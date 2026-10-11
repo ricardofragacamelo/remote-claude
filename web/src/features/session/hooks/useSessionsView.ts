@@ -6,6 +6,8 @@ import type { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import { useCopy } from '@/shared/hooks/useCopy';
 import type { Copy } from '@/shared/hooks/useCopy';
+import { conversationKey, sameConversation } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { closeSession } from '../services/live-session.service';
 import { arrangeConversations, arrangeLiveSessions } from '../services/sessions-view.service';
 import type { SessionsFilter } from '../services/sessions-view.service';
@@ -13,6 +15,7 @@ import { sessionsViewStore } from '../store/sessions-view.store';
 import type { SessionsViewState } from '../store/sessions-view.store';
 import type { ConversationSummary } from '../types/history';
 import type { LiveSessionSummary } from '../types/sessions-view';
+import { useEngines } from './useEngines';
 import { useFolderSessions } from './useFolderSessions';
 import type { FolderSessions } from './useFolderSessions';
 import { useResumer } from './useResumeSession';
@@ -24,7 +27,7 @@ export interface SessionsViewTargets {
   showSession(sessionId: string): void;
 
   /** A conversation of the history opens in the panel, read only, with the way to continue it. */
-  showConversation(conversationId: string): void;
+  showConversation(conversation: ConversationRef): void;
 }
 
 /** A conversation waiting for the person to confirm it may be forked while it is active elsewhere. */
@@ -34,7 +37,7 @@ export interface PendingFork {
   cancel(): void;
 }
 
-/** Everything the view of Claude's sessions shows and does, for one folder tab. */
+/** Everything the view of the agent's sessions shows and does, for one folder tab. */
 export interface SessionsView {
   readonly folder: string;
   readonly state: SessionsViewState;
@@ -57,8 +60,11 @@ export interface SessionsView {
   readonly pendingFork: PendingFork | null;
   readonly copy: Copy;
 
+  /** How a row names the engine of its conversation — the `{{agent}}` of "copy the id". */
+  agentName(engine: string): string;
+
   openSession(sessionId: string): void;
-  openConversation(conversationId: string): void;
+  openConversation(conversation: ConversationRef): void;
 
   /** Continues a conversation here: in place when it is ours, as a fork when it began elsewhere. */
   continueConversation(conversation: ConversationSummary): void;
@@ -94,6 +100,7 @@ export function useSessionsView(folder: string, targets: SessionsViewTargets): S
   const state = useStore(store);
   const sessions = useFolderSessions(folder, state.includeSubfolders);
   const copy = useCopy();
+  const engines = useEngines();
   const resumer = useResumer(targets.showSession);
   const { resume } = resumer;
   const [forking, setForking] = useState<ConversationSummary | null>(null);
@@ -105,7 +112,7 @@ export function useSessionsView(folder: string, targets: SessionsViewTargets): S
   // A resume runs where the conversation ran — the folder of the tab, or one below it.
   const start = useCallback(
     (conversation: ConversationSummary) => {
-      resume({ conversationId: conversation.conversationId, workspacePath: conversation.cwd });
+      resume({ conversation: conversation.conversation, workspacePath: conversation.cwd });
     },
     [resume],
   );
@@ -153,6 +160,7 @@ export function useSessionsView(folder: string, targets: SessionsViewTargets): S
             },
           },
     copy,
+    agentName: engines.nameOf,
     openSession: targets.showSession,
     openConversation: targets.showConversation,
     continueConversation,
@@ -181,7 +189,7 @@ function selectedRow(
   }
 
   const conversation = [...view.elsewhere, ...view.history].find(
-    (entry) => entry.conversationId === id,
+    (entry) => conversationKey(entry.conversation) === id,
   );
 
   return conversation === undefined ? null : { kind: 'conversation', conversation };
@@ -227,7 +235,7 @@ export function sessionsViewCommands(view: SessionsView): CommandDeclaration[] {
         if (row?.kind === 'session') {
           view.openSession(row.session.sessionId);
         } else if (row !== null) {
-          view.openConversation(row.conversation.conversationId);
+          view.openConversation(row.conversation.conversation);
         }
       },
     },
@@ -250,8 +258,9 @@ export function sessionsViewCommands(view: SessionsView): CommandDeclaration[] {
       when: () => selected() !== null,
       run: () => {
         const row = selected();
+        // The id of the conversation, in its engine's store — of a live session too (S-40).
         view.copy.copy(
-          row?.kind === 'session' ? row.session.claudeSessionId : row?.conversation.conversationId,
+          row?.kind === 'session' ? row.session.conversation.id : row?.conversation.conversation.id,
         );
       },
     },
@@ -271,6 +280,8 @@ export function sessionsViewCommands(view: SessionsView): CommandDeclaration[] {
 }
 
 /** The refusal of a continue, when it is the one the row asked for. */
-export function refusalFor(view: SessionsView, conversationId: string): AppError | null {
-  return view.resume.target?.conversationId === conversationId ? view.resume.error : null;
+export function refusalFor(view: SessionsView, conversation: ConversationRef): AppError | null {
+  return sameConversation(view.resume.target?.conversation ?? null, conversation)
+    ? view.resume.error
+    : null;
 }

@@ -9,7 +9,7 @@ import {
   ContextMenuTrigger,
 } from '@/shared/components/ui/context-menu';
 import type { PanelTabs } from '../../hooks/usePanelTabs';
-import type { PanelTab } from '../../store/claude-panel.store';
+import type { PanelTab } from '../../store/agent-panel.store';
 
 /**
  * What a tab of the panel offers on its context menu (plan 08, B-32): moving it a place either way,

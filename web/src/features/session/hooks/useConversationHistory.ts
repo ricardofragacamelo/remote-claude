@@ -4,6 +4,8 @@ import type { InfiniteData } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/api/errors';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { conversationKey } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { logger } from '@/shared/logging/logger';
 import { fetchHistoryPage } from '../services/history.service';
 import { conversationFrom, SILENT } from '../services/live-session.service';
@@ -18,7 +20,8 @@ import type { Conversation } from '../types/live-session';
 /** The keys of the history, in one place, so invalidating one is not an exercise in guessing. */
 export const historyKeys = {
   all: ['history'] as const,
-  pages: (conversationId: string) => [...historyKeys.all, 'pages', conversationId] as const,
+  pages: (conversation: ConversationRef) =>
+    [...historyKeys.all, 'pages', conversationKey(conversation)] as const,
 };
 
 /** What a screen gets: the conversation so far read, and the way to what came before. */
@@ -72,7 +75,8 @@ export interface ConversationHistory {
 
 /** What following added on top of the pages, and the page it was added after. */
 interface Followed {
-  readonly conversationId: string;
+  /** The {@link conversationKey} of the conversation it was followed on. */
+  readonly key: string;
   readonly base: string | null;
   readonly events: readonly HistoryEvent[];
   readonly lastMessageId: string | null;
@@ -80,12 +84,8 @@ interface Followed {
 }
 
 /** What was followed, while it still builds on `base` of the conversation on screen. */
-function stillOn(
-  followed: Followed | null,
-  conversationId: string,
-  base: string | null,
-): Followed | null {
-  return followed?.conversationId === conversationId && followed.base === base ? followed : null;
+function stillOn(followed: Followed | null, key: string, base: string | null): Followed | null {
+  return followed?.key === key && followed.base === base ? followed : null;
 }
 
 /**
@@ -94,15 +94,15 @@ function stillOn(
  */
 function extended(
   before: Followed | null,
-  conversationId: string,
+  key: string,
   base: string | null,
   update: TranscriptUpdate,
 ): Followed {
-  const kept = stillOn(before, conversationId, base);
+  const kept = stillOn(before, key, base);
   const events = kept?.events ?? [];
 
   return {
-    conversationId,
+    key,
     base,
     events: update.events.length === 0 ? events : [...events, ...update.events],
     lastMessageId: update.lastMessageId ?? kept?.lastMessageId ?? null,
@@ -116,7 +116,7 @@ function extended(
  *
  * Opening the same conversation again inside the stale window reads the cache and asks the network
  * nothing (S-16). The backend caches the expensive read as well, and for a different reason — the
- * SDK reparses the whole file on every call. Coming back to the tab is not a reason to read it
+ * engine reparses the whole file on every call. Coming back to the tab is not a reason to read it
  * again: this is a detail, not a list; what changes while it is open arrives by following it.
  *
  * The pages arrive newest first and each is oldest first inside, so the conversation is the pages
@@ -124,11 +124,14 @@ function extended(
  * stream uses (B-03). An earlier page goes **before** everything and what is followed **after**, so
  * reading one while the other arrives neither loses nor repeats a block (S-82).
  */
-export function useConversationHistory(conversationId: string): ConversationHistory {
+export function useConversationHistory(conversationRef: ConversationRef): ConversationHistory {
   const client = useQueryClient();
+  // Read by its two strings, never by the object: one read again is a new object of the same one.
+  const { engine, id } = conversationRef;
+  const key = useMemo(() => conversationKey({ engine, id }), [engine, id]);
   const history = usePagedQuery({
-    queryKey: historyKeys.pages(conversationId),
-    fetchPage: (cursor) => fetchHistoryPage(conversationId, cursor),
+    queryKey: historyKeys.pages({ engine, id }),
+    fetchPage: (cursor) => fetchHistoryPage({ engine, id }, cursor),
     nextCursor: (page) => page.nextCursor,
     refetchOnWindowFocus: false,
   });
@@ -141,7 +144,7 @@ export function useConversationHistory(conversationId: string): ConversationHist
   const base = latest?.lastMessageId ?? null;
 
   // What was followed after a page the screen no longer has — or of another conversation — is gone.
-  const current = latest === undefined ? null : stillOn(followed, conversationId, base);
+  const current = latest === undefined ? null : stillOn(followed, key, base);
 
   // One page after the other while everything was asked for; a failure stops it, and says so.
   useEffect(() => {
@@ -170,14 +173,17 @@ export function useConversationHistory(conversationId: string): ConversationHist
 
   const append = useCallback(
     (from: string | null, update: TranscriptUpdate) => {
-      setFollowed((before) => extended(before, conversationId, from, update));
+      setFollowed((before) => extended(before, key, from, update));
     },
-    [conversationId],
+    [key],
   );
 
   const restart = useCallback(async (): Promise<AppError | null> => {
-    const queryKey = historyKeys.pages(conversationId);
-    logger.debug({ op: 'history.restart', conversationId }, 'reading the latest page again');
+    const queryKey = historyKeys.pages({ engine, id });
+    logger.debug(
+      { op: 'history.restart', conversation: { engine, id } },
+      'reading the latest page again',
+    );
 
     // Only the latest page is read again: an earlier one's cursor may name a chain that is gone.
     client.setQueryData<InfiniteData<HistoryPage, string | null>>(queryKey, (data) =>
@@ -192,7 +198,7 @@ export function useConversationHistory(conversationId: string): ConversationHist
       queryKey,
     );
     return state?.status === 'error' ? state.error : null;
-  }, [client, conversationId]);
+  }, [client, engine, id]);
 
   return {
     isLoading: history.isLoading,

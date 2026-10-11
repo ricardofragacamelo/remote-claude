@@ -56,7 +56,7 @@ void main() {
 
     final List<PermissionRule> rules = await repository.list();
 
-    expect(rules.single.pattern, 'Bash(git status)');
+    expect(rules.single.pattern, 'shell(git status:*)');
   });
 
   test('refuses a body it cannot read rather than saying the user granted nothing', () async {

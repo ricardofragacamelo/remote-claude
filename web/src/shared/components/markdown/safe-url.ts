@@ -1,6 +1,6 @@
 /**
  * What a URL of a markdown text is — and therefore what it may become on screen
- * ([08 · D-04](../../../../../docs/plans/08-claude-panel/decisions.md#d-04--markdown-e-realce)):
+ * (plan 08 · D-04, Markdown and highlighting):
  *
  * - `web`: `http` or `https` — a link that opens outside the app, an image that is **not** loaded;
  * - `mail`: `mailto`;

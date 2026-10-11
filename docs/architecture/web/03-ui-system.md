@@ -274,7 +274,7 @@ Responde a uma pergunta só: **"o que foi executado na minha máquina sem me per
 - Tool em execução mostra estado vivo, não congela em "aguarde".
 - **O app desenha a mesma conversa** ([plano 26](../../plans/26-mobile-conversation-parity/README.md)): um
   componente novo em `features/session/components/conversation/` ou em `shared/components/markdown/`, ou
-  um rótulo novo de `tool-labels.ts`, entra no [`scripts/render-parity.json`](../../../scripts/render-parity.json)
+  um rótulo novo do classificador de ferramentas do backend (`sessions.tool.*`), entra no [`scripts/render-parity.json`](../../../scripts/render-parity.json)
   **na mesma entrega** — com o widget do app que o desenha, ou com a decisão ✅ que o exclui. O
   `pnpm render:check` (portão 11) reprova o que entrou sem par ([mobile/04](../mobile/04-ui.md#a-conversa-é-a-mesma-do-web)).
 

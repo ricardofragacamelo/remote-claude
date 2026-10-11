@@ -1,18 +1,18 @@
 import { activeSelections } from '@/features/editor';
-import { claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentContextTargets } from '@/shared/lib/files-drag';
 import type { FilesDragPayload } from '@/shared/lib/files-drag';
 import { addToSet } from './hooks/useContextSet';
 import { itemId, itemsOfPayload, UNCHECKED } from './lib/context-set';
 import { mentionProviders } from './lib/mention-providers';
-import { claudePanelStore } from './store/claude-panel.store';
+import { agentPanelStore } from './store/agent-panel.store';
 import type { ContextItem } from './types/context';
 
 /**
- * The conversation of a folder tab's panel that takes what is added to Claude's context: the one on
- * screen when it can take a prompt — a draft or a session —, or a new draft when it cannot.
+ * The conversation of a folder tab's panel that takes what is added to the agent's context: the one
+ * on screen when it can take a prompt — a draft or a session —, or a new draft when it cannot.
  */
 function receivingTab(folder: string): string {
-  const panel = claudePanelStore(folder);
+  const panel = agentPanelStore(folder);
   const { tabs, active } = panel.getState();
   const shown = tabs.find((tab) => tab.key === active);
 
@@ -22,12 +22,12 @@ function receivingTab(folder: string): string {
 }
 
 /**
- * What the tree, the tabs and the editor hand to Claude's context, put in the context of the
+ * What the tree, the tabs and the editor hand to the agent's context, put in the context of the
  * conversation on screen in the panel of the **same** folder tab (plan 08, B-49, B-51). The payload
  * is the folder's own, so nothing is re-scoped here; what passes the ceiling is said on the set.
  */
 export function addToPanelContext(payload: FilesDragPayload): void {
-  const panel = claudePanelStore(payload.folder);
+  const panel = agentPanelStore(payload.folder);
   const key = receivingTab(payload.folder);
 
   panel.getState().setNotice(key, addToSet(panel, key, itemsOfPayload(payload)));
@@ -50,15 +50,15 @@ function selectionItems(folder: string): readonly ContextItem[] | null {
 }
 
 /**
- * Puts the panel where Claude's context is fed (plan 08, F5) — once, at load: the target of "Add to
- * Claude's context" and of the drag towards the chat of plan 07, and the `@selection` of the
+ * Puts the panel where the agent's context is fed (plan 08, F5) — once, at load: the target of "Add
+ * to the agent's context" and of the drag towards the chat of plan 07, and the `@selection` of the
  * composer. `@terminal` is the integrated terminal's to register (plan 12).
  *
  * @returns the way to take it back out
  */
-export function registerClaudeContext(): () => void {
+export function registerAgentContext(): () => void {
   const undo = [
-    claudeContextTargets.register({ id: 'session.panel', position: 100, add: addToPanelContext }),
+    agentContextTargets.register({ id: 'session.panel', position: 100, add: addToPanelContext }),
     mentionProviders.register({
       id: 'session.selection',
       position: 100,

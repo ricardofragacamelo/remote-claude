@@ -52,10 +52,10 @@ function isVisible(message: StreamMessage): boolean {
 /**
  * The messages of a level that open their turn's run of answers — the ones that say who speaks
  * (plan 22, D-16). A prompt always does: it is where a turn begins, a queued one in the middle of a
- * turn too (S-110). An answer does when nothing before it in the turn said "Claude": each round trip
- * of a tool is a new answer of the API, and the author is said once (S-108). A message with nothing
- * to draw says nothing, and leaves the turn as it was. The end of a turn, a compaction or a rewind
- * closes the run, so the next answer names its author again.
+ * turn too (S-110). An answer does when nothing before it in the turn said "the agent": each round
+ * trip of a tool is a new answer of the API, and the author is said once (S-108). A message with
+ * nothing to draw says nothing, and leaves the turn as it was. The end of a turn, a compaction or a
+ * rewind closes the run, so the next answer names its author again.
  */
 function authorsOf(
   entries: readonly TimelineEntry[],

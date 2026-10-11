@@ -158,3 +158,19 @@ JSON Schema de `packages/contracts/`, e cai em `lib/core/network/contracts/`.
 | Widget reutilizável entre features | `core/widgets/` |
 | Motor nativo que o `flutter test` não roda (PDF, diagrama, "salvar como") | a porta em `domain/ports/` quando é Dart puro, ou em `presentation/engines/` quando devolve um widget; o adaptador em `data/engines/` (ou ao lado da porta de widget); o fake em `test/support/fakes/` ([25 · D-27](../../plans/25-mobile-file-browser/decisions.md#f4--markdown-e-mermaid)) |
 | Texto | `l10n/app_en.arb` **e** `app_pt.arb` |
+
+---
+
+## Alvo do plano 28 — `engines/` e a composição
+
+> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)). Já valendo desde a F0.
+
+```
+mobile/lib/
+├── core/, features/     núcleo: desenham pelo `kind`, sem nome de motor
+├── engines/             vazio (D-15 do plano 28): só o que for de um motor só
+└── app/engines.dart     a composição: o único arquivo que pode importar engines/
+```
+
+`core/` e `features/` nunca importam `engines/`, e uma extensão nunca importa outra
+(`core_cannot_import_engines`, `features_cannot_import_engines`, `engines_are_isolated` — [12-engines](../shared/12-engines.md)).

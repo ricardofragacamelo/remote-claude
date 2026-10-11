@@ -15,7 +15,7 @@ Ela é uma peça só: o `for await` do Agent SDK é a fonte do stream, e cortá-
 duas metades que não rodam. O que dá para fatiar é a **ordem interna** — fake primeiro, opções
 depois, runner, mapper, domínio, hub —, e é assim que as tasks estão.
 
-Leia [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) e
+Leia [backend/04a-claude](../../architecture/backend/04a-claude.md) e
 [backend/06-realtime](../../architecture/backend/06-realtime.md) **antes** do primeiro arquivo.
 
 ---
@@ -53,7 +53,7 @@ budget e turno.
 acaba ligado.
 
 Por que `['project']` e não omitido nem `[]`:
-[a armadilha do `settingSources`](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources).
+[a armadilha do `settingSources`](../../architecture/backend/04a-claude.md#a-armadilha-do-settingsources).
 
 ### B-14 — `input-queue` e `session-runner` ✅
 
@@ -65,7 +65,7 @@ Subprocesso vazado não morre sozinho, e este roda na máquina do usuário.
 ### B-15 — `sdk-message.mapper` ✅
 
 `SDKMessage` → evento do nosso contrato, pela
-[tabela de mapeamento](../../architecture/backend/04-claude-integration.md#o-mapper--a-tradução-que-protege-o-contrato).
+[tabela de mapeamento](../../architecture/backend/04a-claude.md#o-mapper--a-tradução-que-protege-o-contrato).
 `SDKMessage` cru **nunca** sai do adapter ([ADR-006](../../architecture/shared/00-decisions.md#adr-006--protocolo-próprio-não-sdkmessage-cru)).
 
 A regra de sobrevivência: variante desconhecida vira `warn` e é descartada. Ela **não** derruba
@@ -114,7 +114,7 @@ Autorização por ação conforme [backend/06](../../architecture/backend/06-rea
 ### B-20 — Logging da borda do Agent SDK ✅
 
 `claude.input`, `claude.output`, `claude.session.lifecycle` em `debug`, com truncamento e
-redação conforme [a tabela desta borda](../../architecture/backend/04-claude-integration.md#logging-desta-borda).
+redação conforme [a tabela desta borda](../../architecture/backend/04a-claude.md#logging-desta-borda).
 
 Conteúdo de arquivo lido pela tool `Read` **nunca** vai para o log — só `path` e `bytes`.
 

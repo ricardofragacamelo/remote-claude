@@ -82,7 +82,7 @@ Um use case = uma intenção do usuário. Coordena domínio e portas; não cont�
 | Orquestrar, transacionar | Saber status HTTP |
 
 ```ts
-// src/application/session/ports/claude-session.port.ts
+// src/application/session/ports/agent-engine.port.ts
 export interface ClaudeSessionPort {
   start(input: StartClaudeSessionInput): Promise<ClaudeSessionHandle>
   prompt(sessionId: SessionId, text: string): Promise<void>
@@ -212,3 +212,20 @@ declara a intenção; quem abre e fecha conexão é a camada de fora.
 
 **"E DTO, mora onde?"** DTO de transporte (HTTP/WS) no adapter. DTO de comando de use case
 em `application/`. São coisas diferentes com o mesmo nome.
+
+---
+
+## Alvo do plano 28 — a porta de motor e o anel de extensão
+
+> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)). As regras de lint já valem desde a F0; o código chega na
+> fase indicada.
+
+- **A porta de motor (F1).** A sessão fala com `AgentEnginePort`, resolvida pelo `EngineRegistry`; o
+  Agent SDK é a implementação do Claude, em `adapter/outbound/engines/claude/`. A aplicação declara a
+  porta, como declara qualquer outra.
+- **A interpretação no adapter (F2…F5).** O nome de ferramenta, o input cru, os modos do CLI e a
+  gramática de regra do Claude saem do domínio: o adapter entrega o `kind`, o rótulo, o `FileChange` e
+  a regra canônica, e o domínio decide sobre eles.
+- **O anel de extensão (F6).** O que só um motor tem é um recorte `engines/<motor>/` dentro de cada
+  camada, com a Dependency Rule valendo dentro dele, e só a composição em
+  `infrastructure/modules/engines/` o importa ([12-engines](../shared/12-engines.md)).

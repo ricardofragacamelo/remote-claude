@@ -2,7 +2,7 @@ import { EffortUnsupportedError } from '../errors/effort-unsupported.error';
 import { ForkPointUnknownError } from '../errors/fork-point-unknown.error';
 import type { SlashCommand } from './slash-commands';
 
-/** The levels of effort the SDK knows. */
+/** The levels of effort an engine may take — the ones it takes are its capability (`effortLevels`). */
 export const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 
 export type EffortLevel = (typeof EFFORT_LEVELS)[number];
@@ -12,26 +12,27 @@ export interface InstallationModel {
   /** What `setModel` and `session.start.model` take. */
   readonly value: string;
 
-  /** The id it resolves to (`sonnet` → `claude-sonnet-5`), when the installation says. */
+  /** The id an alias resolves to, when the installation says. */
   readonly resolvedModel: string | null;
 
   /** Data of the installation, shown as it is — like the description of a slash command. */
   readonly displayName: string;
   readonly description: string;
-  readonly supportsEffort: boolean;
+
+  /** The levels of effort it takes — empty when it takes none, which is all a screen needs to know. */
   readonly supportedEffortLevels: readonly EffortLevel[];
 }
 
-/** The account the CLI is signed in to — never a token, never the path of a credential (plan 13, D-07). */
+/**
+ * The account an engine's installation is signed in to — who, which organisation, which plan, which
+ * provider. Never a token, never the path of a credential (plan 13, D-07); what else an engine says
+ * of its login is its extension's.
+ */
 export interface InstallationAccount {
   readonly email: string | null;
   readonly organization: string | null;
   readonly plan: string | null;
   readonly provider: string | null;
-
-  /** The **name** of where the credential comes from, never the credential. */
-  readonly tokenSource: string | null;
-  readonly apiKeySource: string | null;
 }
 
 /** A subagent the installation offers. */
@@ -42,15 +43,13 @@ export interface InstallationAgent {
 }
 
 /**
- * What the installation says about itself in one question — `initializationResult()` (plan 13,
- * D-05): commands, agents, models, output styles and the account.
+ * What an installation says about itself in one question (plan 13, D-05): its commands, agents,
+ * models and account. An engine's adapter may say more — its extension reads it.
  */
 export interface SessionInitialization {
   readonly commands: readonly SlashCommand[];
   readonly agents: readonly InstallationAgent[];
   readonly models: readonly InstallationModel[];
-  readonly outputStyle: string;
-  readonly outputStyles: readonly string[];
   readonly account: InstallationAccount;
 }
 
@@ -58,7 +57,7 @@ export interface SessionInitialization {
  * Refuses an effort the model does not take — none at all, or not that level (D-16, S-171).
  *
  * A model the list does not name is not refused: the list is discovery, and a model set by its full
- * id (`claude-sonnet-5`) is matched by what the aliases resolve to, or not at all.
+ * id is matched by what the aliases resolve to, or not at all.
  *
  * @throws {EffortUnsupportedError} the model is known and does not take `level`
  */
@@ -79,12 +78,35 @@ export function refuseUnsupportedEffort(
 /** What a category of the context window is, the CLI's own classification (plan 08, B-37). */
 export type ContextKind = 'used' | 'free' | 'buffer' | 'deferred';
 
+/**
+ * The categories every engine's context window has, by our own id — each with its own words on the
+ * screens (plan 28, B-24): the system prompt, the tools, the conversation, the memory, what is free,
+ * and what the engine keeps aside.
+ */
+export const CONTEXT_CATEGORIES = [
+  'system',
+  'tools',
+  'messages',
+  'memory',
+  'free',
+  'reserved',
+] as const;
+
+/** One of the canonical categories. */
+export type CanonicalContextCategory = (typeof CONTEXT_CATEGORIES)[number];
+
 /** One category of the context window. */
 export interface ContextCategory {
-  /** A stable name for the screen to translate — `systemTools`, `messages`, `freeSpace`… */
+  /**
+   * A canonical id (`system`, `tools`, `messages`, `memory`, `free`, `reserved`) — or, for what only
+   * one engine counts apart, a stable id of its own, opaque to the screens.
+   */
   readonly id: string;
 
-  /** The installation's own name, shown when this build has no words for the id. */
+  /** The key a screen translates — `sessions.context.<id>` — for a canonical category; `null` otherwise. */
+  readonly messageKey: string | null;
+
+  /** The engine's own name for it, shown when there is no key. */
   readonly name: string;
   readonly tokens: number;
   readonly kind: ContextKind;
@@ -97,6 +119,23 @@ export interface ContextUse {
   readonly maxTokens: number;
   readonly percentage: number;
   readonly categories: readonly ContextCategory[];
+}
+
+/**
+ * A category of [id] and [name], under its canonical id with its key when [canonical] names one.
+ *
+ * @param canonical the canonical category the engine's adapter reads it as, when there is one
+ */
+export function contextCategory(
+  id: string,
+  name: string,
+  tokens: number,
+  kind: ContextKind,
+  canonical: CanonicalContextCategory | null,
+): ContextCategory {
+  return canonical === null
+    ? { id, messageKey: null, name, tokens, kind }
+    : { id: canonical, messageKey: `sessions.context.${canonical}`, name, tokens, kind };
 }
 
 /** The id of a category from the name the CLI gives it: "System tools (deferred)" → `systemToolsDeferred`. */

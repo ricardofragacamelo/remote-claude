@@ -44,7 +44,7 @@ describe('permission rules', () => {
   const grant = (overrides: Partial<GrantPermissionRuleCommand> = {}): Promise<PermissionRule> =>
     harness.grant.execute({
       userId: PERMISSION_OWNER,
-      pattern: 'Bash(git status:*)',
+      pattern: 'shell(git status:*)',
       decision: 'allow',
       scope: 'project',
       projectPath: PERMISSION_PROJECT,
@@ -142,10 +142,22 @@ describe('permission rules', () => {
       expect((await ask()).kind).toBe('pending');
     });
 
-    it('asks a human in `plan`, even with an allow rule standing — S-56', async () => {
+    it('asks a human in `readOnly`, even with an allow rule standing — S-56', async () => {
+      // A call that changes nothing, so the mode does not refuse it first (plan 28, B-26).
+      await grant({ pattern: 'web.search' });
+
+      const outcome = await ask({ permissionMode: 'readOnly', toolName: 'WebSearch', input: {} });
+
+      expect(outcome.kind).toBe('pending');
+    });
+
+    it('refuses a shell in `readOnly` before the allow rule standing for it — plan 28, S-78', async () => {
       await grant();
 
-      expect((await ask({ permissionMode: 'plan' })).kind).toBe('pending');
+      expect(await ask({ permissionMode: 'readOnly' })).toEqual({
+        kind: 'settled',
+        resolution: expect.objectContaining({ decision: 'deny', auto: true, via: 'readOnly' }),
+      });
     });
 
     it('asks a human when the rules cannot be read — never allows — S-59', async () => {
@@ -172,48 +184,50 @@ describe('permission rules', () => {
     });
   });
 
-  describe('the tools that ask the person — plan 24, B-07', () => {
-    it.each(['AskUserQuestion', 'ExitPlanMode', 'AskUserQuestion(anything)'])(
-      'refuses an allow for %s, and grants nothing — S-31, S-32',
-      async (pattern) => {
-        await expect(grant({ pattern, scope: 'always' })).rejects.toBeInstanceOf(
-          PermissionRuleToolInteractiveError,
-        );
-        await expect(grant({ pattern, scope: 'always' })).rejects.toMatchObject({
-          code: 'PERMISSION_RULE_TOOL_INTERACTIVE',
-          messageKey: 'permission.error.ruleToolInteractive',
-          params: { toolName: pattern.split('(')[0] },
-        });
-        expect(await harness.rules.listFor(PERMISSION_OWNER)).toEqual([]);
-        expect(harness.trail.appended).toEqual([]);
-      },
-    );
+  describe('the calls that ask the person — plan 24, B-07; plan 28, B-32', () => {
+    it.each<[string, 'allow' | 'deny']>([
+      ['question', 'allow'],
+      ['plan', 'allow'],
+      ['question(anything)', 'allow'],
+      ['question', 'deny'],
+      ['plan', 'deny'],
+    ])('refuses %s for %s, and grants nothing — S-31, S-32, S-95', async (pattern, decision) => {
+      await expect(grant({ pattern, decision, scope: 'always' })).rejects.toBeInstanceOf(
+        PermissionRuleToolInteractiveError,
+      );
+      await expect(grant({ pattern, decision, scope: 'always' })).rejects.toMatchObject({
+        code: 'PERMISSION_RULE_TOOL_INTERACTIVE',
+        messageKey: 'permission.error.ruleToolInteractive',
+        params: { kind: pattern.split('(')[0] },
+      });
+      expect(await harness.rules.listFor(PERMISSION_OWNER)).toEqual([]);
+      expect(harness.trail.appended).toEqual([]);
+    });
 
     it.each(['AskUserQuestion', 'ExitPlanMode'])(
-      'grants a deny for %s — S-31, S-32',
+      "refuses the engine's own name %s as outside the grammar — S-93",
       async (pattern) => {
-        const granted = await grant({ pattern, decision: 'deny', scope: 'always' });
-
-        expect(granted.decision).toBe('deny');
+        await expect(grant({ pattern, scope: 'always' })).rejects.toMatchObject({
+          code: 'PERMISSION_RULE_PATTERN_INVALID',
+        });
       },
     );
 
-    it('reads an allow already recorded as no answer, says so, and asks the person — S-29', async () => {
-      // One left from before this plan — the API would refuse it now, so it is stored directly.
-      const old = PermissionRule.create(
-        {
-          id: 'rule-old',
-          userId: PERMISSION_OWNER,
-          sessionId: null,
-          projectPath: null,
-          pattern: 'AskUserQuestion',
-          decision: 'allow',
-          scope: 'always',
-          createdAt: PERMISSION_NOW,
-          expiresAt: new Date(PERMISSION_NOW.getTime() + 60_000),
-        },
-        TEST_PERMISSION_SETTINGS.ruleMaxLifetimeMs,
-      );
+    it('answers by no rule an old allow for it, which the migration switched off — S-29', async () => {
+      // One left from before the canonical grammar: migrated, it is disabled, and answers nothing.
+      const old = PermissionRule.restore({
+        id: 'rule-old',
+        userId: PERMISSION_OWNER,
+        sessionId: null,
+        projectPath: null,
+        pattern: 'AskUserQuestion',
+        decision: 'allow',
+        scope: 'always',
+        createdAt: PERMISSION_NOW,
+        expiresAt: new Date(PERMISSION_NOW.getTime() + 60_000),
+        revokedAt: null,
+        disabledReason: 'untranslatable',
+      });
       await harness.rules.grant(old, PERMISSION_NOW);
 
       const outcome = await harness.request.execute(
@@ -221,7 +235,6 @@ describe('permission rules', () => {
       );
 
       expect(outcome.kind).toBe('pending');
-      expect(harness.ignoredRules).toEqual(['rule-old']);
     });
 
     it('leaves no session rule from an allow of a plan, which no lookup would read', async () => {
@@ -379,7 +392,7 @@ describe('permission rules', () => {
     });
 
     it('refuses a pattern outside the grammar — S-47', async () => {
-      await expect(grant({ pattern: 'Bash(git *' })).rejects.toThrow(
+      await expect(grant({ pattern: 'shell(git *' })).rejects.toThrow(
         PermissionRulePatternInvalidError,
       );
     });
@@ -397,12 +410,12 @@ describe('permission rules', () => {
 
   describe('listing', () => {
     it('lists the caller`s own rules, marks the expired, and leaves the revoked out', async () => {
-      const revoked = await grant({ pattern: 'Bash(ls)' });
-      await grant({ pattern: 'Bash(pwd)', expiresAt: new Date(PERMISSION_NOW.getTime() + 1) });
-      await grant({ pattern: 'Bash(whoami)' });
+      const revoked = await grant({ pattern: 'shell(ls)' });
+      await grant({ pattern: 'shell(pwd)', expiresAt: new Date(PERMISSION_NOW.getTime() + 1) });
+      await grant({ pattern: 'shell(whoami)' });
       await harness.grant.execute({
         userId: stranger,
-        pattern: 'Bash(id)',
+        pattern: 'shell(id)',
         decision: 'allow',
         scope: 'always',
         projectPath: null,
@@ -414,8 +427,8 @@ describe('permission rules', () => {
       const listed = await harness.list.execute(PERMISSION_OWNER);
 
       expect(listed.map(({ rule, status }) => [rule.ruleContent, status])).toEqual([
-        ['Bash(whoami)', 'active'],
-        ['Bash(pwd)', 'expired'],
+        ['shell(whoami)', 'active'],
+        ['shell(pwd)', 'expired'],
       ]);
     });
 

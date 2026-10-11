@@ -1,6 +1,6 @@
 /// Continuing a conversation of the history, and learning which session continues it.
 ///
-/// `session.start` with `resumeSessionId` has two answers, and which one is not the client's
+/// `session.start` with `resumeFrom` has two answers, and which one is not the client's
 /// choice: a **new** session, announced by `session.started` naming the conversation it continues,
 /// or — when that conversation is already live for the caller — **joining** it, announced by a
 /// `session.attached` for a session this screen does not watch yet. Resuming what is live is an
@@ -10,6 +10,7 @@ library;
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
@@ -53,7 +54,7 @@ class ResumeState extends Equatable {
   List<Object?> get props => <Object?>[isPending, wasNotSent, failure, sessionId];
 }
 
-/// The resume of one conversation, keyed by it.
+/// The resume of one conversation, keyed by it — by its engine and its id, never the id alone.
 @riverpod
 class ResumeController extends _$ResumeController {
   /// The id the command left with, which is what a refusal of it names.
@@ -63,7 +64,7 @@ class ResumeController extends _$ResumeController {
   Timer? _deadline;
 
   @override
-  ResumeState build(String conversationId) {
+  ResumeState build(ConversationKey conversation) {
     listenToUpdates(ref, _apply);
     ref.onDispose(() => _deadline?.cancel());
     return const ResumeState();
@@ -75,7 +76,7 @@ class ResumeController extends _$ResumeController {
       return;
     }
 
-    final String? commandId = ref.read(driveSessionProvider).resume(workspacePath, conversationId);
+    final String? commandId = ref.read(driveSessionProvider).resume(workspacePath, conversation);
     _commandId = commandId;
 
     state = commandId == null
@@ -115,18 +116,18 @@ class ResumeController extends _$ResumeController {
       EventReceived(
         event: SessionOpened(
           :final String sessionId,
-          :final String? claudeSessionId,
-          :final String? resumedFrom,
+          conversation: final ConversationKey? writes,
+          :final ConversationKey? resumedFrom,
         ),
       )
-          when _continues(claudeSessionId, resumedFrom) =>
+          when _continues(writes, resumedFrom) =>
         sessionId,
       SessionJoined(
         :final String sessionId,
-        :final String? claudeSessionId,
-        :final String? resumedFrom,
+        conversation: final ConversationKey? writes,
+        :final ConversationKey? resumedFrom,
       )
-          when _continues(claudeSessionId, resumedFrom) =>
+          when _continues(writes, resumedFrom) =>
         sessionId,
       _ => null,
     };
@@ -146,10 +147,11 @@ class ResumeController extends _$ResumeController {
     }
   }
 
-  /// Whether a session writing to [claudeSessionId], continuing [resumedFrom], is this one.
+  /// Whether a session writing to [writes], continuing [resumedFrom], is this one.
   ///
   /// Either will do. Continuing one of our own conversations keeps its id, so both name it; a
-  /// conversation begun elsewhere is forked under a new id, and only `resumedFrom` does (D-04).
-  bool _continues(String? claudeSessionId, String? resumedFrom) =>
-      claudeSessionId == conversationId || resumedFrom == conversationId;
+  /// conversation begun elsewhere is forked under a new id, and only `resumedFrom` does (D-04). Both
+  /// are compared whole — engine and id: the same id in another engine is another conversation.
+  bool _continues(ConversationKey? writes, ConversationKey? resumedFrom) =>
+      writes == conversation || resumedFrom == conversation;
 }

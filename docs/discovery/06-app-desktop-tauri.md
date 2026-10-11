@@ -66,7 +66,7 @@ continua sendo o outro cliente, e o produto não muda.
    (o serviço do SO que não acha a credencial) deixa de existir enquanto o app estiver aberto.
 4. **Loopback por padrão continua valendo.** Abrir uma janela não muda quem alcança o backend: quem
    chega nele executa comando na máquina
-   ([04-claude-integration](../architecture/backend/04-claude-integration.md#autenticação--não-faça-nada)).
+   ([04a-claude](../architecture/backend/04a-claude.md#autenticação--não-faça-nada)).
 5. **OIDC padrão, sem atalho de desktop.** O backend continua validando token e nunca emitindo
    ([ADR-010](../architecture/shared/00-decisions.md#adr-010--openid-connect-agnóstico-de-provedor-auth0-como-alvo-inicial)).
    "É local, então pula o login" não entra.

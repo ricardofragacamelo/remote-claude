@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
+import '../../../../../support/builders/tools.dart';
 
 void main() {
   group('StreamMessage', () {
@@ -100,11 +101,7 @@ void main() {
   });
 
   test('a tool is known by its invocation, and a copy keeps its exact input', () {
-    const ToolExecution tool = ToolExecution(
-      toolUseId: 't',
-      toolName: 'Bash',
-      input: <String, Object?>{'command': 'ls -la'},
-    );
+    final ToolExecution tool = ToolExecution(toolUseId: 't', call: shellCall('ls -la'));
 
     final ToolExecution after = tool.copyWith(
       status: ToolStatus.succeeded,
@@ -113,7 +110,7 @@ void main() {
     );
 
     expect(tool.entryId, 'tool:t');
-    expect(after.input['command'], 'ls -la');
+    expect(after.call.rawInput['command'], 'ls -la');
     expect(after.status, ToolStatus.succeeded);
     expect(after.output, 'out');
     expect(after.summary, 'done');

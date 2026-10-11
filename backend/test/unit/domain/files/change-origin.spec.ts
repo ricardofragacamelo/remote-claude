@@ -1,16 +1,17 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
-import { Etag, needsHash, originOf } from '@domain/files';
+import { Etag, needsHash, originOf, writerOf } from '@domain/files';
 import type { WriteMark } from '@domain/files';
 
 const sha = (text: string): string => createHash('sha256').update(text).digest('hex');
 const at = (seconds: number): Date => new Date(Date.UTC(2026, 9, 1, 12, 0, seconds));
 
-const claudeWrote = (text: string, seconds = 0): WriteMark => ({
-  by: 'claude',
+const agentWrote = (text: string, seconds = 0): WriteMark => ({
+  by: 'agent',
   at: at(seconds),
   left: { kind: 'content', hash: sha(text) },
+  engine: 'claude',
 });
 const userWrote = (text: string, seconds = 0): WriteMark => ({
   by: 'user',
@@ -23,8 +24,8 @@ const userCopiedFolder: WriteMark = { by: 'user', at: at(0), left: { kind: 'anyt
 const onDisk = (text: string): Etag => Etag.ofDigest(sha(text));
 
 describe('who changed a path — B-22', () => {
-  it('is claude when the bytes are what a recent write of Claude left — S-148', () => {
-    expect(originOf('changed', [claudeWrote('x')], onDisk('x'))).toBe('claude');
+  it('is agent when the bytes are what a recent write of the agent left — S-148, S-73', () => {
+    expect(originOf('changed', [agentWrote('x')], onDisk('x'))).toBe('agent');
   });
 
   it("is user when the bytes are the person's save — S-149", () => {
@@ -38,30 +39,56 @@ describe('who changed a path — B-22', () => {
 
   it('is external when nothing matches — S-150', () => {
     expect(originOf('changed', [], onDisk('x'))).toBe('external');
-    expect(originOf('changed', [claudeWrote('x')], onDisk('somebody else'))).toBe('external');
-    expect(originOf('deleted', [claudeWrote('x')], null)).toBe('external');
+    expect(originOf('changed', [agentWrote('x')], onDisk('somebody else'))).toBe('external');
+    expect(originOf('deleted', [agentWrote('x')], null)).toBe('external');
     expect(originOf('changed', [userRemoved], onDisk('x'))).toBe('external');
-    expect(originOf('changed', [claudeWrote('x')], null)).toBe('external');
+    expect(originOf('changed', [agentWrote('x')], null)).toBe('external');
   });
 
   it('goes by the final bytes when both wrote the file in the window, never inventing — S-151', () => {
-    const both = [claudeWrote('claude', 1), userWrote('person', 2)];
+    const both = [agentWrote('agent', 1), userWrote('person', 2)];
 
-    expect(originOf('changed', both, onDisk('claude'))).toBe('claude');
+    expect(originOf('changed', both, onDisk('agent'))).toBe('agent');
     expect(originOf('changed', both, onDisk('person'))).toBe('user');
     expect(originOf('changed', both, onDisk('a third party'))).toBe('external');
   });
 
   it('gives the same bytes written twice to the later write', () => {
-    expect(
-      originOf('changed', [claudeWrote('same', 1), userWrote('same', 2)], onDisk('same')),
-    ).toBe('user');
-    expect(
-      originOf('changed', [userWrote('same', 2), claudeWrote('same', 3)], onDisk('same')),
-    ).toBe('claude');
-    expect(
-      originOf('changed', [userWrote('same', 4), claudeWrote('same', 3)], onDisk('same')),
-    ).toBe('user');
+    expect(originOf('changed', [agentWrote('same', 1), userWrote('same', 2)], onDisk('same'))).toBe(
+      'user',
+    );
+    expect(originOf('changed', [userWrote('same', 2), agentWrote('same', 3)], onDisk('same'))).toBe(
+      'agent',
+    );
+    expect(originOf('changed', [userWrote('same', 4), agentWrote('same', 3)], onDisk('same'))).toBe(
+      'user',
+    );
+  });
+});
+
+describe('the write that explains a change — plan 28, B-25', () => {
+  it('is the mark itself, with the engine of the agent that wrote it — S-73', () => {
+    expect(writerOf('changed', [agentWrote('x')], onDisk('x'))).toMatchObject({
+      by: 'agent',
+      engine: 'claude',
+    });
+  });
+
+  it("is the person's mark, which has no engine — S-74", () => {
+    expect(writerOf('created', [userWrote('y')], onDisk('y'))).toEqual(userWrote('y'));
+  });
+
+  it('is null when nobody here explains the change — S-74', () => {
+    expect(writerOf('changed', [agentWrote('x')], onDisk('other'))).toBeNull();
+    expect(writerOf('changed', [], onDisk('x'))).toBeNull();
+  });
+
+  it('is the later of two quick writes of the agent to the same file — S-75', () => {
+    const first = agentWrote('one', 1);
+    const second = agentWrote('two', 2);
+
+    expect(writerOf('changed', [first, second], onDisk('two'))).toBe(second);
+    expect(writerOf('changed', [first, second], onDisk('one'))).toBe(first);
   });
 });
 
@@ -69,7 +96,7 @@ describe('when the bytes are read — B-22', () => {
   it('reads them only when a write left known bytes to compare with', () => {
     expect(needsHash('changed', [])).toBe(false);
     expect(needsHash('changed', [userCopiedFolder])).toBe(false);
-    expect(needsHash('changed', [claudeWrote('x')])).toBe(true);
-    expect(needsHash('deleted', [claudeWrote('x')])).toBe(false);
+    expect(needsHash('changed', [agentWrote('x')])).toBe(true);
+    expect(needsHash('deleted', [agentWrote('x')])).toBe(false);
   });
 });

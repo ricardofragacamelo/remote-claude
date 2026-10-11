@@ -1,7 +1,6 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { PermissionBridge } from '@adapter/outbound/claude/permission-bridge';
 import {
   EmitterPermissionEvents,
   PERMISSION_RESOLVED,
@@ -14,7 +13,9 @@ import {
 } from '@adapter/outbound/permission/permission-resolved.listeners';
 import { RecordToolInvocationUseCase } from '@application/audit';
 import type { PermissionResolvedEvent } from '@application/permission';
-import { PermissionRequest, normalizeQuestion } from '@domain/permission';
+import type { AgentLoopRelease } from '@application/session';
+import { normalizeQuestion } from '@adapter/outbound/engines/claude/question-input';
+import { PermissionRequest } from '@domain/permission';
 import type { AuditEntry } from '@domain/audit';
 import { ConnectionRegistry } from '@infra/websocket/connection-registry';
 import { EventBuffer } from '@infra/websocket/event-buffer';
@@ -28,6 +29,7 @@ import {
 import { FixedClock } from '../../../../support/fakes/fixed-clock';
 import { RecordingLogger } from '../../../../support/fakes/recording-logger';
 import { SequentialIds } from '../../../../support/fakes/sequential-ids';
+import { claudeTool } from '../../../../support/builders/tool.builder';
 
 /** A settled request, ready to be published on the bus. */
 function aResolvedEvent(decision: 'allow' | 'deny' = 'allow'): PermissionResolvedEvent {
@@ -39,6 +41,7 @@ function aResolvedEvent(decision: 'allow' | 'deny' = 'allow'): PermissionResolve
     toolUseId: 'toolu-1',
     toolName: 'Bash',
     input: { command: 'rm -rf build/' },
+    tool: claudeTool('Bash', { command: 'rm -rf build/' }),
     riskHint: 'destructive',
     requestedAt: PERMISSION_NOW,
     expiresAt: PERMISSION_NOW,
@@ -144,13 +147,15 @@ describe('EmitterPermissionEvents', () => {
 });
 
 describe('the consumers of permission.resolved', () => {
-  it('releases the agent loop', () => {
+  it('releases the agent loop through the port, knowing no engine — plan 28, S-101', () => {
     const released: string[] = [];
-    const bridge = {
-      onResolved: (event: PermissionResolvedEvent) => released.push(event.request.id),
-    } as unknown as PermissionBridge;
+    const loop: AgentLoopRelease = {
+      onResolved: (settled) => {
+        released.push(settled.request.id);
+      },
+    };
 
-    new ReleaseAgentLoopOnResolved(bridge).handle(aResolvedEvent());
+    new ReleaseAgentLoopOnResolved(loop).handle(aResolvedEvent());
 
     expect(released).toEqual(['request-1']);
   });
@@ -189,6 +194,7 @@ describe('the consumers of permission.resolved', () => {
       toolUseId: null,
       toolName: 'Write',
       input: { file_path: '/srv/app/main.ts' },
+      tool: claudeTool('Write', { file_path: '/srv/app/main.ts' }),
       riskHint: 'write',
       requestedAt: PERMISSION_NOW,
       expiresAt: PERMISSION_NOW,
@@ -244,6 +250,7 @@ describe('the consumers of permission.resolved', () => {
       toolUseId: 'toolu-4',
       toolName: 'Bash',
       input: { command: 'git status' },
+      tool: claudeTool('Bash', { command: 'git status' }),
       riskHint: 'read',
       requestedAt: PERMISSION_NOW,
       expiresAt: PERMISSION_NOW,
@@ -279,6 +286,7 @@ describe('the consumers of permission.resolved', () => {
       toolUseId: null,
       toolName: 'Read',
       input: {},
+      tool: claudeTool('Read'),
       riskHint: 'read',
       requestedAt: PERMISSION_NOW,
       expiresAt: PERMISSION_NOW,
@@ -343,6 +351,7 @@ function anAnsweredQuestion(answered = true): PermissionResolvedEvent {
     toolUseId: 'toolu-q',
     toolName: 'AskUserQuestion',
     input,
+    tool: claudeTool('AskUserQuestion', input),
     interaction: normalizeQuestion(input),
     riskHint: 'read',
     requestedAt: PERMISSION_NOW,

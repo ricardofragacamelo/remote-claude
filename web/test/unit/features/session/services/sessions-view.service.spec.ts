@@ -9,7 +9,13 @@ import {
 } from '@/features/session/services/sessions-view.service';
 import type { ConversationSummary } from '@/features/session';
 import { api } from '@/shared/api/api';
-import { aConversationDto, EDITOR, OURS, WORKSPACE } from '../../../../support/history';
+import {
+  aConversationDto,
+  conversationRef,
+  EDITOR,
+  OURS,
+  WORKSPACE,
+} from '../../../../support/history';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -19,12 +25,15 @@ afterEach(() => {
 function aLiveDto(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     sessionId: '01J0LIVE0000000000000000AA',
+    conversation: conversationRef(OURS),
+    resumedFromConversation: null,
+    // What the previous protocol reads, and this build no longer does.
     claudeSessionId: OURS,
     resumedFrom: null,
     workspacePath: WORKSPACE,
     status: 'idle',
     model: 'claude-sonnet-5',
-    permissionMode: 'default',
+    permissionMode: 'ask',
     startedAt: '2026-10-01T10:00:00.000Z',
     openedFrom: 'web',
     pendingPermissions: 0,
@@ -35,7 +44,7 @@ function aLiveDto(overrides: Record<string, unknown> = {}): Record<string, unkno
 /** A conversation as the screen reads it. */
 function aSummary(overrides: Partial<ConversationSummary> = {}): ConversationSummary {
   return {
-    conversationId: OURS,
+    conversation: conversationRef(OURS),
     summary: 'Fix the flaky test',
     origin: 'ours',
     cwd: WORKSPACE,
@@ -76,6 +85,8 @@ describe('fetchLiveSessions — plan 08, B-07', () => {
     const [first, second] = await fetchLiveSessions(WORKSPACE);
 
     expect(first).toMatchObject({
+      conversation: conversationRef(OURS),
+      resumedFrom: null,
       openedFrom: 'mobile',
       pendingPermissions: 2,
       status: 'waitingPermission',
@@ -90,7 +101,17 @@ describe('fetchLiveSessions — plan 08, B-07', () => {
     });
   });
 
-  it.each(['sessionId', 'claudeSessionId', 'workspacePath', 'status'])(
+  it('reads the conversation a live session continues — plan 28, B-13', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue({
+      sessions: [
+        aLiveDto({ resumedFromConversation: conversationRef(EDITOR), resumedFrom: EDITOR }),
+      ],
+    });
+
+    expect((await fetchLiveSessions(WORKSPACE))[0]?.resumedFrom).toEqual(conversationRef(EDITOR));
+  });
+
+  it.each(['sessionId', 'conversation', 'workspacePath', 'status'])(
     'drops a row without %s, and an answer without a list is an empty one',
     async (field) => {
       vi.spyOn(api, 'get')
@@ -140,7 +161,11 @@ describe('fetchFolderConversations — plan 08, B-08', () => {
 
     expect(await fetchFolderConversations(WORKSPACE, null, false)).toMatchObject({
       conversations: [
-        { conversationId: EDITOR, activity: 'activeElsewhere', writtenAgoSeconds: 30 },
+        {
+          conversation: conversationRef(EDITOR),
+          activity: 'activeElsewhere',
+          writtenAgoSeconds: 30,
+        },
       ],
       nextCursor: 'n',
     });
@@ -162,7 +187,10 @@ describe('narrowing and ordering the rows — S-36, S-50', () => {
   });
 
   it('keeps only the origin asked for', () => {
-    const rows = [aSummary(), aSummary({ conversationId: EDITOR, origin: 'external' })];
+    const rows = [
+      aSummary(),
+      aSummary({ conversation: conversationRef(EDITOR), origin: 'external' }),
+    ];
 
     expect(
       arrangeConversations(rows, { ...filter, origin: 'external' }).map((row) => row.origin),
@@ -175,13 +203,35 @@ describe('narrowing and ordering the rows — S-36, S-50', () => {
     expect(arrangeConversations(rows, filter).map((row) => row.summary)).toEqual(['new title']);
   });
 
-  it('orders by the latest write, or by name', () => {
+  it('keeps two conversations of the same id on two engines apart — plan 28, B-13', () => {
     const rows = [
-      aSummary({ conversationId: 'a', summary: 'Beta', lastModified: '2026-10-01T09:00:00.000Z' }),
-      aSummary({ conversationId: 'b', summary: 'Alpha', lastModified: '2026-10-01T11:00:00.000Z' }),
+      aSummary({ summary: 'one' }),
+      aSummary({ conversation: conversationRef(OURS, 'other'), summary: 'two' }),
     ];
 
-    expect(arrangeConversations(rows, filter).map((row) => row.conversationId)).toEqual(['b', 'a']);
+    expect(
+      arrangeConversations(rows, { ...filter, sort: 'name' }).map((row) => row.summary),
+    ).toEqual(['one', 'two']);
+  });
+
+  it('orders by the latest write, or by name', () => {
+    const rows = [
+      aSummary({
+        conversation: conversationRef('a'),
+        summary: 'Beta',
+        lastModified: '2026-10-01T09:00:00.000Z',
+      }),
+      aSummary({
+        conversation: conversationRef('b'),
+        summary: 'Alpha',
+        lastModified: '2026-10-01T11:00:00.000Z',
+      }),
+    ];
+
+    expect(arrangeConversations(rows, filter).map((row) => row.conversation.id)).toEqual([
+      'b',
+      'a',
+    ]);
     expect(
       arrangeConversations(rows, { ...filter, sort: 'name' }).map((row) => row.summary),
     ).toEqual(['Alpha', 'Beta']);

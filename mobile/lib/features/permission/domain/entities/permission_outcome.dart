@@ -8,8 +8,9 @@ import 'package:remote_claude/features/permission/domain/entities/question.dart'
 /// Which client answered, as far as the backend can honestly tell.
 enum AnswerOrigin { web, mobile, unknown }
 
-/// What answered a request nobody was asked about: a rule, or Permitir tudo (plan 23, B-17).
-enum AnswerVia { rule, allowAll }
+/// What answered a request nobody was asked about: a rule, Permitir tudo (plan 23, B-17), or the
+/// session's read-only mode, which refuses every call that changes something (plan 28, B-26).
+enum AnswerVia { rule, allowAll, readOnly }
 
 /// The settlement of one request.
 ///
@@ -57,7 +58,8 @@ class PermissionOutcome extends Equatable {
   /// say the decision on that tool's line (plan 10, B-20). The settlement itself does not carry it.
   final String? toolUseId;
 
-  /// What answered when nobody was asked, when the server said: a rule, or Permitir tudo.
+  /// What answered when nobody was asked, when the server said: a rule, Permitir tudo, or the
+  /// read-only mode.
   final AnswerVia? via;
 
   /// The questions, when the request was one — what the line of its tool draws (plan 24, B-19). The

@@ -4,11 +4,14 @@ import { toAppError } from '@/shared/api/errors';
 import type { AppError } from '@/shared/api/errors';
 import type { WsClient } from '@/shared/api/ws-client';
 import { isRecord, readText as text } from '@/shared/lib/json';
+import { readToolCall } from '@/shared/lib/tool-call';
 import type {
   PermissionDecision,
   PermissionOutcome,
   PermissionRequest,
   PermissionScope,
+  Interaction,
+  PlanInteraction,
   Question,
   QuestionAnswer,
   QuestionInteraction,
@@ -113,20 +116,20 @@ export function toRequest(frame: Envelope): PermissionRequest | null {
   }
 
   const required = readRequired(payload);
+  const call = readToolCall(payload);
 
-  if (required === null) {
+  if (required === null || call === null) {
     return null;
   }
 
-  const { requestId, toolName, expiresAt, riskHint } = required;
+  const { requestId, expiresAt, riskHint } = required;
 
   return {
     requestId,
     frameId: frame.id,
     toolUseId: text(payload, 'toolUseId') ?? '',
-    toolName,
+    ...call,
     description: text(payload, 'description'),
-    input: isRecord(payload['input']) ? payload['input'] : {},
     riskHint,
     // Absent reads as `true`. The safe default is not a convenience here: it is the rule.
     defaultToNo: payload['defaultToNo'] !== false,
@@ -138,17 +141,39 @@ export function toRequest(frame: Envelope): PermissionRequest | null {
 }
 
 /**
- * The questions of a request, or `null` when it is not a question.
- *
- * It **fails closed**: a question this build cannot read whole — a field missing, fewer than two
- * options — is read as malformed, and the card offers only a refusal. Half a question shown is an
- * invitation to answer something Claude did not ask.
+ * What a request asks beyond leave to run a tool — the questions or the plan —, or `null` for every
+ * other request, and for a `kind` this build does not know: that one is drawn as the generic card.
  */
-export function readInteraction(value: unknown): QuestionInteraction | null {
-  if (!isRecord(value) || value['kind'] !== 'question') {
+export function readInteraction(value: unknown): Interaction | null {
+  if (!isRecord(value)) {
     return null;
   }
 
+  if (value['kind'] === 'plan') {
+    return planOf(value);
+  }
+
+  return value['kind'] === 'question' ? questionsOf(value) : null;
+}
+
+/** Whether a `permission.requested` asks a question of the agent — not leave, and not a plan. */
+export function asksQuestion(payload: Readonly<Record<string, unknown>> | undefined): boolean {
+  return readInteraction(payload?.['interaction'])?.kind === 'question';
+}
+
+/** The plan of a request: its markdown — empty when the server sent none — and where it was saved. */
+function planOf(value: Readonly<Record<string, unknown>>): PlanInteraction {
+  return { kind: 'plan', markdown: text(value, 'markdown') ?? '', path: text(value, 'path') };
+}
+
+/**
+ * The questions of a request.
+ *
+ * It **fails closed**: a question this build cannot read whole — a field missing, fewer than two
+ * options — is read as malformed, and the card offers only a refusal. Half a question shown is an
+ * invitation to answer something the agent did not ask.
+ */
+function questionsOf(value: Readonly<Record<string, unknown>>): QuestionInteraction {
   const sent: unknown[] = Array.isArray(value['questions']) ? value['questions'] : [];
   // What is not an object, or not a whole question, is dropped — and the count then differs.
   const questions = sent.filter(isRecord).flatMap((entry): Question[] => {
@@ -158,7 +183,7 @@ export function readInteraction(value: unknown): QuestionInteraction | null {
   const malformed =
     value['malformed'] === true || sent.length === 0 || questions.length !== sent.length;
 
-  return { malformed, questions: malformed ? [] : questions };
+  return { kind: 'question', malformed, questions: malformed ? [] : questions };
 }
 
 /** One question, or `null` when anything a person needs to answer it is missing. */
@@ -270,7 +295,6 @@ function readReaches(value: readonly unknown[]): RuleReach[] {
 /** What a request cannot be answered without. */
 interface RequiredFields {
   readonly requestId: string;
-  readonly toolName: string;
   readonly expiresAt: string;
   readonly riskHint: RiskHint;
 }
@@ -278,16 +302,14 @@ interface RequiredFields {
 /** The fields a person needs in order to decide, or `null` when any is missing or unknown. */
 function readRequired(payload: Readonly<Record<string, unknown>>): RequiredFields | null {
   const requestId = text(payload, 'requestId');
-  const toolName = text(payload, 'toolName');
-  // Required by the contract and checked here, even though the label is resolved from the tool
-  // name: a frame missing it is a frame from something that is not this protocol.
+  // Required by the contract and checked here, even though the card names the request by its kind:
+  // a frame missing it is a frame from something that is not this protocol.
   const title = text(payload, 'title');
   const expiresAt = text(payload, 'expiresAt');
   const riskHint = text(payload, 'riskHint');
 
   if (
     requestId === null ||
-    toolName === null ||
     title === null ||
     expiresAt === null ||
     riskHint === null ||
@@ -296,7 +318,7 @@ function readRequired(payload: Readonly<Record<string, unknown>>): RequiredField
     return null;
   }
 
-  return { requestId, toolName, expiresAt, riskHint: riskHint as RiskHint };
+  return { requestId, expiresAt, riskHint: riskHint as RiskHint };
 }
 
 /**
@@ -354,7 +376,7 @@ export function toOutcome(frame: Envelope): PermissionOutcome | null {
 
 /** What answered without asking, as far as this build knows it. Anything else is no answer at all. */
 function viaOf(value: string | null): PermissionOutcome['via'] {
-  return value === 'rule' || value === 'allowAll' ? value : null;
+  return value === 'rule' || value === 'allowAll' || value === 'readOnly' ? value : null;
 }
 
 /** The new deadline of a `permission.extended` frame, or `null` when it is not one. */

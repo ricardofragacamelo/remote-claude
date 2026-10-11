@@ -55,7 +55,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.authSignInTitle), findsOneWidget);
-    expect(find.text(l10n.authSignInDescription), findsOneWidget);
+    expect(find.text(l10n.authSignInDescription(l10n.engineNameFallback)), findsOneWidget);
   });
 
   testWidgets('offers the sign-in once the device is known to hold nothing', (

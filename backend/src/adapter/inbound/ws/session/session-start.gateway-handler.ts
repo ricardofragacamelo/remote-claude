@@ -37,7 +37,8 @@ export class SessionStartHandler implements WsCommandHandler {
       workspacePath: command.workspacePath,
       model: command.model ?? null,
       permissionMode: command.permissionMode ?? null,
-      resumeSessionId: command.resumeSessionId ?? null,
+      engine: command.engine ?? null,
+      resumeFrom: command.resumeFrom ?? null,
       forkAt: command.forkAt ?? null,
       effort: command.effort ?? null,
       userId: context.userId,
@@ -85,6 +86,8 @@ export class SessionStartHandler implements WsCommandHandler {
             model: session.model,
             permissionMode: session.permissionMode,
             ...conversationFields(conversation),
+            engine: conversation.ref.engine.value,
+            capabilities: started.capabilities,
             // Where the model came from, and what the defaults gave beyond it (plan 13, B-15).
             defaultsFrom: started.applied.defaultsFrom,
             ...(started.applied.effort === null ? {} : { effort: started.applied.effort }),

@@ -1,4 +1,4 @@
-import { bigint, index, jsonb, text, timestamp } from 'drizzle-orm/pg-core';
+import { bigint, boolean, index, jsonb, text, timestamp } from 'drizzle-orm/pg-core';
 import type { IndexBuilder } from 'drizzle-orm/pg-core';
 import { desc } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
@@ -19,8 +19,8 @@ export const auditColumns = {
  * What identifies one invocation of a tool, in the two tables that record one.
  *
  * `audit_entries` says the tool was about to run; `permission_requests` says what was asked about
- * it. They are different facts with different lifetimes, but they name the same event — and five
- * columns written out twice is five chances for the two records of one invocation to stop lining
+ * it. They are different facts with different lifetimes, but they name the same event — and six
+ * columns written out twice is six chances for the two records of one invocation to stop lining
  * up. `user_id` is here rather than implied because every query in this schema is scoped by user
  * (D-03), and `input` is `jsonb` and never truncated: truncation is the log's job.
  */
@@ -30,6 +30,11 @@ export const invocationColumns = {
   /** Nullable because the SDK does not always give one. */
   toolUseId: text('tool_use_id'),
   toolName: text('tool_name').notNull(),
+  /**
+   * The canonical kind of the call — `shell`, `file.edit` — beside the engine's name of the tool.
+   * Nullable: a row written before `0023` gets it from the data step at boot (plan 28, B-33).
+   */
+  toolKind: text('tool_kind'),
   /** The exact input. `jsonb`, never `json`, and never cut down. */
   input: jsonb('input').notNull(),
 };
@@ -72,3 +77,13 @@ export function keysetIndexes(
     index(`${prefix}_${scope.name}_seq_idx`).on(scope.column, desc(columns.seq)),
   ];
 }
+
+/**
+ * What a stored server and a stored plugin both carry: switched on or off, and when they were added
+ * and changed.
+ */
+export const storedColumns = () => ({
+  enabled: boolean('enabled').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

@@ -3,8 +3,8 @@ import { createRegistry } from './registry';
 import type { RegistryEntry } from './registry';
 
 /**
- * The type of the files a person drags out of the tree or the editor tabs, towards Claude
- * ([07 · D-20](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-20--o-que-se-arrasta-para-o-claude)).
+ * The type of the files a person drags out of the tree or the editor tabs, towards the agent
+ * ([07 · D-20](../../../../docs/plans/07-explorer-and-editor/decisions.md)).
  * `text/plain` goes along with it, for whoever drops into an ordinary text field.
  */
 export const FILES_DRAG_TYPE = 'application/x-remote-claude-files+json';
@@ -26,7 +26,7 @@ export interface TextRange {
   readonly endColumn: number;
 }
 
-/** What is dragged — or handed by "Add to Claude's context". */
+/** What is dragged — or handed by "Add to the agent's context". */
 export interface FilesDragPayload {
   /** The folder of the tab it came from, absolute — the same `folder` as the API (07 · D-11). */
   readonly folder: string;
@@ -261,25 +261,25 @@ export function scopeDragPayload(payload: FilesDragPayload, targetFolder: string
 }
 
 /**
- * Whoever takes files into Claude's context — the panel of plan 08. Registered, "Add to Claude's
- * context" shows; unregistered, it does not, and a drag only moves inside the tree (S-276).
+ * Whoever takes files into the agent's context — the panel of plan 08. Registered, "Add to the
+ * agent's context" shows; unregistered, it does not, and a drag only moves inside the tree (S-276).
  */
-export interface ClaudeContextTarget extends RegistryEntry {
+export interface AgentContextTarget extends RegistryEntry {
   /** Takes the payload. Repeating an action hands it again — dropping repeats is the target's (S-278). */
   add(payload: FilesDragPayload): void;
 }
 
-/** The targets of "Add to Claude's context" and of the drag towards the chat. */
-export const claudeContextTargets = createRegistry<ClaudeContextTarget>('claude context targets');
+/** The targets of "Add to the agent's context" and of the drag towards the chat. */
+export const agentContextTargets = createRegistry<AgentContextTarget>('agent context targets');
 
 /**
- * Hands a payload to Claude's context, when somebody takes it.
+ * Hands a payload to the agent's context, when somebody takes it.
  *
  * @returns whether a target took it
  */
-export function addToClaudeContext(
+export function addToAgentContext(
   payload: FilesDragPayload,
-  targets = claudeContextTargets,
+  targets = agentContextTargets,
 ): boolean {
   const target = targets.entries()[0];
 

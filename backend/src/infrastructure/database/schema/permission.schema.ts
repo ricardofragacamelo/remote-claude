@@ -30,8 +30,8 @@ export const permissionRequests = pgTable(
   'permission_requests',
   {
     id: text('id').primaryKey(),
-    // The same five columns as the trail: they name the same event, and writing them out twice is
-    // five chances for the two records of one invocation to stop lining up.
+    // The same six columns as the trail: they name the same event, and writing them out twice is
+    // six chances for the two records of one invocation to stop lining up.
     ...invocationColumns,
     riskHint: text('risk_hint').notNull(),
     status: text('status').notNull(),

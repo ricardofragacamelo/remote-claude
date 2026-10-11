@@ -14,7 +14,7 @@ abstract interface class FolderRepository {
   /// Opens [path] in a tab — or answers the tab already open.
   Future<OpenFolderEntry> open(String path);
 
-  /// Closes [path]'s tab. Ends no session of Claude; closing what is not open is not an error.
+  /// Closes [path]'s tab. Ends no session of the agent; closing what is not open is not an error.
   Future<void> close(String path);
 
   /// The folders opened before, pinned first.

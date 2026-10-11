@@ -1,0 +1,338 @@
+{
+  "$comment": "What the core of the three ends never says (plan 28, B-04; docs/architecture/shared/12-engines.md). One file, read by `pnpm neutral:check`, and the file plan 27 · B-07 adds its terms to. Each term carries why it is forbidden and where the thing it names lives instead. `word` matches the word in identifiers, strings and comments, in any case; `token` matches the exact token, case-sensitive; `literal` matches a string whose whole content is the term, or the term followed by `(`, which is how a rule of permission names a tool. `kinds` narrows a term that is also a word of Portuguese to the tokens where only the engine says it (an identifier, a string of code, a key).",
+  "terms": [
+    {
+      "term": "claude",
+      "match": "word",
+      "reason": "the name of an engine",
+      "home": "engines/claude/ — or a neutral name in the core (agent, engine, conversation)"
+    },
+    {
+      "term": "anthropic",
+      "match": "word",
+      "reason": "the vendor of an engine",
+      "home": "adapter/outbound/engines/claude/"
+    },
+    {
+      "term": "sdk",
+      "match": "word",
+      "reason": "the library of one engine; the core talks to the engine port",
+      "home": "adapter/outbound/engines/claude/ — the core says engine"
+    },
+    {
+      "term": "Read",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier of adapter/outbound/engines/claude/ — the core reads the kind"
+    },
+    {
+      "term": "Write",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "Edit",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "MultiEdit",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "NotebookEdit",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "NotebookRead",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "Bash",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind `shell`"
+    },
+    {
+      "term": "BashOutput",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "KillShell",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "Glob",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind `search`"
+    },
+    {
+      "term": "Grep",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind `search`"
+    },
+    {
+      "term": "LS",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "WebFetch",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind `web`"
+    },
+    {
+      "term": "WebSearch",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind `web`"
+    },
+    {
+      "term": "TodoWrite",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the adapter, which emits session.tasksChanged"
+    },
+    {
+      "term": "Task",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind `agent`"
+    },
+    {
+      "term": "TaskCreate",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the adapter, which emits session.tasksChanged"
+    },
+    {
+      "term": "TaskUpdate",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the adapter, which emits session.tasksChanged"
+    },
+    {
+      "term": "TaskGet",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the adapter, which emits session.tasksChanged"
+    },
+    {
+      "term": "TaskList",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the adapter, which emits session.tasksChanged"
+    },
+    {
+      "term": "TaskOutput",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "TaskStop",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "Agent",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind `agent`"
+    },
+    {
+      "term": "AskUserQuestion",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind `question`"
+    },
+    {
+      "term": "ExitPlanMode",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the interaction `plan`"
+    },
+    {
+      "term": "EnterPlanMode",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "Skill",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "SlashCommand",
+      "match": "literal",
+      "reason": "a native tool name of Claude Code",
+      "home": "the tool classifier — the core reads the kind"
+    },
+    {
+      "term": "mcp__",
+      "match": "token",
+      "prefix": true,
+      "reason": "how Claude Code names an MCP tool",
+      "home": "the tool classifier — the core reads the kind `mcp` and subject.server/tool"
+    },
+    {
+      "term": "bypassPermissions",
+      "match": "token",
+      "reason": "a permission mode of the Claude Code CLI",
+      "home": "the adapter, which translates the canonical modes (ask · acceptEdits · readOnly · allowAll)"
+    },
+    {
+      "term": "dontAsk",
+      "match": "token",
+      "reason": "a permission mode of the Claude Code CLI",
+      "home": "the adapter, which translates the canonical modes"
+    },
+    {
+      "term": "old_string",
+      "match": "token",
+      "reason": "a raw input field of a Claude Code tool",
+      "home": "the tool classifier, which hands the core a FileChange"
+    },
+    {
+      "term": "new_string",
+      "match": "token",
+      "reason": "a raw input field of a Claude Code tool",
+      "home": "the tool classifier, which hands the core a FileChange"
+    },
+    {
+      "term": "file_path",
+      "match": "token",
+      "reason": "a raw input field of a Claude Code tool",
+      "home": "the tool classifier, which hands the core subject.paths"
+    },
+    {
+      "term": "notebook_path",
+      "match": "token",
+      "reason": "a raw input field of a Claude Code tool",
+      "home": "the tool classifier, which hands the core subject.paths"
+    },
+    {
+      "term": "replace_all",
+      "match": "token",
+      "reason": "a raw input field of a Claude Code tool",
+      "home": "the tool classifier, which hands the core a FileChange"
+    },
+    {
+      "term": "todos",
+      "match": "token",
+      "kinds": ["identifier", "string", "key"],
+      "reason": "a raw input field of a Claude Code tool",
+      "home": "the adapter, which emits session.tasksChanged"
+    },
+    {
+      "term": "activeForm",
+      "match": "token",
+      "reason": "a raw input field of a Claude Code tool",
+      "home": "the adapter, which emits session.tasksChanged"
+    },
+    {
+      "term": "input_tokens",
+      "match": "token",
+      "reason": "a usage key of the Anthropic API",
+      "home": "the adapter, which emits the canonical usage"
+    },
+    {
+      "term": "output_tokens",
+      "match": "token",
+      "reason": "a usage key of the Anthropic API",
+      "home": "the adapter, which emits the canonical usage"
+    },
+    {
+      "term": "cache_read_input_tokens",
+      "match": "token",
+      "reason": "a usage key of the Anthropic API",
+      "home": "the adapter, which emits the canonical usage"
+    },
+    {
+      "term": "cache_creation_input_tokens",
+      "match": "token",
+      "reason": "a usage key of the Anthropic API",
+      "home": "the adapter, which emits the canonical usage"
+    },
+    {
+      "term": "redacted_thinking",
+      "match": "token",
+      "reason": "a block type of the Anthropic API",
+      "home": "the adapter — the contract says redactedThinking"
+    },
+    {
+      "term": "tool_use",
+      "match": "token",
+      "reason": "a block type of the Anthropic API",
+      "home": "the adapter — the contract says toolUse"
+    },
+    {
+      "term": "tool_result",
+      "match": "token",
+      "reason": "a block type of the Anthropic API",
+      "home": "the adapter — the contract says toolResult"
+    },
+    {
+      "term": "compact_boundary",
+      "match": "token",
+      "reason": "a message subtype of the Agent SDK",
+      "home": "the adapter"
+    },
+    {
+      "term": "api_retry",
+      "match": "token",
+      "reason": "a message subtype of the Agent SDK",
+      "home": "the adapter"
+    },
+    {
+      "term": "rawInput",
+      "match": "access",
+      "reason": "the raw input of a tool call is opaque (plan 28, D-04): the exact input view draws it whole, the export carries it, and nothing reads a field of it",
+      "home": "the label, subject and changes the engine's adapter builds — or a dedicated event (plan 28, F3)"
+    }
+  ],
+  "notListed": [
+    "default, plan and auto, the other modes of the CLI: generic words, and `plan` is also a canonical kind (F3). The mode enum of the contract changes in F4, and its schema test holds the canonical values."
+  ],
+  "exceptions": [
+    {
+      "pattern": "@remote-claude/[A-Za-z0-9-]+",
+      "reason": "a package of the product — the product's name, not the engine's (discovery 10 §5.4; renaming the product is discovery 03 · ME-12)"
+    },
+    {
+      "pattern": "remote-claude(-user)?",
+      "reason": "the product's name, and the synthetic plugin of the product (discovery 10 §5.4)"
+    },
+    {
+      "pattern": "remote_claude",
+      "reason": "the Dart package of the app, its bundle ids and its platform channels (discovery 10 §5.4)"
+    },
+    {
+      "pattern": "REMOTE_CLAUDE_[A-Z_]+",
+      "reason": "the variables that mark a subprocess as the product's — the product's name, not the engine's (discovery 10 §5.4)"
+    },
+    {
+      "pattern": "RemoteClaude[A-Za-z]*",
+      "reason": "the app's root widget, named after the product (discovery 10 §5.4)"
+    }
+  ]
+}

@@ -24,8 +24,8 @@ export interface FolderShellProps {
   /** The real path of the folder of the tab. */
   readonly folder: string;
 
-  /** The chat with Claude for this folder — the host's to compose. */
-  readonly claude: ReactNode;
+  /** The chat with the agent for this folder — the host's to compose. */
+  readonly agent: ReactNode;
 }
 
 /** A size limit as the panel library reads it: a string with no unit is a percentage. */
@@ -37,25 +37,25 @@ function bounds(limit: Pick<SizeLimit, 'min' | 'max'>): { minSize: string; maxSi
  * The workbench of one folder, in the anatomy of the editor people know.
  *
  * From `md` up, **everything at the same time**: the activity bar, the side bar with its view, the
- * editor over the bottom panel, and the chat with Claude beside them — the files and the
+ * editor over the bottom panel, and the chat with the agent beside them — the files and the
  * conversation about them in the same tab (plan 06, S-116). Every part resizes within its limits,
  * and the sizes are this browser's, per folder (S-113).
  *
  * Below `md`, one view at a time, switched by a bar at the bottom — still the same tab and the same
  * store, so changing the width of the window loses nothing (S-117, S-118).
  */
-export function FolderShell({ folder, claude }: FolderShellProps): React.JSX.Element {
+export function FolderShell({ folder, agent }: FolderShellProps): React.JSX.Element {
   const desktop = useIsDesktop();
 
   return desktop ? (
-    <DesktopShell folder={folder} claude={claude} />
+    <DesktopShell folder={folder} agent={agent} />
   ) : (
-    <PhoneShell folder={folder} claude={claude} />
+    <PhoneShell folder={folder} agent={agent} />
   );
 }
 
 /** The panels side by side. */
-function DesktopShell({ folder, claude }: FolderShellProps): React.JSX.Element {
+function DesktopShell({ folder, agent }: FolderShellProps): React.JSX.Element {
   const tab = useFolderTab(folder);
   const view = useActiveView(tab.view);
   const { layout, columnsChanged, rowsChanged } = useWorkbenchLayout(folder);
@@ -110,7 +110,7 @@ function DesktopShell({ folder, claude }: FolderShellProps): React.JSX.Element {
           <>
             <ResizableHandle />
             <ResizablePanel id="secondary" {...bounds(LAYOUT_LIMITS.secondary)}>
-              <SecondarySideBar>{claude}</SecondarySideBar>
+              <SecondarySideBar>{agent}</SecondarySideBar>
             </ResizablePanel>
           </>
         )}
@@ -120,7 +120,7 @@ function DesktopShell({ folder, claude }: FolderShellProps): React.JSX.Element {
 }
 
 /** One view at a time, and the bar that switches it. */
-function PhoneShell({ folder, claude }: FolderShellProps): React.JSX.Element {
+function PhoneShell({ folder, agent }: FolderShellProps): React.JSX.Element {
   const tab = useFolderTab(folder);
   const view = useActiveView(tab.view);
 
@@ -138,7 +138,7 @@ function PhoneShell({ folder, claude }: FolderShellProps): React.JSX.Element {
       </div>
     ),
     editor: <EditorArea folder={folder} />,
-    claude: <SecondarySideBar>{claude}</SecondarySideBar>,
+    agent: <SecondarySideBar>{agent}</SecondarySideBar>,
     panel: <BottomPanel folder={folder} />,
   };
 
@@ -148,7 +148,7 @@ function PhoneShell({ folder, claude }: FolderShellProps): React.JSX.Element {
       <div
         className={cn(
           'flex min-h-0 flex-1 flex-col',
-          tab.mobileView === 'claude' ? 'overflow-hidden' : 'overflow-y-auto',
+          tab.mobileView === 'agent' ? 'overflow-hidden' : 'overflow-y-auto',
         )}
       >
         {screens[tab.mobileView]}

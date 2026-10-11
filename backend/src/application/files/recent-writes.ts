@@ -17,6 +17,8 @@ export interface RecentWrite {
    */
   readonly subtree: boolean;
   readonly at: Date;
+  /** The engine whose agent wrote it — on a write of the agent only. */
+  readonly engine?: string;
 }
 
 /**
@@ -60,7 +62,12 @@ export class RecentWrites {
       .filter((write): write is RecentWrite => write !== undefined)
       .filter((write) => write.path === path || write.subtree)
       .filter((write) => now.getTime() - write.at.getTime() <= this.memoryMs)
-      .map((write) => ({ by: this.by, at: write.at, left: write.left }));
+      .map((write) => ({
+        by: this.by,
+        at: write.at,
+        left: write.left,
+        ...(write.engine === undefined ? {} : { engine: write.engine }),
+      }));
   }
 }
 

@@ -1,6 +1,6 @@
+import { ConversationRef } from '@domain/engine';
 import { SessionFileState, SessionId, TurnFileCheckpoint } from '@domain/session';
 import type { FilePresence, Restorability } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
 import type { sessionFileStates, turnFileCheckpoints } from '@infra/database/schema';
 
 type StateRow = typeof sessionFileStates.$inferSelect;
@@ -12,7 +12,7 @@ type CheckpointInsert = typeof turnFileCheckpoints.$inferInsert;
 export function toStateEntity(row: StateRow): SessionFileState {
   return SessionFileState.record({
     sessionId: SessionId.create(row.sessionId),
-    claudeSessionId: conversationOf(row.claudeSessionId),
+    conversation: conversationOf(row.engine, row.conversationId),
     path: row.path,
     hash: row.hash,
     mtime: row.mtime,
@@ -27,7 +27,7 @@ export function toStateRow(state: SessionFileState): StateInsert {
 
   return {
     sessionId: snapshot.sessionId.value,
-    claudeSessionId: snapshot.claudeSessionId?.value ?? null,
+    ...conversationColumns(snapshot.conversation),
     path: snapshot.path,
     hash: snapshot.hash,
     mtime: snapshot.mtime,
@@ -40,7 +40,7 @@ export function toStateRow(state: SessionFileState): StateInsert {
 export function toCheckpointEntity(row: CheckpointRow): TurnFileCheckpoint {
   return TurnFileCheckpoint.capture({
     sessionId: SessionId.create(row.sessionId),
-    claudeSessionId: conversationOf(row.claudeSessionId),
+    conversation: conversationOf(row.engine, row.conversationId),
     promptId: row.promptId,
     path: row.path,
     existedBefore: row.existedBefore as FilePresence,
@@ -59,7 +59,7 @@ export function toCheckpointRow(checkpoint: TurnFileCheckpoint): CheckpointInser
 
   return {
     sessionId: snapshot.sessionId.value,
-    claudeSessionId: snapshot.claudeSessionId?.value ?? null,
+    ...conversationColumns(snapshot.conversation),
     promptId: snapshot.promptId,
     path: snapshot.path,
     existedBefore: snapshot.existedBefore,
@@ -73,6 +73,22 @@ export function toCheckpointRow(checkpoint: TurnFileCheckpoint): CheckpointInser
 }
 
 /** The conversation a row names, or `null` for a row written before migration `0013`. */
-function conversationOf(value: string | null): ClaudeSessionId | null {
-  return value === null ? null : ClaudeSessionId.create(value);
+function conversationOf(engine: string | null, id: string | null): ConversationRef | null {
+  return engine === null || id === null ? null : ConversationRef.create(engine, id);
+}
+
+/**
+ * The columns that name a conversation. The old `claude_session_id` is written beside the new two
+ * until the window of the previous protocol closes, and a migration drops it (plan 28, F7).
+ */
+export function conversationColumns(conversation: ConversationRef | null): {
+  readonly engine: string | null;
+  readonly conversationId: string | null;
+  readonly claudeSessionId: string | null;
+} {
+  return {
+    engine: conversation?.engine.value ?? null,
+    conversationId: conversation?.id ?? null,
+    claudeSessionId: conversation?.id ?? null,
+  };
 }

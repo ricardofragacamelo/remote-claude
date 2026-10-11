@@ -409,7 +409,7 @@ Decisão registrada só aqui é decisão que o resto do repositório não conhec
 | D-06, D-07 | [backend/05-persistence](../../architecture/backend/05-persistence.md#a-trilha-de-auditoria) — a trigger — e [backend/03-modules](../../architecture/backend/03-modules.md#audit) — nega sempre, encerra na segunda falha consecutiva |
 | D-04, D-12 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) — fixtures capturadas do SDK real, e `smoke-live` **sob demanda, sem nightly**, corrigindo a tabela de portões |
 | D-08 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) — `riskHint` derivado no backend, por lista **mais** heurística, falhando fechado |
-| D-11, D-14 | 2026-09-18 · [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido) — a medição e as três consequências — e [descoberta §8.2](../../discovery/01-descoberta-claude-agent-sdk.md#82--a-assimetria-allow-vs-deny-entre-escopos), cuja incerteza residual deixa de existir |
+| D-11, D-14 | 2026-09-18 · [backend/04a-claude](../../architecture/backend/04a-claude.md#diretório-confiado-fura-o-canusetool--medido) — a medição e as três consequências — e [descoberta §8.2](../../discovery/01-descoberta-claude-agent-sdk.md#82--a-assimetria-allow-vs-deny-entre-escopos), cuja incerteza residual deixa de existir |
 | D-10 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#reconexão-e-replay) — o buffer sobrevive ao encerramento, e o replay é rotulado como parcial |
 
 Segue pendente, e **não** é documento de arquitetura: levar D-05, D-08 e D-10 às fases

@@ -49,6 +49,12 @@ const REFUSALS = [
       api.get(`${environment.backendUrl}/sessions/01J0ABCDEFGHJKMNPQRSTVWXYZ/permissions/req-1`),
   },
   {
+    what: 'the engines of the installation with no credential',
+    status: 401,
+    code: 'UNAUTHENTICATED',
+    call: (api: APIRequestContext) => api.get(`${environment.backendUrl}/engines`),
+  },
+  {
     what: 'a history listing with no credential',
     status: 401,
     code: 'UNAUTHENTICATED',
@@ -61,7 +67,7 @@ const REFUSALS = [
     code: 'UNAUTHENTICATED',
     call: (api: APIRequestContext) =>
       api.get(
-        `${environment.backendUrl}/transcripts/6b41b192-a41b-46c2-b8d7-5098d8c825be/messages`,
+        `${environment.backendUrl}/transcripts/claude/6b41b192-a41b-46c2-b8d7-5098d8c825be/messages`,
       ),
   },
   {

@@ -5,7 +5,8 @@ import { NotifyDeviceApprovedUseCase, NotifyPermissionUseCase } from '@applicati
 import { ForgetPushTokenUseCase, ListApprovedDevicesUseCase } from '@application/auth';
 import type { DeviceContext } from '@application/auth';
 import { RecordAuditEventUseCase } from '@application/audit';
-import { PermissionRequest, normalizeQuestion } from '@domain/permission';
+import { normalizeQuestion } from '@adapter/outbound/engines/claude/question-input';
+import { PermissionRequest } from '@domain/permission';
 import { SessionId } from '@domain/session';
 import { UserId } from '@domain/auth';
 import type { Device } from '@domain/auth';
@@ -29,6 +30,7 @@ import { InMemoryDeviceRepository } from '../../../../support/fakes/in-memory-de
 import { RecordingAuditEvents } from '../../../../support/fakes/recording-audit-events';
 import { RecordingLogger } from '../../../../support/fakes/recording-logger';
 import { SequentialIds } from '../../../../support/fakes/sequential-ids';
+import { claudeTool } from '../../../../support/builders/tool.builder';
 
 const other = UserId.create('auth|other');
 const socket = (): Sendable => ({ send: () => undefined, close: () => undefined });
@@ -141,6 +143,7 @@ describe('the consumers on the bus', () => {
       toolUseId: 'toolu_1',
       toolName: 'Bash',
       input: { command: 'rm -rf build' },
+      tool: claudeTool('Bash', { command: 'rm -rf build' }),
       riskHint: 'destructive',
       requestedAt: at,
       expiresAt: new Date(at.getTime() + 120_000),
@@ -200,6 +203,7 @@ describe('the consumers on the bus', () => {
       toolUseId: 'toolu_2',
       toolName: 'AskUserQuestion',
       input: { questions: [{ question: 'Which secret plan?' }] },
+      tool: claudeTool('AskUserQuestion', { questions: [{ question: 'Which secret plan?' }] }),
       interaction: normalizeQuestion({ questions: [] }),
       riskHint: 'read',
       requestedAt: at,

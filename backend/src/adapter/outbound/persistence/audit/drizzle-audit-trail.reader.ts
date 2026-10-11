@@ -92,6 +92,9 @@ function conditionsOf(request: AuditTrailPageRequest): SQL[] {
     eq(auditEntries.userId, request.userId.value),
     request.sessionId === null ? null : eq(auditEntries.sessionId, request.sessionId.value),
     request.toolName === null ? null : eq(auditEntries.toolName, request.toolName),
+    request.kind === undefined || request.kind === null
+      ? null
+      : eq(auditEntries.toolKind, request.kind),
     request.decision === null ? null : eq(auditEntries.decision, request.decision),
     request.from === null ? null : gte(auditEntries.at, request.from),
     request.to === null ? null : lt(auditEntries.at, request.to),

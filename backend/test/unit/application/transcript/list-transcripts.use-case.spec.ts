@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ListTranscriptsUseCase, TranscriptAudience } from '@application/transcript';
 import { UserId } from '@domain/auth';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { SessionId } from '@domain/session';
 import {
   InvalidWorkspacePathError,
@@ -58,7 +58,7 @@ describe('ListTranscriptsUseCase', () => {
         origins,
         {
           liveSessionOf: (conversation, userId) =>
-            live.get(conversation.value)?.get(userId.value) ?? null,
+            live.get(conversation.id)?.get(userId.value) ?? null,
         },
         { clock: new FixedClock(NOW), activeWindowMs: WINDOW_MS },
       ),
@@ -74,7 +74,7 @@ describe('ListTranscriptsUseCase', () => {
 
   const openedHere = async (n: number, by: UserId): Promise<void> => {
     await origins.record({
-      claudeSessionId: ClaudeSessionId.create(conversationId(n)),
+      conversation: ConversationRef.create('claude', conversationId(n)),
       sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
       openedBy: by,
       workspace: WorkspacePath.create('/srv/projects/app'),
@@ -90,7 +90,7 @@ describe('ListTranscriptsUseCase', () => {
 
     const page = await list();
 
-    expect(page.items.map(({ id, origin }) => [id.value, origin])).toEqual([
+    expect(page.items.map(({ id, origin }) => [id.id, origin])).toEqual([
       [conversationId(1), 'ours'],
       [conversationId(2), 'external'],
     ]);
@@ -137,7 +137,7 @@ describe('ListTranscriptsUseCase', () => {
   /** Plan 08, B-08 — what each conversation is doing, and the folders below. */
   describe('the activity of each conversation', () => {
     const activities = async (options: Parameters<typeof listWith>[0] = {}) =>
-      (await listWith(options)).items.map(({ id, activity }) => [id.value, activity.activity]);
+      (await listWith(options)).items.map(({ id, activity }) => [id.id, activity.activity]);
 
     it('says which are live here, active elsewhere or idle — S-25', async () => {
       store
@@ -155,7 +155,7 @@ describe('ListTranscriptsUseCase', () => {
 
       const page = await listWith({});
 
-      expect(page.items.map(({ id, activity }) => [id.value, activity])).toEqual([
+      expect(page.items.map(({ id, activity }) => [id.id, activity])).toEqual([
         [
           conversationId(1),
           {
@@ -228,7 +228,7 @@ describe('ListTranscriptsUseCase', () => {
 
       const page = await listWith({ includeSubfolders: true });
 
-      expect(page.items.map(({ id }) => id.value).sort()).toEqual(
+      expect(page.items.map(({ id }) => id.id).sort()).toEqual(
         [conversationId(1), conversationId(2)].sort(),
       );
       expect(store.wholeListings).toBe(1);

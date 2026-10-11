@@ -62,7 +62,8 @@ export interface ComposerToolbarProps {
  * The bar under the box (plan 09, B-09): `+` · `/` · mode · model · effort · context · send or
  * stop, in that order — the order of the focus too (B-15). It is what holds for the **next** prompt.
  * Too narrow for all of it, the model and the effort go into a menu of their own; send, stop, the
- * mode and `+` never leave the bar ([web/03](../../../../../../docs/architecture/web/03-ui-system.md#o-painel-do-claude--três-faixas)).
+ * mode and `+` never leave the bar — the panel's three strips of
+ * [web/03](../../../../../../docs/architecture/web/03-ui-system.md).
  */
 export function ComposerToolbar({
   folder,

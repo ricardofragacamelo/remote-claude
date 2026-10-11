@@ -177,7 +177,7 @@ export function activeFile(folder: string): string | null {
 
 /**
  * The files open in the editor, the active one first, then the ones opened last — what an `@` of
- * Claude's panel offers first (plan 08, B-48). Without repeats, in that order.
+ * the agent's panel offers first (plan 08, B-48). Without repeats, in that order.
  */
 export function openAndRecentFiles(folder: string): readonly string[] {
   const state = editorStoreOf(folder).getState();

@@ -19,7 +19,7 @@ const at = (minute: number): Date => new Date(Date.UTC(2026, 8, 26, 12, minute))
 function checkpoint(overrides: Partial<TurnFileCheckpointSnapshot> = {}): TurnFileCheckpoint {
   return TurnFileCheckpoint.capture({
     sessionId,
-    claudeSessionId: null,
+    conversation: null,
     promptId: 'p1',
     path: '/srv/a.md',
     existedBefore: 'present',
@@ -36,7 +36,7 @@ function checkpoint(overrides: Partial<TurnFileCheckpointSnapshot> = {}): TurnFi
 function baseline(hash: string | null, minute = 5, path = '/srv/a.md'): SessionFileState {
   return SessionFileState.record({
     sessionId,
-    claudeSessionId: null,
+    conversation: null,
     path,
     hash,
     mtime: at(minute),

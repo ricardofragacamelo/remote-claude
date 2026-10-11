@@ -9,7 +9,7 @@ import { AppFrame } from './AppFrame';
  *
  * It is the same screen for a link that was never valid, for one a plan removed
  * ([06 · D-07](../../../docs/plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas))
- * and for one reserved to a plan that has not registered it yet (`/claude…`, `/usage…`): a route
+ * and for one reserved to a plan that has not registered it yet (`/usage…`): a route
  * that nobody fills renders this, never an empty frame (plan 06, S-07). It sits in the frame but
  * outside the sign-in gate on purpose — the table of routes ships in the bundle, so saying one is
  * not there tells a stranger nothing.

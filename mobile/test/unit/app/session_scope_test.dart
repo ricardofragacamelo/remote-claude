@@ -23,10 +23,13 @@ import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/device/device_providers.dart';
 import 'package:remote_claude/features/device/domain/repositories/device_repository.dart';
 import 'package:remote_claude/features/permission/permission.dart';
+import 'package:remote_claude/features/session/session.dart';
+import 'package:remote_claude/features/session/session_providers.dart';
 
 import '../../support/builders/frames.dart';
 import '../../support/fakes/fake_auth_repository.dart';
 import '../../support/fakes/fake_device_repository.dart';
+import '../../support/fakes/fake_engine_repository.dart';
 import '../../support/fakes/fake_frame_socket.dart';
 import '../../support/fakes/fake_push_gateway.dart';
 import '../../support/fakes/fake_permission_repository.dart';
@@ -47,6 +50,7 @@ void main() {
   late FakePermissionRepository permissions;
   late FakeDeviceRepository devices;
   late FakePushGateway push;
+  late FakeEngineRepository engines;
   late List<FakeFrameSocket> opened;
 
   ProviderContainer build({AuthSession? stored}) {
@@ -62,6 +66,7 @@ void main() {
     );
     opened = <FakeFrameSocket>[];
     push = FakePushGateway();
+    engines = FakeEngineRepository();
 
     final AppLogger logger = AppLogger(
       context: const LogContext(appVersion: '0.0.1', platform: 'android'),
@@ -71,6 +76,7 @@ void main() {
     final ProviderContainer container = ProviderContainer(
       overrides: <Override>[
         ...permissionOverrides(repository: permissions),
+        engineRepositoryProvider.overrideWithValue(engines),
         authRepositoryProvider.overrideWithValue(auth as AuthRepository),
         appLoggerProvider.overrideWithValue(logger),
         deviceRepositoryProvider.overrideWithValue(devices as DeviceRepository),
@@ -144,6 +150,24 @@ void main() {
     expect(container.read(wsClientProvider).status, ConnectionStatus.closed);
     // Dropped and built again, empty: the first feed was closed with the state it held.
     expect(permissions.feeds.first.closed, isTrue);
+  });
+
+  // Plan 28, B-13 — the names of the engines are the signed-in user's, read again on each change.
+  test('signing out drops the engines read, and signing in reads them afresh', () async {
+    final ProviderContainer container = build(stored: signedInAs('user-1', 'token-1'));
+    await container.read(authControllerProvider.future);
+    await container.read(engineCatalogueProvider.future);
+    expect(engines.asked, 1);
+
+    await container.read(authControllerProvider.notifier).signOut();
+    await settle();
+    await container.read(engineCatalogueProvider.future);
+    expect(engines.asked, 2);
+
+    auth.produced = signedInAs('user-2', 'token-2');
+    await container.read(authControllerProvider.notifier).signIn();
+    await container.read(engineCatalogueProvider.future);
+    expect(engines.asked, 3);
   });
 
   // S-89 — the next person signs in on a socket of their own.

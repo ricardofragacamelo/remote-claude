@@ -484,7 +484,7 @@ describe('the view of the Monaco adapter', () => {
 
     const unbind = view.bindKey('Mod+K S', run);
     const remove = view.addContextAction({
-      id: 'addSelectionToClaude',
+      id: 'addSelectionToAgent',
       label: 'Add selection to chat',
       run,
     });
@@ -492,7 +492,7 @@ describe('the view of the Monaco adapter', () => {
     expect(editor?.actions).toEqual([
       expect.objectContaining({ keybindings: [keybindingOf('Mod+K S')] }),
       expect.objectContaining({
-        id: 'remote-claude.addSelectionToClaude',
+        id: 'remote-claude.addSelectionToAgent',
         precondition: 'editorHasSelection',
         contextMenuGroupId: 'navigation',
       }),

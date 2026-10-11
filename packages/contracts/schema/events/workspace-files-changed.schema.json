@@ -8,7 +8,9 @@
   "type": "object",
   "required": ["watchId", "changes"],
   "properties": {
-    "watchId": { "type": "string" },
+    "watchId": {
+      "type": "string"
+    },
     "changes": {
       "type": "array",
       "description": "Each path that changed, relative to the folder, with what happened to it.",
@@ -16,12 +18,23 @@
         "type": "object",
         "required": ["path", "kind"],
         "properties": {
-          "path": { "type": "string", "description": "Relative to the folder, POSIX." },
-          "kind": { "type": "string", "enum": ["created", "changed", "deleted"] },
+          "path": {
+            "type": "string",
+            "description": "Relative to the folder, POSIX."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["created", "changed", "deleted"]
+          },
           "origin": {
             "type": "string",
-            "enum": ["claude", "user", "external"],
-            "description": "Who changed it, as far as the server can tell: a write of Claude's, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say."
+            "enum": ["agent", "user", "external"],
+            "description": "Who changed it, as far as the server can tell: a write of the agent of a session, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say. (`claude` until plan 28, B-25; a connection of the previous protocol still reads that.)"
+          },
+          "engine": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "On `agent`: the engine whose agent wrote it — an `id` of `GET /engines`, opaque, for naming the agent in the text. Absent on every other origin."
           }
         }
       }

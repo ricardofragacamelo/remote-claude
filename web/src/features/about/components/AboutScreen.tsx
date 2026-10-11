@@ -16,8 +16,8 @@ export const DOCUMENTATION_URL =
   'https://github.com/ricardofragacamelo/remote-claude/tree/main/docs';
 
 /**
- * About: the versions of the web, the backend, the Agent SDK, Claude's CLI and Node, with "copy" of
- * the whole block for a bug report — and the documentation and the license (plan 06, B-32).
+ * About: the versions of the web, the backend, the Agent SDK, the agent's CLI and Node, with "copy"
+ * of the whole block for a bug report — and the documentation and the license (plan 06, B-32).
  *
  * The web's version is on screen whatever the backend answers: it is the bundle's own. A version
  * that could not be read says so, with the reason; the backend unreachable is an error with "try

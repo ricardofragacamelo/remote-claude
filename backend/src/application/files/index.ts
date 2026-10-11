@@ -41,11 +41,11 @@ export { encodedWithin, outcomeOf, writeOver } from './file-writing';
 export type { FileWriting, TextToWrite } from './file-writing';
 export type { FileFact, TrailFailureReporter } from './file-trail';
 export {
-  ClaudeWrites,
-  CLAUDE_WRITE_MEMORY_ENTRIES,
-  CLAUDE_WRITE_MEMORY_MS,
+  AgentWrites,
+  AGENT_WRITE_MEMORY_ENTRIES,
+  AGENT_WRITE_MEMORY_MS,
   UserWrites,
-} from './claude-writes';
+} from './agent-writes';
 export { RecentWrites, WRITE_MEMORY_ENTRIES, WRITE_MEMORY_MS } from './recent-writes';
 export type { RecentWrite } from './recent-writes';
 export { ChangeOrigins } from './change-origins';

@@ -24,8 +24,8 @@ import { StatusBar } from './StatusBar';
 export interface WorkbenchProps extends FolderTabsRoutes {
   /**
    * What a folder tab shows — the host's to compose, since resolving a folder and chatting with
-   * Claude belong to other features. Called for the active tab only: a tab that is not on screen has
-   * no tree (plan 06, S-108).
+   * the agent belong to other features. Called for the active tab only: a tab that is not on screen
+   * has no tree (plan 06, S-108).
    */
   renderFolder(path: string): ReactNode;
 }

@@ -5,19 +5,19 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import request from 'supertest';
 
-import { historicalEvents } from '@adapter/outbound/claude/sdk-message.mapper';
-import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
+import { historicalEvents } from '@adapter/outbound/engines/claude/sdk-message.mapper';
+import { TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
 import {
   TRANSCRIPT_LIMITS,
   TRANSCRIPT_READ_LIMITS,
-} from '@adapter/outbound/claude/transcript-reads';
+} from '@adapter/outbound/engines/claude/transcript-reads';
 import { SESSION_ORIGIN_REPOSITORY } from '@application/session';
 import type { SessionOriginRepository } from '@application/session';
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
@@ -133,14 +133,18 @@ describe('the transcript HTTP surface', () => {
     query: Record<string, string> = {},
     as: string | null = token,
   ): request.Test => {
-    const call = http().get(`/transcripts/${id}/messages`).query(query);
+    const call = http().get(`/transcripts/claude/${id}/messages`).query(query);
     return as === null ? call : call.set('authorization', `Bearer ${as}`);
   };
+
+  /** The same page, by the route of the previous protocol — its window (plan 28, D-08). */
+  const readPrevious = (id: string, query: Record<string, string> = {}): request.Test =>
+    http().get(`/transcripts/${id}/messages`).query(query).set('authorization', `Bearer ${token}`);
 
   /** Records a conversation as opened here, by `subject`. */
   async function openedHere(id: string, subject = SUBJECT): Promise<void> {
     await harness.app.get<SessionOriginRepository>(SESSION_ORIGIN_REPOSITORY).record({
-      claudeSessionId: ClaudeSessionId.create(id),
+      conversation: ConversationRef.create('claude', id),
       sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
       openedBy: UserId.create(subject),
       workspace: WorkspacePath.create(allowlist.root),
@@ -183,6 +187,44 @@ describe('the transcript HTTP surface', () => {
         `${event.type}:${String(event.payload['messageId'] ?? event.payload['toolUseId'])}`,
     );
 
+  describe('the routes of an engine, and of the previous protocol — plan 28, S-38', () => {
+    it('answers the same page by the route of the engine and by the old one', async () => {
+      const id = conversation(1);
+
+      const current = await read(id);
+      const previous = await readPrevious(id);
+
+      expect(current.status).toBe(200);
+      expect(previous.status).toBe(200);
+      // The age is read off the clock at each request, and two requests may straddle a second.
+      expect(previous.body).toEqual({
+        ...current.body,
+        session: { ...current.body.session, writtenAgoSeconds: expect.any(Number) },
+      });
+      expect(current.body.session).toMatchObject({ conversation: { engine: 'claude', id } });
+    });
+
+    it('answers `404` for a conversation of an engine that is not enabled', async () => {
+      const id = conversation(1);
+
+      const response = await http()
+        .get(`/transcripts/codex/${id}/messages`)
+        .set('authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe('NOT_FOUND');
+    });
+
+    it('answers `400` for an engine that is not even the form of one', async () => {
+      const response = await http()
+        .get(`/transcripts/Claude/${conversationId(1)}/messages`)
+        .set('authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('INVALID_INPUT');
+    });
+  });
+
   describe('who may ask', () => {
     it('answers `401` to nobody in particular', async () => {
       expect((await list({}, null)).status).toBe(401);
@@ -202,6 +244,7 @@ describe('the transcript HTTP surface', () => {
       expect(response.body).toEqual({
         sessions: [
           {
+            conversation: { engine: 'claude', id: ours },
             sessionId: ours,
             summary: expect.any(String),
             origin: 'ours',
@@ -294,8 +337,8 @@ describe('the transcript HTTP surface', () => {
 
       expect(response.status).toBe(502);
       expect(response.body.error).toMatchObject({
-        code: 'CLAUDE_UNAVAILABLE',
-        messageKey: 'transcript.error.claudeUnavailable',
+        code: 'AGENT_UNAVAILABLE',
+        messageKey: 'transcript.error.agentUnavailable',
       });
       expect(response.text).not.toContain('EACCES');
     });
@@ -330,7 +373,9 @@ describe('the transcript HTTP surface', () => {
         if (frame.type === 'session.started') {
           return {
             sessionId: String(frame.payload?.['sessionId']),
-            conversation: String(frame.payload?.['claudeSessionId']),
+            conversation: String(
+              (frame.payload?.['conversation'] as { id?: string } | undefined)?.id,
+            ),
           };
         }
       }
@@ -432,7 +477,7 @@ describe('the transcript HTTP surface', () => {
       expect(ids).toEqual([conversationId(33), conversationId(32), conversationId(31)]);
     });
 
-    it('answers CLAUDE_UNAVAILABLE for the history while the live sessions still answer — S-32', async () => {
+    it('answers AGENT_UNAVAILABLE for the history while the live sessions still answer — S-32', async () => {
       store.failWith = new Error('the store is gone');
 
       const history = await list();
@@ -441,7 +486,7 @@ describe('the transcript HTTP surface', () => {
         .query({ workspacePath: allowlist.root })
         .set('authorization', `Bearer ${token}`);
 
-      expect([history.status, history.body.error.code]).toEqual([502, 'CLAUDE_UNAVAILABLE']);
+      expect([history.status, history.body.error.code]).toEqual([502, 'AGENT_UNAVAILABLE']);
       expect(live.status).toBe(200);
     });
   });
@@ -470,9 +515,64 @@ describe('the transcript HTTP surface', () => {
     });
   });
 
+  describe('the list of the agent in a history — plan 28, B-22', () => {
+    const seeded = (n: number, fixture: string): string => {
+      const id = conversationId(n);
+      store.add({
+        sessionId: id,
+        directory: allowlist.root,
+        cwd: allowlist.root,
+        lastModified: (written += 1_000),
+        messages: capturedTranscript(fixture),
+      });
+      return id;
+    };
+    const listsOf = (body: { events: { type: string; payload: Record<string, unknown> }[] }) =>
+      body.events
+        .filter((event) => event.type === 'session.tasksChanged')
+        .map((event) => event.payload['tasks'] as { id: string; status: string }[]);
+
+    it('carries the whole list after each call that changed it, once each — S-66, S-67', async () => {
+      const id = seeded(81, 'task-tools-turn');
+
+      const response = await read(id, { limit: '100' });
+      const lists = listsOf(response.body);
+
+      expect(response.status).toBe(200);
+      expect(lists.map((list) => list.length)).toEqual([1, 2, 3, 3, 3]);
+      expect(lists.at(-1)).toEqual([
+        { id: '1', title: 'Write a.txt', activeTitle: 'Writing a.txt', status: 'completed' },
+        { id: '2', title: 'Write b.txt', activeTitle: 'Writing b.txt', status: 'pending' },
+        { id: '3', title: 'Write c.txt', activeTitle: 'Writing c.txt', status: 'pending' },
+      ]);
+    });
+
+    it('reads the same lists again, and on pages, never adding a task twice — S-67', async () => {
+      const id = seeded(82, 'todo-write-turn');
+
+      const whole = listsOf((await read(id, { limit: '100' })).body);
+      const again = listsOf((await read(id, { limit: '100' })).body);
+
+      expect(again).toEqual(whole);
+      expect(whole).toHaveLength(3);
+      expect(whole.every((list) => list.length === 3)).toBe(true);
+      expect(whole.map((list) => list[0]?.status)).toEqual(['pending', 'inProgress', 'completed']);
+
+      // Page by page, newest first: the same lists, each on the page of the call that made it.
+      const paged: unknown[] = [];
+      let cursor: string | null = null;
+      do {
+        const response = await read(id, cursor === null ? { limit: '3' } : { cursor, limit: '3' });
+        paged.unshift(...listsOf(response.body));
+        cursor = response.body.nextCursor as string | null;
+      } while (cursor !== null);
+      expect(paged).toEqual(whole);
+    });
+  });
+
   describe('a subagent of a conversation', () => {
     const subagent = (id: string, tool: string, as: string | null = token): request.Test => {
-      const call = http().get(`/transcripts/${id}/subagents/${tool}/messages`);
+      const call = http().get(`/transcripts/claude/${id}/subagents/${tool}/messages`);
       return as === null ? call : call.set('authorization', `Bearer ${as}`);
     };
 
@@ -597,10 +697,35 @@ describe('the transcript HTTP surface', () => {
       const response = await pending;
       const snapshot = [capturedTranscript('tool-turn', 0), capturedTranscript('tool-turn', 1)]
         .flat()
-        .flatMap((message) => historicalEvents(message));
+        .flatMap((message) => historicalEvents(message, allowlist.root))
+        .map(withPreviousToolFields);
 
       expect(response.status).toBe(200);
       expect(response.body.events).toEqual(snapshot);
+    });
+
+    it('carries a call by its canonical fields, and by the previous ones beside them — plan 28, D-22', async () => {
+      const id = conversation(1, { turns: 2 });
+
+      const response = await read(id, { limit: '100' });
+      const started = (response.body.events as { type: string; payload: Record<string, unknown> }[])
+        .filter((event) => event.type === 'tool.started')
+        .map((event) => event.payload);
+
+      expect(response.status).toBe(200);
+      expect(started.length).toBeGreaterThan(0);
+      for (const payload of started) {
+        const origin = payload['origin'] as { engine: string; native: string };
+        expect(payload).toMatchObject({
+          kind: expect.any(String),
+          label: { messageKey: expect.stringMatching(/^sessions\.tool\./) },
+          changes: expect.any(Array),
+          origin: { engine: 'claude' },
+          // Beside, for an app on a store that reads them until F7: the name and the raw input.
+          toolName: origin.native,
+          input: payload['rawInput'],
+        });
+      }
     });
 
     it('continues from its cursor after the live session appended, without a repeat — S-57', async () => {
@@ -674,7 +799,7 @@ describe('the transcript HTTP surface', () => {
 
     it.each([
       ['an id that is not a conversation', 'not-a-uuid', {}],
-      ['a cursor that is not a message', conversationId(1), { cursor: 'm1' }],
+      ['a cursor that is no id an engine hands out', conversationId(1), { cursor: 'm 1' }],
       ['a page of none', conversationId(1), { limit: '0' }],
     ])('refuses %s with `400`', async (_case, id, query) => {
       const response = await read(id, query);
@@ -690,7 +815,7 @@ describe('the transcript HTTP surface', () => {
       const response = await read(id);
 
       expect(response.status).toBe(502);
-      expect(response.body.error.code).toBe('CLAUDE_UNAVAILABLE');
+      expect(response.body.error.code).toBe('AGENT_UNAVAILABLE');
     });
   });
 
@@ -854,3 +979,24 @@ describe('the transcript HTTP surface', () => {
     expect(written).not.toContain('safety and speed');
   });
 });
+
+/**
+ * A `tool.started` of the history as a page over HTTP carries it: the canonical fields, and the
+ * engine's name and the raw input beside them, for an app on a store (plan 28, D-22).
+ */
+function withPreviousToolFields(event: {
+  readonly type: string;
+  readonly payload: object;
+}): object {
+  if (event.type !== 'tool.started') {
+    return event;
+  }
+  const payload = event.payload as {
+    readonly origin: { native: string };
+    readonly rawInput: unknown;
+  };
+  return {
+    ...event,
+    payload: { ...payload, toolName: payload.origin.native, input: payload.rawInput },
+  };
+}

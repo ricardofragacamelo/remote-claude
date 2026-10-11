@@ -1,11 +1,11 @@
 import type { UserId } from '@domain/auth';
+import type { ConversationRef } from '@domain/engine';
 import { base64Size } from '@domain/shared';
 import {
   PromptImageTooLargeError,
   PromptImageTypeUnsupportedError,
   TranscriptNotFoundError,
 } from '@domain/transcript';
-import type { ClaudeSessionId } from '@domain/transcript';
 import type { TranscriptStore } from './ports/transcript-store.port';
 import { readableTranscript } from './readable-transcript';
 import type { TranscriptAudience } from './transcript-audience';
@@ -24,7 +24,7 @@ export const SERVED_IMAGE_TYPES: ReadonlySet<string> = new Set([
 /** Which image of which conversation, for whom. */
 export interface ReadPromptImageQuery {
   readonly userId: UserId;
-  readonly sessionId: ClaudeSessionId;
+  readonly sessionId: ConversationRef;
 
   /** The `blockId` of the marker the client holds. */
   readonly blockId: string;
@@ -65,7 +65,7 @@ export class ReadPromptImageUseCase {
     const image = await this.store.promptImage(session, query.blockId);
 
     if (image === null) {
-      throw new TranscriptNotFoundError(query.sessionId.value);
+      throw new TranscriptNotFoundError(query.sessionId.id);
     }
 
     if (image.mediaType === null || !SERVED_IMAGE_TYPES.has(image.mediaType)) {

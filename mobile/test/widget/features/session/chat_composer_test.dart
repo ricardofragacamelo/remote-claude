@@ -210,7 +210,7 @@ void main() {
 
       expect(find.byTooltip(l10n.composerQueue), findsOneWidget);
       expect(find.byTooltip(l10n.composerStop), findsOneWidget);
-      expect(find.text(l10n.composerQueued), findsOneWidget);
+      expect(find.text(l10n.composerQueued(l10n.engineNameFallback)), findsOneWidget);
 
       await tester.tap(find.byTooltip(l10n.composerQueue));
       expect(sent, <String>['and the tests?']);
@@ -223,7 +223,7 @@ void main() {
 
       expect(find.byTooltip(l10n.composerStop), findsNothing);
       expect(find.byTooltip(l10n.sessionEndedResumeAndSend), findsOneWidget);
-      expect(find.text(l10n.composerQueued), findsNothing);
+      expect(find.text(l10n.composerQueued(l10n.engineNameFallback)), findsNothing);
     });
   });
 

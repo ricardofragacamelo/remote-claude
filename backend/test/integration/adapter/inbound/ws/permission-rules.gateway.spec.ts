@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import request from 'supertest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -19,7 +19,7 @@ import { commandFrame, TestSocket } from '../../../../support/app/ws-client';
 const OTHER = 'auth|other';
 
 /** The one invocation the recorded run asks about, and the narrowest rule that covers it. */
-const RECORDED_PATTERN = 'Write(/workspace/summary.md)';
+const RECORDED_PATTERN = 'file.write(/workspace/summary.md)';
 
 /**
  * Rules that outlive a session, over a real socket and a real database — plan 03, F0.
@@ -230,7 +230,7 @@ describe('permission rules over the socket', () => {
   });
 
   it('refuses by rule, and the turn goes on without anybody asked — S-07', async () => {
-    await grant({ pattern: 'Write', decision: 'allow', scope: 'always' });
+    await grant({ pattern: 'file.write', decision: 'allow', scope: 'always' });
     await grant({
       pattern: RECORDED_PATTERN,
       decision: 'deny',

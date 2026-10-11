@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ReadPromptImageUseCase } from '@application/transcript';
 import { UserId } from '@domain/auth';
 import {
-  ClaudeSessionId,
   PromptImageTooLargeError,
   PromptImageTypeUnsupportedError,
   TranscriptNotFoundError,
 } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { OWNER } from '../../../support/builders/workspace.builder';
 import {
   aTranscriptAudience,
@@ -29,7 +29,7 @@ describe('ReadPromptImageUseCase — plan 22, B-12', () => {
   const read = (blockId = BLOCK, maxBytes = 10) =>
     new ReadPromptImageUseCase(store, aTranscriptAudience(), maxBytes).execute({
       userId: owner,
-      sessionId: ClaudeSessionId.create(conversationId(1)),
+      sessionId: ConversationRef.create('claude', conversationId(1)),
       blockId,
     });
 

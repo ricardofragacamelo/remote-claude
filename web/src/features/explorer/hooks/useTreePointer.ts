@@ -45,8 +45,8 @@ function carriesEntries(event: DragEvent): boolean {
 /**
  * The pointer in the tree: selecting, opening, and dragging — a row, or the whole selection in the
  * order of the tree, as a typed payload that moves entries into a folder here and carries them to
- * Claude's chat there (D-20, S-269, S-270). A drag ends in a move only when it is dropped on a folder
- * of the same tab; given up, it publishes nothing (S-279).
+ * the agent's chat there (D-20, S-269, S-270). A drag ends in a move only when it is dropped on a
+ * folder of the same tab; given up, it publishes nothing (S-279).
  */
 export function useTreePointer(explorer: Explorer): TreePointer {
   const [dropTarget, setDropTarget] = useState<string | null>(null);

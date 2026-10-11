@@ -3,11 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/api/errors';
 import { fetchChanges } from '../services/changes.service';
-import { claudePanelStore } from '../store/claude-panel.store';
+import { agentPanelStore } from '../store/agent-panel.store';
 import type { ChangesFilter, FileChange } from '../types/changes';
 import { changeKeys } from './change-keys';
 import { useDiskMoves } from './useDiskMoves';
-import { useReviewMarks } from './useClaudePanel';
+import { useReviewMarks } from './useAgentPanel';
 import { useLiveSessionAttachment } from './useLiveSessionAttachment';
 import { useSessionEnded } from './useSessionEnded';
 
@@ -53,7 +53,7 @@ function matches(file: ReviewedChange, filter: ChangesFilter): boolean {
  */
 export function useSessionChanges(folder: string, sessionId: string): SessionChangesState {
   const queryClient = useQueryClient();
-  const panel = claudePanelStore(folder);
+  const panel = agentPanelStore(folder);
   const { marks, filter } = useReviewMarks(folder, sessionId);
   const ended = useSessionEnded(sessionId);
 

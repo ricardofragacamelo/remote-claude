@@ -63,7 +63,7 @@ final class ForkControllerProvider extends $NotifierProvider<ForkController, Res
   }
 }
 
-String _$forkControllerHash() => r'0dc6d09fd308b00fa529b6eabee82f5cfa7a7d19';
+String _$forkControllerHash() => r'5c5781b1ba12e1628cd336333520c98ebd5d623c';
 
 /// The forks of one session's screen, keyed by that session. Where one stands is what a resume's
 /// state says — pending, not sent, refused, or the session it opened.

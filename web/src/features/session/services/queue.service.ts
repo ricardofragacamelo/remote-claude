@@ -37,7 +37,7 @@ export function queueAfter(
 }
 
 /**
- * Takes a prompt out of the queue before it reaches Claude — any client watching may.
+ * Takes a prompt out of the queue before it reaches the agent — any client watching may.
  *
  * @returns the id of the command frame, or `null` when nothing left
  */

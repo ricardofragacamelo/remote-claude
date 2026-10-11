@@ -18,7 +18,7 @@
     "claudeFile": "summary.md",
     "claudeWrote": "The project has two goals: safety and speed.\n",
     "before": "the version from before the turn\n",
-    "changedByClaude": "Claude changed summary.md on disk, and you have unsaved changes here.",
-    "refused": "summary.md changed since you opened it — Claude may have written to it — so nothing was restored. Look at the file now, and try again."
+    "changedByClaude": "Claude Code changed summary.md on disk, and you have unsaved changes here.",
+    "refused": "summary.md changed since you opened it — Claude Code may have written to it — so nothing was restored. Look at the file now, and try again."
   }
 }

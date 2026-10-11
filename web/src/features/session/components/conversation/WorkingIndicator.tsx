@@ -23,8 +23,8 @@ export interface WorkingIndicatorProps {
   readonly waiting: number;
 
   /**
-   * Every one of them is a question of Claude, and none a permission — the indicator says it waits
-   * for an answer to a question, never what the question is (plan 24, B-16).
+   * Every one of them is a question of the agent, and none a permission — the indicator says it
+   * waits for an answer to a question, never what the question is (plan 24, B-16).
    */
   readonly questionsOnly?: boolean;
 
@@ -33,13 +33,14 @@ export interface WorkingIndicatorProps {
 }
 
 /**
- * The last line of the conversation while a turn runs (plan 09, B-21): our asterisk, what Claude is
- * doing — the tool it runs, that it waits on the person, or the verb of the turn —, and for how long.
- * It shows that something is happening when nothing new has arrived; once the turn ends it is gone,
- * and the summary of the turn stands where it was (S-50).
+ * The last line of the conversation while a turn runs (plan 09, B-21): our asterisk, what the agent
+ * is doing — the tool it runs, that it waits on the person, or the verb of the turn —, and for how
+ * long. It shows that something is happening when nothing new has arrived; once the turn ends it is
+ * gone, and the summary of the turn stands where it was (S-50).
  *
  * The glyph moves only for who has not asked the system for less motion (S-51). What is announced is
- * the **change** of what Claude does, never the clock: the time is outside the live region (S-52).
+ * the **change** of what the agent does, never the clock: the time is outside the live region
+ * (S-52).
  */
 export function WorkingIndicator(props: WorkingIndicatorProps): React.JSX.Element | null {
   return isTurnRunning(props.status) ? <Working {...props} /> : null;
@@ -83,7 +84,7 @@ function Working({
   );
 }
 
-/** What Claude is doing, in words: waiting on the person, the tool it runs, or the turn's verb. */
+/** What the agent is doing, in words: waiting on the person, its tool, or the turn's verb. */
 function labelOf(
   {
     asking,

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/context-use.json",
+  "title": "ContextUse",
+  "description": "`GET /sessions/:sessionId/context`: how full the context window of a live session is, by category, against the window of its model (plan 08, B-37; plan 28, B-24). `409 ENGINE_CAPABILITY_UNAVAILABLE` when the engine has no `contextUse`.",
+  "x-kind": "http",
+  "x-type": "session.context",
+  "type": "object",
+  "required": ["model", "totalTokens", "maxTokens", "percentage", "categories"],
+  "properties": {
+    "model": {
+      "type": "string",
+      "description": "The model whose window this is."
+    },
+    "totalTokens": {
+      "type": "integer",
+      "description": "What the conversation takes now."
+    },
+    "maxTokens": {
+      "type": "integer",
+      "description": "The size of the window."
+    },
+    "percentage": {
+      "type": "integer",
+      "description": "How full it is, 0 to 100."
+    },
+    "categories": {
+      "type": "array",
+      "maxItems": 64,
+      "description": "What the window holds, by category.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "tokens", "kind"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "`system`, `tools`, `messages`, `memory`, `free` or `reserved` — the canonical categories, each with a `messageKey` — or an id of the engine's own, opaque, for what only it counts apart."
+          },
+          "messageKey": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "The key that names a canonical category, `sessions.context.<id>`. Absent otherwise: the client shows `text`."
+          },
+          "text": {
+            "type": "string",
+            "description": "The engine's own name for a category with no key — its words, shown as they are. Absent on a canonical one."
+          },
+          "name": {
+            "type": "string",
+            "description": "The engine's own name, always — kept for the clients of the previous protocol, which read it for an id they do not know (plan 28, D-22). Goes with the window, in F7."
+          },
+          "tokens": {
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["used", "free", "buffer", "deferred"],
+            "description": "What the category is: in use, free, kept aside, or deferred until needed."
+          }
+        }
+      }
+    }
+  }
+}

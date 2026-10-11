@@ -36,7 +36,7 @@ canônica ([D-12](decisions.md#f5--permissão-pelo-dialeto)).
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-31 — A gramática canônica de regra e o `RuleDialect` 🔲
+### B-31 — A gramática canônica de regra e o `RuleDialect` ✅
 
 **A gramática canônica** mora no domínio de `permission`: `<kind>` ou `<kind>(<matcher>)`. Os casos são:
 
@@ -64,20 +64,22 @@ falar a gramática canônica. A tabela de `MATCHED_FIELDS` vira a do `subject`.
   canônica, ou descartadas com `warn` quando não têm tradução;
 - `translate(nativePattern)`: usado só pela migration da B-33.
 
-A implementação do Claude fica em `adapter/outbound/engines/claude/rule-dialect.ts`.
+A implementação do Claude fica em `adapter/outbound/engines/claude/rule-dialect.ts`. **Na execução, só o
+`translate` foi construído** ([D-43](decisions.md#f5--permissão-pelo-dialeto)): nada vai ao motor e as
+sugestões nativas nunca foram lidas, então `toEngine` e `fromNative` não teriam quem os chamasse.
 
 O contrato muda: `permission.requested.suggestions[].pattern` e `reaches[].patterns` passam a vir na
 gramática canônica, e a descrição do 05 deixa de dizer "na gramática dos settings do Claude Code". A
 gramática entra no ADR-025 e no [backend/03](../../architecture/backend/03-modules.md) (`permission`), e
 a rota `/permission-rules` aceita e devolve a forma canônica. Cenários S-91…S-94, S-131, S-132.
 
-### B-32 — A interação fora do alcance de regra e de modo, pelo `kind` 🔲
+### B-32 — A interação fora do alcance de regra e de modo, pelo `kind` ✅
 
 O `HUMAN_ONLY_TOOLS` (`AskUserQuestion`, `ExitPlanMode`) do `mode-approval.ts` vira "toda `interaction`":
 `question` e `plan` nunca são respondidas por regra nem por `allowAll`. A `PermissionRuleToolInteractiveError`
 continua, pelo `kind`. O `rule-precedence.ts` lê o `readOnly`, e não mais o `'plan'`. Cenários S-95, S-96.
 
-### B-33 — As regras migradas, e `engine` e `tool_kind` no banco 🔲
+### B-33 — As regras migradas, e `engine` e `tool_kind` no banco ✅
 
 Uma migration nova ([D-18](decisions.md#f5--permissão-pelo-dialeto)) faz quatro coisas:
 
@@ -95,7 +97,7 @@ A migration é idempotente e confere a contagem: as regras ativas antes são igu
 desligadas. O `tool_name` continua, como o nome nativo. A [auditoria](../14-audit-explained/README.md)
 passa a poder filtrar pelo `kind`. Cenários S-97…S-99, S-133, S-134.
 
-### B-34 — Os adapters não se importam 🔲
+### B-34 — Os adapters não se importam ✅
 
 Os dois imports do inventário saem:
 
@@ -107,7 +109,7 @@ Os dois imports do inventário saem:
 A violação conhecida da [B-06](F0-norms.md#b-06--o-lint-dos-três-anéis-nas-três-pontas-) sai do
 baseline, e a `adapters-do-not-know-each-other` passa a valer sem exceção. Cenários S-100, S-101.
 
-### B-35 — O ADR-011 reescrito como contrato de segurança por motor 🔲
+### B-35 — O ADR-011 reescrito como contrato de segurança por motor ✅
 
 O [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse)
 passa a ser o contrato de segurança que **todo** adapter de motor cumpre, os seis itens da

@@ -7,6 +7,7 @@ import { DialogFrame } from '@/shared/components/DialogFrame';
 import { Button } from '@/shared/components/ui/button';
 import { usePromptImage } from '../../hooks/usePromptImage';
 import type { MessageBlock } from '../../types/live-session';
+import type { ConversationRef } from '@/shared/lib/conversation';
 
 /** The refusals of the route that trying again does not change: the type, the size, the absence. */
 const FINAL = new Set(['UNSUPPORTED_MEDIA_TYPE', 'PAYLOAD_TOO_LARGE', 'NOT_FOUND']);
@@ -19,14 +20,14 @@ function formatOf(mediaType: string | undefined): string | null {
 
 /** The image of an open marker: it, while it loads, or why it cannot be shown. */
 function OpenImage({
-  conversationId,
+  conversation,
   blockId,
 }: {
-  readonly conversationId: string;
+  readonly conversation: ConversationRef;
   readonly blockId: string;
 }): React.JSX.Element {
   const { t } = useTranslation();
-  const image = usePromptImage(conversationId, blockId);
+  const image = usePromptImage(conversation, blockId);
 
   if (image.error !== null) {
     return (
@@ -66,10 +67,10 @@ function OpenImage({
  */
 export function ImageMarker({
   block,
-  conversationId,
+  conversation,
 }: {
   readonly block: MessageBlock;
-  readonly conversationId: string | null;
+  readonly conversation: ConversationRef | null;
 }): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -87,7 +88,7 @@ export function ImageMarker({
     <div className="flex items-center gap-2 self-start rounded-md border border-border px-2 py-1 text-ui-sm">
       <ImageIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       <span>{label}</span>
-      {conversationId !== null && blockId !== undefined && (
+      {conversation !== null && blockId !== undefined && (
         <>
           <Button
             variant="outline"
@@ -115,7 +116,7 @@ export function ImageMarker({
               </Button>
             }
           >
-            {open && <OpenImage conversationId={conversationId} blockId={blockId} />}
+            {open && <OpenImage conversation={conversation} blockId={blockId} />}
           </DialogFrame>
         </>
       )}

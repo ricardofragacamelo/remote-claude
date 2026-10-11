@@ -11,8 +11,11 @@
 library;
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
+import 'package:remote_claude/core/conversation/tool_call.dart';
 import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
+import 'package:remote_claude/features/session/domain/entities/engine.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 
 /// One event of a session's stream.
@@ -39,8 +42,10 @@ final class SessionOpened extends SessionEvent {
   const SessionOpened(
     super.seq,
     this.sessionId, {
-    this.claudeSessionId,
+    this.conversation,
     this.resumedFrom,
+    this.engine,
+    this.capabilities,
     this.workspacePath,
     this.model,
     this.permissionMode,
@@ -49,14 +54,21 @@ final class SessionOpened extends SessionEvent {
 
   final String sessionId;
 
-  /// The conversation in Claude's store this session writes to — what its history is read by and
-  /// what a later resume names. `null` only from a build of the backend that did not say.
-  final String? claudeSessionId;
+  /// The conversation this session writes to, in its engine's store — what its history is read by
+  /// and what a later resume names. `null` only from a build of the backend that did not say.
+  final ConversationKey? conversation;
 
   /// The conversation this session continues, when it is a resume. Everything said before this
   /// session's first turn is read from it, over HTTP: the replay buffer only holds what **this**
   /// session said (B-11).
-  final String? resumedFrom;
+  final ConversationKey? resumedFrom;
+
+  /// The engine the session runs on — an `id` of `GET /engines`. The app never decides by it.
+  final String? engine;
+
+  /// What the engine of this session can do, as it declared — read and kept; hiding what it cannot
+  /// is each control's own phase (plan 28, F3, F4). `null` when it declared nothing readable.
+  final EngineCapabilities? capabilities;
 
   /// The folder it runs in — where a resume of it has to run too.
   final String? workspacePath;
@@ -74,8 +86,10 @@ final class SessionOpened extends SessionEvent {
   List<Object?> get props => <Object?>[
     seq,
     sessionId,
-    claudeSessionId,
+    conversation,
     resumedFrom,
+    engine,
+    capabilities,
     workspacePath,
     model,
     permissionMode,
@@ -180,7 +194,7 @@ class Thought extends Equatable {
   /// What the model thought — empty when it would not show it.
   final String text;
 
-  /// The model thought here and did not show what (`redacted_thinking`).
+  /// The model thought here and did not show what (a `redactedThinking` block).
   final bool isRedacted;
 
   /// The block's identity — two thinkings the model did not show are equal and still two (plan 22,
@@ -196,20 +210,18 @@ final class ToolInvoked extends SessionEvent {
   const ToolInvoked(
     super.seq, {
     required this.toolUseId,
-    required this.toolName,
-    required this.input,
+    required this.call,
     this.isSubagent = false,
     this.title,
     this.writtenAt = '',
   });
 
   final String toolUseId;
-  final String toolName;
 
-  /// Exactly what the tool was asked to do. Never a summary of it.
-  final Map<String, Object?> input;
+  /// What the call is — its kind, its label, what it is about and exactly what it was asked to do.
+  final ToolCall call;
 
-  /// A subagent ran it, not the main conversation — its task list is its own.
+  /// A subagent ran it, not the main conversation.
   final bool isSubagent;
 
   /// What the model said the call is for, when it said (plan 22, D-05).
@@ -219,15 +231,7 @@ final class ToolInvoked extends SessionEvent {
   final String writtenAt;
 
   @override
-  List<Object?> get props => <Object?>[
-    seq,
-    toolUseId,
-    toolName,
-    input,
-    isSubagent,
-    title,
-    writtenAt,
-  ];
+  List<Object?> get props => <Object?>[seq, toolUseId, call, isSubagent, title, writtenAt];
 }
 
 /// Something a tool printed.
@@ -248,7 +252,6 @@ final class ToolFinished extends SessionEvent {
     required this.toolUseId,
     required this.status,
     this.summary,
-    this.taskId,
     this.writtenAt = '',
     this.question,
   });
@@ -257,26 +260,30 @@ final class ToolFinished extends SessionEvent {
   final ToolStatus status;
   final String? summary;
 
-  /// The question of an `AskUserQuestion`, as the contract carried it — read by the permission
+  /// The question of a call of kind `question`, as the contract carried it — read by the permission
   /// feature, which owns questions (plan 24, B-22).
   final Map<String, Object?>? question;
-
-  /// The task a `TaskCreate` made or a `TaskUpdate` changed — what the task list keys it by.
-  final String? taskId;
 
   @override
   final String writtenAt;
 
   @override
-  List<Object?> get props => <Object?>[
-    seq,
-    toolUseId,
-    status,
-    summary,
-    taskId,
-    writtenAt,
-    question,
-  ];
+  List<Object?> get props => <Object?>[seq, toolUseId, status, summary, writtenAt, question];
+}
+
+/// The agent's task list changed: the whole list, as it is now (plan 28, B-22). Read by the adapter
+/// of the engine from its own tools — the app draws it and never rebuilds it.
+final class TasksChanged extends SessionEvent {
+  const TasksChanged(super.seq, this.tasks, {this.writtenAt = ''});
+
+  /// Every task, in the agent's order. Empty when the agent cleared the list.
+  final List<SessionTask> tasks;
+
+  @override
+  final String writtenAt;
+
+  @override
+  List<Object?> get props => <Object?>[seq, tasks, writtenAt];
 }
 
 /// What a finished turn cost.
@@ -316,7 +323,7 @@ final class ContextCompacted extends SessionEvent {
   /// `manual` — somebody sent `/compact`; `auto` — the context was full.
   final String trigger;
 
-  /// How many tokens the context held before, when the SDK said.
+  /// How many tokens the context held before, when the engine said.
   final int? preTokens;
 
   @override

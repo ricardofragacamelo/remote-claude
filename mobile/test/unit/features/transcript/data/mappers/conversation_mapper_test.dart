@@ -2,9 +2,11 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/features/transcript/data/mappers/conversation_mapper.dart';
 import 'package:remote_claude/features/transcript/transcript.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/transcripts.dart';
 
 void main() {
@@ -42,7 +44,13 @@ void main() {
     final List<Object?> unreadable = <Object?>[
       null,
       'conv-1',
-      conversationRow(<String, Object?>{'sessionId': null}),
+      conversationRow(<String, Object?>{'conversation': null}),
+      // The previous protocol's bare id names no engine, so it is no conversation (plan 28, B-13).
+      conversationRow(<String, Object?>{'conversation': null, 'sessionId': 'conv-1'}),
+      conversationRow(<String, Object?>{'conversation': 'conv-1'}),
+      conversationRow(<String, Object?>{
+        'conversation': <String, Object?>{'engine': anEngine},
+      }),
       conversationRow(<String, Object?>{'cwd': 7}),
       conversationRow(<String, Object?>{'origin': 'vscode'}),
       conversationRow(<String, Object?>{'lastModified': 'yesterday'}),
@@ -57,14 +65,20 @@ void main() {
   test('a page keeps the backend’s order, drops what it cannot read, and says where next', () {
     final ConversationList page = conversationListFrom(<String, Object?>{
       'sessions': <Object?>[
-        conversationRow(<String, Object?>{'sessionId': 'b'}),
+        conversationRow(<String, Object?>{'conversation': conversationJson('b')}),
         'not a row',
-        conversationRow(<String, Object?>{'sessionId': 'a'}),
+        conversationRow(<String, Object?>{
+          'conversation': conversationJson('a', engine: 'engine-b'),
+        }),
       ],
       'nextCursor': 'cursor-2',
     });
 
-    expect(page.conversations.map((ConversationSummary c) => c.conversationId), <String>['b', 'a']);
+    // S-39 · each row is keyed by its engine and its id.
+    expect(page.conversations.map((ConversationSummary c) => c.conversation), <ConversationKey>[
+      conversationOf('b'),
+      conversationOf('a', engine: 'engine-b'),
+    ]);
     expect(page.nextCursor, 'cursor-2');
   });
 

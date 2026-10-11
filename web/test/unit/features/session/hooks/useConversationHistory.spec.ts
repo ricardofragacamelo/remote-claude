@@ -4,7 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useConversationHistory } from '@/features/session/hooks/useConversationHistory';
 import { conversationFrom } from '@/features/session/services/live-session.service';
 import { api } from '@/shared/api/api';
-import { aHistoryPage, OURS, said } from '../../../../support/history';
+import { aHistoryPage, conversationRef, OURS, said } from '../../../../support/history';
 import { providers } from '../../../../support/render';
 
 afterEach(() => {
@@ -28,7 +28,9 @@ function block(messageId: string, blockId: string, text: string) {
 }
 
 async function opened() {
-  const view = renderHook(() => useConversationHistory(OURS), { wrapper: providers() });
+  const view = renderHook(() => useConversationHistory(conversationRef(OURS)), {
+    wrapper: providers(),
+  });
   await waitFor(() => {
     expect(view.result.current.summary).not.toBeNull();
   });
@@ -39,7 +41,9 @@ async function opened() {
 describe('useConversationHistory with what is followed', () => {
   it('says where the latest page ends, and nothing before it arrives', async () => {
     vi.spyOn(api, 'get').mockResolvedValue(aPage([said('m1', 'hi')], 'u-41'));
-    const view = renderHook(() => useConversationHistory(OURS), { wrapper: providers() });
+    const view = renderHook(() => useConversationHistory(conversationRef(OURS)), {
+      wrapper: providers(),
+    });
 
     expect(view.result.current.base).toBeNull();
     expect(view.result.current.lastMessageId).toBeNull();
@@ -131,7 +135,7 @@ describe('useConversationHistory with what is followed', () => {
 
     expect(failure).toBeNull();
     expect(get).toHaveBeenCalledTimes(3);
-    expect(get).toHaveBeenLastCalledWith(`/transcripts/${OURS}/messages`);
+    expect(get).toHaveBeenLastCalledWith(`/transcripts/claude/${OURS}/messages`);
     expect(result.current.conversation).toEqual(conversationFrom([said('m5', 'rewritten')]));
     expect(result.current.lastMessageId).toBe('u-5');
     expect(result.current.hasEarlier).toBe(true);

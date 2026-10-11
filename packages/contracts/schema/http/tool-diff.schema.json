@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/tool-diff.json",
+  "title": "ToolDiff",
+  "description": "`GET /sessions/:sessionId/tools/:toolUseId/diff`: the diff of one tool call of a live session — of what it did, or, while its permission request is pending, of what it would do, the disk now against the disk with the change applied (plan 28, B-17). Served for a call whose `changes` write one file; any other is `422 DIFF_NOT_APPLICABLE`. One side may be unknown, and the answer says which and why rather than inventing it.",
+  "x-kind": "http",
+  "x-type": "tool.diff",
+  "type": "object",
+  "required": ["path", "kind", "pending", "scope", "before", "after", "hunks"],
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "The file, absolute."
+    },
+    "kind": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "The kind of the call — `file.edit` or `file.write`."
+    },
+    "pending": {
+      "type": "boolean",
+      "description": "The call is still waiting for an answer: `before` is the disk now, `after` the disk with the change applied."
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["file", "edit"],
+      "description": "`file` — the hunks are of the whole file, before against after; `edit` — they are of the strings the call replaces, because one side of the file is not known."
+    },
+    "before": {
+      "type": "object",
+      "description": "What is known of the file before the call.",
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["content", "absent", "unavailable", "notRestorable"]
+        },
+        "content": {
+          "type": "string",
+          "description": "The text, on `content`."
+        },
+        "reason": {
+          "type": "string",
+          "enum": ["laterTouch", "noSnapshot", "tooLarge", "unreadable"],
+          "description": "Why it is not known: on `unavailable`, `laterTouch` (an earlier write of the same turn reached the file) or `noSnapshot`; on `notRestorable`, `tooLarge` or `unreadable`."
+        }
+      }
+    },
+    "after": {
+      "type": "object",
+      "description": "What is known of the file after the call — or after it would run.",
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["content", "unavailable"]
+        },
+        "content": {
+          "type": "string",
+          "description": "The text, on `content`."
+        },
+        "reason": {
+          "type": "string",
+          "enum": ["laterWrite", "changedSince", "editMissing", "editAmbiguous"],
+          "description": "Why it is not known, on `unavailable`: the session wrote the file again (`laterWrite`), somebody else did (`changedSince`), or — pending — a replacement would not apply, its text not there (`editMissing`) or there more than once (`editAmbiguous`)."
+        },
+        "edit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Which replacement would not apply, from 0 — on `editMissing` and `editAmbiguous`."
+        }
+      }
+    },
+    "hunks": {
+      "type": "array",
+      "description": "The changes, in order.",
+      "items": {
+        "type": "object",
+        "required": ["id", "oldStart", "oldLines", "newStart", "newLines", "lines"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Names the hunk for a rejection; the same texts give the same ids."
+          },
+          "oldStart": {
+            "type": "integer",
+            "description": "The first line of the hunk on the old side, from 1 — or where it inserts."
+          },
+          "oldLines": {
+            "type": "integer"
+          },
+          "newStart": {
+            "type": "integer"
+          },
+          "newLines": {
+            "type": "integer"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["kind", "text"],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["context", "added", "removed"]
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Without its line break."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -9,6 +9,7 @@ import type { InlineRequests } from '@/features/session/hooks/useInlineRequests'
 import type { PermissionRequest } from '@/features/permission';
 import type { StreamMessage } from '@/features/session/types/live-session';
 import { render, translator } from '../../../support/render';
+import { aToolCall } from '../../../support/canonical-tool';
 
 const t = translator('en');
 
@@ -64,9 +65,8 @@ describe('an inline card', () => {
       requestId: 'req-1',
       frameId: 'frame-1',
       toolUseId: 't1',
-      toolName: 'Bash',
+      ...aToolCall('Bash', { command: 'ls' }),
       description: 'ls',
-      input: { command: 'ls' },
       riskHint: 'read',
       defaultToNo: false,
       expiresAt: '2999-01-01T00:00:00.000Z',
@@ -89,7 +89,7 @@ describe('an inline card', () => {
       answerQuestion: vi.fn(),
       declineQuestion: vi.fn(),
     } satisfies InlineRequests;
-    const inline: InlineContext = { requests, folder: '' };
+    const inline: InlineContext = { requests, sessionId: 'S1', folder: '' };
 
     render(
       <ul>

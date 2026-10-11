@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/transcript-event.json",
+  "title": "TranscriptEvent",
+  "description": "One event of the history: a frame of the live contract without its envelope — `{ type, payload }`, exactly as `message.completed`, `tool.started` and `tool.completed` arrive on the socket — so a client feeds the history and the live stream through one reducer.",
+  "type": "object",
+  "required": ["type", "payload"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "A `type` of the live contract."
+    },
+    "payload": {
+      "type": "object",
+      "description": "The payload that `type` carries on the socket."
+    }
+  }
+}

@@ -6,6 +6,7 @@
 /// they are all here, in one place, spelled once.
 library;
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/features/session/domain/repositories/session_repository.dart';
 
 /// The command names of the contract. Nothing else in the app spells them.
@@ -33,6 +34,9 @@ abstract final class SessionCommands {
 
   /// Takes a prompt out of the session's queue before it starts.
   static const String cancelQueuedPrompt = 'session.cancelQueuedPrompt';
+
+  /// Compacts the conversation of a running session.
+  static const String compact = 'session.compact';
 }
 
 /// What a session opens with, chosen before it exists — the draft (D-05). `null` is the
@@ -70,31 +74,37 @@ class DriveSession {
         'effort': ?choices.effort,
       });
 
-  /// Continues [conversationId] — a conversation of Claude's store — in [workspacePath], which is
-  /// where it ran.
+  /// Continues [conversation] — a conversation of its engine's store — in [workspacePath], which is
+  /// where it ran. It opens on the engine of the conversation, whatever the default is.
   ///
   /// @returns the id the command left with, which is what a refusal of it will name, or `null`
   ///   when nothing left. It is answered either by a new session (`session.started`, naming the
   ///   conversation it continues) or, when that conversation is already live, by joining it —
   ///   resuming what is live is an attach, never a second subprocess (S-24).
-  String? resume(String workspacePath, String conversationId) => _repository.issue(
+  String? resume(String workspacePath, ConversationKey conversation) => _repository.issue(
     SessionCommands.start,
-    <String, Object?>{'workspacePath': workspacePath, 'resumeSessionId': conversationId},
+    <String, Object?>{'workspacePath': workspacePath, 'resumeFrom': _wire(conversation)},
   );
 
-  /// Continues [conversationId] in a **new** conversation, from before the prompt [messageId] — the
+  /// Continues [conversation] in a **new** conversation, from before the prompt [messageId] — the
   /// edit and resend, and the fork from a prompt (08 · D-19). Never a truncation: the original stays
-  /// as it was.
+  /// as it was. A fork point is a message of a conversation, so it always travels with `resumeFrom`.
   ///
   /// @returns the id the command left with — what the `session.started` of the fork and a refusal
   ///   name: a point that is not a prompt of the conversation (`INVALID_INPUT`) — or `null` when
   ///   nothing left
-  String? fork(String workspacePath, String conversationId, String messageId) =>
+  String? fork(String workspacePath, ConversationKey conversation, String messageId) =>
       _repository.issue(SessionCommands.start, <String, Object?>{
         'workspacePath': workspacePath,
-        'resumeSessionId': conversationId,
+        'resumeFrom': _wire(conversation),
         'forkAt': messageId,
       });
+
+  /// [conversation] as the command names one: `{ engine, id }`.
+  static Map<String, Object?> _wire(ConversationKey conversation) => <String, Object?>{
+    'engine': conversation.engine,
+    'id': conversation.id,
+  };
 
   /// Sends one turn. A prompt arriving mid-turn is queued by the backend, never refused.
   ///
@@ -106,6 +116,14 @@ class DriveSession {
     SessionCommands.prompt,
     <String, Object?>{'sessionId': sessionId, 'text': text},
   );
+
+  /// Compacts the conversation of [sessionId] (plan 28, B-23). The backend sends the engine's own way
+  /// of doing it through the queue, as it does a prompt; `session.compacted` says when it happened.
+  ///
+  /// @returns the id the command left with — what a refusal names: an engine with no `compaction`
+  ///   (`ENGINE_CAPABILITY_UNAVAILABLE`) — or `null` when nothing left
+  String? compact(String sessionId) =>
+      _repository.issue(SessionCommands.compact, <String, Object?>{'sessionId': sessionId});
 
   /// Puts the files back to how they were before the turn [promptId].
   ///

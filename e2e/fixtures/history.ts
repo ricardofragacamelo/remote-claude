@@ -14,6 +14,11 @@ import { attachFrom, closeSession, connected, prompt } from './live-session';
 import type { AuthenticatedUser } from './auth';
 import type { E2eSocket } from './ws';
 import type { ScenarioUser } from '../scenarios';
+import { conversationIn } from './conversation';
+import type { ConversationRef } from './conversation';
+
+export { conversationIn, conversationKey } from './conversation';
+export type { ConversationRef } from './conversation';
 
 /**
  * Conversations, their history and the files they wrote, from the outside — plan 04, F5.
@@ -27,7 +32,10 @@ import type { ScenarioUser } from '../scenarios';
 /** A session opened by the suite: the live stream, and the conversation it is. */
 export interface OpenedConversation {
   readonly sessionId: string;
+
+  /** The id of the conversation alone — what the door of the scripted backend names it by. */
   readonly conversationId: string;
+  readonly conversation: ConversationRef;
 }
 
 /**
@@ -46,12 +54,12 @@ export async function startConversation(
   const started = await socket.waitFor(
     (frame) => socket.frames.indexOf(frame) >= mark && frame.type === 'session.started',
   );
-  const payload = started.payload as { sessionId?: unknown; claudeSessionId?: unknown };
+  const payload = started.payload as { sessionId?: unknown; conversation?: unknown };
+  const conversation = conversationIn(payload.conversation);
 
   expect(typeof payload.sessionId).toBe('string');
-  expect(typeof payload.claudeSessionId).toBe('string');
 
-  return { sessionId: String(payload.sessionId), conversationId: String(payload.claudeSessionId) };
+  return { sessionId: String(payload.sessionId), conversationId: conversation.id, conversation };
 }
 
 /**
@@ -119,7 +127,7 @@ export async function endSession(user: AuthenticatedUser, sessionId: string): Pr
   await closeSession(socket, sessionId);
 }
 
-/** One page of a conversation, as `GET /transcripts/:id/messages` answers it. */
+/** One page of a conversation, as `GET /transcripts/:engine/:id/messages` answers it. */
 export interface TranscriptPage {
   readonly events: readonly { readonly type: string; readonly payload: Record<string, unknown> }[];
   readonly nextCursor: string | null;
@@ -129,10 +137,11 @@ export interface TranscriptPage {
 /** Reads the latest page of a conversation — as a browser, or as the phone [installId] is. */
 export async function transcriptOf(
   user: AuthenticatedUser,
-  conversationId: string,
+  conversation: ConversationRef,
   installId?: string,
 ): Promise<TranscriptPage> {
-  const response = await callApi(user, `/transcripts/${conversationId}/messages`, {
+  const route = `/transcripts/${encodeURIComponent(conversation.engine)}/${encodeURIComponent(conversation.id)}`;
+  const response = await callApi(user, `${route}/messages`, {
     ...(installId === undefined ? {} : { installId }),
   });
 

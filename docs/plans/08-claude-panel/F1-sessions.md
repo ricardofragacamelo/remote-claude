@@ -21,7 +21,7 @@ de "ativa em outro lugar" antes que o resto do painel dependa dela.
 A integração com a sessão existente **não** é inventada aqui: é a do
 [plano 04](../04-transcript-and-resume/F2-resume.md) — viva é `attach`, nossa encerrada retoma
 in-place, externa retoma por fork — e a regra continua não dependendo de detecção
-([backend/04](../../architecture/backend/04-claude-integration.md#retomada--fork-fora-in-place-dentro)).
+([backend/04](../../architecture/backend/04a-claude.md#retomada--fork-fora-in-place-dentro)).
 O que esta fase acrescenta é **ver** as três coisas juntas, na pasta.
 
 ---
@@ -33,7 +33,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 
 ### B-07 — `GET /sessions?workspacePath=`: as sessões vivas da pasta ✅
 
-O registro de sessões vivas é um `Map` em memória ([backend/04](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos)),
+O registro de sessões vivas é um `Map` em memória ([backend/04](../../architecture/backend/04a-claude.md#ciclo-de-vida-e-recursos)),
 e hoje nada o expõe. O endpoint filtra por **dono** (o chamador; sessão de outra pessoa não aparece,
 nem como contagem) e por **contenção**: o `cwd` da sessão está na pasta pedida ou abaixo dela,
 comparado no realpath e por segmento de caminho (`/repo-old` não está em `/repo`). A pasta passa

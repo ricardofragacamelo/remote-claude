@@ -40,8 +40,11 @@ const ruledEntry = {
 const revokedRule = {
   id: 'rule_1',
   scope: 'always',
-  toolName: 'Write',
-  pattern: 'Write(/workspace/summary.md)',
+  kind: 'file.write',
+  toolName: 'file.write',
+  pattern: 'file.write(/workspace/summary.md)',
+  engine: null,
+  disabled: null,
   decision: 'allow',
   projectPath: null,
   grantedBy: 'auth|42',

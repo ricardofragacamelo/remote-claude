@@ -309,7 +309,7 @@ void main() {
       (GoRoute route) => route.path == historyRoute,
     );
     expect(history.routes.whereType<GoRoute>().map((GoRoute route) => route.path), <String>[
-      ':conversationId',
+      ':engine/:conversationId',
     ]);
 
     final GoRoute live = router.configuration.routes

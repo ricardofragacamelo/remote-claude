@@ -22,7 +22,7 @@ function textOf(side: ChangeSide): string {
 }
 
 /**
- * Where the editor reads the sides of a diff of what Claude changed (plan 08, B-27, B-28): the
+ * Where the editor reads the sides of a diff of what the agent changed (plan 08, B-27, B-28): the
  * diff of a tool, or a file of the changes — asked of the backend when the tab shows, and again
  * when it is opened anew.
  */

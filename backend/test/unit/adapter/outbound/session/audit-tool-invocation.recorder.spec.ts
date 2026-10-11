@@ -11,6 +11,7 @@ import { aRegistry, aSession, SESSION_ID } from '../../../../support/builders/se
 import { RecordingBroadcaster } from '../../../../support/fakes/recording-broadcaster';
 import { RecordingLogger } from '../../../../support/fakes/recording-logger';
 import { SequentialIds } from '../../../../support/fakes/sequential-ids';
+import { claudeTool } from '../../../../support/builders/tool.builder';
 
 const FILE = '/srv/projects/app/a.ts';
 
@@ -28,12 +29,15 @@ class Trail implements AuditRepository {
   }
 }
 
+const INPUT = { file_path: FILE, old_string: 'a', new_string: 'b' };
+
 function anInvocation(overrides: Partial<ToolInvocation> = {}): ToolInvocation {
   return {
     sessionId: SessionId.create(SESSION_ID),
     toolUseId: 'toolu_1',
     toolName: 'Edit',
-    input: { file_path: FILE, old_string: 'a', new_string: 'b' },
+    input: INPUT,
+    tool: claudeTool('Edit', INPUT),
     promptId: 'p1',
     at: new Date('2026-10-02T10:00:00.000Z'),
     ...overrides,
@@ -64,8 +68,8 @@ describe('the recorder of tool invocations', () => {
 
     expect(trail.entries).toHaveLength(1);
     expect(session === undefined ? null : memory.toolOf(session, 'toolu_1')).toMatchObject({
-      toolName: 'Edit',
-      input: { file_path: FILE },
+      kind: 'file.edit',
+      change: { path: FILE, op: 'edit', edits: [{ oldText: 'a', newText: 'b' }] },
     });
   });
 

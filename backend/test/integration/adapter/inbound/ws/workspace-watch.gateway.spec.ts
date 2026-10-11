@@ -10,7 +10,7 @@ import { watch } from 'chokidar';
 import type { FSWatcher } from 'chokidar';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { ClaudeWrites, FOLDER_WATCHER, FolderWatches } from '@application/files';
+import { AgentWrites, FOLDER_WATCHER, FolderWatches } from '@application/files';
 import { ChokidarFolderWatcher } from '@adapter/outbound/filesystem/chokidar-folder.watcher';
 import { AllowlistReloadSignal } from '@infra/config/allowlist-reload.signal';
 import { LOGGER, type Logger } from '@shared/logging/logger';
@@ -571,7 +571,7 @@ describe('workspace.watch over the socket', () => {
   });
 
   describe('who changed it', () => {
-    it("labels the person's save user, and Claude's write claude — S-148, S-149", async () => {
+    it("labels the person's save user, and the agent's write agent with its engine — S-148, S-149, S-73", async () => {
       const socket = await connect();
       const id = await watchId(socket, folder);
       writeFileSync(path.join(folder, 'mine.txt'), 'before\n');
@@ -587,16 +587,19 @@ describe('workspace.watch over the socket', () => {
         .expect(200);
       const saved = await changeOf(socket, id, 'mine.txt');
 
-      harness.app.get(ClaudeWrites).record({
-        path: path.join(folder, 'claude.txt'),
-        hash: sha('by claude\n'),
+      harness.app.get(AgentWrites).record({
+        path: path.join(folder, 'agent.txt'),
+        hash: sha('by the agent\n'),
         at: new Date(),
+        engine: 'claude',
       });
-      writeFileSync(path.join(folder, 'claude.txt'), 'by claude\n');
-      const claude = await changeOf(socket, id, 'claude.txt');
+      writeFileSync(path.join(folder, 'agent.txt'), 'by the agent\n');
+      const agent = await changeOf(socket, id, 'agent.txt');
 
       expect(changes(saved)).toEqual([{ path: 'mine.txt', kind: 'changed', origin: 'user' }]);
-      expect(changes(claude)).toEqual([{ path: 'claude.txt', kind: 'created', origin: 'claude' }]);
+      expect(changes(agent)).toEqual([
+        { path: 'agent.txt', kind: 'created', origin: 'agent', engine: 'claude' },
+      ]);
     });
   });
 });

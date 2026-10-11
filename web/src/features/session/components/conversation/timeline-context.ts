@@ -1,13 +1,16 @@
 import type { PlanMode } from '@/features/permission';
 import type { InlineRequests } from '../../hooks/useInlineRequests';
-import type { TaskList } from '../../lib/task-list';
 import type { Conversation, StreamMessage } from '../../types/live-session';
+import type { ConversationRef } from '@/shared/lib/conversation';
 
 /** The questions of a live session, and what their cards need — drawn in the conversation. */
 export interface InlineContext {
   readonly requests: InlineRequests;
 
-  /** The folder of the tab — what a pending edit is previewed against. */
+  /** The live session — what the preview of a pending change is asked of (plan 28, B-17). */
+  readonly sessionId: string;
+
+  /** The folder of the tab the session runs in. */
   readonly folder: string;
 
   /** Where the rules a "don't ask again" leaves are taken back. */
@@ -15,6 +18,9 @@ export interface InlineContext {
 
   /** A plan was approved, to go on in this mode — the chip of the bar follows (plan 09, B-24). */
   readonly onPlanApproved?: ((mode: PlanMode) => void) | undefined;
+
+  /** The modes the session's engine announces — `null` until known (plan 28, B-27). */
+  readonly planModes?: readonly PlanMode[] | null | undefined;
 }
 
 /** A prompt of the conversation, and what can be done from it (plan 09, B-27). */
@@ -40,17 +46,17 @@ export interface TimelineContext {
   /** The live session, for the way to its trail — `null` reading the history. */
   readonly sessionId: string | null;
 
-  /** The conversation in Claude's store, for what the history keeps apart — a subagent. */
-  readonly conversationId: string | null;
+  /**
+   * The conversation it is — its engine and its id in that engine's store —, for what the history
+   * keeps apart: a subagent, the whole output of a tool, the image of a prompt.
+   */
+  readonly reference: ConversationRef | null;
 
   /** The whole conversation, so a subagent's tool finds what the stream nested under it. */
   readonly conversation: Pick<Conversation, 'messages' | 'tools' | 'timeline' | 'turns'>;
 
   /** The message the search is on, so it is marked. */
   readonly current: string | null;
-
-  /** The task list the conversation's tools made — which of their calls it read (B-20). */
-  readonly taskList: TaskList;
 
   /** What can be done from a prompt — absent reading the history. */
   readonly prompts?: PromptActions | undefined;

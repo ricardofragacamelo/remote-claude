@@ -140,7 +140,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Ajuda, atalhos, foco e axe na tela de logs | B-23 | [web/03-ui-system](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-80…S-83 |
 | Checks com prazo, sem travar uns aos outros, com cache e ritmo | B-24, B-28 | [backend/03-modules](../../architecture/backend/03-modules.md) | S-84…S-89 |
 | **Checks falhando um a um, com explicação traduzida e o que fazer** | B-25, B-26, B-29 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-90…S-101, S-109, S-121 |
-| O estado de cada motor vem do `describe()`; a sonda ativa do Claude, registrada pela extensão, custa, e por isso é do operador, única e auditada | B-26 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-102…S-104 |
+| O estado de cada motor vem do `describe()`; a sonda ativa do Claude, registrada pela extensão, custa, e por isso é do operador, única e auditada | B-26 | [backend/04a-claude](../../architecture/backend/04a-claude.md) | S-102…S-104 |
 | Recursos de outros planos aparecem só quando existem | B-27 | [backend/03-modules](../../architecture/backend/03-modules.md) | S-105 |
 | O `GET /health` público não vaza o relatório; o detalhado é autenticado e filtrado por papel | B-28 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#tabela-de-status-http) | S-106…S-108 |
 | A tela de saúde explica, resume, mede o ping e sobrevive ao backend fora | B-29, B-30, B-31 | [web/03-ui-system](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre) | S-81, S-109…S-116, S-122, S-123 |

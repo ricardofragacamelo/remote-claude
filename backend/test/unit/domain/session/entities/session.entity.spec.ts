@@ -21,11 +21,11 @@ describe('Session', () => {
   });
 
   it('carries the workspace, the model and the mode it was opened with', () => {
-    const session = aSession({ model: 'claude-opus-5', permissionMode: 'plan' });
+    const session = aSession({ model: 'claude-opus-5', permissionMode: 'readOnly' });
 
     expect(session.workspace.value).toBe('/srv/projects/app');
     expect(session.model).toBe('claude-opus-5');
-    expect(session.permissionMode).toBe('plan');
+    expect(session.permissionMode).toBe('readOnly');
   });
 
   it('knows who it belongs to', () => {

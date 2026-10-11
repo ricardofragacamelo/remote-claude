@@ -1,6 +1,6 @@
 import { SessionForbiddenError, SessionId, SessionNotFoundError } from '@domain/session';
 import type { UserId } from '@domain/auth';
-import type { SessionConversation } from './ports/claude-session.port';
+import type { SessionConversation } from './ports/agent-engine.port';
 import type { SessionOwnership } from './ports/session-ownership.port';
 
 /** Which conversation of Claude a stream is, when it is one. */

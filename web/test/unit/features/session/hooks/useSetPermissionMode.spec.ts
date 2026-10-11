@@ -34,9 +34,9 @@ describe('changing the permission mode after a plan — plan 08 B-22', () => {
   it('shows the mode it sent as the mode of the session, as the picker of the header does — S-263', () => {
     const { result } = renderHook(() => useSetPermissionMode('s-1'));
 
-    result.current('default');
+    result.current('ask');
 
-    expect(liveSessionStoreOf('s-1').getState().permissionMode).toBe('default');
+    expect(liveSessionStoreOf('s-1').getState().permissionMode).toBe('ask');
   });
 
   it('leaves the mode shown as it was when nothing could be sent', () => {
@@ -52,7 +52,7 @@ describe('changing the permission mode after a plan — plan 08 B-22', () => {
   it('sends nothing with no session', () => {
     const { result } = renderHook(() => useSetPermissionMode(null));
 
-    result.current('default');
+    result.current('ask');
 
     expect(live.lastSent('session.setPermissionMode')).toBeUndefined();
   });

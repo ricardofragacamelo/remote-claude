@@ -26,7 +26,7 @@ function toComponentVersion(dto: VersionsDto[string]): ComponentVersion {
 }
 
 /**
- * The versions of this installation: the backend, the Agent SDK, Claude's CLI and Node (plan 06,
+ * The versions of this installation: the backend, the Agent SDK, the agent's CLI and Node (plan 06,
  * B-12). The web's own version is not asked for — it is the version of this bundle.
  *
  * @throws {import('@/shared/api/errors').AppError} never a raw `Response`

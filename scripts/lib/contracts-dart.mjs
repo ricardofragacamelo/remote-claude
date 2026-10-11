@@ -42,6 +42,15 @@ function dartTypeOf(type) {
 }
 
 /**
+ * Whether a field always holds a value in Dart: required, and never `null` on the wire.
+ *
+ * @param {import('./contracts-model.mjs').Field} field
+ */
+function present(field) {
+  return field.required && !field.nullable;
+}
+
+/**
  * Expression that reads one field out of a decoded JSON map.
  *
  * @param {import('./contracts-model.mjs').Field} field
@@ -52,7 +61,7 @@ function readExpression(field) {
   const dart = dartTypeOf(field.type);
 
   if (field.type.kind === 'object') {
-    return field.required
+    return present(field)
       ? `${dart}.fromJson(${raw}! as Map<String, Object?>)`
       : `${raw} == null ? null : ${dart}.fromJson(${raw}! as Map<String, Object?>)`;
   }
@@ -65,10 +74,10 @@ function readExpression(field) {
         : `item! as ${dartTypeOf(items)}`;
     const mapped = `(${raw}! as List<Object?>).map((item) => ${element}).toList(growable: false)`;
 
-    return field.required ? mapped : `${raw} == null ? null : ${mapped}`;
+    return present(field) ? mapped : `${raw} == null ? null : ${mapped}`;
   }
 
-  return field.required ? `${raw}! as ${dart}` : `${raw} as ${dart}?`;
+  return present(field) ? `${raw}! as ${dart}` : `${raw} as ${dart}?`;
 }
 
 /**
@@ -77,12 +86,12 @@ function readExpression(field) {
  */
 function writeExpression(field) {
   if (field.type.kind === 'object') {
-    return field.required ? `${field.name}.toJson()` : `${field.name}?.toJson()`;
+    return present(field) ? `${field.name}.toJson()` : `${field.name}?.toJson()`;
   }
 
   if (field.type.kind === 'array' && field.type.items.kind === 'object') {
     const mapped = `.map((item) => item.toJson()).toList(growable: false)`;
-    return field.required ? `${field.name}${mapped}` : `${field.name}?${mapped}`;
+    return present(field) ? `${field.name}${mapped}` : `${field.name}?${mapped}`;
   }
 
   return field.name;
@@ -273,7 +282,7 @@ function emitClass(declaration) {
 
   for (const field of declaration.fields) {
     lines.push(...comment(field.description, '  ', 'line'));
-    lines.push(`  final ${dartTypeOf(field.type)}${field.required ? '' : '?'} ${field.name};`);
+    lines.push(`  final ${dartTypeOf(field.type)}${present(field) ? '' : '?'} ${field.name};`);
     lines.push('');
   }
 
@@ -321,7 +330,7 @@ export function emitDart(model) {
     '// dart format off',
     '',
     '/// The protocol version this build speaks.',
-    'const int protocolVersion = 1;',
+    `const int protocolVersion = ${String(model.protocolVersion)};`,
     '',
     '/// Every frame `type` the classes below cover.',
     'const List<String> frameTypes = <String>[',

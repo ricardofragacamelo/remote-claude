@@ -51,14 +51,15 @@ export interface QuestionCardProps {
 }
 
 /**
- * A question of Claude (`AskUserQuestion`), answered (plan 24, B-14) — the card of the extension of
- * the VS Code, the mould of plans 09 and 10 (docs/architecture/web/03-ui-system.md#a-pergunta--questioncard):
+ * A question of the agent (`AskUserQuestion`), answered (plan 24, B-14) — the card of the extension
+ * of the VS Code, the mould of plans 09 and 10
+ * (docs/architecture/web/03-ui-system.md#a-pergunta--questioncard):
  *
  * - **one question at a time**, in tabs named by their header, each marked once it has an answer;
  * - a **single choice** is a radio, and choosing one that is not the last goes on to the next by
  *   itself; a **multiple** one is a checkbox, and stays (D-24);
  * - **"Other"** is always the last option, and opens a field; marked and empty, it is no answer;
- * - the option Claude **recommends** is highlighted, never chosen for the person (D-23);
+ * - the option the agent **recommends** is highlighted, never chosen for the person (D-23);
  * - a **preview**, on a single choice that has any, beside the options — stacked on a narrow screen;
  * - **"Send answers"** waits for every question (D-04); **"Don't answer"** and Esc refuse, with a
  *   reason the person may leave empty (D-15). There is no "allow" here, no scope and no reach.
@@ -111,7 +112,10 @@ export function QuestionCard(props: QuestionCardProps): React.JSX.Element {
         }}
       >
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="text-sm font-semibold">{t('permission.tool.AskUserQuestion')}</h3>
+          {/* A question names the agent that asks it, by the engine of the call (plan 28, B-18). */}
+          <h3 className="text-sm font-semibold">
+            {t('permission.tool.question', { engine: request.origin.engine })}
+          </h3>
           <PermissionCountdown remainingMs={remainingMs} />
         </div>
 

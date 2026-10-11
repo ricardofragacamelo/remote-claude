@@ -3,7 +3,7 @@ import type { OnApplicationBootstrap } from '@nestjs/common';
 
 import { SCHEDULER } from '@application/shared';
 import type { Scheduler } from '@application/shared';
-import { OWNER_VALUE, PROCESS_MARKER } from '@adapter/outbound/claude/process-marker';
+import { OWNER_VALUE, PROCESS_MARKER } from '@shared/process/process-marker';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import type { ProcessEntry, ProcessTable } from './process-table';
 

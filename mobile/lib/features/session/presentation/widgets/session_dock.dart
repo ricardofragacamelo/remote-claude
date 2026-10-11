@@ -13,7 +13,8 @@ import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/insight.dart';
-import 'package:remote_claude/features/session/domain/entities/task_list.dart';
+import 'package:remote_claude/features/session/domain/entities/engine.dart';
+import 'package:remote_claude/features/session/presentation/providers/engine_catalogue.dart';
 import 'package:remote_claude/features/session/presentation/providers/first_prompts.dart';
 import 'package:remote_claude/features/session/presentation/providers/insight_controllers.dart';
 import 'package:remote_claude/features/session/presentation/providers/live_session_controller.dart';
@@ -82,6 +83,14 @@ class SessionDock {
 
   LiveSessionController get _live => ref.read(liveSessionControllerProvider(sessionId).notifier);
 
+  /// What the engine of the session declared it can do — declared, never supposed (ADR-025): a
+  /// control of a capability it did not declare does not exist (plan 28, F3).
+  EngineCapabilities? get _can => session.conversation.facts.capabilities;
+
+  /// What the session's engine offers to choose — the modes and the levels of effort it announced —,
+  /// from the list of engines while its `session.started` has not said (plan 28, B-27, B-28).
+  EngineCapabilities? get _offered => sessionCapabilities(ref, session.conversation.facts);
+
   /// The lines above the box, in their order (B-13): why it ended, the queue, the last refusal, and
   /// a real reason nothing can be sent.
   List<Widget> aboveBox() {
@@ -98,8 +107,12 @@ class SessionDock {
     return <Widget>[
       // Over the box (09 · D-14): the way to a question out of view, and the task list.
       _pill(),
-      TaskStrip(items: taskListOf(session.conversation.tools)),
-      if (ending != null) EndedStrip(ending: ending),
+      if (_can?.taskList ?? false)
+        TaskStrip(
+          items: session.conversation.tasks ?? const <SessionTask>[],
+          engine: session.conversation.facts.engine,
+        ),
+      if (ending != null) EndedStrip(ending: ending, engine: session.conversation.facts.engine),
       QueueStrip(queue: session.conversation.queue, onCancel: _live.cancelQueued),
       if (cancelEdit != null) EditingStrip(onCancel: cancelEdit),
       if (forkRejection != null)
@@ -124,7 +137,7 @@ class SessionDock {
     ];
   }
 
-  /// "Claude is waiting for your answer (n)", while a card is out of view.
+  /// "The agent is waiting for your answer (n)", while a card is out of view.
   Widget _pill() {
     final int waiting = ref.watch(
       permissionQueueControllerProvider(
@@ -141,6 +154,7 @@ class SessionDock {
       listenable: questions,
       builder: (BuildContext context, Widget? _) => PendingPill(
         count: waiting,
+        engine: session.conversation.facts.engine,
         outOfView: questions.outOfView,
         questionsOnly: ref.watch(
           permissionQueueControllerProvider(sessionId).select(onlyQuestions),
@@ -165,7 +179,7 @@ class SessionDock {
       state: ComposerState(
         isEnabled:
             connection == ConnectionStatus.ready &&
-            (!closed || conversation.facts.conversationId != null),
+            (!closed || conversation.facts.conversation != null),
         isBusy: fork.isPending || (resume?.isPending ?? false),
         busyLabel: fork.isPending
             ? AppLocalizations.of(context).sessionForkStarting
@@ -173,6 +187,7 @@ class SessionDock {
         isTurnRunning: conversation.isTurnRunning,
         isClosed: closed,
         isStopping: session.isInterrupting,
+        engine: conversation.facts.engine,
       ),
       onSend: (String text) => _send(live, text, closed: closed),
       onStop: live.interrupt,
@@ -180,6 +195,8 @@ class SessionDock {
       mode: modeChoice(
         context,
         current: session.permissionMode,
+        modes: modesOf(_offered),
+        engine: conversation.facts.engine,
         isPending: session.isChoosing,
         onPick: live.setPermissionMode,
       ),
@@ -210,6 +227,7 @@ class SessionDock {
     final List<InstallationModel> known = models.value?.models ?? const <InstallationModel>[];
     final String? model = session.model ?? models.value?.current;
     final Map<String, String?> efforts = ref.watch(firstPromptsProvider);
+    final EngineCapabilities? can = _can;
 
     return <ComposerChoice>[
       modelChoice(
@@ -225,16 +243,21 @@ class SessionDock {
       ?effortChoice(
         context,
         model: modelOf(known, model),
+        levels: levelsOf(_offered),
         current: efforts[sessionId],
         isKnown: efforts.containsKey(sessionId),
+        engine: session.conversation.facts.engine,
       ),
-      contextChoice(
-        context,
-        sessionId: sessionId,
-        use: ref.watch(sessionContextControllerProvider(sessionId)),
-        onCompact: () => live.compact(),
-        isCompacting: session.isCompacting,
-      ),
+      // No measure is asked of an engine that cannot give one, and no "Compact" offered to one that
+      // cannot compact (S-70, S-72).
+      if (can != null && can.contextUse)
+        contextChoice(
+          context,
+          sessionId: sessionId,
+          use: ref.watch(sessionContextControllerProvider(sessionId)),
+          onCompact: can.compaction ? live.compact : null,
+          isCompacting: session.isCompacting,
+        ),
     ];
   }
 }

@@ -15,6 +15,8 @@ import {
 } from '../fixtures/claude-panel';
 import {
   completedTurn,
+  conversationIn,
+  conversationKey,
   endSession,
   framesCounted,
   said,
@@ -23,7 +25,7 @@ import {
   SwitchableSocket,
   transcriptOf,
 } from '../fixtures/history';
-import type { TranscriptPage } from '../fixtures/history';
+import type { ConversationRef, TranscriptPage } from '../fixtures/history';
 import {
   attachFrom,
   closeSession,
@@ -87,8 +89,8 @@ test(`${overflow.id} — ${overflow.title}`, async ({ page }) => {
   const producer = await connected(context().user);
   await attachFrom(producer, sessionId, 0);
   const attached = producer.frames.find((frame) => frame.type === 'session.attached');
-  const conversationId = String(
-    (attached?.payload as { claudeSessionId?: unknown }).claudeSessionId,
+  const conversation = conversationIn(
+    (attached?.payload as { conversation?: unknown }).conversation,
   );
 
   try {
@@ -111,7 +113,9 @@ test(`${overflow.id} — ${overflow.title}`, async ({ page }) => {
     // Back: the server says gap, and the screen reads the conversation the ack named — by HTTP.
     const reloaded = page.waitForResponse(
       (response) =>
-        response.url().includes(`/transcripts/${conversationId}/messages`) &&
+        response
+          .url()
+          .includes(`/transcripts/${conversation.engine}/${conversation.id}/messages`) &&
         response.request().method() === 'GET',
       { timeout: 90_000 },
     );
@@ -121,7 +125,7 @@ test(`${overflow.id} — ${overflow.title}`, async ({ page }) => {
     expect(network.attachAcks.at(-1)?.payload).toMatchObject({
       gap: true,
       replayed: 0,
-      claudeSessionId: conversationId,
+      conversation,
     });
     const latest = (await response.json()) as TranscriptPage;
 
@@ -146,7 +150,7 @@ test(`${onThePhone.id} — ${onThePhone.title}`, async () => {
   const workspace = scratch(context().workspace);
 
   const web = await connected(context().user);
-  const { sessionId, conversationId } = await startConversation(web, workspace);
+  const { sessionId, conversation } = await startConversation(web, workspace);
   await completedTurn(web, sessionId, expected.fixture, expected.prompt);
 
   const phone = await approvedPhone(context().user);
@@ -160,14 +164,14 @@ test(`${onThePhone.id} — ${onThePhone.title}`, async () => {
 
     expect(ack.gap).toBe(false);
     expect(ack.replayed).toBe(sequencesOf(web, sessionId).length);
-    expect(attached?.payload).toMatchObject({ claudeSessionId: conversationId });
+    expect(attached?.payload).toMatchObject({ conversation });
 
     await mobile.waitFor((frame) => (frame.seq ?? 0) >= lastSeqOf(web));
     expect(timelineOf(mobile, sessionId)).toEqual(timelineOf(web, sessionId));
 
     // And the history the phone reads by HTTP — its installation named, as the app sends it — is
     // the conversation the browser had.
-    const transcript = await transcriptOf(context().user, conversationId, phone.installId);
+    const transcript = await transcriptOf(context().user, conversation, phone.installId);
     expect(said(transcript, 'user')).toEqual([`${expected.prompt} [fixture:${expected.fixture}]`]);
     expect(said(transcript, 'assistant')).toEqual([expected.answer]);
   } finally {
@@ -180,26 +184,26 @@ test(`${onThePhone.id} — ${onThePhone.title}`, async () => {
 async function anEndedConversation(
   folder: string,
   fixture: string,
-): Promise<{ readonly conversationId: string }> {
+): Promise<{ readonly conversation: ConversationRef }> {
   const socket = await connected(context().user);
-  const { sessionId, conversationId } = await startConversation(socket, folder);
+  const { sessionId, conversation } = await startConversation(socket, folder);
   await completedTurn(socket, sessionId, fixture);
   await closeSession(socket, sessionId);
   socket.close();
 
-  return { conversationId };
+  return { conversation };
 }
 
 test(`${resumed.id} — ${resumed.title}`, async ({ page }) => {
   const expected = resumed.expect as { fixture: string; answer: string; continued: string };
   const workspace = scratch(context().workspace);
-  const { conversationId } = await anEndedConversation(workspace, expected.fixture);
+  const { conversation } = await anEndedConversation(workspace, expected.fixture);
 
   await openSignedIn(page, resumed.user, workbenchAddress(workspace));
   await expect(connectedStatus(page)).toBeVisible();
 
   // The Sessions view of the tab lists it under History; pressed, it opens in the panel, to read.
-  await page.getByRole('button', { name: 'Claude sessions' }).click();
+  await page.getByRole('button', { name: 'Claude Code sessions' }).click();
   const history = page.getByRole('region', { name: /History/ });
   await history.getByRole('button', { name: /^Read the conversation/ }).click();
   // The reader, in the Claude panel: read only, until somebody continues it.
@@ -221,7 +225,7 @@ test(`${resumed.id} — ${resumed.title}`, async ({ page }) => {
 
     // Continued **in place**: one of ours keeps its file, so the conversation the history reads
     // now holds both turns, in order.
-    const transcript = await transcriptOf(context().user, conversationId);
+    const transcript = await transcriptOf(context().user, conversation);
     expect(said(transcript, 'assistant')).toEqual([expected.answer, expected.answer]);
     expect(said(transcript, 'user').at(-1)).toBe(expected.continued);
   } finally {
@@ -236,14 +240,14 @@ test(`${removed.id} — ${removed.title}`, async ({ page }) => {
   // It ran in a folder **below** the tab's, so the tab stays open when that folder goes.
   const below = path.join(workspace, 'service');
   fs.mkdirSync(below);
-  const { conversationId } = await anEndedConversation(below, expected.fixture);
+  const { conversation } = await anEndedConversation(below, expected.fixture);
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-e2e-outside-'));
 
   try {
     await openSignedIn(
       page,
       removed.user,
-      `${workbenchAddress(workspace)}&${new URLSearchParams({ conversation: conversationId }).toString()}`,
+      `${workbenchAddress(workspace)}&${new URLSearchParams({ conversation: conversationKey(conversation) }).toString()}`,
     );
     const resume = continueConversationButton(page);
     await expect(resume).toBeEnabled();
@@ -260,7 +264,9 @@ test(`${removed.id} — ${removed.title}`, async ({ page }) => {
     await expect(page.getByText(expected.notAllowed)).toBeVisible();
 
     // Refused before anything was spawned: the panel still reads the conversation.
-    expect(new URL(page.url()).searchParams.get('conversation')).toBe(conversationId);
+    expect(new URL(page.url()).searchParams.get('conversation')).toBe(
+      conversationKey(conversation),
+    );
   } finally {
     fs.rmSync(below, { force: true });
     fs.rmSync(outside, { recursive: true, force: true });

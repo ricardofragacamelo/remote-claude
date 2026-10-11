@@ -23,7 +23,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 
 ### B-06 — `blockId` em cada bloco, e `at` no histórico ✅
 
-Em `backend/src/adapter/outbound/claude/sdk-message.mapper.ts` (`toContentBlock`, `assistantEvents`,
+Em `backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts` (`toContentBlock`, `assistantEvents`,
 `historicalEvents`): o `blockId` da [D-06](decisions.md#f1--mapeamento-e-leituras), e o `at` = o `timestamp` da
 entrada nos eventos do histórico. No `transcript.dto.ts`, os campos novos. O buffer de replay da sessão viva
 leva o `blockId` como os outros campos.

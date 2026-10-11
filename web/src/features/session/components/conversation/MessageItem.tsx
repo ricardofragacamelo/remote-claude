@@ -10,6 +10,7 @@ import {
 } from '@/shared/components/ui/context-menu';
 import { IconButton } from '@/shared/components/IconButton';
 import { useCopy } from '@/shared/hooks/useCopy';
+import { equalConversations } from '@/shared/lib/conversation';
 import { cn } from '@/shared/lib/utils';
 import type { MessageBlock, StreamMessage } from '../../types/live-session';
 import { ImageMarker } from './ImageMarker';
@@ -58,7 +59,7 @@ function Block({
     case 'text':
       return <TextBlock text={block.text} folder={context.folder} />;
     case 'image':
-      return <ImageMarker block={block} conversationId={context.conversationId} />;
+      return <ImageMarker block={block} conversation={context.reference} />;
     default:
       return <ThinkingBlock block={block} thinkingMs={message.thinkingMs} streaming={streaming} />;
   }
@@ -85,7 +86,7 @@ function sameMessage(before: MessageItemProps, after: MessageItemProps): boolean
     before.message === after.message &&
     before.showsAuthor === after.showsAuthor &&
     before.context.folder === after.context.folder &&
-    before.context.conversationId === after.context.conversationId &&
+    equalConversations(before.context.reference, after.context.reference) &&
     (before.context.current === id) === (after.context.current === id) &&
     samePrompts(before.context.prompts, after.context.prompts)
   );

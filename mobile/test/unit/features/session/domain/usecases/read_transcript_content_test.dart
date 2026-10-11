@@ -4,9 +4,11 @@ library;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
 import 'package:remote_claude/features/session/domain/usecases/read_transcript_content.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/fakes/fake_transcript_content_repository.dart';
 
 void main() {
@@ -15,10 +17,10 @@ void main() {
       ..outputs['t1'] = const ToolOutput(text: 'done');
 
     expect(
-      await ReadTranscriptContent(content).toolResult('c-1', 't1'),
+      await ReadTranscriptContent(content).toolResult(conversationOf('c-1'), 't1'),
       const ToolOutput(text: 'done'),
     );
-    expect(content.toolReads, <(String, String)>[('c-1', 't1')]);
+    expect(content.toolReads, <(ConversationKey, String)>[(conversationOf('c-1'), 't1')]);
   });
 
   test('reads the image of a prompt of a conversation', () async {
@@ -26,7 +28,7 @@ void main() {
     final FakeTranscriptContentRepository content = FakeTranscriptContentRepository()
       ..images['u1:1'] = png;
 
-    expect(await ReadTranscriptContent(content).promptImage('c-1', 'u1:1'), png);
-    expect(content.imageReads, <(String, String)>[('c-1', 'u1:1')]);
+    expect(await ReadTranscriptContent(content).promptImage(conversationOf('c-1'), 'u1:1'), png);
+    expect(content.imageReads, <(ConversationKey, String)>[(conversationOf('c-1'), 'u1:1')]);
   });
 }

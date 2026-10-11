@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import type { AppError } from '@/shared/api/errors';
+import { useStableConversation } from '@/shared/hooks/useStableConversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { logger } from '@/shared/logging/logger';
 import { followTranscript } from '../services/transcript-follow.service';
 import type { ConversationHistory } from './useConversationHistory';
@@ -11,8 +13,8 @@ export interface ConversationFollow {
   readonly following: boolean;
 
   /**
-   * Whether Claude seems to be working on it in another client — an inference from its last entry,
-   * and only while it is followed: a screen that no longer hears cannot say it still works.
+   * Whether the agent seems to be working on it in another client — an inference from its last
+   * entry, and only while it is followed: a screen that no longer hears cannot say it still works.
    */
   readonly working: boolean;
 
@@ -60,10 +62,11 @@ type Phase = 'free' | 'rereading' | 'stopped';
  *   after a {@link ConversationFollow.hold}, a new refusal is what lets it follow again
  */
 export function useConversationFollow(
-  conversationId: string,
+  asked: ConversationRef,
   history: FollowedHistory,
   continuation: AppError | null,
 ): ConversationFollow {
+  const conversation = useStableConversation(asked);
   const visible = useSyncExternalStore(subscribeVisibility, pageVisible);
   const [phase, setPhase] = useState<Phase>('free');
   const [seen, setSeen] = useState(visible);
@@ -94,7 +97,7 @@ export function useConversationFollow(
       return undefined;
     }
 
-    const stop = followTranscript(conversationId, last.current, {
+    const stop = followTranscript(conversation, last.current, {
       onFollowing: (activity) => {
         setFollowing(true);
         setRefusal(null);
@@ -109,7 +112,7 @@ export function useConversationFollow(
         setWorking(false);
       },
       onReset: (reason) => {
-        logger.debug({ op: 'history.follow', conversationId, reason }, 'reading it again');
+        logger.debug({ op: 'history.follow', conversation, reason }, 'reading it again');
         stop();
         setFollowing(false);
         setWorking(false);
@@ -134,7 +137,7 @@ export function useConversationFollow(
       setFollowing(false);
       setWorking(false);
     };
-  }, [append, base, conversationId, held, phase, ready, restart, visible]);
+  }, [append, base, conversation, held, phase, ready, restart, visible]);
 
   return {
     following,

@@ -39,7 +39,7 @@ test(`${sessions.id} — on a phone the panel is a view of its own, with no hori
 
   // One view at a time: the panel, with nothing of the editor beside it.
   const bar = page.getByRole('navigation', { name: 'Views of this folder' });
-  await bar.getByRole('button', { name: 'Claude' }).click();
+  await bar.getByRole('button', { name: 'Claude Code' }).click();
   await expect(panelOf(page)).toBeVisible();
   await expect(page.getByRole('region', { name: 'Editor' })).toHaveCount(0);
 

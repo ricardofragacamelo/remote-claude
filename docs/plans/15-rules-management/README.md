@@ -116,7 +116,7 @@ Nenhuma é reaberta; todas são provadas de novo, porque o código que as susten
   teste de comando "nesta sessão", e a ajuda explica. Mostrá-la numa lista de gestão seria gerir o que
   some sozinho.
 - **Editar as permissões do `.claude/settings.json` do projeto.** Elas furam o `canUseTool` em
-  diretório confiado ([backend/04](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido));
+  diretório confiado ([backend/04](../../architecture/backend/04a-claude.md#diretório-confiado-fura-o-canusetool--medido));
   mostrá-las (só leitura) é do [plano 13](../13-claude-settings/README.md).
 - **Step-up (reautenticação recente) para criar regra.** Mecanismo do [plano 12](../12-integrated-terminal/README.md)
   e do [plano 05](../05-hardening-operations/README.md); quando existir, criar `allow` `broad` é

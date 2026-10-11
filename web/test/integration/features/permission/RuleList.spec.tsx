@@ -5,6 +5,7 @@ import { axe } from 'jest-axe';
 
 import { RuleList } from '@/features/permission';
 import { api } from '@/shared/api/api';
+import { nameAgents } from '@/shared/i18n';
 import { render, translator } from '../../../support/render';
 
 const t = translator('en');
@@ -20,25 +21,37 @@ function shown(iso: string, locale = 'en'): string {
 const alwaysRule = {
   id: 'rule_always',
   scope: 'always',
-  toolName: 'Bash',
-  pattern: 'Bash(git status)',
+  kind: 'shell',
+  pattern: 'shell(git status:*)',
   decision: 'allow',
   projectPath: null,
+  engine: null,
   grantedBy: 'user-1',
   grantedAt: '2026-09-20T10:00:00.000Z',
   expiresAt: '2026-12-19T10:00:00.000Z',
   status: 'active',
   revokedAt: null,
+  disabled: null,
 };
 
 const projectRule = {
   ...alwaysRule,
   id: 'rule_project',
   scope: 'project',
-  toolName: 'Write',
-  pattern: 'Write(/srv/app/notes.md)',
+  kind: 'file.write',
+  pattern: 'file.write(notes.md)',
   decision: 'deny',
   projectPath: '/srv/app',
+};
+
+/** A rule the update could not carry over: its old pattern, kept, and no kind (plan 28, D-18). */
+const disabledRule = {
+  ...alwaysRule,
+  id: 'rule_disabled',
+  kind: null,
+  pattern: 'Bash(npm run *)',
+  status: 'disabled',
+  disabled: { reason: 'untranslatable' },
 };
 
 /** A failure shaped the way `api.ts` hands one on. */
@@ -65,6 +78,7 @@ describe('the rules screen', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    nameAgents(null);
   });
 
   function answers(...rules: readonly unknown[]): void {
@@ -82,7 +96,7 @@ describe('the rules screen', () => {
     expect(screen.getByLabelText(t('rules.list.loading'))).toBeInTheDocument();
   });
 
-  it('shows scope, tool, pattern, author, date and validity on every row — S-15', async () => {
+  it('shows scope, kind, pattern, author, date and validity on every row — S-15', async () => {
     answers(alwaysRule, projectRule);
     render(<RuleList />);
 
@@ -94,7 +108,7 @@ describe('the rules screen', () => {
     expect(
       within(always).getByText(
         t('rules.row.toolDecision', {
-          tool: t('permission.tool.Bash'),
+          tool: t('sessions.kind.shell'),
           decision: t('rules.decision.allow'),
         }),
       ),
@@ -117,25 +131,107 @@ describe('the rules screen', () => {
     expect(
       within(project).getByText(
         t('rules.row.toolDecision', {
-          tool: t('permission.tool.Write'),
+          tool: t('sessions.kind.fileWrite'),
           decision: t('rules.decision.deny'),
         }),
       ),
     ).toBeInTheDocument();
   });
 
-  it('names a tool it has no words for, rather than a blank', async () => {
-    answers({ ...alwaysRule, toolName: 'Glob', pattern: 'Glob(src/**)' });
+  it('names a kind it has no words for by the generic name, rather than a blank', async () => {
+    answers({ ...alwaysRule, kind: 'vcs.commit', pattern: 'vcs.commit' });
     render(<RuleList />);
 
     expect(
       await screen.findByText(
         t('rules.row.toolDecision', {
-          tool: t('permission.tool.unknown', { tool: 'Glob' }),
+          tool: t('sessions.kind.other'),
           decision: t('rules.decision.allow'),
         }),
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText('vcs.commit')).toBeInTheDocument();
+  });
+
+  it('shows the canonical pattern as the server wrote it, never rewritten — plan 28 S-93', async () => {
+    answers({ ...alwaysRule, kind: 'mcp', pattern: 'mcp(github:*)' });
+    render(<RuleList />);
+
+    const row = await screen.findByRole('listitem', {
+      name: t('rules.row.label', { pattern: 'mcp(github:*)' }),
+    });
+    expect(within(row).getByText('mcp(github:*)')).toBeInTheDocument();
+    expect(
+      within(row).getByText(
+        t('rules.row.toolDecision', {
+          tool: t('sessions.kind.mcp'),
+          decision: t('rules.decision.allow'),
+        }),
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('lists a disabled rule with its old pattern, why, and only the way to revoke it — plan 28 S-98', async () => {
+    nameAgents({
+      defaultEngine: 'claude',
+      engines: [{ id: 'claude', displayName: 'Claude Code' }],
+    });
+    answers(disabledRule);
+    render(<RuleList />);
+
+    const row = await screen.findByRole('listitem', {
+      name: t('rules.row.label', { pattern: disabledRule.pattern }),
+    });
+    expect(within(row).getByText(disabledRule.pattern)).toBeInTheDocument();
+    expect(within(row).getByText(t('rules.status.disabled'))).toBeInTheDocument();
+    expect(within(row).getByRole('note')).toHaveTextContent(
+      'Written for Claude Code in a form this version cannot translate: it no longer applies. Create it again if you still want it.',
+    );
+    // It answers nothing: no validity, no warning, no kind it never had.
+    expect(
+      within(row).queryByText(t('rules.row.validUntil', { at: shown(alwaysRule.expiresAt) })),
+    ).not.toBeInTheDocument();
+    expect(
+      within(row).queryByText(t('rules.decision.allow'), { exact: false }),
+    ).not.toBeInTheDocument();
+    expect(within(row).getAllByRole('button')).toHaveLength(1);
+    expect(within(row).getByRole('button', { name: t('rules.action.revoke') })).toBeEnabled();
+  });
+
+  it('names the agent a disabled rule was restricted to, in the visitor’s language', async () => {
+    nameAgents({
+      defaultEngine: 'claude',
+      engines: [
+        { id: 'claude', displayName: 'Claude Code' },
+        { id: 'codex', displayName: 'Codex' },
+      ],
+    });
+    answers({ ...disabledRule, engine: 'codex' });
+    render(<RuleList />, 'pt-BR');
+    const pt = translator('pt-BR');
+
+    expect(await screen.findByText(pt('rules.status.disabled'))).toBeInTheDocument();
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'Escrita para o Codex numa forma que esta versão não traduz: não vale mais. Crie de novo se ainda quiser.',
+    );
+  });
+
+  it('revokes a disabled rule with one click, like any other', async () => {
+    answers(disabledRule);
+    const send = vi
+      .spyOn(api, 'request')
+      .mockResolvedValue({ ...disabledRule, status: 'revoked', revokedAt: 'now' });
+    render(<RuleList />);
+
+    const row = await screen.findByRole('listitem', {
+      name: t('rules.row.label', { pattern: disabledRule.pattern }),
+    });
+    await userEvent.click(within(row).getByRole('button', { name: t('rules.action.revoke') }));
+
+    expect(send).toHaveBeenCalledWith('/permission-rules/rule_disabled', { method: 'DELETE' });
+    await waitFor(() => {
+      expect(screen.queryByText(disabledRule.pattern)).not.toBeInTheDocument();
+    });
   });
 
   it('warns about a rule close to expiring, and marks an expired one — S-66', async () => {

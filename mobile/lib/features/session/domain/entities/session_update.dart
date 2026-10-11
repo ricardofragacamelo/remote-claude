@@ -5,6 +5,7 @@
 library;
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
@@ -34,7 +35,7 @@ final class EventReceived extends SessionUpdate {
 
 /// The replay buffer no longer held what was missed: drop everything and reload.
 final class StreamGap extends SessionUpdate {
-  const StreamGap({this.sessionId, this.claudeSessionId});
+  const StreamGap({this.sessionId, this.conversation});
 
   /// The session whose stream has the hole, or `null` for one that concerns every session — a
   /// gap of one session must not wipe the screen of another open beside it (plan 10, S-172).
@@ -43,10 +44,10 @@ final class StreamGap extends SessionUpdate {
   /// The conversation to reload the history from, as the ack named it — the only place left that
   /// says so once the buffer has lost the `session.started` that did. `null` for a stream that is
   /// not a conversation.
-  final String? claudeSessionId;
+  final ConversationKey? conversation;
 
   @override
-  List<Object?> get props => <Object?>[sessionId, claudeSessionId];
+  List<Object?> get props => <Object?>[sessionId, conversation];
 }
 
 /// A command landed on a session that was **already live**, and this connection now watches it.
@@ -55,18 +56,18 @@ final class StreamGap extends SessionUpdate {
 /// never opening a second one beside it (S-24). No `session.started` follows — the session began
 /// once — so this is where the screen that asked learns which session it is on.
 final class SessionJoined extends SessionUpdate {
-  const SessionJoined({required this.sessionId, this.claudeSessionId, this.resumedFrom});
+  const SessionJoined({required this.sessionId, this.conversation, this.resumedFrom});
 
   final String sessionId;
 
   /// The conversation the joined session writes to.
-  final String? claudeSessionId;
+  final ConversationKey? conversation;
 
   /// The conversation it continues, when it is a resume.
-  final String? resumedFrom;
+  final ConversationKey? resumedFrom;
 
   @override
-  List<Object?> get props => <Object?>[sessionId, claudeSessionId, resumedFrom];
+  List<Object?> get props => <Object?>[sessionId, conversation, resumedFrom];
 }
 
 /// The server accepted a command — not that it finished: the outcome, when there is one, arrives

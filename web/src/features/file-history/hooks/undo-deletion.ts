@@ -11,7 +11,7 @@ import { historyKeys } from './history-keys';
  * was — each folder before the files inside it — one request at a time, and how each went. A path
  * that was taken since is not written over (`409`): it is told, and the others still go.
  *
- * @param confirmSensitive the second step of a file that changes what Claude may do was answered
+ * @param confirmSensitive the second step of a file that changes what the agent may do was answered
  */
 export async function undoDeletion(
   client: QueryClient,

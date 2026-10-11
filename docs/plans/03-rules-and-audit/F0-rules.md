@@ -52,7 +52,7 @@ Validade acima do teto configurado é recusada na criação, não truncada em si
 ### B-03 — Auto-resolução antes de notificar ✅
 
 A ordem da ponte não muda: idempotência por `requestId`, **depois** regra, **depois** cria o
-pedido e espera ([a ponte](../../architecture/backend/04-claude-integration.md#a-ponte-de-permissão)).
+pedido e espera ([a ponte](../../architecture/backend/04a-claude.md#a-ponte-de-permissão)).
 
 Regra que resolve **não** emite `permission.requested` e **não** dispara push. O que ela emite
 é `permission.resolved` com `auto: true` — o usuário precisa ver que algo foi autorizado em seu

@@ -10,13 +10,15 @@
 library;
 
 // The wire's own question classes stay out: the domain's are the ones read here (plan 24).
-import 'package:remote_claude/core/network/contracts/protocol.g.dart'
-    hide QuestionAnswer, QuestionInteraction;
+import 'package:remote_claude/core/network/contracts/protocol.g.dart' hide QuestionAnswer;
+import 'package:remote_claude/core/conversation/tool_call.dart';
+import 'package:remote_claude/core/network/tool_wire.dart';
 import 'package:remote_claude/features/permission/data/mappers/wire_fields.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/plan_interaction.dart';
 import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 /// The frames of the permission round trip, by name. Nothing else in the app spells them.
@@ -76,9 +78,11 @@ PermissionRequest? permissionRequestFrom(
   required String sessionId,
 }) {
   final String? requestId = wireText(payload, 'requestId');
-  final String? toolName = wireText(payload, 'toolName');
-  // Required by the contract and checked here, even though the label comes from the tool name: a
-  // payload missing it is a payload from something that is not this protocol.
+  // What the card is drawn by: the kind and the label of the call — never the engine's own name for
+  // the tool, which this build does not read (plan 28, B-19).
+  final ToolCall? call = toolCallFrom(payload);
+  // The key of what is asked, by kind — required by the contract: a payload missing it is a payload
+  // from something that is not this protocol.
   final String? title = wireText(payload, 'title');
   final DateTime? expiresAt = wireInstant(payload, 'expiresAt');
   final RiskHint? riskHint = switch (wireText(payload, 'riskHint')) {
@@ -88,24 +92,20 @@ PermissionRequest? permissionRequestFrom(
     _ => null,
   };
 
-  if (requestId == null ||
-      toolName == null ||
-      title == null ||
-      expiresAt == null ||
-      riskHint == null) {
+  if (requestId == null || call == null || title == null || expiresAt == null || riskHint == null) {
     return null;
   }
 
-  final Object? input = payload['input'];
   final _Offers offers = _offersOf(payload);
 
   return PermissionRequest(
     requestId: requestId,
     sessionId: sessionId,
     toolUseId: wireText(payload, 'toolUseId') ?? '',
-    toolName: toolName,
+    call: call,
+    titleKey: title,
+    engine: _engineOf(payload['origin']),
     description: wireText(payload, 'description'),
-    input: input is Map<String, Object?> ? input : const <String, Object?>{},
     riskHint: riskHint,
     // Absent reads as `true`. The safe default is not a convenience here: it is the rule.
     defaultToNo: payload['defaultToNo'] != false,
@@ -113,9 +113,15 @@ PermissionRequest? permissionRequestFrom(
     scopes: offers.scopes,
     rule: offers.rule,
     reaches: offers.reaches,
+    // What is asked beyond leave to run a tool, by the interaction's kind — never by the tool.
     interaction: questionInteractionFrom(payload['interaction']),
+    plan: planInteractionFrom(payload['interaction']),
   );
 }
+
+/// The engine of the request's origin — read only to name it in a sentence, never to decide.
+String? _engineOf(Object? origin) =>
+    origin is Map<String, Object?> ? wireText(origin, 'engine') : null;
 
 /// What a yes may reach: the scopes offered, the lifetime of their rules, and the reaches.
 typedef _Offers = ({List<PermissionScope> scopes, RuleOffer? rule, List<RuleReach> reaches});
@@ -187,14 +193,25 @@ PermissionOutcome? permissionOutcomeFrom(Map<String, Object?> payload) {
   }
 
   final bool auto = payload['auto'] == true;
+  final AnswerVia? via = switch (wireText(payload, 'via')) {
+    'rule' => AnswerVia.rule,
+    'allowAll' => AnswerVia.allowAll,
+    'readOnly' => AnswerVia.readOnly,
+    _ => null,
+  };
 
   return PermissionOutcome(
     requestId: requestId,
     decision: decision,
     auto: auto,
     // The deadline's refusal and a rule's are both automatic; only a rule has an author. Telling
-    // them apart is the difference between "nobody answered in time" and "you said so earlier".
-    expired: auto && decision == PermissionDecision.deny && wireText(payload, 'resolvedBy') == null,
+    // them apart is the difference between "nobody answered in time" and "you said so earlier". A
+    // refusal that says why — the read-only mode has no author either — is not the deadline.
+    expired:
+        auto &&
+        decision == PermissionDecision.deny &&
+        wireText(payload, 'resolvedBy') == null &&
+        via == null,
     origin: switch (wireText(payload, 'resolvedFrom')) {
       'web' => AnswerOrigin.web,
       'mobile' => AnswerOrigin.mobile,
@@ -203,11 +220,7 @@ PermissionOutcome? permissionOutcomeFrom(Map<String, Object?> payload) {
     // The tool it was about: a request a rule settled was never asked here, and this is how the line
     // of its tool still says so (plan 10, B-20).
     toolUseId: wireText(payload, 'toolUseId'),
-    via: switch (wireText(payload, 'via')) {
-      'rule' => AnswerVia.rule,
-      'allowAll' => AnswerVia.allowAll,
-      _ => null,
-    },
+    via: via,
     // The event carries the answers; the server's revalidation the questions too (plan 24, S-94).
     interaction: questionInteractionFrom(payload['interaction']),
     answers: questionAnswersFrom(payload['answers']),

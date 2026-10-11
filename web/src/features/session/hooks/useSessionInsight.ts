@@ -12,7 +12,7 @@ export const CONTEXT_WARNING_PERCENT = 80;
 
 /**
  * The use of the session's context window (plan 08, B-37) — read again at the end of every turn, a
- * `/compact` included, which is when it moves.
+ * compaction included, which is when it moves.
  */
 export function useContextUse(sessionId: string): Loaded<ContextUse> {
   const queryClient = useQueryClient();

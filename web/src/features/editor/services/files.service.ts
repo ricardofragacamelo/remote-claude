@@ -94,7 +94,7 @@ export interface TextWrite {
   readonly encoding: string;
   readonly bom: boolean;
 
-  /** The second step of a file that changes what Claude may do was answered (07 · D-15). */
+  /** The second step of a file that changes what the agent may do was answered (07 · D-15). */
   readonly confirmSensitive: boolean;
 }
 
@@ -160,7 +160,8 @@ export async function readFile(
  * Saves a file over the version it was edited against.
  *
  * **Never** without `If-Match` (S-231): a save that does not name the version it overwrites is the
- * silent overwrite of Claude's work this plan exists to prevent. Without a version, nothing is sent.
+ * silent overwrite of the agent's work this plan exists to prevent. Without a version, nothing is
+ * sent.
  *
  * @throws {AppError} `PRECONDITION_REQUIRED` without a version, before any request; and as the
  *   server answered — `412` `FILE_CHANGED` with `params.currentEtag`, `428` for a sensitive file,

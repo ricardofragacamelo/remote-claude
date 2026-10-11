@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TranscriptModuleConversationSource } from '@adapter/outbound/session/transcript-module-conversation.source';
 import { UserId } from '@domain/auth';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
 import { SessionId } from '@domain/session';
 import {
@@ -28,10 +28,10 @@ describe('TranscriptModuleConversationSource', () => {
 
   it('answers where a conversation of ours ran, and who opened it', async () => {
     const { source, store, origins } = build();
-    const id = ClaudeSessionId.create(conversationId(1));
+    const id = ConversationRef.create('claude', conversationId(1));
     store.add('/srv/projects/app', aTranscriptSession({ id: 1 }));
     await origins.record({
-      claudeSessionId: id,
+      conversation: id,
       sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
       openedBy: owner,
       workspace: WorkspacePath.create('/srv/projects/app'),
@@ -48,7 +48,7 @@ describe('TranscriptModuleConversationSource', () => {
     const { source, store } = build();
     store.add('/srv/projects/app', aTranscriptSession({ id: 2, cwd: null }));
 
-    expect(await source.find(ClaudeSessionId.create(conversationId(2)))).toMatchObject({
+    expect(await source.find(ConversationRef.create('claude', conversationId(2)))).toMatchObject({
       cwd: null,
       openedBy: undefined,
     });
@@ -62,7 +62,7 @@ describe('TranscriptModuleConversationSource', () => {
       return Promise.resolve(new Map());
     };
 
-    expect(await source.find(ClaudeSessionId.create(conversationId(3)))).toBeNull();
+    expect(await source.find(ConversationRef.create('claude', conversationId(3)))).toBeNull();
     expect(asked).toBe(false);
   });
 
@@ -70,7 +70,7 @@ describe('TranscriptModuleConversationSource', () => {
     const { source, store } = build();
     store.add('/srv/projects/app', aTranscriptSession({ id: 4 }));
 
-    await source.find(ClaudeSessionId.create(conversationId(4)));
+    await source.find(ConversationRef.create('claude', conversationId(4)));
 
     expect(store.reads).toBe(0);
   });
@@ -78,6 +78,6 @@ describe('TranscriptModuleConversationSource', () => {
   it('answers no chain to fork from for an id the store does not hold — plan 08, S-163', async () => {
     const { source } = build();
 
-    expect(await source.chainOf(ClaudeSessionId.create(conversationId(9)))).toEqual([]);
+    expect(await source.chainOf(ConversationRef.create('claude', conversationId(9)))).toEqual([]);
   });
 });

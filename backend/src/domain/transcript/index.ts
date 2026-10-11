@@ -1,5 +1,4 @@
 /** Public surface of the `transcript` domain. Another domain imports this file, never a deep path. */
-export { ClaudeSessionId } from './value-objects/claude-session-id.value-object';
 export type {
   TranscriptEvent,
   TranscriptMessage,
@@ -24,7 +23,6 @@ export { inferWorking } from './services/infer-working';
 export { clipOutput } from './services/tool-output';
 export type { ToolOutput } from './services/tool-output';
 export type { Page, SessionListCursor } from './services/transcript-pages';
-export { InvalidClaudeSessionIdError } from './errors/invalid-claude-session-id.error';
 export { TranscriptCursorStaleError } from './errors/transcript-cursor-stale.error';
 export { TranscriptNotFoundError } from './errors/transcript-not-found.error';
 export { TranscriptTimeoutError } from './errors/transcript-timeout.error';

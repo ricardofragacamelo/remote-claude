@@ -41,7 +41,7 @@ Hoje isso não existe por faltas concretas, não por decisão:
 
 | Falta | Onde | O que este plano faz |
 |---|---|---|
-| Não há endpoint que liste sessões **vivas** | o registro é um `Map` em memória, sem HTTP ([backend/04](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos)) | `GET /sessions?workspacePath=`, da pasta **e** das subpastas (F1) |
+| Não há endpoint que liste sessões **vivas** | o registro é um `Map` em memória, sem HTTP ([backend/04](../../architecture/backend/04a-claude.md#ciclo-de-vida-e-recursos)) | `GET /sessions?workspacePath=`, da pasta **e** das subpastas (F1) |
 | O histórico casa o `cwd` **exato** | `listSessions({ dir })` não desce a subpastas ([backend/03](../../architecture/backend/03-modules.md#transcript)) | subpastas se a [D-05](decisions.md#d-05--a-lista-casa-subpastas) disser — o caso relatado (VS Code aberto na raiz do repositório) já casa exato |
 | Não há como saber que uma conversa está aberta **agora** no editor | [descoberta §9.4](../../discovery/01-descoberta-claude-agent-sdk.md#94--não-há-como-saber-que-uma-sessão-está-aberta-no-editor) | "ativa em outro lugar" por **heurística declarada** — `lastModified` recente —, nunca por detecção ([D-06](decisions.md#d-06--ativa-em-outro-lugar-o-critério-e-o-que-se-permite)) |
 | `session.prompt.attachments` existe no schema e ninguém o usa | o backend não o lê; o web não o envia | contexto de verdade: arquivo, pasta, trecho, anexo do desktop, terminal (F0, F5) |
@@ -148,28 +148,28 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Caminho de arquivo no texto abre no editor, só dentro da pasta | B-16 | [web/01-architecture](../../architecture/web/01-architecture.md#os-quatro-elos) | S-69…S-71 |
 | Tools compactas, com o input exato a um clique e a permissão nunca compactada | B-17 | [web/03-ui-system](../../architecture/web/03-ui-system.md#permissão--a-tela-mais-importante) | S-72…S-76 |
 | Saída viva do `Bash` com ANSI seguro e teto | B-18 | [web/03-ui-system](../../architecture/web/03-ui-system.md#stream-de-mensagens) | S-77…S-81 |
-| Thinking, lista de tarefas e subagents como na extensão, vivos e no histórico | B-19, B-20, B-21 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#o-mapper--a-tradução-que-protege-o-contrato) | S-82…S-91 |
+| Thinking, lista de tarefas e subagents como na extensão, vivos e no histórico | B-19, B-20, B-21 | [backend/04a-claude](../../architecture/backend/04a-claude.md#o-mapper--a-tradução-que-protege-o-contrato) | S-82…S-91 |
 | Modo plan com aprovação do plano | B-22 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#o-fluxo-de-permissão) | S-92…S-95 |
 | Status do turno, resumo com custo, duração e tokens, e custo da sessão | B-23 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#eventos-servidor--cliente) | S-96…S-99 |
 | Copiar mensagem e buscar na conversa | B-24 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#o-histórico-é-dado-do-servidor) | S-100…S-102 |
-| O diff de uma tool vem do input e do snapshot que já guardamos | B-25 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#desfazer-arquivos--o-store-é-nosso) | S-103…S-112 |
+| O diff de uma tool vem do input e do snapshot que já guardamos | B-25 | [backend/04a-claude](../../architecture/backend/04a-claude.md#desfazer-arquivos--o-store-é-nosso) | S-103…S-112 |
 | O que a sessão mudou, por arquivo e por trecho, contra antes da sessão | B-26 | [backend/05-persistence](../../architecture/backend/05-persistence.md#o-que-vai-no-banco-e-o-que-não-vai) | S-113…S-118 |
 | Diff inline no chat e aba de diff no editor | B-27 | [web/03-ui-system](../../architecture/web/03-ui-system.md#stream-de-mensagens) | S-119…S-121 |
 | View "Alterações" da sessão, com aceitar | B-28 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#menu-de-comandos-e-desfazer) | S-122…S-126 |
 | Aprovar Edit/Write vendo o diff contra o disco agora | B-29 | [web/03-ui-system](../../architecture/web/03-ui-system.md#permissão--a-tela-mais-importante) | S-127…S-131 |
 | Rejeitar por arquivo e por trecho, com as garantias do desfazer, e desfazer a rejeição | B-30, B-31 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#desfazer-arquivos) | S-132…S-144 |
 | O painel fica dentro da aba de pasta, ao lado do explorer e do editor, sem vazar entre abas; fechar não encerra | B-32 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#websocket--o-stream-ao-vivo) | S-145…S-150 |
-| A sessão nasce no primeiro prompt, e nada vive antes dele | B-33 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos) | S-151…S-155 |
+| A sessão nasce no primeiro prompt, e nada vive antes dele | B-33 | [backend/04a-claude](../../architecture/backend/04a-claude.md#ciclo-de-vida-e-recursos) | S-151…S-155 |
 | A fila de prompts visível a todos e cancelável | B-34 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#multi-cliente-na-mesma-sessão) | S-156…S-160 |
-| Editar e reenviar bifurca a partir da mensagem, sem truncar a original | B-35 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#retomada--fork-fora-in-place-dentro) | S-161…S-165 |
-| Modelo da instalação, nunca hardcoded; modo que não promete o que não existe; esforço quando o modelo aceita | B-36 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#options--o-que-amarramos) | S-166…S-172 |
-| Medidor de contexto e `/compact` | B-37 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-173…S-175 |
+| Editar e reenviar bifurca a partir da mensagem, sem truncar a original | B-35 | [backend/04a-claude](../../architecture/backend/04a-claude.md#retomada--fork-fora-in-place-dentro) | S-161…S-165 |
+| Modelo da instalação, nunca hardcoded; modo que não promete o que não existe; esforço quando o modelo aceita | B-36 | [backend/04a-claude](../../architecture/backend/04a-claude.md#options--o-que-amarramos) | S-166…S-172 |
+| Medidor de contexto e `/compact` | B-37 | [backend/04a-claude](../../architecture/backend/04a-claude.md#slash-commands-init-gerar-readme-e-agentsmd) | S-173…S-175 |
 | Status dos MCPs da sessão à vista, sem segredo, sem configuração | B-38 | [backend/03-modules](../../architecture/backend/03-modules.md#session) | S-176…S-179 |
 | Exportar a conversa no cliente, sem endpoint novo | B-39 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#o-histórico-é-dado-do-servidor) | S-180…S-182 |
 | Esc interrompe sem roubar o Esc dos menus; atalhos na palette | B-40 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#comandos-cliente--servidor) | S-183…S-185 |
 | Status bar com status, modelo e custo da sessão ativa | B-41 | [web/03-ui-system](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto) | S-186, S-187 |
 | Permissão nunca se perde por estar noutra aba ou com o painel escondido; notificação sem o comando | B-42 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#a-fila-de-permissão) | S-188…S-193 |
-| O contexto é validado na pasta da sessão, tudo ou nada, e o `Read` dele é auditado | B-44 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#a-trilha-de-auditoria-é-o-hook-não-o-canusetool) | S-197…S-205 |
+| O contexto é validado na pasta da sessão, tudo ou nada, e o `Read` dele é auditado | B-44 | [backend/04a-claude](../../architecture/backend/04a-claude.md#a-trilha-de-auditoria-é-o-hook-não-o-canusetool) | S-197…S-205 |
 | Anexo do desktop com teto, tipo e vida curta, fora do workspace, da trilha e do log | B-45 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) | S-206…S-213 |
 | O composer multilinha, com recusa traduzida e o texto preservado | B-46 | [web/01-architecture](../../architecture/web/01-architecture.md#componente--só-apresentação-e-interação) | S-214…S-217 |
 | O conjunto de contexto em chips, com tamanho e tokens estimados, persistido no rascunho | B-47 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#onde-cada-estado-mora) | S-218…S-225 |

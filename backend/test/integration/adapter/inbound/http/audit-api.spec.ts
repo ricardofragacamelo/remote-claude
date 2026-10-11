@@ -64,7 +64,13 @@ describe('the audit trail HTTP surface', () => {
   };
 
   async function write(
-    overrides: { userId?: string; sessionId?: string; toolName?: string; input?: object } = {},
+    overrides: {
+      userId?: string;
+      sessionId?: string;
+      toolName?: string;
+      toolKind?: string | null;
+      input?: object;
+    } = {},
   ): Promise<string> {
     written += 1;
     const id = `01J0AUDITAPI${String(written).padStart(14, '0')}`;
@@ -76,6 +82,7 @@ describe('the audit trail HTTP surface', () => {
         sessionId: SessionId.create(overrides.sessionId ?? MINE),
         toolUseId: `tu-${String(written)}`,
         toolName: overrides.toolName ?? 'Bash',
+        toolKind: overrides.toolKind === undefined ? 'shell' : overrides.toolKind,
         input: (overrides.input as Record<string, unknown> | undefined) ?? { command: 'ls' },
         decision: 'recorded',
         origin: { deviceId: null, ip: null },
@@ -104,6 +111,7 @@ describe('the audit trail HTTP surface', () => {
           sessionId: MINE,
           toolUseId: expect.any(String),
           toolName: 'Bash',
+          kind: 'shell',
           input: { command: 'ls' },
           decision: 'recorded',
           at: at.toISOString(),
@@ -134,12 +142,13 @@ describe('the audit trail HTTP surface', () => {
     expect(response.body).toEqual({ entries: [], nextCursor: null });
   });
 
-  it('never hands back what a `Read` read — S-27', async () => {
+  it('never hands back what a `file.read` read, only its path — S-27, plan 28 S-52', async () => {
     await write({ toolName: 'Read', input: { file_path: '/srv/.env', content: 'SECRET=1' } });
 
     const response = await read();
 
-    expect(response.body.entries[0].input).toEqual({ file_path: '/srv/.env' });
+    // Read by the kind the engine's classifier gives the entry (plan 28, D-31).
+    expect(response.body.entries[0].input).toEqual({ paths: ['/srv/.env'] });
     expect(response.text).not.toContain('SECRET');
   });
 
@@ -198,6 +207,38 @@ describe('the audit trail HTTP surface', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('INVALID_INPUT');
+  });
+
+  it('filters by the kind of the call, and says it beside the engine name — plan 28, B-33', async () => {
+    const shell = await write();
+    const edit = await write({
+      toolName: 'Edit',
+      toolKind: 'file.edit',
+      input: { file_path: '/srv/a.ts' },
+    });
+    // Written before the trail kept the kind: the query reads it from the classifier, and only the
+    // data step at boot makes it filterable.
+    const old = await write({
+      toolName: 'Write',
+      toolKind: null,
+      input: { file_path: '/srv/b.ts' },
+    });
+
+    const edits = await read({ kind: 'file.edit' });
+    const all = await read();
+
+    expect(edits.body.entries.map((entry: { id: string }) => entry.id)).toEqual([edit]);
+    expect(
+      all.body.entries.map((entry: { id: string; kind: string }) => [entry.id, entry.kind]),
+    ).toEqual([
+      [old, 'file.write'],
+      [edit, 'file.edit'],
+      [shell, 'shell'],
+    ]);
+  });
+
+  it('refuses a kind that is not one, with `400`', async () => {
+    expect((await read({ kind: 'Bash' })).status).toBe(400);
   });
 
   it('refuses a session id that is not one, with `400`', async () => {

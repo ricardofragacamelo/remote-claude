@@ -12,8 +12,8 @@ import type {
 
 /**
  * The places of the activity bar, held by plan 06 until the plan that fills each registers it:
- * Explorer (plan 07), Search (plan 11) and Claude's sessions (plan 08). A held place is on screen
- * with a placeholder that says what will live there — never an empty side bar
+ * Explorer (plan 07), Search (plan 11) and the agent's sessions (plan 08). A held place is on
+ * screen with a placeholder that says what will live there — never an empty side bar
  * (docs/architecture/web/03-ui-system.md#os-registros--onde-os-planos-seguintes-encaixam).
  */
 export const HELD_VIEWS: readonly [ViewEntry, ...ViewEntry[]] = [
@@ -58,5 +58,5 @@ export const editorAreas = createRegistry<EditorAreaEntry>('editor areas');
 /** What features keep per folder tab that closing it would lose — asked before a tab closes. */
 export const folderTabKeepers = createRegistry<FolderTabKeeper>('folder tab keepers');
 
-/** What a folder tab says beside its name — Claude's questions waiting there (plan 08, B-42). */
+/** What a folder tab says beside its name — the agent's questions waiting there (plan 08, B-42). */
 export const folderTabBadges = createRegistry<FolderTabBadgeEntry>('folder tab badges');

@@ -1,11 +1,11 @@
-/// The last line of the conversation while a turn runs (plan 10, B-18): our asterisk, what Claude is
-/// doing — the tool it runs, that it waits for the person, or the verb of the turn — and for how
-/// long. It shows that something is happening when nothing new has arrived; once the turn ends it is
-/// gone, and the summary of the turn stands where it was (S-54).
+/// The last line of the conversation while a turn runs (plan 10, B-18): our asterisk, what the
+/// agent is doing — the tool it runs, that it waits for the person, or the verb of the turn — and
+/// for how long. It shows that something is happening when nothing new has arrived; once the turn
+/// ends it is gone, and the summary of the turn stands where it was (S-54).
 ///
 /// The glyph moves only for who has not asked the system for less motion (S-57). What is announced
-/// is the **change** of what Claude does, never the clock: the clock lives in this widget alone, so
-/// neither the conversation nor the screen reader hears every second (S-56, R-06).
+/// is the **change** of what the agent does, never the clock: the clock lives in this widget alone,
+/// so neither the conversation nor the screen reader hears every second (S-56, R-06).
 library;
 
 import 'dart:async';
@@ -82,7 +82,7 @@ String verbText(AppLocalizations l10n, String verb) => switch (verb) {
   _ => l10n.sessionWorkingVerbWorking,
 };
 
-/// What the line says Claude is doing — and what is announced, only when it changes.
+/// What the line says the agent is doing — and what is announced, only when it changes.
 ///
 /// Waiting on the person first, then the tool of the main conversation that runs, then the verb of
 /// the turn.
@@ -95,7 +95,7 @@ String workingLabel(
   bool questionsOnly = false,
 }) {
   if (status == SessionStatus.waitingPermission || waiting > 0) {
-    // A question of Claude says it is one, never what it asks (plan 24, B-20).
+    // A question of the agent says it is one, never what it asks (plan 24, B-20).
     return questionsOnly ? l10n.permissionQuestionWaiting : l10n.sessionWorkingWaiting;
   }
 
@@ -123,7 +123,7 @@ class WorkingIndicator extends StatefulWidget {
     this.clock = DateTime.now,
   });
 
-  /// What Claude is doing, in words ([workingLabel]).
+  /// What the agent is doing, in words ([workingLabel]).
   final String label;
 
   /// When the turn began, by the server's clock — `null` when the stream did not say: the clock

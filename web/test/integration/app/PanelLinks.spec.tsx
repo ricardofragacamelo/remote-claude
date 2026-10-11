@@ -14,6 +14,8 @@ const t = translator('en');
 const A = `${projects.path}/a`;
 const LIVE = '01J0LIVE0000000000000000AA';
 const CONVERSATION = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
+/** How the address names a conversation: its engine and its id — plan 28, B-13. */
+const LINKED = `claude:${CONVERSATION}`;
 
 let live: LiveSocket;
 let unregister: () => void;
@@ -38,12 +40,12 @@ function answers(path: string): unknown {
       sessions: [
         {
           sessionId: LIVE,
-          claudeSessionId: CONVERSATION,
-          resumedFrom: null,
+          conversation: { engine: 'claude', id: CONVERSATION },
+          resumedFromConversation: null,
           workspacePath: A,
           status: 'idle',
           model: 'claude-sonnet-5',
-          permissionMode: 'default',
+          permissionMode: 'ask',
           startedAt: new Date().toISOString(),
           openedFrom: 'web',
           pendingPermissions: 0,
@@ -64,7 +66,7 @@ function answers(path: string): unknown {
       nextCursor: null,
     };
   }
-  if (path.startsWith(`/transcripts/${CONVERSATION}/messages`)) {
+  if (path.startsWith(`/transcripts/claude/${CONVERSATION}/messages`)) {
     return aHistoryPage([said('m1', 'What was said')], {
       session: aConversationDto({ summary: 'Linked talk', cwd: A }),
     });
@@ -73,7 +75,7 @@ function answers(path: string): unknown {
 }
 
 function claude(): Promise<HTMLElement> {
-  return screen.findByRole('complementary', { name: t('workbench.claude.label') });
+  return screen.findByRole('complementary', { name: t('workbench.agent.label') });
 }
 
 function open(search: { session?: string; conversation?: string } = {}) {
@@ -113,7 +115,7 @@ describe('the link of a session and of a conversation', () => {
       await within(await claude()).findByText(t('session.error.notFound')),
     ).toBeInTheDocument();
     await user.click(
-      within(await claude()).getByRole('button', { name: t('workbench.claude.backToStart') }),
+      within(await claude()).getByRole('button', { name: t('workbench.agent.backToStart') }),
     );
 
     expect(
@@ -126,13 +128,13 @@ describe('the link of a session and of a conversation', () => {
 
   it('opens a conversation a link names, read only, in the panel of its folder — S-54', async () => {
     const user = userEvent.setup();
-    const mounted = open({ conversation: CONVERSATION });
+    const mounted = open({ conversation: LINKED });
 
     expect(await within(await claude()).findByText('What was said')).toBeInTheDocument();
     expect(
       within(await claude()).getByRole('button', { name: t('history.screen.resume') }),
     ).toBeInTheDocument();
-    expect(mounted.search()).toMatchObject({ conversation: CONVERSATION });
+    expect(mounted.search()).toMatchObject({ conversation: LINKED });
 
     await user.click(
       within(await claude()).getByRole('button', { name: t('history.screen.close') }),
@@ -142,10 +144,22 @@ describe('the link of a session and of a conversation', () => {
     });
   });
 
+  it('opens nothing for a link that names a conversation by its id alone — plan 28, B-13', async () => {
+    const mounted = open({ conversation: CONVERSATION });
+
+    expect(
+      await within(await claude()).findByRole('group', { name: t('sessions.draft.choices') }),
+    ).toBeInTheDocument();
+    expect(within(await claude()).queryByText('What was said')).toBeNull();
+    await waitFor(() => {
+      expect(mounted.search()['conversation']).toBeUndefined();
+    });
+  });
+
   it('goes on as a session in the same panel when the conversation is resumed — plan 08, B-32', async () => {
     const user = userEvent.setup();
     const RESUMED = '01J0RESUMEDRESUMEDRESUMED0';
-    const mounted = open({ conversation: CONVERSATION });
+    const mounted = open({ conversation: LINKED });
 
     await user.click(
       await within(await claude()).findByRole('button', { name: t('history.screen.resume') }),
@@ -159,7 +173,11 @@ describe('the link of a session and of a conversation', () => {
       seq: 1,
       sessionId: RESUMED,
       correlationId: live.lastSent('session.start')?.['id'],
-      payload: { sessionId: RESUMED, resumedFrom: CONVERSATION, workspacePath: A },
+      payload: {
+        sessionId: RESUMED,
+        resumedFrom: { engine: 'claude', id: CONVERSATION },
+        workspacePath: A,
+      },
     });
 
     expect(

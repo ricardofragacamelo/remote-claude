@@ -90,8 +90,8 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 
 | Requisito | Tarefas | Documento normativo | Cenários |
 |---|---|---|---|
-| Limite de sessões derivado da RAM, não fixo | B-01 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos) | S-01…S-03, S-13 |
-| Sessão ociosa libera recurso; sessão ativa não é morta | B-02 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos) | S-04, S-05 |
+| Limite de sessões derivado da RAM, não fixo | B-01 | [backend/04a-claude](../../architecture/backend/04a-claude.md#ciclo-de-vida-e-recursos) | S-01…S-03, S-13 |
+| Sessão ociosa libera recurso; sessão ativa não é morta | B-02 | [backend/04a-claude](../../architecture/backend/04a-claude.md#ciclo-de-vida-e-recursos) | S-04, S-05 |
 | Subprocesso não sobrevive ao backend | B-03, B-04 | [backend/06-realtime](../../architecture/backend/06-realtime.md#shutdown) | S-06…S-09, S-14 |
 | Cliente que martela é contido, com `Retry-After` | B-05, B-06, B-07 | [backend/06-realtime](../../architecture/backend/06-realtime.md#heartbeat-e-limites) | S-10…S-12 |
 | Uma falha pontual do provedor não perde a notificação | B-25 | [plano 02 · D-05](../02-mobile-approval/decisions.md#d-05--quando-o-push-não-sai) | S-47…S-53 |

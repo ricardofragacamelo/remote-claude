@@ -32,12 +32,12 @@ export interface SlashCommand {
   readonly shadowed: boolean;
 }
 
-/** Where a command or a skill comes from: Claude Code, the project, the user, the system. */
+/** Where a command or a skill comes from: the agent, the project, the user, the system. */
 export type CommandOrigin = 'builtin' | 'project' | 'user' | 'system';
 
 /** What the installation of a live session offers. */
 export interface CommandMenu {
-  /** The version of the CLI the SDK spawned, or `null` before the first turn told it. */
+  /** The version of the engine's own program, or `null` before the first turn told it. */
   readonly cliVersion: string | null;
 
   /** Filtered and ordered by the backend: the suggested first, in ranking order, then by name. */

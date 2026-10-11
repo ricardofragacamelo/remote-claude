@@ -5,9 +5,9 @@ import path from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 
-import { MODEL_CHECK_SETTINGS } from '@adapter/outbound/claude/model-check.adapter';
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
+import { MODEL_CHECK_SETTINGS } from '@adapter/outbound/engines/claude/model-check.adapter';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
 import { SessionRegistry } from '@application/session';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
@@ -102,13 +102,16 @@ describe('the configuration of Claude when the installation is not well — plan
   const modelsOf = (folder: string) => get(`/claude/models?folder=${encodeURIComponent(folder)}`);
   const closes = (): number => records.reduce((total, record) => total + record.closes, 0);
 
-  it('answers a probe that failed with CLAUDE_UNAVAILABLE, keeps nothing, and asks again — S-20, S-17', async () => {
+  it('answers a probe that failed with AGENT_UNAVAILABLE, keeps nothing, and asks again — S-20, S-17', async () => {
     const folder = freshFolder();
     script = { fixture: 'text-turn', installationFails: new Error('the CLI is unhappy') };
 
     const failed = await modelsOf(folder);
     expect(failed.status).toBe(502);
-    expect(failed.body.error.code).toBe('CLAUDE_UNAVAILABLE');
+    expect(failed.body.error.code).toBe('AGENT_UNAVAILABLE');
+    // Which agent fell over, for the client to name it — plan 28, S-26.
+    expect(failed.body.error.params).toMatchObject({ engine: 'claude' });
+    expect(failed.body.error.messageKey).toBe('session.error.agentUnavailable');
     expect(closes()).toBe(1);
 
     script = { fixture: 'text-turn' };
@@ -117,13 +120,14 @@ describe('the configuration of Claude when the installation is not well — plan
     expect(closes()).toBe(2);
   });
 
-  it('answers a probe that never answers with CLAUDE_TIMEOUT, and ends its subprocess — S-20', async () => {
+  it('answers a probe that never answers with AGENT_TIMEOUT, and ends its subprocess — S-20', async () => {
     script = { fixture: 'text-turn', installationFails: 'hang' };
 
     const response = await modelsOf(freshFolder());
 
     expect(response.status).toBe(504);
-    expect(response.body.error.code).toBe('CLAUDE_TIMEOUT');
+    expect(response.body.error.code).toBe('AGENT_TIMEOUT');
+    expect(response.body.error.params).toMatchObject({ engine: 'claude' });
     expect(closes()).toBe(1);
   }, 20_000);
 
@@ -183,7 +187,7 @@ describe('the configuration of Claude when the installation is not well — plan
     });
 
     expect(response.status).toBe(502);
-    expect(response.body.error.code).toBe('CLAUDE_UNAVAILABLE');
+    expect(response.body.error.code).toBe('AGENT_UNAVAILABLE');
     expect((await get('/claude/defaults')).body.user.model).toBeNull();
   });
 
@@ -203,13 +207,13 @@ describe('the configuration of Claude when the installation is not well — plan
     expect((await get('/claude/defaults')).body.user.thinking).toBeNull();
   });
 
-  it('answers a CLI that died during the test with CLAUDE_UNAVAILABLE — S-31', async () => {
+  it('answers a CLI that died during the test with AGENT_UNAVAILABLE — S-31', async () => {
     script = { fixture: 'text-turn', failWith: new Error('the subprocess exited') };
 
     const response = await post('/claude/diagnostics/model-check', {});
 
     expect(response.status).toBe(502);
-    expect(response.body.error.code).toBe('CLAUDE_UNAVAILABLE');
+    expect(response.body.error.code).toBe('AGENT_UNAVAILABLE');
     expect((await get('/claude/installation')).body.lastModelCheck).toBeNull();
   });
 
@@ -219,7 +223,7 @@ describe('the configuration of Claude when the installation is not well — plan
     const response = await post('/claude/diagnostics/model-check', { model: 'sonnet' });
 
     expect(response.status).toBe(504);
-    expect(response.body.error.code).toBe('CLAUDE_TIMEOUT');
+    expect(response.body.error.code).toBe('AGENT_TIMEOUT');
     expect(closes()).toBe(1);
   });
 });

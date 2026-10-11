@@ -1,4 +1,4 @@
-import { PermissionRequest, classifyRisk, interactionFor } from '@domain/permission';
+import { PermissionRequest, classifyRisk } from '@domain/permission';
 import type { PermissionResolution } from '@domain/permission';
 import type { SessionId } from '@domain/session';
 import type { Clock } from '@domain/shared';
@@ -64,7 +64,7 @@ export class RequestPermissionUseCase {
     const now = this.clock.now();
     // The questions of an `AskUserQuestion`, normalised once, here — what every screen renders
     // and what an answer is checked against. A question waits longer than a permission (D-07).
-    const interaction = interactionFor(command.toolName, command.input);
+    const interaction = command.tool.interaction ?? null;
     const timeoutMs =
       interaction === null ? this.settings.timeoutMs : this.settings.questionTimeoutMs;
     const request = PermissionRequest.open({
@@ -75,8 +75,9 @@ export class RequestPermissionUseCase {
       toolUseId: command.toolUseId,
       toolName: command.toolName,
       input: command.input,
+      tool: command.tool,
       interaction,
-      riskHint: classifyRisk(command.toolName, command.input),
+      riskHint: classifyRisk(command.tool),
       requestedAt: now,
       expiresAt: new Date(now.getTime() + timeoutMs),
     });

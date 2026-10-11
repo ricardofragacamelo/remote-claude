@@ -3,7 +3,7 @@ import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { registerClaudeChanges } from '@/features/session';
+import { registerAgentChanges } from '@/features/session';
 import { Conversation } from '@/features/session/components/Conversation';
 import { INLINE_DIFF_LINES } from '@/features/session/components/conversation/ToolDiffView';
 import { readEvent, SILENT } from '@/features/session/services/conversation-reducer';
@@ -11,6 +11,7 @@ import { EditorWorkspace } from '@/features/editor/components/EditorWorkspace';
 import { FOLDER, editorState } from '../../../support/editor';
 import { renderRouted, translator } from '../../../support/render';
 import { aWireError, routeApi, SESSION } from '../../../support/session-tools';
+import { aToolCall } from '../../../support/canonical-tool';
 
 const t = translator('en');
 const FILE = `${FOLDER}/src/app.ts`;
@@ -32,8 +33,7 @@ function anEdit(status = 'succeeded') {
   return [
     frame('tool.started', {
       toolUseId: 'toolu_1',
-      toolName: 'Edit',
-      input: { file_path: FILE, old_string: 'a', new_string: 'b' },
+      ...aToolCall('Edit', { file_path: FILE, old_string: 'a', new_string: 'b' }),
     }),
     frame('tool.completed', { toolUseId: 'toolu_1', status }),
   ].reduce(readEvent, SILENT);
@@ -43,7 +43,8 @@ function anEdit(status = 'succeeded') {
 function aDiff(count: number, overrides: Record<string, unknown> = {}) {
   return {
     path: FILE,
-    toolName: 'Edit',
+    kind: 'file.edit',
+    pending: false,
     scope: 'file',
     before: { state: 'content', content: 'old\n' },
     after: { state: 'content', content: 'new\n' },
@@ -79,7 +80,7 @@ function show(conversation = anEdit()) {
 let unregister: () => void;
 
 beforeAll(() => {
-  unregister = registerClaudeChanges();
+  unregister = registerAgentChanges();
 });
 
 afterAll(() => {
@@ -174,6 +175,29 @@ describe('the diff of a tool in the chat', () => {
     act(() => undefined);
 
     expect(get).not.toHaveBeenCalled();
+  });
+
+  it('turns the diff on by the files a call changes, never by its tool — plan 28 B-18', async () => {
+    const get = routeApi({ [ROUTE]: [aDiff(1)] });
+    const call = (changes: readonly Record<string, unknown>[]) =>
+      [
+        frame('tool.started', {
+          toolUseId: 'toolu_1',
+          ...aToolCall('Frobnicate', {}),
+          changes,
+        }),
+        frame('tool.completed', { toolUseId: 'toolu_1', status: 'succeeded' }),
+      ].reduce(readEvent, SILENT);
+
+    const deleted = show(call([{ path: FILE, op: 'delete' }]));
+    act(() => undefined);
+    expect(get).not.toHaveBeenCalled();
+    deleted.unmount();
+
+    show(call([{ path: FILE, op: 'write' }]));
+    expect(
+      await screen.findByRole('group', { name: t('sessions.diff.label', { name: 'app.ts' }) }),
+    ).toBeVisible();
   });
 
   it('reads a side the editor cannot know as an error of the tab', async () => {

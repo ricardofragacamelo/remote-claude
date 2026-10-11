@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { AUDIT_DECISIONS, disclosedInput } from '@domain/audit';
-import type { AuditTrailPage, AuditTrailRecord } from '@application/audit';
+import { AUDIT_DECISIONS } from '@domain/audit';
+import type { DisclosedAuditPage, DisclosedAuditRecord } from '@application/audit';
 
 /** How many entries a page holds when the client does not say, and the most it may ask for. */
 export const DEFAULT_PAGE_SIZE = 50;
@@ -32,6 +32,12 @@ export const auditTrailQuerySchema = z
   .object({
     sessionId: z.string().min(1).max(64).optional(),
     toolName: z.string().min(1).max(128).optional(),
+    /** The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33). */
+    kind: z
+      .string()
+      .regex(/^[a-z]+(?:\.[a-z]+)*$/)
+      .max(64)
+      .optional(),
     decision: z.enum(AUDIT_DECISIONS).optional(),
     /** Inclusive. */
     from: z.iso.datetime({ offset: true }).optional(),
@@ -70,9 +76,14 @@ export interface AuditEntryDto {
   readonly id: string;
   readonly sessionId: string;
   readonly toolUseId: string | null;
+
+  /** The engine's own name of the tool, kept beside the kind. */
   readonly toolName: string;
 
-  /** Exactly as the tool was called — except a `Read`, which never hands back a file's contents. */
+  /** The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33). */
+  readonly kind: string;
+
+  /** Exactly as the tool was called — except a `file.read`, which shows its path and window alone. */
   readonly input: Readonly<Record<string, unknown>>;
 
   readonly decision: string;
@@ -94,7 +105,12 @@ export interface AuditTrailPageDto {
 }
 
 /** The transport shape of one entry. */
-export function toAuditEntryDto({ entry, traceId }: AuditTrailRecord): AuditEntryDto {
+export function toAuditEntryDto({
+  entry,
+  traceId,
+  disclosed,
+  kind,
+}: DisclosedAuditRecord): AuditEntryDto {
   const verdict = entry.verdict;
 
   return {
@@ -102,7 +118,8 @@ export function toAuditEntryDto({ entry, traceId }: AuditTrailRecord): AuditEntr
     sessionId: entry.sessionId.value,
     toolUseId: entry.toolUseId,
     toolName: entry.toolName,
-    input: disclosedInput(entry.toolName, entry.input.value),
+    kind,
+    input: disclosed,
     decision: entry.decision,
     at: entry.at.toISOString(),
     traceId,
@@ -121,7 +138,7 @@ export function toAuditEntryDto({ entry, traceId }: AuditTrailRecord): AuditEntr
 }
 
 /** The transport shape of a page. */
-export function toAuditTrailPageDto(page: AuditTrailPage): AuditTrailPageDto {
+export function toAuditTrailPageDto(page: DisclosedAuditPage): AuditTrailPageDto {
   return {
     entries: page.records.map(toAuditEntryDto),
     nextCursor: page.nextCursor === null ? null : String(page.nextCursor),

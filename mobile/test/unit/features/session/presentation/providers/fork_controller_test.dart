@@ -13,6 +13,7 @@ import 'package:remote_claude/features/session/presentation/providers/owned_sess
 import 'package:remote_claude/features/session/presentation/providers/resume_controller.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
 import '../../../../../support/fakes/fake_session_repository.dart';
 
@@ -50,7 +51,12 @@ void main() {
 
   bool fork(ProviderContainer container, {String text = 'fix it properly'}) => container
       .read(forkControllerProvider('session-1').notifier)
-      .fork(workspacePath: '/work', conversationId: 'conv-1', messageId: 'u1', text: text);
+      .fork(
+        workspacePath: '/work',
+        conversation: conversationOf('conv-1'),
+        messageId: 'u1',
+        text: text,
+      );
 
   ResumeState read(ProviderContainer container) =>
       container.read(forkControllerProvider('session-1'));
@@ -63,7 +69,7 @@ void main() {
 
     expect(sessions.commands.single.$2, <String, Object?>{
       'workspacePath': '/work',
-      'resumeSessionId': 'conv-1',
+      'resumeFrom': conversationJson('conv-1'),
       'forkAt': 'u1',
     });
     expect(read(container).isPending, isTrue);

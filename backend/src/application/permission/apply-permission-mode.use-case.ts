@@ -6,11 +6,12 @@ import type { PermissionRegistry } from './permission-registry';
 /**
  * A session changed mode: what that means for the questions it already has on screen.
  *
- * Only switching **to** Permitir tudo changes anything. Somebody who turns it on with a card in
- * front of them wants the card gone, and leaving it would cost the extra tap the mode exists to
+ * Only switching **to** Permitir tudo or to read-only changes anything. Somebody who turns Permitir
+ * tudo on with a card in front of them wants the card gone, and leaving it would cost the extra tap the mode exists to
  * save ([23 · D-06](../../../../docs/plans/23-fluid-permissions/decisions.md)). Each pending request
  * goes through the same {@link PermissionAutoAnswer} a new one does, so a rule that refuses still
- * refuses and a question for the person stays open.
+ * refuses and a question for the person stays open. Read-only refuses, the same way, every pending
+ * call that would change something (plan 28, B-26).
  *
  * Switching away needs nothing: the mode is read on every request, and the next tool asks.
  */
@@ -23,7 +24,8 @@ export class ApplyPermissionModeUseCase {
 
   /** @returns how many of the session's open questions were answered by the change */
   async execute(sessionId: SessionId, mode: PermissionMode): Promise<number> {
-    if (mode !== 'allowAll') {
+    // The two modes that answer by themselves: Permitir tudo allows, read-only refuses a change.
+    if (mode !== 'allowAll' && mode !== 'readOnly') {
       return 0;
     }
 

@@ -24,8 +24,22 @@ export const permissionRules = pgTable(
     userId: text('user_id').notNull(),
     scope: text('scope').notNull(),
     projectPath: text('project_path'),
-    /** The grammar of the Claude Code settings, exactly as written. */
+    /**
+     * The canonical grammar, exactly as written — `shell(git status:*)`. On a rule still `native`,
+     * or switched off, the engine's own grammar it was written in (plan 28, B-33).
+     */
     pattern: text('pattern').notNull(),
+    /** The engine the rule is restricted to; `NULL` for every engine whose calls have the kind. */
+    engine: text('engine'),
+    /**
+     * `native` for a rule still in an engine's grammar, `canonical` once the migration read it — no
+     * default: the repository says, always `canonical`.
+     */
+    grammar: text('grammar').notNull(),
+    /** Why the rule was switched off, `NULL` for one that was not. A disabled rule never answers. */
+    disabledReason: text('disabled_reason'),
+    /** The engine's pattern a migrated rule was written as. */
+    nativePattern: text('native_pattern'),
     decision: text('decision').notNull(),
     grantedAt: timestamp('granted_at', { withTimezone: true }).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -43,5 +57,14 @@ export const permissionRules = pgTable(
       sql`(${table.scope} = 'project') = (${table.projectPath} IS NOT NULL)`,
     ),
     check('permission_rules_expires_after_grant', sql`${table.expiresAt} > ${table.grantedAt}`),
+    check('permission_rules_grammar_known', sql`${table.grammar} IN ('native', 'canonical')`),
+    check(
+      'permission_rules_disabled_is_canonical',
+      sql`${table.disabledReason} IS NULL OR ${table.grammar} = 'canonical'`,
+    ),
+    check(
+      'permission_rules_engine_form',
+      sql`${table.engine} IS NULL OR ${table.engine} ~ '^[a-z][a-z0-9-]{0,31}$'`,
+    ),
   ],
 );

@@ -4,6 +4,8 @@ import type { QuestionRecord, QuestionRecordSource } from '@application/permissi
 import { QuestionHistory } from '@application/transcript/question-history';
 import { UserId } from '@domain/auth';
 import type { TranscriptMessage } from '@domain/transcript';
+import { canonicalToolPayload } from '@application/session';
+import { claudeTool } from '../../../support/builders/tool.builder';
 
 const owner = UserId.create('auth|owner');
 
@@ -28,11 +30,17 @@ const ASKED: TranscriptMessage = {
   events: [
     {
       type: 'tool.started',
-      payload: { toolUseId: 'q-1', toolName: 'AskUserQuestion', input: INPUT },
+      payload: {
+        toolUseId: 'q-1',
+        ...canonicalToolPayload(claudeTool('AskUserQuestion', INPUT), INPUT),
+      },
     },
     {
       type: 'tool.started',
-      payload: { toolUseId: 'b-1', toolName: 'Bash', input: { command: 'ls' } },
+      payload: {
+        toolUseId: 'b-1',
+        ...canonicalToolPayload(claudeTool('Bash', { command: 'ls' }), { command: 'ls' }),
+      },
     },
   ],
 };
@@ -151,7 +159,7 @@ describe('the questions of a history — plan 24, B-21', () => {
       events: [
         {
           type: 'tool.started',
-          payload: { toolUseId: 'q-2', toolName: 'AskUserQuestion', input: 'x' },
+          payload: { toolUseId: 'q-2', kind: 'question', rawInput: 'x' },
         },
         { type: 'tool.completed', payload: { toolUseId: 7 } },
       ],
@@ -161,5 +169,94 @@ describe('the questions of a history — plan 24, B-21', () => {
       odd,
       ENDED,
     ]);
+  });
+
+  it('reads a question by its kind and its interaction, whichever engine asked it — plan 28, B-15, S-64', async () => {
+    const { source } = records();
+    const asked: TranscriptMessage = {
+      id: 'm1',
+      events: [
+        {
+          type: 'tool.started',
+          payload: {
+            toolUseId: 'q-1',
+            kind: 'question',
+            origin: { engine: 'test-engine', native: 'ask_user' },
+            rawInput: { anything: 'the engine of its own' },
+            interaction: INTERACTION,
+          },
+        },
+      ],
+    };
+
+    const [, ended] = await new QuestionHistory(source).of(owner, [asked, ENDED], [asked, ENDED]);
+
+    expect(ended?.events[0]?.payload['question']).toEqual({ interaction: INTERACTION });
+  });
+
+  it('never rebuilds a question from the raw input: a start with no interaction asks nothing — S-64', async () => {
+    const { source, asked } = records();
+    const raw: TranscriptMessage = {
+      id: 'm1',
+      events: [
+        {
+          type: 'tool.started',
+          payload: {
+            toolUseId: 'q-1',
+            kind: 'question',
+            origin: { engine: 'claude', native: 'AskUserQuestion' },
+            rawInput: INPUT,
+          },
+        },
+      ],
+    };
+
+    const page = [raw, ENDED];
+    expect(await new QuestionHistory(source).of(owner, page, page)).toBe(page);
+    expect(asked).toEqual([]);
+  });
+
+  it('joins nothing to the end of a plan, which is not a question', async () => {
+    const { source, asked } = records();
+    const input = { plan: '# Plan' };
+    const plan: TranscriptMessage = {
+      id: 'm1',
+      events: [
+        {
+          type: 'tool.started',
+          payload: {
+            toolUseId: 'q-1',
+            ...canonicalToolPayload(claudeTool('ExitPlanMode', input), input),
+          },
+        },
+      ],
+    };
+
+    const page = [plan, ENDED];
+    expect(await new QuestionHistory(source).of(owner, page, page)).toBe(page);
+    expect(asked).toEqual([]);
+  });
+
+  it('never reads a question by the engine`s name of the tool alone', async () => {
+    // The name of Claude's question tool, on a call whose kind is not `question`: not a question.
+    const { source, asked } = records();
+    const named: TranscriptMessage = {
+      id: 'm1',
+      events: [
+        {
+          type: 'tool.started',
+          payload: {
+            toolUseId: 'q-1',
+            kind: 'other',
+            origin: { engine: 'claude', native: 'AskUserQuestion' },
+            rawInput: INPUT,
+          },
+        },
+      ],
+    };
+
+    const page = [named, ENDED];
+    expect(await new QuestionHistory(source).of(owner, page, page)).toBe(page);
+    expect(asked).toEqual([]);
   });
 });

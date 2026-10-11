@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/events/tool-progress.json",
   "title": "ToolProgress",
-  "description": "Output of a tool while it is still running, from the SDK's `tool_progress`.",
+  "description": "A tool is still running: how long it has been at it, from the engine. The text of the row is the client's, from the `label` of the `tool.started` with the same `toolUseId`.",
   "x-kind": "event",
   "x-type": "tool.progress",
   "type": "object",
@@ -13,11 +13,11 @@
     },
     "chunk": {
       "type": "string",
-      "description": "This fragment of the output, and only this one."
+      "description": "The elapsed time, as `<seconds>s` — never the tool's name, which the client already has as the `label` of the `tool.started` (plan 28, S-48)."
     },
     "parentToolUseId": {
       "type": "string",
-      "description": "Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation."
+      "description": "Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation."
     }
   }
 }

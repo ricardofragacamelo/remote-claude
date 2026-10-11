@@ -37,7 +37,7 @@ final class ConversationHistoryControllerProvider
   /// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
   ConversationHistoryControllerProvider._({
     required ConversationHistoryControllerFamily super.from,
-    required String super.argument,
+    required ConversationKey super.argument,
   }) : super(
          retry: null,
          name: r'conversationHistoryControllerProvider',
@@ -71,7 +71,7 @@ final class ConversationHistoryControllerProvider
   }
 }
 
-String _$conversationHistoryControllerHash() => r'1e5051636659be6651ffdbc38685c42ac12896ad';
+String _$conversationHistoryControllerHash() => r'74c5ca4da1d7da60ef55e96c45348e99a783658a';
 
 /// The history of one conversation, keyed by it.
 ///
@@ -88,7 +88,7 @@ final class ConversationHistoryControllerFamily extends $Family
           AsyncValue<HistoryBoard>,
           HistoryBoard,
           FutureOr<HistoryBoard>,
-          String
+          ConversationKey
         > {
   ConversationHistoryControllerFamily._()
     : super(
@@ -107,8 +107,8 @@ final class ConversationHistoryControllerFamily extends $Family
   /// comes back and when the socket does — always from the last entry it has, so nothing is missed and
   /// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
 
-  ConversationHistoryControllerProvider call(String conversationId) =>
-      ConversationHistoryControllerProvider._(argument: conversationId, from: this);
+  ConversationHistoryControllerProvider call(ConversationKey conversation) =>
+      ConversationHistoryControllerProvider._(argument: conversation, from: this);
 
   @override
   String toString() => r'conversationHistoryControllerProvider';
@@ -123,10 +123,10 @@ final class ConversationHistoryControllerFamily extends $Family
 /// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
 
 abstract class _$ConversationHistoryController extends $AsyncNotifier<HistoryBoard> {
-  late final _$args = ref.$arg as String;
-  String get conversationId => _$args;
+  late final _$args = ref.$arg as ConversationKey;
+  ConversationKey get conversation => _$args;
 
-  FutureOr<HistoryBoard> build(String conversationId);
+  FutureOr<HistoryBoard> build(ConversationKey conversation);
   @$mustCallSuper
   @override
   WhenComplete runBuild() {

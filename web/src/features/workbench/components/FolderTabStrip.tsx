@@ -169,7 +169,7 @@ function FolderTabItem({
   );
 }
 
-/** What the features say on a folder tab — a question of Claude waiting there, for one. */
+/** What the features say on a folder tab — a question of the agent waiting there, for one. */
 function TabBadges({ folder }: { readonly folder: string }): React.JSX.Element {
   const badges = useRegistry(folderTabBadges);
 

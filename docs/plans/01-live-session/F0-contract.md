@@ -103,7 +103,7 @@ restauração no fim.
 antes de abrir sessão. A medição decide se ela é obrigatória ou redundante, nunca se ela existe.
 O resultado, qualquer que seja, vira registro em [progress.md](progress.md), fecha a linha de
 [D-11](decisions.md) e atualiza
-[04-claude-integration](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources).
+[04a-claude](../../architecture/backend/04a-claude.md#a-armadilha-do-settingsources).
 
 **Medido em 2026-09-18: o furo é real.** Em diretório confiado o `canUseTool` **não é chamado**, e
 o `allow` de projeto executa a tool sem consultar ninguém. A mitigação passa de precaução a
@@ -111,7 +111,7 @@ requisito, e o spike ainda achou um segundo caminho para o mesmo furo — nome s
 `options.allowedTools` ([D-14](decisions.md#d-14--o-segundo-jeito-de-furar-o-canusetool)). A
 medição, os números e o método estão em
 [D-11](decisions.md#d-11--o-furo-que-invalidaria-o-produto) e em
-[04-claude-integration](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido).
+[04a-claude](../../architecture/backend/04a-claude.md#diretório-confiado-fura-o-canusetool--medido).
 
 O spike rodou sobre um `CLAUDE_CONFIG_DIR` isolado em vez do backup e restauração do
 `~/.claude.json` que esta task previa: mede a mesma coisa e não disputa o arquivo com uma sessão

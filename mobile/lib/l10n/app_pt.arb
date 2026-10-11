@@ -16,7 +16,7 @@
   "authErrorTokenExpired": "Sua sessão expirou.",
   "authErrorInvalidState": "A resposta do login não corresponde ao pedido.",
   "authSignInTitle": "Entre para continuar",
-  "authSignInDescription": "O remote-claude executa o Claude Code na sua própria máquina, por isso pergunta quem é você antes.",
+  "authSignInDescription": "O remote-claude executa o {agent} na sua própria máquina, por isso pergunta quem é você antes.",
   "authSignInAction": "Entrar",
   "authSignInPending": "Concluindo o login…",
   "connectionErrorUnsupportedVersion": "Esta versão fala um protocolo antigo. Atualize o aplicativo.",
@@ -102,6 +102,45 @@
   "sessionToolStatusDenied": "Recusada",
 
   "sessionToolTitled": "{name} · {title}",
+  "sessionToolFileRead": "Ler {path}",
+  "sessionToolFileEdit": "Editar {path} (+{added} −{removed})",
+  "sessionToolFileEditMany": "Editar {path} (várias mudanças)",
+  "sessionToolFileEditCell": "Editar o notebook {path}",
+  "sessionToolFileWrite": "Gravar {path} ({lines} linhas)",
+  "sessionToolShell": "Shell: {command}",
+  "sessionToolShellOutput": "Ler a saída de um comando",
+  "sessionToolSearch": "Buscar “{pattern}”",
+  "sessionToolSearchIn": "Buscar “{pattern}” em {path}",
+  "sessionToolSearchFiles": "Achar arquivos {pattern}",
+  "sessionToolWebFetch": "Buscar {host}",
+  "sessionToolWebSearch": "Pesquisar na web “{query}”",
+  "sessionToolAgent": "Subagente ({type}): {description}",
+  "sessionToolQuestion": "Perguntou: {header}",
+  "sessionToolQuestions": "Fez {count} perguntas",
+  "sessionToolPlan": "Apresentar o plano",
+  "sessionToolTasksWrite": "Atualizou a lista de tarefas ({count} tarefas)",
+  "sessionToolTaskCreate": "Adicionou uma tarefa: {subject}",
+  "sessionToolTaskUpdate": "Mudou a tarefa #{id}",
+  "sessionToolTaskGet": "Leu a tarefa #{id}",
+  "sessionToolTaskList": "Leu a lista de tarefas",
+  "sessionToolMcp": "{server} · {tool}",
+  "sessionToolOther": "{name}",
+  "sessionKindFileRead": "Ler",
+  "sessionKindFileEdit": "Editar",
+  "sessionKindFileWrite": "Gravar",
+  "sessionKindFileDelete": "Apagar",
+  "sessionKindFileMove": "Mover",
+  "sessionKindSearch": "Busca",
+  "sessionKindShell": "Shell",
+  "sessionKindShellOutput": "Saída",
+  "sessionKindWebFetch": "Página",
+  "sessionKindWebSearch": "Pesquisa na web",
+  "sessionKindMcp": "MCP",
+  "sessionKindAgent": "Subagente",
+  "sessionKindQuestion": "Pergunta",
+  "sessionKindPlan": "Plano",
+  "sessionKindTasks": "Tarefas",
+  "sessionKindOther": "Ferramenta",
   "sessionToolRowLabel": "{tool} — {status}. Mostrar o input exato",
   "sessionToolRowIn": "IN",
   "sessionToolRowOut": "OUT",
@@ -115,7 +154,7 @@
   "sessionImageAttachedWith": "Imagem anexada ({details})",
   "sessionImageOpen": "Abrir a imagem",
   "sessionImageClose": "Fechar",
-  "sessionImageDescription": "A imagem que este prompt levou, como o Claude a recebeu.",
+  "sessionImageDescription": "A imagem que este prompt levou, como o {agent} a recebeu.",
   "sessionImageLoading": "Carregando a imagem…",
   "sessionImageAlt": "A imagem anexada ao prompt",
 
@@ -134,21 +173,22 @@
 
   "permissionCardLabel": "Permissão para {tool}",
 
-  "permissionToolBash": "Executar um comando no terminal",
-
-  "permissionToolWrite": "Gravar um arquivo",
-
-  "permissionToolEdit": "Editar um arquivo",
-
-  "permissionToolMultiEdit": "Editar vários arquivos",
-
-  "permissionToolNotebookEdit": "Editar um notebook",
-
-  "permissionToolRead": "Ler um arquivo",
-
+  "permissionToolFileRead": "Ler um arquivo",
+  "permissionToolFileEdit": "Editar um arquivo",
+  "permissionToolFileWrite": "Escrever um arquivo",
+  "permissionToolFileDelete": "Apagar um arquivo",
+  "permissionToolFileMove": "Mover um arquivo",
+  "permissionToolSearch": "Buscar nos arquivos",
+  "permissionToolShell": "Executar um comando de shell",
+  "permissionToolShellOutput": "Ler a saída de um comando",
   "permissionToolWebFetch": "Buscar uma página",
-
-  "permissionToolUnknown": "Usar {tool}",
+  "permissionToolWebSearch": "Pesquisar na web",
+  "permissionToolMcp": "Usar uma ferramenta MCP",
+  "permissionToolAgent": "Iniciar um subagente",
+  "permissionToolQuestion": "Responder à pergunta do {agent}",
+  "permissionToolPlan": "Aprovar o plano",
+  "permissionToolTasks": "Mudar a lista de tarefas",
+  "permissionToolOther": "Usar uma ferramenta",
 
   "permissionRiskRead": "Lê algo",
 
@@ -221,6 +261,7 @@
   "permissionOutcomeAllowedByRule": "Permitido por uma das suas regras, sem perguntar a ninguém.",
 
   "permissionOutcomeRefusedByRule": "Negado por uma das suas regras, sem perguntar a ninguém.",
+  "permissionRefusedReadOnly": "Recusado: a sessão é só leitura",
 
   "permissionOutcomeAllowedByAllowAll": "Permitido pelo Permitir tudo, sem perguntar a ninguém.",
 
@@ -258,9 +299,9 @@
 
   "permissionPersistTitle": "Parar de perguntar sobre isto?",
 
-  "permissionPersistProject": "O Claude vai executar o que casar com a regra abaixo neste projeto sem perguntar a você, por {duration}.",
+  "permissionPersistProject": "O {agent} vai executar o que casar com a regra abaixo neste projeto sem perguntar a você, por {duration}.",
 
-  "permissionPersistAlways": "O Claude vai executar o que casar com a regra abaixo em qualquer projeto seu sem perguntar a você, por {duration}.",
+  "permissionPersistAlways": "O {agent} vai executar o que casar com a regra abaixo em qualquer projeto seu sem perguntar a você, por {duration}.",
 
   "permissionPersistRevocable": "Você pode retirar isso a qualquer momento nas suas regras. A revogação vale no próximo pedido, em toda sessão aberta.",
 
@@ -270,9 +311,7 @@
 
   "permissionErrorRuleNotFound": "Essa regra não existe.",
 
-  "permissionToolAskUserQuestion": "Responder à pergunta do Claude",
-
-  "permissionQuestionLabel": "Pergunta do Claude",
+  "permissionQuestionLabel": "Pergunta do {agent}",
 
   "permissionQuestionProgress": "Pergunta {n} de {total}",
 
@@ -296,7 +335,7 @@
 
   "permissionQuestionDecline": "Não responder",
 
-  "permissionQuestionDeclineReason": "Por quê? O Claude lê isto (opcional)",
+  "permissionQuestionDeclineReason": "Por quê? O {agent} lê isto (opcional)",
 
   "permissionQuestionDeclineConfirm": "Enviar sem responder",
 
@@ -304,15 +343,11 @@
 
   "permissionQuestionExpired": "Esta pergunta expirou. Nada foi enviado.",
 
-  "permissionQuestionMalformed": "Não foi possível ler a pergunta do Claude, então ela não pode ser respondida aqui. Recusar avisa o Claude disso.",
+  "permissionQuestionMalformed": "Não foi possível ler a pergunta do {agent}, então ela não pode ser respondida aqui. Recusar avisa o {agent} disso.",
 
   "permissionQuestionWaiting": "Aguardando sua resposta a uma pergunta",
 
-  "permissionQuestionPill": "O Claude te perguntou algo ({count})",
-
-  "permissionQuestionAsked": "Perguntou: {header}",
-
-  "permissionQuestionAskedMany": "Fez {count} perguntas",
+  "permissionQuestionPill": "O {agent} te perguntou algo ({count})",
 
   "permissionQuestionPending": "Aguardando resposta",
 
@@ -330,13 +365,13 @@
 
   "rulesReload": "Ler a lista de novo",
 
-  "rulesDescription": "O que o Claude pode fazer nesta máquina sem perguntar a você antes. A revogação vale no próximo pedido, em toda sessão aberta.",
+  "rulesDescription": "O que o {agent} pode fazer nesta máquina sem perguntar a você antes. A revogação vale no próximo pedido, em toda sessão aberta.",
 
   "rulesLoading": "Carregando suas regras…",
 
   "rulesEmptyTitle": "Nenhuma regra ainda",
 
-  "rulesEmptyBody": "Uma regra nasce quando você responde um pedido com “não perguntar de novo”. Até lá, o Claude pergunta toda vez.",
+  "rulesEmptyBody": "Uma regra nasce quando você responde um pedido com “não perguntar de novo”. Até lá, o {agent} pergunta toda vez.",
 
   "rulesScopeProject": "Em um projeto",
 
@@ -351,6 +386,8 @@
   "rulesStatusExpired": "Expirada",
 
   "rulesStatusUnknown": "Estado desconhecido",
+  "rulesStatusDisabled": "Desligada",
+  "rulesDisabledExplanation": "Escrita para o {agent} numa forma que esta versão não traduz: não vale mais. Crie de novo se ainda quiser.",
 
   "rulesRowLabel": "Regra {pattern}",
 
@@ -362,9 +399,9 @@
 
   "rulesValidUntil": "Válida até {at}",
 
-  "rulesExpiredOn": "Expirou em {at}. O Claude volta a perguntar.",
+  "rulesExpiredOn": "Expirou em {at}. O {agent} volta a perguntar.",
 
-  "rulesExpiringSoon": "Expira em breve: depois de {at}, o Claude volta a perguntar.",
+  "rulesExpiringSoon": "Expira em breve: depois de {at}, o {agent} volta a perguntar.",
 
   "rulesRevoke": "Revogar",
 
@@ -376,15 +413,15 @@
 
   "sessionErrorLimitReached": "Esta máquina já está rodando {limit} sessões, o máximo que ela permite. Encerre uma e tente de novo.",
 
-  "sessionErrorClaudeUnavailable": "O Claude parou de responder nesta máquina.",
+  "sessionErrorAgentUnavailable": "O {agent} parou de responder nesta máquina.",
 
   "transcriptErrorNotFound": "Essa conversa não existe, ou não é sua para ler.",
 
   "transcriptErrorInvalidSessionId": "{sessionId} não é um identificador de conversa.",
 
-  "transcriptErrorClaudeUnavailable": "O Claude não conseguiu ler o histórico nesta máquina.",
+  "transcriptErrorAgentUnavailable": "O {agent} não conseguiu ler o histórico nesta máquina.",
 
-  "transcriptErrorClaudeTimeout": "O Claude demorou demais para ler o histórico. Tente de novo.",
+  "transcriptErrorAgentTimeout": "O {agent} demorou demais para ler o histórico. Tente de novo.",
 
   "transcriptErrorCursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes.",
 
@@ -442,7 +479,7 @@
 
   "historyFollowWorking": "Trabalhando em outro cliente…",
 
-  "historyFollowWorkingHelp": "Isto é uma inferência, não algo que o Claude informou: a última entrada da conversa deixa o turno aberto — uma ferramenta sem resultado, um pensamento ou um prompt sem resposta — e algo escreveu nela há pouco. O histórico não grava o estado de um turno, e nada aqui diz qual é o outro cliente.",
+  "historyFollowWorkingHelp": "Isto é uma inferência, não algo que o {agent} informou: a última entrada da conversa deixa o turno aberto — uma ferramenta sem resultado, um pensamento ou um prompt sem resposta — e algo escreveu nela há pouco. O histórico não grava o estado de um turno, e nada aqui diz qual é o outro cliente.",
 
   "historyFollowNewerOne": "1 nova",
 
@@ -460,9 +497,11 @@
 
   "sessionHistoryLoading": "Carregando o que foi dito antes",
 
-  "sessionErrorUnknownCommand": "{command} não é um comando que o Claude oferece nesta máquina.",
+  "sessionErrorUnknownCommand": "{command} não é um comando que o {agent} oferece nesta máquina.",
 
-  "sessionErrorClaudeTimeout": "O Claude demorou demais para responder nesta máquina. Tente de novo.",
+  "sessionErrorAgentTimeout": "O {agent} demorou demais para responder. Tente de novo.",
+  "engineErrorCapabilityUnavailable": "O {agent} não consegue fazer isso.",
+  "engineNameFallback": "agente",
   "sessionErrorResumeTimeout": "O backend não respondeu à retomada. Confira a conexão e tente de novo.",
 
   "sessionErrorLocked": "A sessão está ocupada: um turno está em execução ou outro desfazer está em andamento. Tente de novo quando ela estiver ociosa.",
@@ -473,7 +512,7 @@
 
   "sessionCommandsTitle": "Comandos",
 
-  "sessionCommandsDescription": "O que o Claude oferece nesta máquina. A caixa de prompt aceita qualquer comando, listado aqui ou não.",
+  "sessionCommandsDescription": "O que o {agent} oferece nesta máquina. A caixa de prompt aceita qualquer comando, listado aqui ou não.",
 
   "sessionCommandsSearch": "Buscar comandos",
 
@@ -485,7 +524,7 @@
 
   "sessionCommandsEmptyTitle": "Nenhum comando nesta máquina",
 
-  "sessionCommandsEmptyBody": "O Claude daqui não oferece comandos. Você ainda pode digitar qualquer coisa na caixa de prompt.",
+  "sessionCommandsEmptyBody": "O {agent} daqui não oferece comandos. Você ainda pode digitar qualquer coisa na caixa de prompt.",
 
   "sessionCommandsNoMatch": "Nenhum comando corresponde a “{query}”.",
 
@@ -561,11 +600,12 @@
   "diagnosticsDebugLabel": "Log detalhado",
   "diagnosticsDebugDescription": "Registra toda troca com o servidor enquanto esta tela estiver aberta. Desliga sozinho quando você sai.",
   "diagnosticsDebugAlwaysOn": "Sempre ligado em um build de desenvolvimento.",
-  "sessionEndedResumes": "Mandar um prompt a retoma, num novo processo do Claude nesta máquina.",
+  "sessionEndedResumes": "Mandar um prompt a retoma, num novo processo do {agent} nesta máquina.",
   "sessionEndedResumeAndSend": "Retomar e enviar",
   "sessionEndedResuming": "Retomando a conversa…",
   "commonActionShowAll": "Mostrar tudo",
   "sessionTurnLine": "Turno encerrado: {costUsd} USD · {seconds} s",
+  "sessionTurnLineNoCost": "Turno encerrado: {seconds} s",
   "sessionCompactedManual": "Compactada a pedido: o que veio antes agora é um resumo",
   "sessionCompactedAuto": "Compactada sozinha, o contexto encheu: o que veio antes agora é um resumo",
   "sessionCompactedManualTokens": "Compactada a pedido: {tokens} tokens de antes agora são um resumo",
@@ -579,15 +619,15 @@
   "thinkingHidden": "Pensou — o modelo não mostrou",
   "thinkingNothingShown": "O modelo pensou aqui e não mostrou o que pensou.",
   "draftTitle": "Uma nova conversa",
-  "draftDescription": "Nada roda até você enviar o primeiro prompt: então uma sessão do Claude abre nesta pasta, com o que você escolheu abaixo.",
+  "draftDescription": "Nada roda até você enviar o primeiro prompt: então uma sessão do {agent} abre nesta pasta, com o que você escolheu abaixo.",
   "draftCommands": "Digite / para os comandos e skills desta instalação.",
   "draftDefaultModel": "Os modelos desta instalação aparecem depois que uma sessão desta pasta rodou; até lá, usa-se o padrão da instalação.",
   "draftStarting": "Abrindo a sessão…",
   "draftCatalogFailed": "As escolhas desta instalação não puderam ser lidas, então a conversa começa com os padrões dela: {reason}",
   "composerBoxLabel": "Prompt",
-  "composerPlaceholder": "Peça ao Claude algo nesta pasta…",
+  "composerPlaceholder": "Peça ao {agent} algo nesta pasta…",
   "composerQueue": "Pôr na fila",
-  "composerQueued": "O Claude está trabalhando: o que você enviar agora espera na fila e roda em seguida.",
+  "composerQueued": "O {agent} está trabalhando: o que você enviar agora espera na fila e roda em seguida.",
   "composerStop": "Parar",
   "composerEmpty": "Escreva um prompt para enviar.",
   "composerSlash": "Comandos e skills (/)",
@@ -597,16 +637,16 @@
   "composerChoice": "{label}: {value}",
   "composerChoicePending": "Trocando…",
   "modeLabel": "Modo",
-  "modeDefault": "Perguntar",
-  "modeDefaultDescription": "O Claude pergunta antes de cada tool que precisa da sua palavra.",
+  "modeAsk": "Perguntar",
+  "modeAskDescription": "O {agent} pergunta antes de cada tool que precisa da sua palavra.",
   "modeAcceptEdits": "Aceitar edições",
-  "modeAcceptEditsDescription": "O Claude edita e grava arquivos sem perguntar; ainda pergunta antes do resto.",
-  "modeAcceptEditsWarning": "O Claude vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.",
-  "modePlan": "Plan",
-  "modePlanDescription": "O Claude planeja sem mudar nada, e pede que você aprove o plano.",
+  "modeAcceptEditsDescription": "O {agent} edita e grava arquivos sem perguntar; ainda pergunta antes do resto.",
+  "modeAcceptEditsWarning": "O {agent} vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.",
+  "modeReadOnly": "Só leitura",
+  "modeReadOnlyDescription": "O {agent} lê e planeja sem mudar nada: nada que grave arquivos ou rode comandos é permitido.",
   "modeAllowAll": "Permitir tudo",
-  "modeAllowAllDescription": "O Claude executa toda tool sem perguntar, menos o que uma regra sua recusa. As perguntas dele a você continuam chegando.",
-  "modeAllowAllWarning": "O Claude vai executar qualquer comando nesta máquina sem perguntar a você, até você trocar o modo.",
+  "modeAllowAllDescription": "O {agent} executa toda tool sem perguntar, menos o que uma regra sua recusa. As perguntas dele a você continuam chegando.",
+  "modeAllowAllWarning": "O {agent} vai executar qualquer comando nesta máquina sem perguntar a você, até você trocar o modo.",
   "modelLabel": "Modelo",
   "modelDefault": "Padrão da instalação",
   "modelsFailed": "Os modelos desta instalação não puderam ser lidos: {reason}",
@@ -618,7 +658,7 @@
   "effortHigh": "Alto",
   "effortXhigh": "Muito alto",
   "effortMax": "Máximo",
-  "effortReadOnly": "O esforço se escolhe quando a conversa começa. Trocá-lo com ela rodando faria o Claude parar de perguntar antes de cada tool.",
+  "effortReadOnly": "O esforço se escolhe quando a conversa começa. Trocá-lo com ela rodando faria o {agent} parar de perguntar antes de cada tool.",
   "effortUnknown": "O do início",
   "queueTitle": "Prompts na fila",
   "queueDescription": "Estes rodam um depois do outro, como turnos próprios, quando o turno em execução terminar.",
@@ -632,18 +672,16 @@
   "contextWindow": "{total} de {max} tokens",
   "contextTokens": "{tokens} tokens",
   "contextNear": "A conversa está perto do limite do contexto. Compactá-la a mantém andando.",
-  "contextCompact": "Compactar a conversa (/compact)",
+  "contextCompact": "Compactar a conversa",
   "contextCompacting": "Compactando…",
   "contextUnavailable": "O uso do contexto não pôde ser lido.",
   "contextLoading": "Lendo o contexto",
-  "contextSystemPrompt": "Prompt de sistema",
-  "contextSystemTools": "Tools do sistema",
-  "contextMcpTools": "Tools de MCP",
+  "contextSystem": "Prompt de sistema",
+  "contextTools": "Ferramentas",
   "contextMessages": "Mensagens",
-  "contextMemoryFiles": "Arquivos de memória",
-  "contextSkills": "Skills",
-  "contextFreeSpace": "Espaço livre",
-  "contextBuffer": "Reservado para compactação",
+  "contextMemory": "Arquivos de memória",
+  "contextFree": "Espaço livre",
+  "contextReserved": "Reservado para compactação",
   "sessionErrorQueuedPromptStarted": "Esse prompt já começou. Interrompa o turno para pará-lo.",
   "sessionErrorQueuedPromptNotFound": "Esse prompt não está mais na fila.",
   "sessionErrorEffortUnsupported": "{model} não aceita o nível de esforço {level}.",
@@ -655,26 +693,29 @@
   "sessionStandingOpen": "Status: {standing}. Abrir os detalhes da sessão",
   "sessionDotConnected": "Conectado — nada rodando",
   "sessionDotReconnecting": "Reconectando…",
-  "sessionDotRunning": "O Claude está trabalhando",
-  "sessionDotWaiting": "O Claude espera sua resposta",
+  "sessionDotRunning": "O {agent} está trabalhando",
+  "sessionDotWaiting": "O {agent} espera sua resposta",
   "sessionDotEnded": "A sessão terminou",
   "sessionDotSession": "Sessão {sessionId}",
   "sessionStatusTitle": "A sessão",
   "sessionStatusDescription": "Como ela está, qual sessão é, e quanto custou desde que abriu.",
   "sessionStatusCost": "Esta sessão custou {cost} desde que abriu, em {turns} turno(s)",
   "sessionStatusNoCost": "Nenhum turno terminou ainda, então não há custo a dizer.",
+  "sessionStatusCostNotReported": "O {agent} não informa quanto custam os turnos.",
   "sessionMenuOpen": "Mais ações da sessão",
   "sessionMenuRules": "Regras de permissão",
   "sessionMenuUndo": "Desfazer alterações de arquivo…",
   "sessionMenuCopyId": "Copiar o id da sessão",
   "sessionMenuCopied": "O id da sessão foi copiado.",
+  "sessionMenuCopyConversationId": "Copiar o id da conversa do {agent}",
+  "sessionMenuConversationIdCopied": "O id da conversa do {agent} foi copiado.",
   "sessionMenuCopyFailed": "Não foi possível copiar o id. Selecione e copie à mão: {sessionId}",
   "sessionMenuHelp": "Ajuda sobre esta tela",
   "sessionMenuEnd": "Encerrar sessão",
   "sessionMenuEndNotOwner": "Só o app que abriu esta sessão pode encerrá-la.",
   "sessionMenuEndEnded": "A sessão já terminou.",
   "sessionCloseTitle": "Encerrar esta sessão?",
-  "sessionCloseDescription": "O Claude para nesta máquina. O que ele escreveu fica no disco, mas o desfazer das alterações de arquivo vai embora com a sessão. A conversa fica no histórico e pode ser retomada.",
+  "sessionCloseDescription": "O {agent} para nesta máquina. O que ele escreveu fica no disco, mas o desfazer das alterações de arquivo vai embora com a sessão. A conversa fica no histórico e pode ser retomada.",
   "sessionCloseKeep": "Manter rodando",
   "sessionCloseConfirm": "Encerrar a sessão",
   "sessionHistoryOpen": "Conversas desta pasta",
@@ -682,28 +723,28 @@
   "sessionHelpTitle": "A tela de sessão",
   "sessionHelpIntro": "Só a conversa rola. A caixa fica embaixo, acima do teclado, com o que vale para o próximo prompt sob ela; o que a sessão está fazendo aparece na própria conversa, na ordem em que aconteceu.",
   "sessionHelpBarHeading": "A barra sob a caixa",
-  "sessionHelpBar": "Nesta ordem: / lista os comandos e skills; depois o modo, o modelo, o esforço e a parte da janela de contexto em uso — com Compactar dentro dela — e enviar. Enquanto o Claude trabalha, enviar põe o que você escreveu na fila, e Parar fica ao lado; com a caixa vazia, o próprio botão é Parar. O esforço só se escolhe numa conversa nova. Numa tela estreita, o modelo, o esforço e o contexto vão para o … da barra.",
+  "sessionHelpBar": "Nesta ordem: / lista os comandos e skills; depois o modo, o modelo, o esforço e a parte da janela de contexto em uso — com Compactar dentro dela — e enviar. Enquanto o {agent} trabalha, enviar põe o que você escreveu na fila, e Parar fica ao lado; com a caixa vazia, o próprio botão é Parar. O esforço só se escolhe numa conversa nova. Numa tela estreita, o modelo, o esforço e o contexto vão para o … da barra.",
   "sessionHelpMenuHeading": "O menu da sessão",
   "sessionHelpMenu": "O … da barra de cima reúne o que se faz com a sessão inteira, e raramente: encerrá-la — só o app que a abriu pode, e ele pergunta antes —, desfazer as alterações de arquivo, copiar o id; e as regras de permissão e esta ajuda. O relógio ao lado abre as conversas desta pasta.",
   "sessionHelpStatusHeading": "O status",
   "sessionHelpStatus": "O chip da barra de cima diz como a sessão está, por cor e por palavra: conectada, reconectando, rodando, esperando você ou encerrada. Toque nele para ver o id da sessão, com o jeito de copiá-lo, e quanto ela custou desde que abriu.",
-  "sessionHelpWorkingHeading": "Enquanto o Claude trabalha",
-  "sessionHelpWorking": "Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o Claude está fazendo — a tool que executa, que espera você, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina — o que pensou à vista, mais discreto que a resposta, quando o modelo mostrou; recolhido quando não mostrou. Uma tool é uma linha, recolhida: toque para ver o que entrou e o que saiu. Quando o turno acaba, a linha dá lugar ao que o turno custou.",
+  "sessionHelpWorkingHeading": "Enquanto o {agent} trabalha",
+  "sessionHelpWorking": "Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o {agent} está fazendo — a tool que executa, que espera você, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina — o que pensou à vista, mais discreto que a resposta, quando o modelo mostrou; recolhido quando não mostrou. Uma tool é uma linha, recolhida: toque para ver o que entrou e o que saiu. Quando o turno acaba, a linha dá lugar ao que o turno custou.",
   "sessionHelpInlineHeading": "Perguntas na conversa",
-  "sessionHelpInline": "Quando o Claude pergunta antes de executar uma tool, a pergunta fica na conversa, no lugar dessa tool: o comando exato, o risco, o tempo que resta e até onde vai um sim. Respondida, a linha da tool diz como — por você, no navegador, por uma regra sua, ou recusada porque ninguém respondeu a tempo. Uma pergunta nunca fecha o teclado nem tira a caixa de você: enviar continua enviando o seu prompt, e só um toque no card responde a ela.",
+  "sessionHelpInline": "Quando o {agent} pergunta antes de executar uma tool, a pergunta fica na conversa, no lugar dessa tool: o comando exato, o risco, o tempo que resta e até onde vai um sim. Respondida, a linha da tool diz como — por você, no navegador, por uma regra sua, ou recusada porque ninguém respondeu a tempo. Uma pergunta nunca fecha o teclado nem tira a caixa de você: enviar continua enviando o seu prompt, e só um toque no card responde a ela.",
   "sessionHelpPillHeading": "Esperando sua resposta",
-  "sessionHelpPill": "Com uma pergunta fora de vista — a conversa rolada para cima —, uma pílula sobre a caixa diz que o Claude espera, e quantas perguntas. Tocar nela leva à mais antiga.",
+  "sessionHelpPill": "Com uma pergunta fora de vista — a conversa rolada para cima —, uma pílula sobre a caixa diz que o {agent} espera, e quantas perguntas. Tocar nela leva à mais antiga.",
   "sessionHelpTasksHeading": "A lista de tarefas",
-  "sessionHelpTasks": "Quando o Claude mantém uma lista de tarefas, ela fica sobre a caixa, recolhida numa linha — quantas estão feitas e o que está sendo feito agora. Toque nela para a lista inteira; ela muda enquanto o Claude trabalha, sem mexer no que você está lendo.",
+  "sessionHelpTasks": "Quando o {agent} mantém uma lista de tarefas, ela fica sobre a caixa, recolhida numa linha — quantas estão feitas e o que está sendo feito agora. Toque nela para a lista inteira; ela muda enquanto o {agent} trabalha, sem mexer no que você está lendo.",
   "sessionHelpActionsHeading": "A partir de um prompt",
-  "sessionHelpActions": "Pressione e segure um prompt seu para o que dá para fazer a partir dele: editar e reenviar, bifurcar de antes dele, e devolver os arquivos a antes do turno dele — com o alcance mostrado arquivo a arquivo antes. O leitor de tela oferece as mesmas três como ações da mensagem. Enquanto o Claude trabalha, o desfazer espera o turno acabar; com a sessão encerrada não há desfazer.",
-  "permissionPlanLabel": "O plano que o Claude propõe",
+  "sessionHelpActions": "Pressione e segure um prompt seu para o que dá para fazer a partir dele: editar e reenviar, bifurcar de antes dele, e devolver os arquivos a antes do turno dele — com o alcance mostrado arquivo a arquivo antes. O leitor de tela oferece as mesmas três como ações da mensagem. Enquanto o {agent} trabalha, o desfazer espera o turno acabar; com a sessão encerrada não há desfazer.",
+  "permissionPlanLabel": "O plano que o {agent} propõe",
   "permissionPlanTitle": "Aprovar o plano?",
   "permissionPlanModeLegend": "Depois de aprovado, seguir",
   "permissionPlanApprove": "Aprovar o plano",
   "permissionPlanCommentLabel": "Ou diga o que mudar, e continue planejando",
   "permissionPlanKeepPlanning": "Continuar planejando",
-  "permissionPlanModeDefault": "perguntando antes de cada edição",
+  "permissionPlanModeAsk": "perguntando antes de cada edição",
   "permissionPlanModeAcceptEdits": "aceitando edições sem perguntar",
   "sessionWorkingWaiting": "Esperando sua resposta",
   "sessionWorkingRunningTool": "Executando {tool}…",
@@ -729,9 +770,9 @@
   "sessionWorkingVerbComputing": "Calculando…",
   "sessionWorkingVerbWorking": "Trabalhando…",
   "sessionWorkingVerbMusing": "Refletindo…",
-  "sessionPendingPill": "O Claude espera sua resposta ({count})",
+  "sessionPendingPill": "O {agent} espera sua resposta ({count})",
   "sessionInlineTail": "Perguntas esperando você",
-  "sessionTasksLabel": "A lista de tarefas que o Claude mantém nesta conversa",
+  "sessionTasksLabel": "A lista de tarefas que o {agent} mantém nesta conversa",
   "sessionTasksHeadline": "{done}/{total} · {task}",
   "sessionTasksAllDone": "{done}/{total} · Tudo feito",
   "sessionTaskPending": "Pendente",
@@ -744,14 +785,14 @@
   "sessionMessageEdit": "Editar e reenviar",
   "sessionMessageForkFrom": "Bifurcar daqui — reenviar sem mudar, numa nova conversa",
   "sessionMessageUndo": "Devolver os arquivos a antes deste prompt",
-  "sessionMessageUndoBusy": "Devolver os arquivos a antes deste prompt — não enquanto o Claude trabalha",
+  "sessionMessageUndoBusy": "Devolver os arquivos a antes deste prompt — não enquanto o {agent} trabalha",
   "sessionMessageHold": "Pressione e segure para o que fazer com este prompt",
   "sessionEditEditing": "Editando uma mensagem",
   "sessionEditCancel": "Parar de editar",
   "sessionEditExplain": "Você está editando um prompt: enviá-lo abre uma nova conversa a partir de antes dele. A conversa original fica como estava.",
   "sessionEditResumeInstead": "Retomar a conversa em vez disso",
   "sessionForkStarting": "Abrindo a nova conversa…",
-  "sessionErrorForkRejected": "O Claude não conseguiu continuar a conversa a partir dessa mensagem. Retome a conversa e edite a partir dela.",
+  "sessionErrorForkRejected": "O {agent} não conseguiu continuar a conversa a partir dessa mensagem. Retome a conversa e edite a partir dela.",
   "sessionErrorForkPointUnknown": "Essa mensagem não é um prompt desta conversa. Recarregue a conversa e tente de novo.",
   "connectionTitle": "Endereço do servidor",
   "connectionDescription": "Escolha como este celular chega ao seu servidor: o endereço da sua rede, o da internet ou outro. A API, a conexão ao vivo e o login passam todos por ele.",
@@ -807,9 +848,9 @@
   "foldersForget": "Tirar das recentes",
   "foldersLimitReached": "Você já tem {limit} pastas abertas. Feche uma para abrir outra.",
   "foldersHelpOpen": "Ajuda sobre as pastas",
-  "foldersHelpBody": "Abertas: as pastas em que você está trabalhando — as mesmas das abas de pasta no navegador. Cada uma diz quantas sessões estão abertas nela e quantos pedidos esperam você. Toque numa para ver as sessões e o histórico dela, ou para começar uma sessão nova.\n\nRecentes: pastas que você abriu antes. Toque numa para abri-la de novo; fixe as que você volta sempre.\n\nAbrir outra pasta: percorra as raízes em que este computador deixa o Claude rodar, um nível por vez, e abra a pasta que quiser.\n\nFechar uma pasta só a tira da lista: as sessões dela continuam rodando.",
+  "foldersHelpBody": "Abertas: as pastas em que você está trabalhando — as mesmas das abas de pasta no navegador. Cada uma diz quantas sessões estão abertas nela e quantos pedidos esperam você. Toque numa para ver as sessões e o histórico dela, ou para começar uma sessão nova.\n\nRecentes: pastas que você abriu antes. Toque numa para abri-la de novo; fixe as que você volta sempre.\n\nAbrir outra pasta: percorra as raízes em que este computador deixa o {agent} rodar, um nível por vez, e abra a pasta que quiser.\n\nFechar uma pasta só a tira da lista: as sessões dela continuam rodando.",
   "folderPickerTitle": "Abrir uma pasta",
-  "folderPickerRoots": "As raízes em que este computador deixa o Claude rodar",
+  "folderPickerRoots": "As raízes em que este computador deixa o {agent} rodar",
   "folderPickerOpenThis": "Abrir esta pasta",
   "folderPickerUp": "Subir um nível",
   "folderPickerEmpty": "Nenhuma subpasta aqui.",
@@ -829,7 +870,7 @@
   "folderOpenedFromWeb": "Aberta num navegador",
   "folderOpenedFromMobile": "Aberta num celular",
   "folderHelpOpen": "Ajuda sobre esta pasta",
-  "folderHelpBody": "Nova sessão: um rascunho nesta pasta. Nada roda até você mandar o primeiro prompt.\n\nSessões abertas: o que roda agora nesta pasta e abaixo dela, aberto aqui, em outro celular ou num navegador. Toque numa para acompanhá-la; ela entra no painel de sessões desta pasta.\n\nHistórico: as conversas que o Claude guardou desta pasta. Abra uma para ler ou continuar.",
+  "folderHelpBody": "Nova sessão: um rascunho nesta pasta. Nada roda até você mandar o primeiro prompt.\n\nSessões abertas: o que roda agora nesta pasta e abaixo dela, aberto aqui, em outro celular ou num navegador. Toque numa para acompanhá-la; ela entra no painel de sessões desta pasta.\n\nHistórico: as conversas que o {agent} guardou desta pasta. Abra uma para ler ou continuar.",
   "liveStatusStarting": "Iniciando",
   "liveStatusIdle": "Parada",
   "liveStatusThinking": "Pensando",
@@ -888,7 +929,7 @@
   "fileViewerNotFound": "Este arquivo não está mais na pasta.",
   "fileViewerDenied": "O acesso a este arquivo foi negado.",
   "fileViewerBack": "Voltar",
-  "fileViewerClaudeWaiting": "{count, plural, =1{O Claude está esperando sua resposta} other{O Claude está esperando {count} respostas}}",
+  "fileViewerAgentWaiting": "{count, plural, =1{O {agent} está esperando sua resposta} other{O {agent} está esperando {count} respostas}}",
   "fileViewerBackToSession": "Voltar à sessão",
   "fileViewerImage": "Imagem {name}",
   "markdownPreview": "Ver a prévia",

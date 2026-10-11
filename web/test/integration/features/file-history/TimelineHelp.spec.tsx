@@ -29,7 +29,7 @@ function inCatalogue(catalogue: unknown, key: string): string {
 }
 
 describe('the help of the Timeline — plan 07, B-60, S-351', () => {
-  it('says what is kept and what is not, the ceiling and the retention, and that it is not git nor Claude’s undo — in en and pt-BR', () => {
+  it('says what is kept and what is not, the ceiling and the retention, and that it is not git nor the agent’s undo — in en and pt-BR', () => {
     for (const key of TIMELINE_HELP_PARTS) {
       expect(inCatalogue(en, key)).not.toBe('undefined');
       expect(inCatalogue(ptBR, key)).not.toBe('undefined');
@@ -37,15 +37,15 @@ describe('the help of the Timeline — plan 07, B-60, S-351', () => {
 
     const english = TIMELINE_HELP_PARTS.map((key) => inCatalogue(en, key)).join(' ');
     expect(english).toMatch(/not git/);
-    expect(english).toMatch(/not Claude's undo/);
-    expect(english).toMatch(/what Claude writes is not kept here/);
+    expect(english).toMatch(/not \{\{agent\}\}'s undo/);
+    expect(english).toMatch(/what \{\{agent\}\} writes is not kept here/);
     expect(english).toMatch(/\{\{size\}\}/);
     expect(english).toMatch(/50 versions of each file, 512 MB in all, for 30 days/);
 
     const portuguese = TIMELINE_HELP_PARTS.map((key) => inCatalogue(ptBR, key)).join(' ');
     expect(portuguese).toMatch(/não é o git/);
-    expect(portuguese).toMatch(/não é o desfazer do Claude/);
-    expect(portuguese).toMatch(/o que o Claude escreve não é guardado aqui/);
+    expect(portuguese).toMatch(/não é o desfazer do \{\{agent\}\}/);
+    expect(portuguese).toMatch(/o que o \{\{agent\}\} escreve não é guardado aqui/);
     expect(portuguese).toMatch(/\{\{size\}\}/);
     expect(portuguese).toMatch(/50 versões de cada arquivo, 512 MB no total, por 30 dias/);
   });

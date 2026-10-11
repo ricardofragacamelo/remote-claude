@@ -11,13 +11,15 @@ import 'package:remote_claude/features/session/domain/entities/session_update.da
 import 'package:remote_claude/features/session/domain/entities/slash_command.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/builders/undo.dart';
 import '../../../support/pump_app.dart';
 import '../../../support/session_screen.dart';
 
 const Failure unavailable = ServerFailure(
-  code: 'CLAUDE_UNAVAILABLE',
-  messageKey: 'session.error.claudeUnavailable',
+  code: 'AGENT_UNAVAILABLE',
+  messageKey: 'session.error.agentUnavailable',
+  params: <String, String>{'engine': anEngine},
   traceId: 'trace-7',
 );
 
@@ -55,7 +57,7 @@ void main() {
 
     expect(screen.commands.reads, <String>['session-1']);
     expect(find.text(l10n.sessionCommandsTitle), findsOneWidget);
-    expect(find.text(l10n.sessionCommandsDescription), findsOneWidget);
+    expect(find.text(l10n.sessionCommandsDescription(l10n.engineNameFallback)), findsOneWidget);
     expect(find.text(l10n.sessionCommandsSuggested), findsOneWidget);
     expect(find.text(l10n.sessionCommandsAll), findsOneWidget);
 
@@ -175,7 +177,7 @@ void main() {
     await openMenu(tester);
 
     expect(find.text(l10n.sessionCommandsEmptyTitle), findsOneWidget);
-    expect(find.text(l10n.sessionCommandsEmptyBody), findsOneWidget);
+    expect(find.text(l10n.sessionCommandsEmptyBody(l10n.engineNameFallback)), findsOneWidget);
   });
 
   testWidgets('S-31 · a menu that could not be read says why, retries, and blocks nothing', (
@@ -185,7 +187,7 @@ void main() {
     await screen.pump(tester);
     await openMenu(tester);
 
-    expect(find.text(l10n.sessionErrorClaudeUnavailable), findsOneWidget);
+    expect(find.text(l10n.sessionErrorAgentUnavailable(anEngine)), findsOneWidget);
 
     screen.commands.failure = null;
     await tester.tap(find.text(l10n.commonActionRetry));
@@ -231,13 +233,19 @@ void main() {
       screen.sessions.emit(const CommandRefused(commandId: 'command-1', failure: unknown));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.sessionErrorUnknownCommand('/heapdumb')), findsOneWidget);
+      expect(
+        find.text(l10n.sessionErrorUnknownCommand(l10n.engineNameFallback, '/heapdumb')),
+        findsOneWidget,
+      );
 
       await typeCommand(tester, '/init');
       await tester.tap(find.byTooltip(l10n.sessionPromptAction));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.sessionErrorUnknownCommand('/heapdumb')), findsNothing);
+      expect(
+        find.text(l10n.sessionErrorUnknownCommand(l10n.engineNameFallback, '/heapdumb')),
+        findsNothing,
+      );
     });
 
     testWidgets('a refusal of somebody else’s command is not shown here', (
@@ -251,7 +259,10 @@ void main() {
       screen.sessions.emit(const CommandRefused(commandId: 'command-42', failure: unknown));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.sessionErrorUnknownCommand('/heapdumb')), findsNothing);
+      expect(
+        find.text(l10n.sessionErrorUnknownCommand(l10n.engineNameFallback, '/heapdumb')),
+        findsNothing,
+      );
     });
   });
 

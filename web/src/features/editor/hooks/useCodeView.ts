@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { commandRegistry, executeCommand } from '@/features/commands';
 import { useRegistry } from '@/shared/hooks/useRegistry';
-import { claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentContextTargets } from '@/shared/lib/files-drag';
 import { editorStoreOf, updateDoc } from '../store/editor.store';
 import { useEditorPreferences } from '../store/preferences.store';
 import type { CodeEditorEngine, CodeView, ViewOptions } from '../types/code-editor';
 import { attachModel, documentOf, takeRestore } from './documents';
 import { autoSave } from './saving';
-import { addFileToClaude } from './text-actions';
+import { addFileToAgent } from './text-actions';
 import { showView } from './views';
 import { useHosted } from './useHosted';
 import { useDocument } from './useEditor';
@@ -66,7 +66,7 @@ export function useCodeView({
 }: CodeViewInput): (element: HTMLDivElement | null) => (() => void) | undefined {
   const { t } = useTranslation();
   const ready = useDocument(folder, path)?.status === 'ready';
-  const targets = useRegistry(claudeContextTargets);
+  const targets = useRegistry(agentContextTargets);
   const make = useCallback(
     (host: HTMLDivElement, initial: ViewOptions) => engine.createView(host, initial),
     [engine],
@@ -125,10 +125,10 @@ export function useCodeView({
 
     // "Add selection to chat", in the editor's own menu — only while somebody takes it (S-276).
     return view.addContextAction({
-      id: 'addSelectionToClaude',
-      label: t('editor.claude.addSelection'),
+      id: 'addSelectionToAgent',
+      label: t('editor.agent.addSelection'),
       run: () => {
-        addFileToClaude(folder, path, view.selections());
+        addFileToAgent(folder, path, view.selections());
       },
     });
   }, [view, targets, folder, path, t]);

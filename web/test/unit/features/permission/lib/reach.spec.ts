@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { patternsToConfirm, preselectedReach } from '@/features/permission/lib/reach';
 import type { RuleReach } from '@/features/permission/types/permission';
 
-const exact: RuleReach = { reach: 'exact', patterns: ['Edit(/a/b.ts)'] };
-const prefix: RuleReach = { reach: 'prefix', patterns: ['Bash(git push:*)', 'Bash(tail:*)'] };
+const exact: RuleReach = { reach: 'exact', patterns: ['file.edit(a/b.ts)'] };
+const prefix: RuleReach = { reach: 'prefix', patterns: ['shell(git push:*)', 'shell(tail:*)'] };
 const tool: RuleReach = { reach: 'tool', patterns: ['WebSearch'] };
 
 describe('the reach a card starts on — plan 23, D-09', () => {
@@ -27,7 +27,7 @@ describe('the reach a card starts on — plan 23, D-09', () => {
 
 describe('what the second step says it will leave', () => {
   it('lists every pattern of the reach chosen', () => {
-    expect(patternsToConfirm(prefix)).toEqual(['Bash(git push:*)', 'Bash(tail:*)']);
+    expect(patternsToConfirm(prefix)).toEqual(['shell(git push:*)', 'shell(tail:*)']);
   });
 
   it('lists nothing when no reach was chosen', () => {

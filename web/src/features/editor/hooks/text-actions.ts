@@ -1,4 +1,4 @@
-import { addToClaudeContext, filesDragPayload } from '@/shared/lib/files-drag';
+import { addToAgentContext, filesDragPayload } from '@/shared/lib/files-drag';
 import type { TextRange } from '@/shared/lib/files-drag';
 import { convertIndentation } from '../lib/text';
 import { editorStoreOf, isDirty, updateDoc } from '../store/editor.store';
@@ -76,12 +76,12 @@ export async function saveWithEncoding(
 }
 
 /**
- * Hands a file — or the selections of it, each with its range — to Claude's context (B-42), and says
- * how it went. No selection hands the whole file; several cursors hand one range each (08 · B-51,
- * S-251), and the set past its ceiling keeps what fits. Repeating it hands it again: dropping
+ * Hands a file — or the selections of it, each with its range — to the agent's context (B-42), and
+ * says how it went. No selection hands the whole file; several cursors hand one range each (08 ·
+ * B-51, S-251), and the set past its ceiling keeps what fits. Repeating it hands it again: dropping
  * repeats is the target's (S-278).
  */
-export function addFileToClaude(
+export function addFileToAgent(
   folder: string,
   path: string,
   selections: readonly TextRange[],
@@ -93,8 +93,8 @@ export function addFileToClaude(
   let taken = payloads.length > 0;
 
   for (const payload of payloads) {
-    taken = payload !== null && addToClaudeContext(payload) && taken;
+    taken = payload !== null && addToAgentContext(payload) && taken;
   }
 
-  announce(folder, taken ? 'editor.claude.added' : 'editor.claude.unavailable', { path });
+  announce(folder, taken ? 'editor.agent.added' : 'editor.agent.unavailable', { path });
 }

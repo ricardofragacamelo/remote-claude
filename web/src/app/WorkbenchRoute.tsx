@@ -5,14 +5,14 @@ import { EditorLocation } from '@/features/editor';
 import { PanelCommands } from '@/features/session';
 import { FolderShell, Workbench } from '@/features/workbench';
 import { FolderGate } from '@/features/workspace';
-import { ClaudeSideBar } from './ClaudeSideBar';
+import { AgentSideBar } from './AgentSideBar';
 import { PanelLocation } from './PanelLocation';
 import { useOpenFolder } from './navigation';
 
 /**
  * `/workbench?folder=&file=&session=|conversation=` — the folder tabs, with the active one's folder in
- * the URL, the file its editor has active (plan 07, B-40), and what its panel of Claude shows (plan
- * 08, B-12).
+ * the URL, the file its editor has active (plan 07, B-40), and what its panel of the agent shows
+ * (plan 08, B-12).
  *
  * The folder of the tab on screen is resolved before anything of it shows, the address is replaced
  * by the real path when a link named a symlink, and a session starts on that real path — never on
@@ -52,7 +52,7 @@ export function WorkbenchRoute(): React.JSX.Element {
     [navigate],
   );
 
-  // The same for the panel of Claude: a session or a conversation, never both (plan 08, D-24).
+  // The same for the panel of the agent: a session or a conversation, never both (plan 08, D-24).
   const panelShown = useCallback(
     (
       folder: string,
@@ -93,7 +93,7 @@ export function WorkbenchRoute(): React.JSX.Element {
               }}
             />
             <PanelCommands folder={folder.path} />
-            <FolderShell folder={folder.path} claude={<ClaudeSideBar folder={folder.path} />} />
+            <FolderShell folder={folder.path} agent={<AgentSideBar folder={folder.path} />} />
           </>
         )}
       </FolderGate>

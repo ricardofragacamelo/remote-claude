@@ -7,14 +7,20 @@ import {
   SessionNotFoundError,
 } from '@domain/session';
 import type { SessionId } from '@domain/session';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 import type { SessionConversations } from './attach-session.use-case';
-import type { ClaudeSessionHandle, SessionConversation } from './ports/claude-session.port';
+import { controlOf } from './ports/agent-engine.port';
+import type {
+  AgentSessionHandle,
+  ControlMethod,
+  EngineControl,
+  SessionConversation,
+} from './ports/agent-engine.port';
 
 /** A live session, the subprocess behind it, and the conversation of Claude it is. */
 export interface LiveSession {
   readonly session: Session;
-  readonly handle: ClaudeSessionHandle;
+  readonly handle: AgentSessionHandle;
   readonly conversation: SessionConversation;
 }
 
@@ -139,10 +145,10 @@ export class SessionRegistry implements SessionConversations {
    * Only the caller's own: somebody else's live continuation of a conversation begun elsewhere is
    * theirs, and the caller gets a fork of their own.
    */
-  findConversation(id: ClaudeSessionId, userId: UserId): LiveSession | null {
+  findConversation(id: ConversationRef, userId: UserId): LiveSession | null {
     for (const entry of this.live.values()) {
-      const { claudeSessionId, resumedFrom } = entry.conversation;
-      const continues = claudeSessionId.equals(id) || (resumedFrom?.equals(id) ?? false);
+      const { ref, resumedFrom } = entry.conversation;
+      const continues = ref.equals(id) || (resumedFrom?.equals(id) ?? false);
 
       if (continues && entry.session.isOwnedBy(userId) && !entry.session.isClosed) {
         return entry;
@@ -200,4 +206,17 @@ export class SessionRegistry implements SessionConversations {
   all(): readonly LiveSession[] {
     return [...this.live.values()];
   }
+}
+
+/**
+ * The member of a live session's control named [name], or the refusal of an engine that does not
+ * have it (ADR-025).
+ *
+ * @throws {import('@domain/engine').EngineCapabilityUnavailableError}
+ */
+export function liveControl<K extends ControlMethod>(
+  live: LiveSession,
+  name: K,
+): NonNullable<EngineControl[K]> {
+  return controlOf(live.conversation.ref.engine, live.handle, name);
 }

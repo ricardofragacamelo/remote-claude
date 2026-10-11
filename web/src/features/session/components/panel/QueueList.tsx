@@ -14,7 +14,7 @@ const AUTHORS: Readonly<Record<string, string>> = {
 /**
  * The prompts waiting for the turn to end, above the prompt box (plan 08, B-34): the same queue for
  * every client watching, each with its place, who sent it and the start of what it says — and the
- * way to take it out before it reaches Claude. One compact line each (plan 09, B-14).
+ * way to take it out before it reaches the agent. One compact line each (plan 09, B-14).
  */
 export function QueueList({ sessionId }: { readonly sessionId: string }): React.JSX.Element | null {
   const { t } = useTranslation();

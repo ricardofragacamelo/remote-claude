@@ -13,6 +13,7 @@ import type {
   McpServerStatus,
   ModelInfo,
   Options,
+  PermissionUpdate,
   Query,
   SDKControlGetContextUsageResponse,
   SDKMessage,
@@ -25,6 +26,17 @@ import { loadCommands, loadFixture, loadInitialization, loadInstallation } from 
 import type { AgentSdkFixture, InstallationFixture } from './fixture';
 import { renumber } from './scripted-transcripts';
 import type { ScriptedTranscripts } from './scripted-transcripts';
+
+/**
+ * The rule the CLI suggests with every `canUseTool`, in its own grammar — never read by the backend,
+ * never answered back (plan 28, S-132).
+ */
+export const NATIVE_SUGGESTION: PermissionUpdate = {
+  type: 'addRules',
+  rules: [{ toolName: 'NativeSuggestedTool', ruleContent: 'native-suggestion' }],
+  behavior: 'allow',
+  destination: 'localSettings',
+};
 
 /** The tools of the fixture MCP server (`e2e/fixtures/mcp-server/`), as a connected server lists them. */
 const FIXTURE_TOOLS: NonNullable<McpServerStatus['tools']> = [
@@ -773,6 +785,9 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
       signal: new AbortController().signal,
       requestId,
       toolUseID: toolUseId,
+      // What the CLI suggests leaving in its own settings — which the backend never reads (plan 03,
+      // D-09; plan 28, S-132): every call carries one, so a test can prove it went nowhere.
+      suggestions: [NATIVE_SUGGESTION],
     });
     this.record.verdicts.push({ toolName, requestId, result });
   }

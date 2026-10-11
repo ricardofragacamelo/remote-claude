@@ -1,6 +1,6 @@
 import type { SessionOrigin, SessionOriginRepository } from '@application/session';
 import type { UserId } from '@domain/auth';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * The provenance of our sessions, in a map keyed as the table is — by the conversation's id — so a
@@ -17,19 +17,20 @@ export class InMemorySessionOriginRepository implements SessionOriginRepository 
       return Promise.reject(this.failWith);
     }
 
-    if (!this.rows.has(origin.claudeSessionId.value)) {
-      this.rows.set(origin.claudeSessionId.value, origin);
+    if (!this.rows.has(origin.conversation.id)) {
+      this.rows.set(origin.conversation.id, origin);
     }
 
     return Promise.resolve();
   }
 
-  openersOf(ids: readonly ClaudeSessionId[]): Promise<ReadonlyMap<string, UserId>> {
+  openersOf(ids: readonly ConversationRef[]): Promise<ReadonlyMap<string, UserId>> {
     return Promise.resolve(
       new Map(
         ids.flatMap((id) => {
-          const row = this.rows.get(id.value);
-          return row === undefined ? [] : [[id.value, row.openedBy] as const];
+          // Kept by the id, read back by the key the application maps by.
+          const row = this.rows.get(id.id);
+          return row === undefined ? [] : [[id.key, row.openedBy] as const];
         }),
       ),
     );

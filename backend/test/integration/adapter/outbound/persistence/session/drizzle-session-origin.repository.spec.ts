@@ -5,7 +5,7 @@ import { DrizzleSessionOriginRepository } from '@adapter/outbound/persistence/se
 import type { SessionOrigin } from '@application/session';
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
@@ -21,7 +21,7 @@ const stranger = UserId.create('auth|stranger');
 
 /** A provenance record, with what a test does not care about defaulted. */
 const origin = (n: number, openedBy = owner): SessionOrigin => ({
-  claudeSessionId: ClaudeSessionId.create(conversationId(n)),
+  conversation: ConversationRef.create('claude', conversationId(n)),
   sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
   openedBy,
   workspace: WorkspacePath.create('/srv/projects/app'),
@@ -68,15 +68,47 @@ describe('DrizzleSessionOriginRepository', () => {
     await repository.record(origin(2, stranger));
 
     const openers = await repository.openersOf([
-      ClaudeSessionId.create(conversationId(1)),
-      ClaudeSessionId.create(conversationId(2)),
-      ClaudeSessionId.create(conversationId(3)),
+      ConversationRef.create('claude', conversationId(1)),
+      ConversationRef.create('claude', conversationId(2)),
+      ConversationRef.create('claude', conversationId(3)),
     ]);
 
     expect([...openers.entries()].map(([id, user]) => [id, user.value]).sort()).toEqual([
-      [conversationId(1), 'auth|owner'],
-      [conversationId(2), 'auth|stranger'],
+      [`claude:${conversationId(1)}`, 'auth|owner'],
+      [`claude:${conversationId(2)}`, 'auth|stranger'],
     ]);
+  });
+
+  it('writes the engine and the id of the conversation beside the old column — plan 28, B-11', async () => {
+    await build().record(origin(4));
+
+    const rows = await connection.db.execute<{
+      claude_session_id: string;
+      engine: string;
+      conversation_id: string;
+    }>(
+      sql`SELECT "claude_session_id", "engine", "conversation_id" FROM "session_origins"
+          WHERE "conversation_id" = ${conversationId(4)}`,
+    );
+
+    expect(rows.rows).toEqual([
+      {
+        claude_session_id: conversationId(4),
+        engine: 'claude',
+        conversation_id: conversationId(4),
+      },
+    ]);
+  });
+
+  it('answers by engine: the same id under another engine is another conversation', async () => {
+    const repository = build();
+    await repository.record(origin(5));
+
+    const openers = await repository.openersOf([
+      ConversationRef.create('codex', conversationId(5)),
+    ]);
+
+    expect(openers.size).toBe(0);
   });
 
   it('keeps the first owner when the same conversation is recorded twice', async () => {
@@ -105,6 +137,9 @@ describe('DrizzleSessionOriginRepository', () => {
       'user_id',
       'workspace_path',
       'opened_at',
+      // The conversation as plan 28 names it; the first column is its copy until F7 drops it.
+      'engine',
+      'conversation_id',
     ]);
   });
 

@@ -1,3 +1,5 @@
+import type { ToolCall } from '@/shared/lib/tool-call';
+
 /** How dangerous the backend judged an invocation. Derived there, never here. */
 export type RiskHint = 'read' | 'write' | 'destructive';
 
@@ -24,7 +26,7 @@ export type PermissionDecision = 'allow' | 'deny';
  */
 export interface RuleOffer {
   /**
-   * The `exact` pattern, in the grammar of the Claude Code settings: `Bash(git status)`. `null`
+   * The `exact` pattern, in the canonical grammar: `shell(git status)` — opaque text here. `null`
    * when the invocation has no exact reach — the patterns of the others travel in `reaches`.
    */
   readonly pattern: string | null;
@@ -51,7 +53,7 @@ export interface QuestionOption {
   readonly preview: string | null;
 }
 
-/** One question of Claude, normalised by the server (plan 24). */
+/** One question of the agent, normalised by the server (plan 24). */
 export interface Question {
   /** `q1`…`q4` — what an answer names. */
   readonly id: string;
@@ -62,13 +64,28 @@ export interface Question {
 }
 
 /**
- * Claude asking the person something, rather than asking leave to run a tool. `malformed` is a
+ * The agent asking the person something, rather than asking leave to run a tool. `malformed` is a
  * question nobody can read safely — on the server's word, or this build's: it can only be refused.
  */
 export interface QuestionInteraction {
+  readonly kind: 'question';
   readonly malformed: boolean;
   readonly questions: readonly Question[];
 }
+
+/** The agent presenting a plan to approve before it changes anything (plan 28, B-20). */
+export interface PlanInteraction {
+  readonly kind: 'plan';
+
+  /** The plan, in markdown — rendered safely, never trusted as markup. */
+  readonly markdown: string;
+
+  /** The file the agent saved the plan to — `null` when it did not say. */
+  readonly path: string | null;
+}
+
+/** What a request asks of the person beyond leave to run a tool, by its `kind` (plan 28, B-20). */
+export type Interaction = QuestionInteraction | PlanInteraction;
 
 /** What a person answered to one question: the labels and the free answer, apart. */
 export interface QuestionAnswer {
@@ -110,17 +127,13 @@ export interface ScopeSuggestion {
  * is a `response` that names it. Idempotency, on the other hand, is by `requestId` and never by
  * `toolUseId`.
  */
-export interface PermissionRequest {
+export interface PermissionRequest extends ToolCall {
   readonly requestId: string;
   readonly frameId: string;
   readonly toolUseId: string;
-  readonly toolName: string;
 
   /** The detail a person decides on: the command line, the path being written. */
   readonly description: string | null;
-
-  /** The exact input the tool would run with. What is shown is what executes. */
-  readonly input: Readonly<Record<string, unknown>>;
 
   readonly riskHint: RiskHint;
 
@@ -138,8 +151,11 @@ export interface PermissionRequest {
    */
   readonly reaches: readonly RuleReach[];
 
-  /** The questions, when the request is a question of Claude — `null` for every other request. */
-  readonly interaction: QuestionInteraction | null;
+  /**
+   * The questions or the plan, when the request is one — `null` for every other request, and for a
+   * `kind` this build does not know, which is drawn as the generic card.
+   */
+  readonly interaction: Interaction | null;
 
   /**
    * An answer of ours is in flight.
@@ -158,8 +174,11 @@ export interface PermissionOutcome {
   /** The server decided it: the deadline passed, a rule matched, or Permitir tudo answered. */
   readonly auto: boolean;
 
-  /** What answered when nobody was asked: a rule, or Permitir tudo. `null` otherwise. */
-  readonly via: 'rule' | 'allowAll' | null;
+  /**
+   * What answered when nobody was asked: a rule, Permitir tudo, or a read-only session, which refuses
+   * every call that changes something (plan 28, B-26). `null` otherwise.
+   */
+  readonly via: 'rule' | 'allowAll' | 'readOnly' | null;
 
   /** Who answered, when somebody did. */
   readonly resolvedBy: string | null;
@@ -177,7 +196,7 @@ export interface PermissionOutcome {
   readonly answeredHere: boolean;
 
   /** The questions, when the request was one — what the line of its tool draws (plan 24, B-15). */
-  readonly interaction: QuestionInteraction | null;
+  readonly interaction: Interaction | null;
 
   /** What was answered, when the request was a question and the decision `allow`. */
   readonly answers: readonly QuestionAnswer[] | null;

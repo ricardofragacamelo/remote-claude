@@ -78,12 +78,12 @@ sim em **tornar neutro o que hoje vive no meio do sistema e nos clientes**.
 
 | Peça | Onde | Por que ajuda |
 |---|---|---|
-| SDK confinado | [adapter/outbound/claude/](../../backend/src/adapter/outbound/claude/), 18 arquivos, cerca de 3,6 mil linhas | `domain/` e `application/` não importam o SDK. O `dependency-cruiser` já garante isso. |
-| Protocolo próprio | [ADR-006](../architecture/shared/00-decisions.md), [sdk-message.mapper.ts](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts) | clientes nunca recebem o formato do SDK; um motor novo ganha um mapper equivalente |
-| Permissão é nossa | [PermissionBridge](../../backend/src/adapter/outbound/claude/permission-bridge.ts) implementa `SessionPermissionGate` | o bridge só guarda a promise. Regras, prazo, histórico e fan-out são do módulo `permission`, agnóstico. |
+| SDK confinado | [adapter/outbound/claude/](../../backend/src/adapter/outbound/engines/claude/), 18 arquivos, cerca de 3,6 mil linhas | `domain/` e `application/` não importam o SDK. O `dependency-cruiser` já garante isso. |
+| Protocolo próprio | [ADR-006](../architecture/shared/00-decisions.md), [sdk-message.mapper.ts](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts) | clientes nunca recebem o formato do SDK; um motor novo ganha um mapper equivalente |
+| Permissão é nossa | [PermissionBridge](../../backend/src/adapter/outbound/engines/claude/permission-bridge.ts) implementa `SessionPermissionGate` | o bridge só guarda a promise. Regras, prazo, histórico e fan-out são do módulo `permission`, agnóstico. |
 | Desfazer é nosso | [ADR-013](../architecture/shared/00-decisions.md#adr-013--o-desfazer-não-usa-rewindfiles-o-store-de-checkpoint-é-nosso) | não depende de `rewindFiles()` do Claude: o store de checkpoint funciona para qualquer motor que diga **qual arquivo** vai escrever |
 | Reconexão é nossa | [ADR-012](../architecture/shared/00-decisions.md#adr-012--reconexão-não-usa-reinitialize-o-registro-de-pendentes-é-nosso) | o registro de pendentes e o replay não dependem do motor |
-| Fila de prompts | [input-queue.ts](../../backend/src/adapter/outbound/claude/input-queue.ts), `PromptQueue` no domínio | a fila é de domínio; só a entrega é do adapter |
+| Fila de prompts | [input-queue.ts](../../backend/src/adapter/outbound/engines/claude/input-queue.ts), `PromptQueue` no domínio | a fila é de domínio; só a entrega é do adapter |
 | Instruções de projeto em `AGENTS.md` | [AGENTS.md](../../AGENTS.md), [CLAUDE.md](../../CLAUDE.md) só importa | Codex e Copilot leem `AGENTS.md`; o padrão deste repositório já é o portável |
 
 ### 4.2 Onde o Claude vaza
@@ -93,7 +93,7 @@ tarefas.
 
 #### Backend — porta e aplicação
 
-- [ClaudeSessionPort](../../backend/src/application/session/ports/claude-session.port.ts) é
+- [ClaudeSessionPort](../../backend/src/application/session/ports/agent-engine.port.ts) é
   "a única porta do Agent SDK", e tem forma de Claude:
   - `ClaudeSessionStart` leva `conversation.claudeSessionId`, `resumedFrom`, `effort` e
     `forkAt { keepUpTo, dropsTurn }` (o edit-and-resend do plano 08, D-19, que usa
@@ -110,23 +110,23 @@ tarefas.
 
 #### Backend — adapter e segurança
 
-- [query.factory.ts](../../backend/src/adapter/outbound/claude/query.factory.ts) **recusa** abrir
+- [query.factory.ts](../../backend/src/adapter/outbound/engines/claude/query.factory.ts) **recusa** abrir
   uma sessão sem `settingSources: ['project']`, sem o hook `PreToolUse` de auditoria e sem
   `canUseTool` ([ADR-011](../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse)).
   É a defesa certa, mas escrita em termos de Claude. Cada motor precisa da **sua** versão dessa
   asserção (§6.6).
-- [trusted-directory.ts](../../backend/src/adapter/outbound/claude/trusted-directory.ts): em pasta
+- [trusted-directory.ts](../../backend/src/adapter/outbound/engines/claude/trusted-directory.ts): em pasta
   confiável, o SDK do Claude pula o `canUseTool`. Outros motores têm armadilhas equivalentes, como
   "aprovar para sempre" no Copilot ou `execpolicy` no Codex.
-- [file-tools.ts](../../backend/src/adapter/outbound/claude/file-tools.ts): a tabela
+- `file-tools.ts` (desde o plano 28 · F2, o `changeAt` do [tool-classifier.ts](../../backend/src/adapter/outbound/engines/claude/tool-classifier.ts)): a tabela
   `Write`/`Edit`/`MultiEdit`/`NotebookEdit → campo do caminho` alimenta o desfazer. É o ponto
   exato onde o desfazer fica cego para outro motor.
-- [sdk-options.factory.ts](../../backend/src/adapter/outbound/claude/sdk-options.factory.ts):
+- [sdk-options.factory.ts](../../backend/src/adapter/outbound/engines/claude/sdk-options.factory.ts):
   `enableFileCheckpointing`, `includePartialMessages`, `maxTurns` e a variável
   `CLAUDE_CODE_ENABLE_TODO_TOOLS`.
-- Instalação e versão: [cli-version.ts](../../backend/src/adapter/outbound/claude/cli-version.ts),
-  [claude-environment.ts](../../backend/src/adapter/outbound/claude/claude-environment.ts),
-  [installation-mapping.ts](../../backend/src/adapter/outbound/claude/installation-mapping.ts), e a
+- Instalação e versão: [cli-version.ts](../../backend/src/adapter/outbound/engines/claude/cli-version.ts),
+  [claude-environment.ts](../../backend/src/adapter/outbound/engines/claude/claude-environment.ts),
+  [installation-mapping.ts](../../backend/src/adapter/outbound/engines/claude/installation-mapping.ts), e a
   credencial em `~/.claude/.credentials.json`, que o
   [plano 19](../plans/19-distribution/README.md) (R-02) precisa herdar.
 
@@ -148,14 +148,14 @@ tarefas.
 #### Web e mobile — o acoplamento mais caro
 
 - **Os clientes interpretam as ferramentas do Claude pelo nome e pelo formato do input:**
-  - [tool-labels.ts](../../web/src/features/session/lib/tool-labels.ts) e
+  - `tool-labels.ts` (removido no plano 28 · F2) e
     [ToolRow.tsx](../../web/src/features/session/components/conversation/ToolRow.tsx): rótulo
     compacto por ferramenta;
-  - [edit-preview.ts](../../web/src/features/permission/lib/edit-preview.ts),
+  - `edit-preview.ts` (removido no plano 28 · F2),
     [useToolDiff.ts](../../web/src/features/session/hooks/useToolDiff.ts) e
     [ToolDiffView.tsx](../../web/src/features/session/components/conversation/ToolDiffView.tsx):
     diff a partir de `old_string`/`new_string`/`content` de `Edit`/`MultiEdit`/`Write`;
-  - [task-list.ts](../../web/src/features/session/lib/task-list.ts) e
+  - `task-list.ts` (removido no plano 28 · F3) e
     [TaskStrip.tsx](../../web/src/features/session/components/composer/TaskStrip.tsx):
     `TodoWrite` e `Task*`;
   - [PlanApprovalCard.tsx](../../web/src/features/permission/components/PlanApprovalCard.tsx):
@@ -173,7 +173,7 @@ tarefas.
 - O [plano 18 — Logs e diagnóstico](../plans/18-logs-and-diagnostics/README.md) lê as versões da
   instalação do Claude.
 - Os kinds de auditoria `claude.*`.
-- Documentos normativos: [backend/04-claude-integration](../architecture/backend/04-claude-integration.md),
+- Documentos normativos: [backend/04a-claude](../architecture/backend/04a-claude.md),
   [discovery 01](01-descoberta-claude-agent-sdk.md), ADR-001 e ADR-011.
 - O próprio nome do produto (`remote-claude`) e o formato `remote-claude/workflow@1` da proposta de
   workflow.
@@ -382,7 +382,7 @@ Regras:
   regras existentes migram para a forma canônica quando o mapeamento é inequívoco;
 - **o desfazer** ([ADR-013](../architecture/shared/00-decisions.md)) passa a perguntar ao payload
   canônico quais caminhos `file.*` vão mudar, em vez da tabela de nomes de
-  [file-tools.ts](../../backend/src/adapter/outbound/claude/file-tools.ts). `shell` continua fora,
+  `file-tools.ts` (feito no plano 28 · F2: os `changes` do [tool-classifier.ts](../../backend/src/adapter/outbound/engines/claude/tool-classifier.ts)). `shell` continua fora,
   como hoje, e pela mesma razão;
 - **o diff**: motores com diff estruturado (Codex, ACP) o entregam pronto; o Claude continua
   derivando do input, mas **no adapter**, não no cliente. `edit-preview.ts` e `useToolDiff.ts` deixam
@@ -425,7 +425,7 @@ O que o agente pede ao humano além de "posso executar isto?":
 ### 6.6 Segurança por motor
 
 O ADR-011 é reescrito como **contrato que todo adapter cumpre**, verificado em código no ponto de
-abertura da sessão (como o [query.factory.ts](../../backend/src/adapter/outbound/claude/query.factory.ts)
+abertura da sessão (como o [query.factory.ts](../../backend/src/adapter/outbound/engines/claude/query.factory.ts)
 faz hoje):
 
 1. **gate bloqueante** ligado ao `SessionPermissionGate`. Nenhum "aprovar tudo" do SDK (por
@@ -552,7 +552,7 @@ Ver §8.
 - **ADR-011 reescrito** como o contrato de segurança por motor do §6.6. As duas obrigações atuais
   viram a implementação do Claude desse contrato.
 - **ADR-006 estendido**: ferramentas e interações canônicas.
-- [backend/04-claude-integration](../architecture/backend/04-claude-integration.md) vira
+- [backend/04a-claude](../architecture/backend/04a-claude.md) vira
   `04-engine-integration.md` (o geral) mais um anexo por motor. O roteador do
   [AGENTS.md](../../AGENTS.md) ("Entender como o backend conversa com o Claude local") e o
   anti-padrão "`query()` do Agent SDK sem `settingSources`" ganham a versão geral.

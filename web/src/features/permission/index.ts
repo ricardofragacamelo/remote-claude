@@ -4,7 +4,7 @@ export { PermissionOutcomeLine } from './components/PermissionOutcomeLine';
 export { AnsweredQuestions } from './components/AnsweredQuestions';
 export type { QuestionEnd } from './components/AnsweredQuestions';
 export type { QuestionHandlers } from './components/PermissionRequestCard';
-export { readAnswers, readInteraction } from './services/permission.service';
+export { asksQuestion, readAnswers, readInteraction } from './services/permission.service';
 export { RuleList } from './components/RuleList';
 export { RuleDetail } from './components/RuleDetail';
 export { usePermissionRules } from './hooks/usePermissionRules';
@@ -19,6 +19,7 @@ export type {
   PermissionRequest,
   PermissionScope,
   PersistedScope,
+  Interaction,
   QuestionAnswer,
   QuestionInteraction,
   RiskHint,

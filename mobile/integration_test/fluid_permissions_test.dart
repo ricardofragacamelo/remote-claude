@@ -26,7 +26,7 @@ void main() {
   Future<void> switchTo(WidgetTester tester, SignedInApp app, String sessionId, String mode) async {
     final String name = switch (mode) {
       'allowAll' => app.l10n.modeAllowAll,
-      _ => app.l10n.modeDefault,
+      _ => app.l10n.modeAsk,
     };
     await app.robot(tester).pick(app.l10n.modeLabel, name);
     await pumpUntil(tester, () {
@@ -57,7 +57,7 @@ void main() {
         .seeInConversation(find.text(app.l10n.permissionOutcomeAllowedByAllowAll));
 
     // Switched off, the next write is put to the phone again.
-    await switchTo(tester, app, sessionId, 'default');
+    await switchTo(tester, app, sessionId, 'ask');
     final Map<String, Object?> asked = await answeredOnThePhone(
       tester,
       app,

@@ -32,10 +32,10 @@ export class InMemoryUndoJournal implements UndoJournal {
   }
 
   reachOf(live: readonly UndoReach[]): Promise<ReadonlySet<string>> {
-    const conversations = new Set(live.map((reach) => reach.claudeSessionId.value));
+    const conversations = new Set(live.map((reach) => reach.conversation.key));
     const earlier = this.checkpoints
-      .filter((c) => c.snapshot().claudeSessionId !== null)
-      .filter((c) => conversations.has(c.snapshot().claudeSessionId?.value ?? ''))
+      .filter((c) => c.snapshot().conversation !== null)
+      .filter((c) => conversations.has(c.snapshot().conversation?.key ?? ''))
       .map((c) => c.sessionId.value);
 
     return Promise.resolve(new Set([...live.map((reach) => reach.sessionId.value), ...earlier]));
@@ -47,12 +47,12 @@ function reaches(
   reach: UndoReach,
   row: {
     readonly sessionId: { readonly value: string };
-    readonly claudeSessionId: { readonly value: string } | null;
+    readonly conversation: { readonly key: string } | null;
   },
 ): boolean {
   return (
     row.sessionId.value === reach.sessionId.value ||
-    row.claudeSessionId?.value === reach.claudeSessionId.value
+    row.conversation?.key === reach.conversation.key
   );
 }
 

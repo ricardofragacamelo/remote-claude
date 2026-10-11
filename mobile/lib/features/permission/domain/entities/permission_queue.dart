@@ -93,7 +93,8 @@ class PermissionCard extends Equatable {
   ];
 }
 
-/// Whether everything waiting on the person is a question of Claude — none a permission (plan 24).
+/// Whether everything waiting on the person is a question of the agent — none a permission (plan
+/// 24).
 bool onlyQuestions(PermissionQueue queue) =>
     queue.pending.isNotEmpty &&
     queue.pending.every((PermissionCard card) => card.request.interaction != null);

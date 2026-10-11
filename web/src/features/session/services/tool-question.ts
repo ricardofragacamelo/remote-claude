@@ -6,12 +6,12 @@ import type { QuestionOutcome, ToolQuestion } from '../types/live-session';
 const OUTCOMES = new Set<string>(['answered', 'declined', 'expired']);
 
 /**
- * The question a `tool.completed` of an `AskUserQuestion` carries — the questions as the server
+ * The question a `tool.completed` of a `question` call carries — the questions as the server
  * normalised them and, when it recorded them, how they ended (plan 24, B-22) — or `null` when it
  * carries none: any other tool, or an older server.
  *
  * Fails closed the way the card does: questions this build cannot read whole are read as unreadable,
- * never as half of what Claude asked.
+ * never as half of what the agent asked.
  */
 export function readToolQuestion(value: unknown): ToolQuestion | null {
   if (!isRecord(value)) {
@@ -20,7 +20,7 @@ export function readToolQuestion(value: unknown): ToolQuestion | null {
 
   const interaction = readInteraction(value['interaction']);
 
-  if (interaction === null) {
+  if (interaction?.kind !== 'question') {
     return null;
   }
 

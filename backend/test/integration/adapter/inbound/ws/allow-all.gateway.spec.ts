@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -204,7 +204,7 @@ describe('Permitir tudo', () => {
     await until(socket, 'turn.completed');
     expect(record.modes.at(-1)).toBe('default');
 
-    socket.send(commandFrame('session.setPermissionMode', { sessionId, mode: 'default' }));
+    socket.send(commandFrame('session.setPermissionMode', { sessionId, mode: 'ask' }));
     socket.send(commandFrame('session.prompt', { sessionId, text: 'do it again' }));
 
     const again = await until(socket, 'permission.requested');

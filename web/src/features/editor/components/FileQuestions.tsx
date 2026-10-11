@@ -19,8 +19,8 @@ import { EditorQuestion } from './EditorQuestion';
 
 /**
  * The questions the editor asks about one file — the conflict of a save (S-228), the second step of
- * a file that changes what Claude may do (S-232), and the file deleted under its tab (S-240) — each in
- * a dialog of its own, one at a time, the way out with the focus first.
+ * a file that changes what the agent may do (S-232), and the file deleted under its tab (S-240) —
+ * each in a dialog of its own, one at a time, the way out with the focus first.
  */
 export function FileQuestions({ folder }: { readonly folder: string }): React.JSX.Element {
   return (
@@ -33,9 +33,10 @@ export function FileQuestions({ folder }: { readonly folder: string }): React.JS
 }
 
 /**
- * The conflict: the file changed on disk since it was opened — Claude's work, probably — and a save
- * would overwrite it. Compare (a diff tab of the disk and the buffer), Overwrite (on purpose, over the
- * version shown), or Reload (dropping the changes). Nothing is ever overwritten on its own.
+ * The conflict: the file changed on disk since it was opened — the agent's work, probably — and a
+ * save would overwrite it. Compare (a diff tab of the disk and the buffer), Overwrite (on purpose,
+ * over the version shown), or Reload (dropping the changes). Nothing is ever overwritten on its
+ * own.
  */
 function ConflictQuestion({ folder, path }: FileQuestionProps): React.JSX.Element {
   const { t } = useTranslation();
@@ -79,13 +80,13 @@ function ConflictQuestion({ folder, path }: FileQuestionProps): React.JSX.Elemen
 
 /** What a sensitive file controls, said before the save — the subject's own key, named in full. */
 const SUBJECTS: Readonly<Record<SensitiveSubject, string>> = {
-  claudeSettings: 'editor.sensitive.claudeSettings',
-  claudeLocalSettings: 'editor.sensitive.claudeLocalSettings',
+  projectSettings: 'editor.sensitive.projectSettings',
+  localSettings: 'editor.sensitive.localSettings',
   mcpServers: 'editor.sensitive.mcpServers',
 };
 
-/** What a file the server called sensitive, and the list did not know, controls: Claude's settings. */
-const UNKNOWN_SUBJECT: SensitiveSubject = 'claudeSettings';
+/** What a file the server called sensitive, unknown to the list, controls: the agent's own. */
+const UNKNOWN_SUBJECT: SensitiveSubject = 'projectSettings';
 
 /** The questions answered by yes or no — each one's words, and what "yes" does. */
 const YES_NO = {
@@ -107,7 +108,7 @@ const YES_NO = {
 
 /**
  * A question answered by yes or no, "no" with the focus first and what `Esc` means: the second step
- * of a file that changes what Claude may do — what it controls, before the save goes with
+ * of a file that changes what the agent may do — what it controls, before the save goes with
  * `confirmSensitive` — or recreating a file deleted on disk, a create, never a silent save.
  */
 function YesNo({

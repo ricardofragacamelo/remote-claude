@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { tabMenuOf } from '@/features/editor/hooks/tab-menu';
 import { openDiff, openFile } from '@/features/editor/hooks/tabs';
-import { claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentContextTargets } from '@/shared/lib/files-drag';
 import { FOLDER, editorState, openedModel } from '../../../../support/editor';
 import { fakeDisk } from '../../../../support/editor-disk';
 
@@ -19,13 +19,13 @@ const tab = (index: number) => {
 
 function menu(
   index: number,
-  extra: { dirty?: boolean; claude?: boolean; reveal?: (() => void) | null } = {},
+  extra: { dirty?: boolean; agent?: boolean; reveal?: (() => void) | null } = {},
 ) {
   return tabMenuOf(tab(index), {
     folder: FOLDER,
     group: group(),
     dirty: extra.dirty ?? false,
-    claude: extra.claude ?? false,
+    agent: extra.agent ?? false,
     reveal: extra.reveal ?? null,
   });
 }
@@ -103,12 +103,12 @@ describe('the menu of an editor tab — plan 07, B-32', () => {
     await openedModel('a.ts');
     const reveal = vi.fn();
     const add = vi.fn();
-    const unregister = claudeContextTargets.register({ id: 'chat', position: 1, add });
+    const unregister = agentContextTargets.register({ id: 'chat', position: 1, add });
 
-    const sections = menu(0, { claude: true, reveal });
-    expect(ids(sections)[2]).toEqual(['openToSide', 'compareWithSaved', 'reveal', 'addToClaude']);
+    const sections = menu(0, { agent: true, reveal });
+    expect(ids(sections)[2]).toEqual(['openToSide', 'compareWithSaved', 'reveal', 'addToAgent']);
     pick(sections, 'reveal').run();
-    pick(sections, 'addToClaude').run();
+    pick(sections, 'addToAgent').run();
 
     expect(reveal).toHaveBeenCalledTimes(1);
     expect(add).toHaveBeenCalledWith({ folder: FOLDER, entries: [{ path: 'a.ts', kind: 'file' }] });

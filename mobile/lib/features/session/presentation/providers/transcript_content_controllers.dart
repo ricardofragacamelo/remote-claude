@@ -5,6 +5,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter_riverpod/misc.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -25,9 +26,9 @@ Duration? _neverRetry(int retryCount, Object error) => null;
 @Riverpod(retry: _neverRetry)
 class ToolResultController extends _$ToolResultController {
   @override
-  Future<ToolOutput> build(String conversationId, String toolUseId) {
+  Future<ToolOutput> build(ConversationKey conversation, String toolUseId) {
     _keepForAWhile();
-    return ref.watch(readTranscriptContentProvider).toolResult(conversationId, toolUseId);
+    return ref.watch(readTranscriptContentProvider).toolResult(conversation, toolUseId);
   }
 
   /// Asks again, after it did not arrive.
@@ -49,8 +50,8 @@ class ToolResultController extends _$ToolResultController {
 @Riverpod(retry: _neverRetry)
 class PromptImageController extends _$PromptImageController {
   @override
-  Future<PromptImageBytes> build(String conversationId, String blockId) =>
-      ref.watch(readTranscriptContentProvider).promptImage(conversationId, blockId);
+  Future<PromptImageBytes> build(ConversationKey conversation, String blockId) =>
+      ref.watch(readTranscriptContentProvider).promptImage(conversation, blockId);
 
   /// Asks again, after it did not arrive for a reason asking again can change.
   void retry() => ref.invalidateSelf();

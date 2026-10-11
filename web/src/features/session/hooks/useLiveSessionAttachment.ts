@@ -10,8 +10,8 @@ function intoStore(sessionId: string): SessionSubscriber {
     onEvent: (frame) => {
       store.getState().apply(frame);
     },
-    onGap: (claudeSessionId) => {
-      store.getState().reset(claudeSessionId);
+    onGap: (conversation) => {
+      store.getState().reset(conversation);
     },
     lastSeq: () => store.getState().lastSeq,
   };

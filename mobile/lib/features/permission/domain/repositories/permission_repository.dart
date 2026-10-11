@@ -39,7 +39,7 @@ class OutgoingAnswer extends Equatable {
   /// Which of the request's reaches the rules of a `session`, `project` or `always` yes take.
   final RuleReachKind? reach;
 
-  /// The answers to a question of Claude; `null` on everything else (plan 24, B-17).
+  /// The answers to a question of the agent; `null` on everything else (plan 24, B-17).
   final List<QuestionAnswer>? answers;
 
   @override

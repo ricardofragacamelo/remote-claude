@@ -5,6 +5,7 @@ import { useOwnedSessionsStore } from '../store/owned-sessions.store';
 import { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import type { ConnectionStatus } from '@/shared/api/ws-client';
+import type { ConversationRef } from '@/shared/lib/conversation';
 
 /**
  * How long a resume waits for its answer before the screen gives up on it.
@@ -18,7 +19,7 @@ export const RESUME_TIMEOUT_MS = 30_000;
 
 /** A conversation to continue, and where it ran — a resume runs there too, and nowhere else. */
 export interface ResumeTarget {
-  readonly conversationId: string;
+  readonly conversation: ConversationRef;
   readonly workspacePath: string;
 }
 
@@ -47,7 +48,7 @@ export interface Resumer extends Omit<ResumeControl, 'resume'> {
 /** The resume in flight: the command that asked, and the conversation it asked for. */
 interface InFlight {
   readonly commandId: string;
-  readonly conversationId: string;
+  readonly conversation: ConversationRef;
 }
 
 /**
@@ -82,7 +83,7 @@ export function useResumer(onResumed: (sessionId: string) => void): Resumer {
         }
 
         const answer = resumeAnswer(frame, {
-          conversationId: asked.conversationId,
+          conversation: asked.conversation,
           commandId: asked.commandId,
         });
 
@@ -134,14 +135,14 @@ export function useResumer(onResumed: (sessionId: string) => void): Resumer {
       return false;
     }
 
-    const commandId = resumeSession(wsClient, next.workspacePath, next.conversationId);
+    const commandId = resumeSession(wsClient, next.workspacePath, next.conversation);
 
     // The socket was not ready and nothing left: there is nothing to wait for.
     if (commandId === null) {
       return false;
     }
 
-    const asked = { commandId, conversationId: next.conversationId };
+    const asked = { commandId, conversation: next.conversation };
 
     inFlight.current = asked;
     setPending(asked);

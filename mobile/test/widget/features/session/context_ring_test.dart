@@ -16,6 +16,7 @@ import 'package:remote_claude/features/session/presentation/widgets/context_ring
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/fakes/fake_insight_repository.dart';
 import '../../../support/fakes/fake_session_repository.dart';
 import '../../../support/pump_app.dart';
@@ -38,23 +39,24 @@ void main() {
 
   tearDown(() => sessions.dispose());
 
-  Future<void> pump(WidgetTester tester, {bool isCompacting = false}) => tester.pumpApp(
-    Consumer(
-      builder: (BuildContext context, WidgetRef ref, Widget? _) => ChoiceChipButton(
-        choice: contextChoice(
-          context,
-          sessionId: 's-1',
-          use: ref.watch(sessionContextControllerProvider('s-1')),
-          onCompact: () => compacts += 1,
-          isCompacting: isCompacting,
+  Future<void> pump(WidgetTester tester, {bool isCompacting = false, bool canCompact = true}) =>
+      tester.pumpApp(
+        Consumer(
+          builder: (BuildContext context, WidgetRef ref, Widget? _) => ChoiceChipButton(
+            choice: contextChoice(
+              context,
+              sessionId: 's-1',
+              use: ref.watch(sessionContextControllerProvider('s-1')),
+              onCompact: canCompact ? () => compacts += 1 : null,
+              isCompacting: isCompacting,
+            ),
+          ),
         ),
-      ),
-    ),
-    overrides: <Override>[
-      insightRepositoryProvider.overrideWithValue(insight as InsightRepository),
-      sessionRepositoryProvider.overrideWithValue(sessions),
-    ],
-  );
+        overrides: <Override>[
+          insightRepositoryProvider.overrideWithValue(insight as InsightRepository),
+          sessionRepositoryProvider.overrideWithValue(sessions),
+        ],
+      );
 
   testWidgets('S-43 · the ring says how full the window is, named in full', (
     WidgetTester tester,
@@ -85,7 +87,7 @@ void main() {
 
     expect(find.text(l10n.contextWindow('50,000', '200,000')), findsOneWidget);
     expect(find.text(l10n.contextMessages), findsOneWidget);
-    // A category this build has no words for keeps the installation's name.
+    // A category with no key of ours is named by the engine's own words.
     expect(find.text('Something new'), findsOneWidget);
     expect(find.text(l10n.contextNear), findsNothing);
 
@@ -127,8 +129,9 @@ void main() {
     WidgetTester tester,
   ) async {
     insight.contextFailure = const ServerFailure(
-      code: 'CLAUDE_TIMEOUT',
-      messageKey: 'session.error.claudeTimeout',
+      code: 'AGENT_TIMEOUT',
+      messageKey: 'session.error.agentTimeout',
+      params: <String, String>{'engine': anEngine},
       traceId: 't',
     );
     await pump(tester);
@@ -140,7 +143,7 @@ void main() {
     await tester.tap(find.byType(ChoiceChipButton));
     await tester.pumpAndSettle();
     expect(find.textContaining(l10n.contextUnavailable), findsOneWidget);
-    expect(find.textContaining(l10n.sessionErrorClaudeTimeout), findsOneWidget);
+    expect(find.textContaining(l10n.sessionErrorAgentTimeout(anEngine)), findsOneWidget);
 
     insight.contextFailure = null;
     await tester.tap(find.text(l10n.commonActionRetry));
@@ -161,21 +164,72 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  test('every category the CLI names has a name here', () async {
-    final AppLocalizations en = await englishCatalogue();
-    expect(
-      <String>[
-        'systemPrompt',
-        'systemTools',
-        'mcpTools',
-        'messages',
-        'memoryFiles',
-        'skills',
-        'freeSpace',
-        'autocompactBuffer',
-        'buffer',
-      ].map((String id) => categoryName(en, ContextCategory(id: id, name: id, tokens: 0))).toSet(),
-      hasLength(8),
-    );
+  testWidgets('S-70 · an engine that cannot compact: the sheet has no Compact', (
+    WidgetTester tester,
+  ) async {
+    await pump(tester, canCompact: false);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(ChoiceChipButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.contextWindow('50,000', '200,000')), findsOneWidget);
+    expect(find.text(l10n.contextCompact), findsNothing);
+    expect(find.byIcon(Icons.compress), findsNothing);
+  });
+
+  group('S-71 · a category is named by its key, or by the engine\'s words', () {
+    test('each canonical key has its own words, in both languages', () async {
+      final AppLocalizations en = await englishCatalogue();
+      final AppLocalizations pt = await AppLocalizations.delegate.load(const Locale('pt'));
+      const Map<String, (String, String)> expected = <String, (String, String)>{
+        'system': ('System prompt', 'Prompt de sistema'),
+        'tools': ('Tools', 'Ferramentas'),
+        'messages': ('Messages', 'Mensagens'),
+        'memory': ('Memory files', 'Arquivos de memória'),
+        'free': ('Free space', 'Espaço livre'),
+        'reserved': ('Reserved for compaction', 'Reservado para compactação'),
+      };
+
+      for (final MapEntry<String, (String, String)> entry in expected.entries) {
+        final ContextCategory category = ContextCategory(
+          id: entry.key,
+          messageKey: 'sessions.context.${entry.key}',
+          text: 'ignored',
+          tokens: 0,
+        );
+        expect(categoryName(en, category), entry.value.$1, reason: entry.key);
+        expect(categoryName(pt, category), entry.value.$2, reason: entry.key);
+      }
+    });
+
+    test('no key: the engine\'s words; an unknown key: its words, or else its id', () async {
+      final AppLocalizations en = await englishCatalogue();
+
+      expect(
+        categoryName(en, const ContextCategory(id: 'own', text: 'Engine words', tokens: 0)),
+        'Engine words',
+      );
+      expect(
+        categoryName(
+          en,
+          const ContextCategory(
+            id: 'later',
+            messageKey: 'sessions.context.later',
+            text: 'Later words',
+            tokens: 0,
+          ),
+        ),
+        'Later words',
+      );
+      expect(
+        categoryName(
+          en,
+          const ContextCategory(id: 'later', messageKey: 'sessions.context.later', tokens: 0),
+        ),
+        'later',
+      );
+      expect(categoryName(en, const ContextCategory(id: 'bare', tokens: 0)), 'bare');
+    });
   });
 }

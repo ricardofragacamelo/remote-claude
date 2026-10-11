@@ -10,6 +10,7 @@ import 'package:remote_claude/features/permission/presentation/widgets/permissio
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import '../../../support/builders/permissions.dart';
+import '../../../support/builders/tools.dart';
 import '../../../support/pump_app.dart';
 
 /// What the card asked for, in order.
@@ -125,7 +126,11 @@ void main() {
       await pumpCard(
         tester,
         card: PermissionCard(
-          request: aPermissionRequest(riskHint: RiskHint.read, toolName: 'Read'),
+          request: aPermissionRequest(
+            riskHint: RiskHint.read,
+            call: readA,
+            titleKey: 'permission.tool.fileRead',
+          ),
           frameId: 'f',
         ),
       );
@@ -134,7 +139,7 @@ void main() {
           tester.widget<Card>(find.byType(Card)).shape! as RoundedRectangleBorder;
       expect(shape.side.color, isNot(AppTheme.light().colorScheme.error));
       expect(find.text(l10n.permissionRiskRead), findsOneWidget);
-      expect(find.text(l10n.permissionToolRead), findsOneWidget);
+      expect(find.text(l10n.permissionToolFileRead), findsOneWidget);
     });
   });
 
@@ -144,16 +149,55 @@ void main() {
     expect(find.text(l10n.permissionRemaining(120)), findsOneWidget);
   });
 
-  testWidgets('names a tool it has no words for', (WidgetTester tester) async {
-    await pumpCard(
-      tester,
-      card: PermissionCard(
-        request: aPermissionRequest(toolName: 'Grep'),
-        frameId: 'f',
-      ),
-    );
+  group('plan 28, B-19 · what it asks, by the kind of the call', () {
+    testWidgets('S-58 · the title of the kind, and the label of the call in its accessible name', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await pumpCard(tester);
 
-    expect(find.text(l10n.permissionToolUnknown('Grep')), findsOneWidget);
+      expect(find.text(l10n.permissionToolShell), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(l10n.permissionCardLabel('Shell: rm -rf build/')),
+        findsOneWidget,
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('a title key this build has no words for is the label of the call', (
+      WidgetTester tester,
+    ) async {
+      await pumpCard(
+        tester,
+        card: PermissionCard(
+          request: aPermissionRequest(titleKey: 'permission.tool.shellLater'),
+          frameId: 'f',
+        ),
+      );
+
+      expect(find.text('Shell: rm -rf build/'), findsOneWidget);
+    });
+
+    testWidgets('S-59 · a kind this build does not know is the generic line', (
+      WidgetTester tester,
+    ) async {
+      await pumpCard(
+        tester,
+        card: PermissionCard(
+          request: aPermissionRequest(
+            call: aToolCall(
+              kind: 'vcs.commit',
+              messageKey: 'sessions.tool.vcsCommit',
+              params: const <String, Object>{'name': 'Commit'},
+            ),
+            titleKey: 'permission.tool.vcsCommit',
+          ),
+          frameId: 'f',
+        ),
+      );
+
+      expect(find.text('Commit'), findsOneWidget);
+    });
   });
 
   testWidgets('every yes says what it reaches, and for how long', (WidgetTester tester) async {
@@ -235,7 +279,7 @@ void main() {
   // Plan 03, B-10 — a yes that outlives the session, and the second step that says how far.
   group('a yes that persists a rule', () {
     const RuleOffer ninetyDays = RuleOffer(
-      pattern: 'Bash(git status)',
+      pattern: 'shell(git status)',
       lifetime: Duration(days: 90),
     );
 
@@ -286,12 +330,15 @@ void main() {
       );
 
       expect(find.text(l10n.permissionPersistTitle), findsOneWidget);
-      expect(find.text(l10n.permissionPersistAlways(l10n.permissionRuleDays(90))), findsOneWidget);
+      expect(
+        find.text(l10n.permissionPersistAlways('engine-a', l10n.permissionRuleDays(90))),
+        findsOneWidget,
+      );
       expect(
         tester
             .widgetList<SelectableText>(find.byType(SelectableText))
             .map((SelectableText t) => t.data),
-        contains('Bash(git status)'),
+        contains('shell(git status)'),
       );
       expect(find.text(l10n.permissionPersistRevocable), findsOneWidget);
       // Not destructive, so no warning about destruction — the reach is the whole message.
@@ -317,7 +364,10 @@ void main() {
         card: PermissionCard(request: offering(), frameId: 'f', phase: CardPhase.confirming),
       );
 
-      expect(find.text(l10n.permissionPersistProject(l10n.permissionRuleDays(90))), findsOneWidget);
+      expect(
+        find.text(l10n.permissionPersistProject('engine-a', l10n.permissionRuleDays(90))),
+        findsOneWidget,
+      );
       // With nowhere to go, no way to the rules is offered — the note still says they exist.
       expect(find.text(l10n.permissionPersistOpenRules), findsNothing);
       expect(find.text(l10n.permissionPersistRevocable), findsOneWidget);
@@ -348,7 +398,7 @@ void main() {
         tester,
         card: PermissionCard(
           request: offering(
-            rule: const RuleOffer(pattern: 'Bash(git status)', lifetime: Duration(minutes: 20)),
+            rule: const RuleOffer(pattern: 'shell(git status)', lifetime: Duration(minutes: 20)),
           ),
           frameId: 'f',
         ),
@@ -380,11 +430,11 @@ void main() {
   group('how far a rule reaches — plan 23, B-16', () {
     const RuleReach exact = RuleReach(
       kind: RuleReachKind.exact,
-      patterns: <String>['Bash(git push 2>&1 | tail -5)'],
+      patterns: <String>['shell(git push 2>&1 | tail -5)'],
     );
     const RuleReach prefix = RuleReach(
       kind: RuleReachKind.prefix,
-      patterns: <String>['Bash(git push:*)', 'Bash(tail:*)'],
+      patterns: <String>['shell(git push:*)', 'shell(tail:*)'],
     );
 
     PermissionRequest reaching(List<RuleReach> reaches) => aPermissionRequest(
@@ -408,7 +458,7 @@ void main() {
       );
 
       expect(find.text(l10n.permissionReachLabel), findsOneWidget);
-      expect(find.text('Bash(git push:*)\nBash(tail:*)'), findsOneWidget);
+      expect(find.text('shell(git push:*)\nshell(tail:*)'), findsOneWidget);
       final RadioGroup<RuleReachKind> group = tester.widget<RadioGroup<RuleReachKind>>(
         find.byType(RadioGroup<RuleReachKind>),
       );
@@ -463,7 +513,7 @@ void main() {
         tester
             .widgetList<SelectableText>(find.byType(SelectableText))
             .map((SelectableText t) => t.data),
-        contains('Bash(git push:*)\nBash(tail:*)'),
+        contains('shell(git push:*)\nshell(tail:*)'),
       );
     });
   });

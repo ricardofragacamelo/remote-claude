@@ -23,7 +23,7 @@ LiveSessionSummary aLive(String id, {SessionStatus? status = SessionStatus.idle}
       workspacePath: '/w/a',
       status: status,
       model: 'opus',
-      permissionMode: 'default',
+      permissionMode: 'ask',
       startedAt: DateTime.utc(2026, 10, 4),
       openedFrom: SessionOrigin.mobile,
       pendingPermissions: 0,

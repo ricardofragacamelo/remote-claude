@@ -27,7 +27,7 @@ import type { CodeView, ViewCapabilities } from '../types/code-editor';
 
 import { commandRegistry, executeCommand, useCommands, usePalette } from '@/features/commands';
 import type { CommandDeclaration } from '@/features/commands';
-import { claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentContextTargets } from '@/shared/lib/files-drag';
 import { activeGroupOf, activeTabOf } from '../lib/layout';
 import { editorStoreOf, isDirty } from '../store/editor.store';
 import { useEditorUi } from '../store/ui.store';
@@ -50,7 +50,7 @@ import {
   reopenClosed,
   tabsToClose,
 } from './tabs';
-import { addFileToClaude } from './text-actions';
+import { addFileToAgent } from './text-actions';
 import { activeView, focusEditor } from './views';
 
 /** The palette's mode for the files opened last in the folder tab. */
@@ -73,7 +73,7 @@ export const EDITOR_SHORTCUTS = [
   'editor.find',
   'editor.replace',
   'editor.goToLine',
-  'editor.addToClaude',
+  'editor.addToAgent',
   'editor.pdf.find',
   'editor.pdf.zoomIn',
   'editor.pdf.zoomOut',
@@ -444,15 +444,15 @@ function textCommands(folder: string, read: Reader, t: TFunction): CommandDeclar
 function linkCommands(folder: string, read: Reader, t: TFunction): CommandDeclaration[] {
   return [
     {
-      id: 'editor.addToClaude',
-      labelKey: 'command.editor.addToClaude',
+      id: 'editor.addToAgent',
+      labelKey: 'command.editor.addToAgent',
       category: 'file',
       icon: MessageSquarePlus,
-      // Only while somebody takes it: without Claude's panel, the action does not exist (S-276).
-      when: () => read.ready() && claudeContextTargets.entries().length > 0,
+      // Only while somebody takes it: without the agent's panel, the action does not exist (S-276).
+      when: () => read.ready() && agentContextTargets.entries().length > 0,
       run: () => {
         const path = read.path();
-        if (path !== null) addFileToClaude(folder, path, activeView(folder)?.selections() ?? []);
+        if (path !== null) addFileToAgent(folder, path, activeView(folder)?.selections() ?? []);
       },
       keys: [{ key: 'Mod+K A', context: 'workbench', allowInInput: true }],
     },

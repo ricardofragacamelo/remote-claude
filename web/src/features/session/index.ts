@@ -1,23 +1,26 @@
 /** Public surface of the `session` feature. */
 export { ConversationReader } from './components/ConversationReader';
 export { registerSessionsView, SESSIONS_VIEW } from './components/sessions/registration';
-export { registerClaudeChanges } from './register-changes';
-export { registerClaudeContext } from './register-context';
+export { registerAgentChanges } from './register-changes';
+export { registerAgentContext } from './register-context';
 export { ChangesView } from './components/changes/ChangesView';
-export { ClaudePanel } from './components/panel/ClaudePanel';
+export { AgentPanel } from './components/panel/AgentPanel';
 export { PanelCommands } from './components/panel/PanelCommands';
 export { Notifiers } from './components/panel/Notifiers';
 export { usePanelSessions } from './hooks/usePanelTabs';
-export { useClaudePanel } from './hooks/useClaudePanel';
-export type { EffortLevel, PanelPane } from './store/claude-panel.store';
+export { useAgentPanel } from './hooks/useAgentPanel';
+export type { EffortLevel, PanelMode, PanelPane } from './store/agent-panel.store';
+export { useEngineCapabilities } from './hooks/useEngines';
+export { levelName } from './lib/effort-levels';
 export type { InstallationModel } from './types/insight';
-export { forgetClaudePanel } from './store/claude-panel.store';
+export { forgetAgentPanel } from './store/agent-panel.store';
 export { SessionScreen } from './components/SessionScreen';
 export { useLiveSession } from './hooks/useLiveSession';
 export { useSetPermissionMode } from './hooks/useSetPermissionMode';
 export { SESSION_LINK_GONE, useSessionLink } from './hooks/useSessionLink';
 export type { SessionLinkState } from './hooks/useSessionLink';
 export { KeepSessionAttached } from './components/KeepSessionAttached';
+export { KeepAgentNames } from './components/KeepAgentNames';
 export {
   createLiveSessionStore,
   forgetLiveSessions,

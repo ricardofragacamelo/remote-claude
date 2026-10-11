@@ -127,7 +127,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Painel estreito, caixa alta, celular e teclado virtual sem perder o composer | B-08 | [web/03-ui-system](../../architecture/web/03-ui-system.md#o-workbench-abaixo-de-md) | S-13…S-17 |
 | A barra da caixa com os controles do plugin; o esforço só se escolhe no rascunho | B-09, B-11, B-12 | [web/03-ui-system](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto) | S-18, S-23…S-27, S-90 |
 | Enviar e parar no mesmo lugar, uma vez só | B-10 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#comandos-cliente--servidor) | S-19…S-22 |
-| O contexto da janela à vista, com `/compact` | B-13 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-33, S-34 |
+| O contexto da janela à vista, com `/compact` | B-13 | [backend/04a-claude](../../architecture/backend/04a-claude.md#slash-commands-init-gerar-readme-e-agentsmd) | S-33, S-34 |
 | Fila, edição e recusa acima da caixa; o motivo de não enviar sem poluir | B-14 | [shared/04-errors-and-http](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) | S-28…S-32 |
 | O composer por teclado, com os atalhos de antes | B-15 | [web/03-ui-system](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-35, S-36 |
 | O cabeçalho numa faixa, com status e histórico | B-16, B-18, B-19 | [web/03-ui-system](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto) | S-37, S-38, S-43…S-46, S-91 |

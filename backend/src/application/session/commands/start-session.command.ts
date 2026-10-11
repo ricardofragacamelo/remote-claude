@@ -14,12 +14,16 @@ export interface StartSessionCommand {
   readonly permissionMode: PermissionMode | null;
 
   /**
-   * The conversation of Claude to continue — an id from the history — or `null` for a new one.
-   *
-   * Looked up **inside** `workspacePath`: the conversation has to have run there, which is what the
-   * history lists it under and what the SDK finds its file by.
+   * The engine to open on, or `null` for the installation's default (ADR-025). A resume opens on
+   * the engine of the conversation it continues, and this is ignored.
    */
-  readonly resumeSessionId: string | null;
+  readonly engine?: string | null;
+
+  /**
+   * The conversation to continue, `{ engine, id }`, or `null` for a fresh one. Checked by the
+   * engine's own rule before anything is spawned.
+   */
+  readonly resumeFrom: { readonly engine: string; readonly id: string } | null;
 
   /**
    * The prompt of `resumeSessionId` to send again, edited: the conversation forks from **before** it,

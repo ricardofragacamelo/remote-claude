@@ -22,6 +22,7 @@ import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-eve
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
 import { aHistoryKeeper } from '../../../support/fakes/in-memory-file-history';
 import { stubFolderDisk } from '../../../support/fakes/stub-folder-disk';
+import { PRODUCT_SENSITIVE_FILES } from '../../../support/files/sensitive-files';
 
 const owner = UserId.create('auth|42');
 const folder = WorkspacePath.create('/srv/projects/app');
@@ -77,6 +78,7 @@ describe('SaveFileUseCase', () => {
         ),
         limits: { maxEditBytes: limit },
         writes: new UserWrites(new FixedClock(new Date(0))),
+        sensitive: PRODUCT_SENSITIVE_FILES,
       },
       aHistoryKeeper(disk),
     );
@@ -228,6 +230,7 @@ describe('SaveFileUseCase', () => {
         ),
         limits: { maxEditBytes: 1_000 },
         writes: new UserWrites(new FixedClock(new Date(0))),
+        sensitive: PRODUCT_SENSITIVE_FILES,
       },
       aHistoryKeeper(disk),
     );

@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
-/// What a finished turn cost, and how long it took.
+/// What a finished turn cost, when its engine says, and how long it took.
 ///
 /// Shown rather than kept for a report: this is somebody's own money, spent by a process they
 /// started from a phone, and it should not take a dashboard to find out.
@@ -18,11 +18,16 @@ class TurnLine extends StatelessWidget {
   final TurnSummary turn;
 
   @override
-  Widget build(BuildContext context) => _Line(
-    AppLocalizations.of(
-      context,
-    ).sessionTurnLine(turn.costUsd, (turn.durationMs / 1000).toStringAsFixed(1)),
-  );
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String seconds = (turn.durationMs / 1000).toStringAsFixed(1);
+    final String? cost = turn.costUsd;
+
+    // No cost said is no cost shown — never "0", which is a cost the engine did report (S-86, S-87).
+    return _Line(
+      cost == null ? l10n.sessionTurnLineNoCost(seconds) : l10n.sessionTurnLine(cost, seconds),
+    );
+  }
 }
 
 /// Where the conversation was compacted, and how.

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/tool-label.json",
+  "title": "ToolLabel",
+  "description": "The label of a tool call, built by the backend from what the engine sent, which the client translates and never builds (plan 28, D-02). The adapter of the engine is the one that reads the call; a client that met an unknown `messageKey` shows the generic line.",
+  "type": "object",
+  "required": ["messageKey", "params"],
+  "properties": {
+    "messageKey": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "An i18n key of `sessions.tool.*`, one per way of labelling a kind — `sessions.tool.fileEdit`, `sessions.tool.searchIn`, `sessions.tool.other`."
+    },
+    "params": {
+      "type": "object",
+      "description": "The values the key interpolates, strings and numbers only: a path relative to the session's folder, the lines added and removed, the first line of a command, a pattern, a host, a query, a server and its tool, the engine's own name for a tool of kind `other`."
+    }
+  }
+}

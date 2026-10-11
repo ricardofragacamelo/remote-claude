@@ -1,10 +1,14 @@
 /// Permission requests, built for a test.
 library;
 
+import 'package:remote_claude/core/conversation/tool_call.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/plan_interaction.dart';
 import 'package:remote_claude/features/permission/domain/entities/question.dart';
+
+import 'tools.dart';
 
 /// The instant every test's clock starts at.
 final DateTime t0 = DateTime.utc(2026, 9, 24, 12);
@@ -14,9 +18,10 @@ PermissionRequest aPermissionRequest({
   String requestId = 'request-1',
   String sessionId = 'session-1',
   String toolUseId = 'toolu-1',
-  String toolName = 'Bash',
+  ToolCall? call,
+  String titleKey = 'permission.tool.shell',
+  String? engine = 'engine-a',
   String? description = 'rm -rf build/',
-  Map<String, Object?> input = const <String, Object?>{'command': 'rm -rf build/'},
   RiskHint riskHint = RiskHint.destructive,
   bool defaultToNo = true,
   DateTime? expiresAt,
@@ -27,13 +32,15 @@ PermissionRequest aPermissionRequest({
   RuleOffer? rule,
   List<RuleReach> reaches = const <RuleReach>[],
   QuestionInteraction? interaction,
+  PlanInteraction? plan,
 }) => PermissionRequest(
   requestId: requestId,
   sessionId: sessionId,
   toolUseId: toolUseId,
-  toolName: toolName,
+  call: call ?? shellCall('rm -rf build/'),
+  titleKey: titleKey,
+  engine: engine,
   description: description,
-  input: input,
   riskHint: riskHint,
   defaultToNo: defaultToNo,
   expiresAt: expiresAt ?? t0.add(const Duration(minutes: 2)),
@@ -41,6 +48,7 @@ PermissionRequest aPermissionRequest({
   rule: rule,
   reaches: reaches,
   interaction: interaction,
+  plan: plan,
 );
 
 /// The server asking [request], on the frame [frameId].

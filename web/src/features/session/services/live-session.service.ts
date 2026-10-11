@@ -1,8 +1,15 @@
-import type { Envelope, SessionPromptPayloadAttachmentsItem } from '@remote-claude/contracts';
+import { isEngineCapabilities } from '@remote-claude/contracts';
+import type {
+  EngineCapabilities,
+  Envelope,
+  SessionPromptPayloadAttachmentsItem,
+} from '@remote-claude/contracts';
 
 import { toAppError } from '@/shared/api/errors';
 import type { AppError } from '@/shared/api/errors';
 import type { WsClient } from '@/shared/api/ws-client';
+import { readConversation, sameConversation } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { readText } from '@/shared/lib/json';
 
 /** The commands that drive a session. Names of the contract, in one place. */
@@ -13,6 +20,7 @@ export const SESSION_COMMANDS = {
   setModel: 'session.setModel',
   setPermissionMode: 'session.setPermissionMode',
   close: 'session.close',
+  compact: 'session.compact',
   rewindFiles: 'session.rewindFiles',
 } as const;
 
@@ -38,8 +46,13 @@ export function startDraft(client: WsClient, draft: DraftStart): string | null {
   });
 }
 
+/** The `resumeFrom` of a `session.start`: exactly the two fields of the reference, nothing else. */
+function resumeFromOf(conversation: ConversationRef): ConversationRef {
+  return { engine: conversation.engine, id: conversation.id };
+}
+
 /**
- * Edit-and-resend (plan 08, D-19): a new conversation that continues `conversationId` up to before
+ * Edit-and-resend (plan 08, D-19): a new conversation that continues `conversation` up to before
  * the prompt `messageId` — always a fork, never a truncation.
  *
  * @returns the id of the command frame, or `null`
@@ -47,12 +60,12 @@ export function startDraft(client: WsClient, draft: DraftStart): string | null {
 export function forkConversation(
   client: WsClient,
   workspacePath: string,
-  conversationId: string,
+  conversation: ConversationRef,
   messageId: string,
 ): string | null {
   return client.issue(SESSION_COMMANDS.start, {
     workspacePath,
-    resumeSessionId: conversationId,
+    resumeFrom: resumeFromOf(conversation),
     forkAt: messageId,
   });
 }
@@ -68,7 +81,7 @@ export function startedBy(frame: Envelope, commandId: string): string | null {
  * Sends one turn. A prompt that arrives mid-turn is queued by the backend, never refused for that.
  *
  * A slash command is a prompt like any other (`"/init"`), and one the installation does not have
- * is refused before it reaches Claude — with an `error` naming this frame in `correlationId`.
+ * is refused before it reaches the agent — with an `error` naming this frame in `correlationId`.
  *
  * @returns the id of the command frame, or `null` when the socket was not ready and nothing left
  */
@@ -97,6 +110,17 @@ export function refusalOf(frame: Envelope, commandId: string): AppError | null {
     : null;
 }
 
+/**
+ * Asks the session to compact its conversation (plan 28, B-23) — a command of ours, which the
+ * backend turns into the engine's own way of doing it and queues like a prompt. An engine without
+ * `compaction` refuses it with `ENGINE_CAPABILITY_UNAVAILABLE`; `session.compacted` says it happened.
+ *
+ * @returns the id of the command, to match its refusal — `null` when nothing left
+ */
+export function compactSession(client: WsClient, sessionId: string): string | null {
+  return client.issue(SESSION_COMMANDS.compact, { sessionId });
+}
+
 /** Interrupts the turn that is running. */
 export function interruptSession(client: WsClient, sessionId: string): boolean {
   return client.command(SESSION_COMMANDS.interrupt, { sessionId });
@@ -113,7 +137,7 @@ export function setSessionModel(client: WsClient, sessionId: string, model: stri
 }
 
 /**
- * Changes how the SDK treats tool invocations.
+ * Changes how the engine treats tool invocations.
  *
  * @returns the id of the command frame, or `null` when nothing left
  */
@@ -139,9 +163,12 @@ export function closeSession(client: WsClient, sessionId: string): boolean {
 export function resumeSession(
   client: WsClient,
   workspacePath: string,
-  conversationId: string,
+  conversation: ConversationRef,
 ): string | null {
-  return client.issue(SESSION_COMMANDS.start, { workspacePath, resumeSessionId: conversationId });
+  return client.issue(SESSION_COMMANDS.start, {
+    workspacePath,
+    resumeFrom: resumeFromOf(conversation),
+  });
 }
 
 /** What answered a resume: the session to go to, or why there is none. */
@@ -161,12 +188,12 @@ export type ResumeAnswer =
  * - an `error` whose `correlationId` is the command's — refused: gone, outside the allowlist, or
  *   beyond the limit of the installation (B-13).
  *
- * Either id of the conversation counts: a fork is a new one that **continues** the requested id,
- * and one of ours continued in place **is** it.
+ * Either conversation counts: a fork is a new one that **continues** the requested one, and one of
+ * ours continued in place **is** it.
  */
 export function resumeAnswer(
   frame: Envelope,
-  request: { readonly conversationId: string; readonly commandId: string },
+  request: { readonly conversation: ConversationRef; readonly commandId: string },
 ): ResumeAnswer | null {
   if (frame.kind === 'error') {
     const error = refusalOf(frame, request.commandId);
@@ -179,32 +206,48 @@ export function resumeAnswer(
 
   const payload = frame.payload ?? {};
   const sessionId = readText(payload, 'sessionId');
-  const continues = [readText(payload, 'claudeSessionId'), readText(payload, 'resumedFrom')];
+  const continues = [
+    readConversation(payload, 'conversation'),
+    readConversation(payload, 'resumedFrom'),
+  ];
 
-  return sessionId !== null && continues.includes(request.conversationId)
+  return sessionId !== null &&
+    continues.some((said) => sameConversation(said, request.conversation))
     ? { kind: 'resumed', sessionId }
     : null;
 }
 
+/** What a `session.started` says of the conversation it is, and of what its engine can do. */
+export interface StartedConversation {
+  /** The conversation the session is — `null` from a frame that does not say. */
+  readonly conversation: ConversationRef | null;
+
+  /** The conversation it continues, when it is a resume. */
+  readonly resumedFrom: ConversationRef | null;
+
+  /** What the engine of the session can do — read and kept, `null` from a frame that does not say. */
+  readonly capabilities: EngineCapabilities | null;
+}
+
 /**
- * Which conversation of Claude a `session.started` is, and which one it continues.
+ * Which conversation a `session.started` is, which one it continues, and what its engine can do.
  *
- * `null` for any other frame. The live session id and the conversation id are different things —
- * the first names a subprocess and dies with it, the second names Claude's file — and the history
- * is only ever read by the second.
+ * `null` for any other frame. The live session id and the conversation are different things — the
+ * first names a subprocess and dies with it, the second names the engine's record of what was said —
+ * and the history is only ever read by the second.
  */
-export function conversationOfStart(
-  frame: Envelope,
-): { readonly claudeSessionId: string | null; readonly resumedFrom: string | null } | null {
+export function conversationOfStart(frame: Envelope): StartedConversation | null {
   if (frame.type !== 'session.started') {
     return null;
   }
 
   const payload = frame.payload ?? {};
+  const capabilities = payload['capabilities'];
 
   return {
-    claudeSessionId: readText(payload, 'claudeSessionId'),
-    resumedFrom: readText(payload, 'resumedFrom'),
+    conversation: readConversation(payload, 'conversation'),
+    resumedFrom: readConversation(payload, 'resumedFrom'),
+    capabilities: isEngineCapabilities(capabilities) ? capabilities : null,
   };
 }
 

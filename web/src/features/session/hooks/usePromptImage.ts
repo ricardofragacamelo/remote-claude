@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
 
+import { useStableConversation } from '@/shared/hooks/useStableConversation';
+import { conversationKey } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { newTraceId } from '@/shared/lib/trace';
 import { useObjectUrl } from '@/shared/hooks/useObjectUrl';
 import type { ObjectUrl } from '@/shared/hooks/useObjectUrl';
@@ -17,17 +20,21 @@ export type PromptImage = ObjectUrl;
  *
  * @param blockId the image open now — `null` while none is
  */
-export function usePromptImage(conversationId: string | null, blockId: string | null): PromptImage {
+export function usePromptImage(asked: ConversationRef | null, blockId: string | null): PromptImage {
+  const conversation = useStableConversation(asked);
   const source = useMemo(
     () =>
-      conversationId === null || blockId === null
+      conversation === null || blockId === null
         ? null
         : {
-            read: (signal: AbortSignal) => fetchPromptImage(conversationId, blockId, signal),
+            read: (signal: AbortSignal) => fetchPromptImage(conversation, blockId, signal),
             failure: (error: unknown) => asAppError(error, newTraceId()),
           },
-    [conversationId, blockId],
+    [conversation, blockId],
   );
 
-  return useObjectUrl([conversationId ?? '', blockId ?? ''], source);
+  return useObjectUrl(
+    [conversation === null ? '' : conversationKey(conversation), blockId ?? ''],
+    source,
+  );
 }

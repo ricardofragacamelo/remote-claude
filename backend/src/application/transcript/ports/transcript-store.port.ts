@@ -1,4 +1,5 @@
-import type { ClaudeSessionId, TranscriptMessage, TranscriptSession } from '@domain/transcript';
+import type { ConversationRef, EngineId } from '@domain/engine';
+import type { TranscriptMessage, TranscriptSession } from '@domain/transcript';
 
 /**
  * Claude's own store of conversations, read — never written, never parsed by us.
@@ -35,7 +36,7 @@ export interface TranscriptStore {
    * It is what tells "empty" from "absent": the messages come back `[]` in both cases, and only
    * this answers `undefined` for an id that names nothing (S-56).
    */
-  find(id: ClaudeSessionId): Promise<TranscriptSession | null>;
+  find(id: ConversationRef): Promise<TranscriptSession | null>;
 
   /**
    * Every message of a session, oldest first, as events of our contract.
@@ -83,3 +84,17 @@ export interface StoredImage {
 }
 
 export const TRANSCRIPT_STORE = Symbol('TranscriptStore');
+
+/**
+ * The store of one engine: it reads that engine's conversations, and knows the form of their ids
+ * (ADR-025). The adapter of each engine implements it; {@link TranscriptStoreRegistry} routes to it.
+ */
+export interface EngineTranscriptStore extends TranscriptStore {
+  readonly engine: EngineId;
+
+  /** The conversation [id] names, or `null` when the engine never hands out such an id. */
+  conversationOf(id: string): ConversationRef | null;
+}
+
+/** The stores of the engines enabled here, in the order the configuration listed them. */
+export const ENGINE_TRANSCRIPT_STORES = Symbol('EngineTranscriptStores');

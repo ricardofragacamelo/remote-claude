@@ -4,7 +4,7 @@ import type { Conversation, StreamMessage, ToolExecution } from '../types/live-s
 export interface MarkdownLabels {
   readonly title: string;
   readonly you: string;
-  readonly claude: string;
+  readonly agent: string;
   readonly thinking: string;
   readonly tool: (tool: ToolExecution) => string;
   readonly output: string;
@@ -41,11 +41,11 @@ function messageOf(message: StreamMessage, labels: MarkdownLabels): string {
         : `<details>\n<summary>${labels.thinking}</summary>\n\n${block.text}\n\n</details>`,
     );
 
-  return [`### ${message.role === 'user' ? labels.you : labels.claude}`, ...blocks].join('\n\n');
+  return [`### ${message.role === 'user' ? labels.you : labels.agent}`, ...blocks].join('\n\n');
 }
 
 function toolOf(tool: ToolExecution, labels: MarkdownLabels, options: MarkdownOptions): string {
-  const parts = [`- ${labels.tool(tool)}`, fenced(JSON.stringify(tool.input, null, 2), 'json')];
+  const parts = [`- ${labels.tool(tool)}`, fenced(JSON.stringify(tool.rawInput, null, 2), 'json')];
 
   if (options.outputs && tool.summary !== null && tool.summary !== '') {
     parts.push(`${labels.output}\n\n${fenced(tool.summary)}`);

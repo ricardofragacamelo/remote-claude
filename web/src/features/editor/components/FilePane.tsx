@@ -181,7 +181,7 @@ function FileNotices({
   const { t } = useTranslation();
   const path = doc.path;
   const changedBy =
-    doc.external?.origin === 'claude' ? 'editor.external.claude' : 'editor.external.other';
+    doc.external?.origin === 'agent' ? 'editor.external.agent' : 'editor.external.other';
 
   return (
     <>
@@ -197,7 +197,7 @@ function FileNotices({
       )}
       {doc.external !== null && (
         <Notice icon={Info} tone="warning">
-          <p>{t(changedBy, { path })}</p>
+          <p>{t(changedBy, { path, engine: doc.external.engine })}</p>
           <NoticeAction
             label={t('editor.external.compare')}
             onClick={() => {

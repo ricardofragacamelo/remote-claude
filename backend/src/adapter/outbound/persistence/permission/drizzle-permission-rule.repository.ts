@@ -39,6 +39,7 @@ export class DrizzlePermissionRuleRepository implements PermissionRuleRepository
       rule.scope,
       rule.projectPath,
       rule.ruleContent,
+      rule.engine,
       rule.decision,
     ]);
 
@@ -63,8 +64,11 @@ export class DrizzlePermissionRuleRepository implements PermissionRuleRepository
                 ? isNull(permissionRules.projectPath)
                 : eq(permissionRules.projectPath, rule.projectPath),
               eq(permissionRules.pattern, rule.ruleContent),
+              rule.engine === null
+                ? isNull(permissionRules.engine)
+                : eq(permissionRules.engine, rule.engine),
               eq(permissionRules.decision, rule.decision),
-              isNull(permissionRules.revokedAt),
+              ...answering(),
               gt(permissionRules.expiresAt, now),
             ),
           )
@@ -122,7 +126,7 @@ export class DrizzlePermissionRuleRepository implements PermissionRuleRepository
           and(
             eq(permissionRules.userId, userId.value),
             inArray(permissionRules.scope, ['project', 'always']),
-            isNull(permissionRules.revokedAt),
+            ...answering(),
             gt(permissionRules.expiresAt, now),
             reach,
           ),
@@ -167,4 +171,16 @@ export class DrizzlePermissionRuleRepository implements PermissionRuleRepository
 
     return { rule: (await this.findById(rule.id)) ?? rule, revoked: false };
   }
+}
+
+/**
+ * What a rule that may answer is, beside the clock: not revoked, in the canonical grammar, and not
+ * switched off — a rule the migration has not read, or could not translate, answers nothing.
+ */
+function answering(): SQL[] {
+  return [
+    isNull(permissionRules.revokedAt),
+    eq(permissionRules.grammar, 'canonical'),
+    isNull(permissionRules.disabledReason),
+  ];
 }

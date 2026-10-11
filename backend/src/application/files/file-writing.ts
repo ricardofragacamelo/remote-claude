@@ -1,7 +1,7 @@
 import type { PathLock } from '@application/shared';
 import { FileChangedError, FileTooLargeError } from '@domain/files';
-import type { Etag, FilePath, WriteOutcome } from '@domain/files';
-import type { UserWrites } from './claude-writes';
+import type { Etag, FilePath, SensitiveFiles, WriteOutcome } from '@domain/files';
+import type { UserWrites } from './agent-writes';
 import type { FileLimits } from './file-limits';
 import type { FileTrail } from './file-trail';
 import type { FolderDisk, WrittenFile } from './ports/folder-disk.port';
@@ -11,7 +11,7 @@ import { encodeText } from './text-content';
 
 /**
  * What every write of a person's text needs: the folder, the disk, the codec, the lock the undo
- * shares, the trail and the editing ceiling — one object, so saving and creating are given the
+ * shares, the trail, the editing ceiling and the sensitive files — one object, so saving and creating are given the
  * same things and can never be wired with different ones.
  */
 export interface FileWriting {
@@ -23,6 +23,11 @@ export interface FileWriting {
   readonly limits: Pick<FileLimits, 'maxEditBytes'>;
   /** The person's writes the disk took, for the watcher to label the changes they cause `user`. */
   readonly writes: UserWrites;
+  /**
+   * The files that take the second step — every registered engine's configuration (plan 28, B-35),
+   * put together by the composition.
+   */
+  readonly sensitive: SensitiveFiles;
 }
 
 /** What a write left at a path: the bytes of a file when they are known, anything otherwise. */

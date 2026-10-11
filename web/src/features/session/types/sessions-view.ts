@@ -1,3 +1,4 @@
+import type { ConversationRef } from '@/shared/lib/conversation';
 import type { ConversationSummary } from './history';
 import type { SessionStatus } from './live-session';
 
@@ -5,11 +6,11 @@ import type { SessionStatus } from './live-session';
 export interface LiveSessionSummary {
   readonly sessionId: string;
 
-  /** The conversation in Claude's store this session is. */
-  readonly claudeSessionId: string;
+  /** The conversation this session is: its engine, and its id in that engine's store. */
+  readonly conversation: ConversationRef;
 
   /** The conversation it continues, when it is a resume. */
-  readonly resumedFrom: string | null;
+  readonly resumedFrom: ConversationRef | null;
 
   /** Where it runs — the folder of the tab, or one below it. */
   readonly workspacePath: string;

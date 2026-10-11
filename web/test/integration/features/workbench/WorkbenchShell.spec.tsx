@@ -48,7 +48,7 @@ describe('the anatomy of the workbench from md up — plan 06, S-116', () => {
 
     expect(sideBar('workbench.explorer.label')).toBeVisible();
     expect(screen.getByRole('region', { name: t('workbench.editor.label') })).toBeVisible();
-    const claude = sideBar('workbench.claude.label')!;
+    const claude = sideBar('workbench.agent.label')!;
     expect(within(claude).getByRole('group', { name: t('sessions.draft.choices') })).toBeVisible();
     // Held places say what will live there, never a blank.
     expect(screen.getByText(t('workbench.explorer.placeholder'))).toBeVisible();
@@ -262,7 +262,7 @@ describe('the workbench under md — plan 06, S-117, S-118', () => {
     const bar = screen.getByRole('navigation', { name: t('workbench.mobile.label') });
 
     // Claude first — the one place with something in it until the Explorer arrives.
-    expect(within(bar).getByRole('button', { name: t('workbench.mobile.claude') })).toHaveAttribute(
+    expect(within(bar).getByRole('button', { name: t('workbench.mobile.agent') })).toHaveAttribute(
       'aria-pressed',
       'true',
     );

@@ -32,7 +32,7 @@ repositório.
 
 E há um fato que muda o desenho inteiro desta etapa: **quem alcança este backend executa
 comando arbitrário na máquina, com as credenciais do usuário**
-([04-claude-integration](../../architecture/backend/04-claude-integration.md#autenticação--não-faça-nada)).
+([04a-claude](../../architecture/backend/04a-claude.md#autenticação--não-faça-nada)).
 
 Consequência direta: expor uma porta é uma decisão de segurança, não de conveniência. O default
 é loopback, e sair disso exige TLS e uma escolha explícita — configuração insegura **impede o

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useCommands } from '@/features/commands';
 import { useFolderTab } from '@/features/workbench';
 import { LoadMore } from '@/shared/components/LoadMore';
+import { conversationKey } from '@/shared/lib/conversation';
 import { sessionsViewCommands, useSessionsView } from '../../hooks/useSessionsView';
 import type { SessionsView as View } from '../../hooks/useSessionsView';
 import { ForkDialog } from './ForkDialog';
@@ -18,7 +19,7 @@ export interface SessionsViewProps {
 }
 
 /**
- * The view "Claude sessions" of a folder tab (plan 08, F1): what runs here, what looks active
+ * The view "agent sessions" of a folder tab (plan 08, F1): what runs here, what looks active
  * elsewhere — the editor, a terminal — and the history of the folder, each row leading to the right
  * way to join it: a live session is attached, a conversation opens in the panel, where it is
  * continued in place (ours) or forked (begun elsewhere).
@@ -95,7 +96,7 @@ function SessionsBody({ view }: { readonly view: View }): React.JSX.Element {
           onRetry: history.reload,
           children: view.elsewhere.map((conversation) => (
             <ConversationRow
-              key={conversation.conversationId}
+              key={conversationKey(conversation.conversation)}
               view={view}
               conversation={conversation}
             />
@@ -112,7 +113,7 @@ function SessionsBody({ view }: { readonly view: View }): React.JSX.Element {
           onRetry: history.reload,
           children: view.history.map((conversation) => (
             <ConversationRow
-              key={conversation.conversationId}
+              key={conversationKey(conversation.conversation)}
               view={view}
               conversation={conversation}
             />

@@ -10,6 +10,7 @@ import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/network/api_client_provider.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
+import 'package:remote_claude/features/session/data/datasources/engine_api_data_source.dart';
 import 'package:remote_claude/features/session/data/datasources/history_api_data_source.dart';
 import 'package:remote_claude/features/session/data/datasources/session_api_data_source.dart';
 import 'package:remote_claude/features/session/data/datasources/session_ws_data_source.dart';
@@ -17,6 +18,7 @@ import 'package:remote_claude/features/session/data/datasources/transcript_conte
 import 'package:remote_claude/features/session/data/datasources/transcript_follow_ws_data_source.dart';
 import 'package:remote_claude/features/session/data/repositories/checkpoint_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/command_repository_impl.dart';
+import 'package:remote_claude/features/session/data/repositories/engine_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/history_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/insight_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/live_session_repository_impl.dart';
@@ -25,6 +27,7 @@ import 'package:remote_claude/features/session/data/repositories/transcript_cont
 import 'package:remote_claude/features/session/data/repositories/transcript_follow_repository_impl.dart';
 import 'package:remote_claude/features/session/domain/repositories/checkpoint_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/command_repository.dart';
+import 'package:remote_claude/features/session/domain/repositories/engine_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/history_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/insight_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/live_session_repository.dart';
@@ -35,6 +38,7 @@ import 'package:remote_claude/features/session/domain/usecases/drive_session.dar
 import 'package:remote_claude/features/session/domain/usecases/follow_transcript.dart';
 import 'package:remote_claude/features/session/domain/usecases/list_checkpoints.dart';
 import 'package:remote_claude/features/session/domain/usecases/list_commands.dart';
+import 'package:remote_claude/features/session/domain/usecases/list_engines.dart';
 import 'package:remote_claude/features/session/domain/usecases/list_live_sessions.dart';
 import 'package:remote_claude/features/session/domain/usecases/ping_session.dart';
 import 'package:remote_claude/features/session/domain/usecases/read_history.dart';
@@ -172,3 +176,17 @@ LiveSessionRepository liveSessionRepository(Ref ref) =>
 @Riverpod(keepAlive: true)
 ListLiveSessions listLiveSessions(Ref ref) =>
     ListLiveSessions(ref.watch(liveSessionRepositoryProvider));
+
+/// The engines endpoint (plan 28, B-13).
+@Riverpod(keepAlive: true)
+EngineApiDataSource engineApiDataSource(Ref ref) =>
+    HttpEngineApiDataSource(ref.watch(apiClientProvider));
+
+/// The engines of the installation.
+@Riverpod(keepAlive: true)
+EngineRepository engineRepository(Ref ref) =>
+    EngineRepositoryImpl(ref.watch(engineApiDataSourceProvider));
+
+/// Lists the engines, and what each can do.
+@Riverpod(keepAlive: true)
+ListEngines listEngines(Ref ref) => ListEngines(ref.watch(engineRepositoryProvider));

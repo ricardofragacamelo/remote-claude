@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
@@ -67,7 +68,7 @@ class HistoryBoard extends Equatable {
   /// What the conversation is doing now — the page's, then the latest the subscription said.
   final ConversationActivity? activity;
 
-  /// Whether Claude seems to be working on it in another client: an inference, said as one
+  /// Whether the agent seems to be working on it in another client: an inference, said as one
   /// (plan 22, D-12). Only a subscription says it, so it is `false` without one.
   final bool working;
 
@@ -168,7 +169,7 @@ class ConversationHistoryController extends _$ConversationHistoryController {
   bool _connected = false;
 
   @override
-  Future<HistoryBoard> build(String conversationId) async {
+  Future<HistoryBoard> build(ConversationKey conversation) async {
     _keepForAWhile();
     _pageRead = false;
     _follow = ref.watch(followTranscriptProvider);
@@ -185,7 +186,7 @@ class ConversationHistoryController extends _$ConversationHistoryController {
       fireImmediately: true,
     );
 
-    final HistoryPage page = await ref.watch(readHistoryProvider)(conversationId);
+    final HistoryPage page = await ref.watch(readHistoryProvider)(conversation);
     _read(page);
     return HistoryBoard.from(page);
   }
@@ -210,7 +211,7 @@ class ConversationHistoryController extends _$ConversationHistoryController {
     );
 
     try {
-      final HistoryPage page = await ref.read(readHistoryProvider)(conversationId, cursor: cursor);
+      final HistoryPage page = await ref.read(readHistoryProvider)(conversation, cursor: cursor);
 
       _settle(
         (HistoryBoard now) => now.copyWith(
@@ -273,7 +274,7 @@ class ConversationHistoryController extends _$ConversationHistoryController {
     _pageRead = false;
 
     final AsyncValue<HistoryBoard> next = await AsyncValue.guard<HistoryBoard>(
-      () async => HistoryBoard.from(await ref.read(readHistoryProvider)(conversationId)),
+      () async => HistoryBoard.from(await ref.read(readHistoryProvider)(conversation)),
     );
 
     if (!ref.mounted) {
@@ -309,7 +310,7 @@ class ConversationHistoryController extends _$ConversationHistoryController {
     }
 
     _seq = 0;
-    _asking = _follow.follow(conversationId, afterMessageId: _lastMessageId);
+    _asking = _follow.follow(conversation, afterMessageId: _lastMessageId);
   }
 
   /// Lets the subscription go — the one there is, or the one on its way, once its ack names it.

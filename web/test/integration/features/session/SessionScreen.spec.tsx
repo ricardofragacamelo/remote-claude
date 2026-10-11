@@ -10,9 +10,11 @@ import { wsClient } from '@/shared/api/ws';
 import { render, renderRouted, translator } from '../../../support/render';
 import { installFakeWebSocket } from '../../../support/fake-websocket';
 import type { InstalledWebSocket } from '../../../support/fake-websocket';
-import { aHistoryPage, claudeUnavailable, said } from '../../../support/history';
+import { aHistoryPage, agentUnavailable, said } from '../../../support/history';
 import { ack, aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
+import { aToolCall } from '../../../support/canonical-tool';
+import { CAPABILITIES } from '../../../support/engines';
 
 const t = translator('en');
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
@@ -106,19 +108,18 @@ describe('the session screen', () => {
     receive(
       event('tool.started', 1, {
         toolUseId: 't1',
-        toolName: 'Bash',
-        input: { command: 'rm -rf build/ && echo done' },
+        ...aToolCall('Bash', { command: 'rm -rf build/ && echo done' }),
       }),
-      event('tool.progress', 2, { toolUseId: 't1', chunk: 'Bash · 3s' }),
+      event('tool.progress', 2, { toolUseId: 't1', chunk: '3s' }),
     );
 
     const line = screen.getByRole('button', {
       name: t('sessions.toolRow.label', {
-        tool: t('sessions.tool.bash', { command: 'rm -rf build/ && echo done' }),
+        tool: t('sessions.tool.shell', { command: 'rm -rf build/ && echo done' }),
         status: t('session.toolStatus.running'),
       }),
     });
-    expect(line).toHaveTextContent('Bash · 3s');
+    expect(line).toHaveTextContent('3s');
 
     // A shell call shows its command as it is, under IN (plan 22, B-29).
     await user.click(line);
@@ -136,8 +137,7 @@ describe('the session screen', () => {
     receive(
       event('tool.started', 1, {
         toolUseId: 't1',
-        toolName: 'McpDoSomething',
-        input: { anything: 'at all' },
+        ...aToolCall('McpDoSomething', { anything: 'at all' }),
       }),
     );
 
@@ -152,11 +152,11 @@ describe('the session screen', () => {
     connect();
 
     receive(
-      event('tool.started', 1, { toolUseId: 't1', toolName: 'Bash', input: { command: 'ls' } }),
+      event('tool.started', 1, { toolUseId: 't1', ...aToolCall('Bash', { command: 'ls' }) }),
       event('tool.completed', 2, { toolUseId: 't1', status: 'failed', summary: 'exit 1' }),
     );
 
-    await user.click(screen.getByRole('button', { name: /Bash: ls/ }));
+    await user.click(screen.getByRole('button', { name: /Shell: ls/ }));
     expect(screen.getByText('exit 1')).toBeInTheDocument();
     expect(screen.getByText(t('session.toolStatus.failed'))).toBeInTheDocument();
   });
@@ -168,11 +168,11 @@ describe('the session screen', () => {
     connect();
 
     receive(
-      event('tool.started', 1, { toolUseId: 't1', toolName: 'Bash', input: { command: 'rm x' } }),
+      event('tool.started', 1, { toolUseId: 't1', ...aToolCall('Bash', { command: 'rm x' }) }),
       event('tool.completed', 2, { toolUseId: 't1', status: 'denied', summary: 'not today' }),
     );
 
-    await user.click(screen.getByRole('button', { name: /Bash: rm x/ }));
+    await user.click(screen.getByRole('button', { name: /Shell: rm x/ }));
     expect(
       screen.getByText(t('sessions.toolRow.denied', { reason: 'not today' })),
     ).toBeInTheDocument();
@@ -300,20 +300,31 @@ describe('the session screen', () => {
     const user = userEvent.setup();
     render(<SessionScreen sessionId={SESSION} />);
     connect();
+    receive(
+      event('session.started', 1, {
+        sessionId: SESSION,
+        permissionMode: 'ask',
+        capabilities: CAPABILITIES,
+      }),
+    );
 
     await user.click(
       screen.getByRole('button', {
         name: t('composer.chip.choice', {
           label: t('sessions.mode.label'),
-          value: t('sessions.mode.default'),
+          value: t('sessions.mode.ask'),
         }),
       }),
     );
-    await user.click(await screen.findByRole('menuitem', { name: /^Plan/ }));
+    await user.click(
+      await screen.findByRole('menuitem', {
+        name: new RegExp(`^${t('sessions.mode.readOnly')}`),
+      }),
+    );
 
     expect(
       sockets.latest.frames().find((sent) => sent['type'] === 'session.setPermissionMode'),
-    ).toMatchObject({ payload: { sessionId: SESSION, mode: 'plan' } });
+    ).toMatchObject({ payload: { sessionId: SESSION, mode: 'readOnly' } });
   });
 
   it('reports what each turn cost, in the conversation — S-97 (the whole session: the status dot, plan 09, S-43)', () => {
@@ -323,7 +334,7 @@ describe('the session screen', () => {
     receive(
       event('turn.completed', 1, {
         turnId: 'turn-1',
-        usage: { input_tokens: 1200, output_tokens: 34, cache_read_input_tokens: 5000 },
+        usage: { inputTokens: 1200, outputTokens: 34, cacheReadTokens: 5000 },
         costUsd: '0.0123',
         durationMs: 2_400,
       }),
@@ -338,16 +349,28 @@ describe('the session screen', () => {
     expect(
       screen.getByText(
         t('sessions.turn.summary', {
-          cost: '$0.0123',
-          seconds: '2.4',
-          input: '1,200',
-          output: '34',
-          cache: '5,000',
+          details: [
+            '$0.0123',
+            t('sessions.turn.seconds', { seconds: '2.4' }),
+            [
+              t('sessions.turn.inputTokens', { count: '1,200' }),
+              t('sessions.turn.outputTokens', { count: '34' }),
+              t('sessions.turn.cacheTokens', { count: '5,000' }),
+            ].join(', '),
+          ].join(' · '),
         }),
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(t('sessions.turn.noUsage', { cost: '$0.01', seconds: '0.9' })),
+      screen.getByText(
+        t('sessions.turn.summary', {
+          details: [
+            '$0.01',
+            t('sessions.turn.seconds', { seconds: '0.9' }),
+            t('sessions.turn.noTokens'),
+          ].join(' · '),
+        }),
+      ),
     ).toBeInTheDocument();
     // The line above the conversation is gone (D-11): the cost of the session is the status's.
     expect(screen.queryByText(t('sessions.status.cost', { cost: '$0.0223', turns: 2 }))).toBeNull();
@@ -357,9 +380,7 @@ describe('the session screen', () => {
     const { container } = render(<SessionScreen sessionId={SESSION} />);
     connect();
 
-    receive(
-      event('tool.started', 1, { toolUseId: 't1', toolName: 'Bash', input: { command: 'ls' } }),
-    );
+    receive(event('tool.started', 1, { toolUseId: 't1', ...aToolCall('Bash', { command: 'ls' }) }));
 
     await waitFor(async () => {
       expect(await axe(container)).toHaveNoViolations();
@@ -377,7 +398,7 @@ describe('the session screen, with the history under the stream — plan 04', ()
     replayed: 0,
     oldestAvailableSeq: 900,
     gap: true,
-    claudeSessionId: CONVERSATION,
+    conversation: { engine: 'claude', id: CONVERSATION },
   });
 
   beforeEach(() => {
@@ -403,7 +424,7 @@ describe('the session screen, with the history under the stream — plan 04', ()
     expect(await screen.findByText('From before the gap.')).toBeInTheDocument();
     // Cleared, not stitched: what was on screen before the hole is gone.
     expect(screen.queryByText('stale')).toBeNull();
-    expect(get).toHaveBeenCalledWith(`/transcripts/${CONVERSATION}/messages`);
+    expect(get).toHaveBeenCalledWith(`/transcripts/claude/${CONVERSATION}/messages`);
   });
 
   it('never shows a message twice when the stream keeps arriving during the reload — S-15', async () => {
@@ -443,7 +464,7 @@ describe('the session screen, with the history under the stream — plan 04', ()
       }
       reads += 1;
       return reads === 1
-        ? Promise.reject(claudeUnavailable)
+        ? Promise.reject(agentUnavailable)
         : Promise.resolve(aHistoryPage([said('m1', 'Read at last.')]));
     });
     render(<SessionScreen sessionId={SESSION} />);
@@ -452,7 +473,9 @@ describe('the session screen, with the history under the stream — plan 04', ()
     live.receive(gap);
     live.receive(hubEvent(SESSION, 'message.delta', 901, { messageId: 'm9', delta: 'still live' }));
 
-    expect(await screen.findByText(t('transcript.error.claudeUnavailable'))).toBeInTheDocument();
+    expect(
+      await screen.findByText(t('transcript.error.agentUnavailable', agentUnavailable.params)),
+    ).toBeInTheDocument();
     expect(screen.getByText('still live')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: t('common.action.retry') }));
@@ -471,8 +494,8 @@ describe('the session screen, with the history under the stream — plan 04', ()
     live.receive(
       hubEvent(SESSION, 'session.started', 1, {
         sessionId: SESSION,
-        claudeSessionId: CONVERSATION,
-        resumedFrom: SOURCE,
+        conversation: { engine: 'claude', id: CONVERSATION },
+        resumedFrom: { engine: 'claude', id: SOURCE },
       }),
       hubEvent(SESSION, 'message.delta', 2, { messageId: 'm1', delta: 'Said now.' }),
     );
@@ -480,7 +503,7 @@ describe('the session screen, with the history under the stream — plan 04', ()
     expect(await screen.findByText('Said in the editor.')).toBeInTheDocument();
     const texts = screen.getAllByText(/Said (in the editor|now)\./).map((node) => node.textContent);
     expect(texts).toEqual(['Said in the editor.', 'Said now.']);
-    expect(get).toHaveBeenCalledWith(`/transcripts/${SOURCE}/messages`);
+    expect(get).toHaveBeenCalledWith(`/transcripts/claude/${SOURCE}/messages`);
     expect(liveSessionStoreOf(SESSION).getState().lastSeq).toBe(2);
   });
 
@@ -493,12 +516,12 @@ describe('the session screen, with the history under the stream — plan 04', ()
     live.receive(
       hubEvent(SESSION, 'session.started', 1, {
         sessionId: SESSION,
-        claudeSessionId: CONVERSATION,
+        conversation: { engine: 'claude', id: CONVERSATION },
       }),
     );
 
     await userEvent.click(screen.getByRole('button', { name: t('session.history.open') }));
 
-    expect(onOpenHistory).toHaveBeenCalledWith(CONVERSATION);
+    expect(onOpenHistory).toHaveBeenCalledWith({ engine: 'claude', id: CONVERSATION });
   });
 });

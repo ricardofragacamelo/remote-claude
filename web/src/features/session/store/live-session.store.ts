@@ -1,7 +1,9 @@
 import { createStore } from 'zustand/vanilla';
 import type { StoreApi } from 'zustand/vanilla';
-import type { Envelope } from '@remote-claude/contracts';
+import type { EngineCapabilities, Envelope } from '@remote-claude/contracts';
 
+import { sameConversation } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { readText } from '@/shared/lib/json';
 import { rewoundOf } from '../services/checkpoint.service';
 import {
@@ -10,6 +12,7 @@ import {
   SILENT,
   withHistory,
 } from '../services/live-session.service';
+import type { StartedConversation } from '../services/live-session.service';
 import { queueAfter } from '../services/queue.service';
 import type { RewindOutcome } from '../types/checkpoint';
 import type { HistoryEvent } from '../types/history';
@@ -32,10 +35,16 @@ export interface LiveSessionState extends Conversation {
   readonly isPartial: boolean;
 
   /**
-   * The conversation of Claude this session is — its id in Claude's store, not ours — once the
-   * stream or the attach has said so.
+   * The conversation this session is — its engine and its id in that engine's store, not our session
+   * id — once the stream or the attach has said so.
    */
-  readonly conversationId: string | null;
+  readonly conversation: ConversationRef | null;
+
+  /**
+   * What the engine of this session can do, as `session.started` declared it — read and kept, and
+   * hidden from nothing yet: the phase of each control does that (plan 28).
+   */
+  readonly capabilities: EngineCapabilities | null;
 
   /**
    * The conversation whose history this screen is waiting to lay under the stream, or `null`.
@@ -44,7 +53,7 @@ export interface LiveSessionState extends Conversation {
    * lives in the transcript and not in the buffer (B-11), and a gap, after which the buffer no
    * longer holds what was missed (B-07). The hook reads it and loads; {@link hydrate} clears it.
    */
-  readonly historyFrom: string | null;
+  readonly historyFrom: ConversationRef | null;
 
   /**
    * What the last undo of this session did to the disk, as `session.rewound` reported it.
@@ -77,10 +86,10 @@ export interface LiveSessionState extends Conversation {
   /**
    * Drops everything, which is what a replay gap calls for — and asks for the history again.
    *
-   * @param claudeSessionId the conversation the ack said to reload from, or `null` when the stream
-   *   is not one
+   * @param conversation the conversation the ack said to reload from, or `null` when the stream is
+   *   not one
    */
-  reset(claudeSessionId?: string | null): void;
+  reset(conversation?: ConversationRef | null): void;
 
   /**
    * Lays a page of history under the stream, if it is the history still being waited for.
@@ -88,7 +97,7 @@ export interface LiveSessionState extends Conversation {
    * A page for a conversation this screen no longer waits on — a second gap asked again, or the
    * screen moved to another session — lands nowhere.
    */
-  hydrate(conversationId: string, events: readonly HistoryEvent[]): void;
+  hydrate(conversation: ConversationRef, events: readonly HistoryEvent[]): void;
 }
 
 /** The store of one session's conversation. */
@@ -105,7 +114,8 @@ const EMPTY = {
   status: 'starting' as SessionStatus,
   lastSeq: 0,
   isPartial: false,
-  conversationId: null,
+  conversation: null,
+  capabilities: null,
   historyFrom: null,
   lastRewind: null,
   queue: [],
@@ -172,7 +182,8 @@ export function createLiveSessionStore(
             ? {}
             : {
                 ...runsWith(frame, state),
-                conversationId: started.claudeSessionId ?? state.conversationId,
+                conversation: started.conversation ?? state.conversation,
+                capabilities: started.capabilities ?? state.capabilities,
                 // A resume: what was said before this session began is in the transcript, not in
                 // the buffer, and it is read from the conversation this one continues.
                 historyFrom: started.resumedFrom ?? state.historyFrom,
@@ -187,19 +198,20 @@ export function createLiveSessionStore(
       set({ permissionMode });
     },
 
-    reset: (claudeSessionId = null) => {
+    reset: (conversation = null) => {
       // The session stays the one it is; what it said is what goes. Stitching a partial hole
       // produces a view that looks complete and is not.
       set((state) => ({
         ...EMPTY,
-        conversationId: claudeSessionId ?? state.conversationId,
-        historyFrom: claudeSessionId,
+        conversation: conversation ?? state.conversation,
+        capabilities: state.capabilities,
+        historyFrom: conversation,
       }));
     },
 
-    hydrate: (conversationId, events) => {
+    hydrate: (conversation, events) => {
       set((state) =>
-        state.historyFrom === conversationId
+        sameConversation(state.historyFrom, conversation)
           ? { ...withHistory(state, events), historyFrom: null, isPartial: false }
           : state,
       );
@@ -230,10 +242,10 @@ function runsWith(
  */
 function lateStart(
   frame: Envelope,
-  started: NonNullable<ReturnType<typeof conversationOfStart>>,
+  started: StartedConversation,
   state: LiveSessionState,
 ): LiveSessionState {
-  if (state.conversationId !== null) {
+  if (state.conversation !== null) {
     return state;
   }
 
@@ -244,7 +256,8 @@ function lateStart(
     model: state.model ?? said.model,
     permissionMode: state.permissionMode ?? said.permissionMode,
     workspacePath: state.workspacePath ?? said.workspacePath,
-    conversationId: started.claudeSessionId,
+    conversation: started.conversation,
+    capabilities: state.capabilities ?? started.capabilities,
     historyFrom: state.historyFrom ?? started.resumedFrom,
   };
 }

@@ -1,12 +1,13 @@
 /// The mode, the model and the effort, as chips of the composer bar, each opening a sheet
 /// (plan 10, B-11).
 ///
-/// The lists are the installation's, never ours: the models come from the session or, in a draft,
-/// from the folder's catalogue. `bypassPermissions` — the SDK's mode, which skips the approval — is
-/// never offered. Permitir tudo (`allowAll`) is ours, and is (plan 23, ADR-022): the backend still sees
-/// every tool, a rule that refuses still refuses, and switching it off asks again at the next tool.
-/// `acceptEdits` and `allowAll` **look** different: a warning tone with an icon of their own, never
-/// only a colour, and the warning in full in the sheet.
+/// The lists are never ours: the modes and the levels of effort are the ones the engine announces in
+/// its capabilities (plan 28, B-27, B-28) — one mode, or no level, and there is nothing to choose,
+/// so no chip —, and the models come from the session or, in a draft, from the folder's catalogue.
+/// Permitir tudo (`allowAll`) is ours (plan 23, ADR-022): the backend still sees every tool, a rule
+/// that refuses still refuses, and switching it off asks again at the next tool. `acceptEdits` and
+/// `allowAll` **look** different: a warning tone with an icon of their own, never only a colour, and
+/// the warning in full in the sheet.
 library;
 
 import 'dart:async';
@@ -16,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/error/failure_messages.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/message_strip.dart';
 import 'package:remote_claude/features/session/domain/entities/insight.dart';
@@ -23,37 +25,32 @@ import 'package:remote_claude/features/session/presentation/widgets/composer_bar
 import 'package:remote_claude/features/session/presentation/widgets/session_sheet.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
-/// The modes a phone may switch to, in the order the sheet offers them.
-const List<String> offeredModes = <String>['default', 'acceptEdits', 'plan', 'allowAll'];
-
-/// The mode the installation opens with when nothing was chosen.
-const String defaultMode = 'default';
-
 /// How the models are read: whatever the screen watches, as a list.
 typedef ModelsOf = AsyncValue<List<InstallationModel>> Function(WidgetRef ref);
 
 /// The name of [mode], or the mode itself when this build has no words for it.
 String modeName(AppLocalizations l10n, String mode) => switch (mode) {
-  'default' => l10n.modeDefault,
+  'ask' => l10n.modeAsk,
   'acceptEdits' => l10n.modeAcceptEdits,
-  'plan' => l10n.modePlan,
+  'readOnly' => l10n.modeReadOnly,
   'allowAll' => l10n.modeAllowAll,
   _ => mode,
 };
 
-/// What [mode] does, or nothing for one this build does not know.
-String modeDescription(AppLocalizations l10n, String mode) => switch (mode) {
-  'default' => l10n.modeDefaultDescription,
-  'acceptEdits' => l10n.modeAcceptEditsDescription,
-  'plan' => l10n.modePlanDescription,
-  'allowAll' => l10n.modeAllowAllDescription,
+/// What [mode] does, said of [agent], or nothing for one this build does not know.
+String modeDescription(AppLocalizations l10n, String mode, String agent) => switch (mode) {
+  'ask' => l10n.modeAskDescription(agent),
+  'acceptEdits' => l10n.modeAcceptEditsDescription(agent),
+  'readOnly' => l10n.modeReadOnlyDescription(agent),
+  'allowAll' => l10n.modeAllowAllDescription(agent),
   _ => '',
 };
 
-/// The warning a mode that stops asking carries, in full — or nothing for one that asks.
-String? modeWarning(AppLocalizations l10n, String mode) => switch (mode) {
-  'acceptEdits' => l10n.modeAcceptEditsWarning,
-  'allowAll' => l10n.modeAllowAllWarning,
+/// The warning a mode that stops asking carries, in full, said of [agent] — or nothing for one that
+/// asks.
+String? modeWarning(AppLocalizations l10n, String mode, String agent) => switch (mode) {
+  'acceptEdits' => l10n.modeAcceptEditsWarning(agent),
+  'allowAll' => l10n.modeAllowAllWarning(agent),
   _ => null,
 };
 
@@ -75,21 +72,31 @@ String effortName(AppLocalizations l10n, String? level) => switch (level) {
   _ => level,
 };
 
-/// The mode chip.
-ComposerChoice modeChoice(
+/// The mode chip, offering [modes] — the ones the engine announced, in its order.
+///
+/// `null` when there is nothing to choose: one mode, or none known (plan 28, S-81). [engine] is who
+/// the descriptions speak of — the default engine's name when `null`.
+ComposerChoice? modeChoice(
   BuildContext context, {
   required String? current,
+  required List<String> modes,
   required void Function(String mode) onPick,
   bool isPending = false,
+  String? engine,
 }) {
+  if (modes.length < 2) {
+    return null;
+  }
+
   final AppLocalizations l10n = AppLocalizations.of(context);
-  final String mode = current ?? defaultMode;
+  final String agent = AgentNamesScope.of(context).nameOf(engine);
+  final String mode = current ?? modes.first;
 
   return ComposerChoice(
     label: l10n.modeLabel,
     value: isPending ? l10n.composerChoicePending : modeName(l10n, mode),
     icon: modeIcon(mode),
-    warn: modeWarning(l10n, mode) != null,
+    warn: modeWarning(l10n, mode, agent) != null,
     onOpen: () => unawaited(
       _openSheet(
         context,
@@ -97,12 +104,15 @@ ComposerChoice modeChoice(
           title: l10n.modeLabel,
           current: mode,
           options: <_Option<String>>[
-            for (final String each in offeredModes)
+            for (final String each in modes)
               _Option<String>(
                 value: each,
                 title: modeName(l10n, each),
-                subtitle: <String>[modeDescription(l10n, each), ?modeWarning(l10n, each)].join(' '),
-                warn: modeWarning(l10n, each) != null,
+                subtitle: <String>[
+                  modeDescription(l10n, each, agent),
+                  ?modeWarning(l10n, each, agent),
+                ].join(' '),
+                warn: modeWarning(l10n, each, agent) != null,
               ),
           ],
           onPick: isPending ? null : onPick,
@@ -157,16 +167,25 @@ InstallationModel? modelOf(List<InstallationModel> known, String? current) =>
 
 /// The effort chip — in a draft, where it is chosen; in a session, read-only (08 · D-16).
 ///
-/// `null` when the model does not take an effort: a chip for something that cannot be set is a
-/// question with no answer.
+/// The levels offered are the ones the engine announces in [levels] that [model] takes (plan 28,
+/// B-28). `null` when there is none: a chip for something that cannot be set is a question with no
+/// answer (S-83). The read-only one names [engine], the session's.
 ComposerChoice? effortChoice(
   BuildContext context, {
   required InstallationModel? model,
+  required List<String> levels,
   required String? current,
   void Function(String? level)? onPick,
   bool isKnown = true,
+  String? engine,
 }) {
-  if (model == null || !model.supportsEffort) {
+  final List<String> offered = <String>[
+    if (model != null)
+      for (final String level in levels)
+        if (model.effortLevels.contains(level)) level,
+  ];
+
+  if (offered.isEmpty) {
     return null;
   }
 
@@ -181,13 +200,17 @@ ComposerChoice? effortChoice(
       _openSheet(
         context,
         onPick == null
-            ? _ReadOnlySheet(title: l10n.effortLabel, value: value, why: l10n.effortReadOnly)
+            ? _ReadOnlySheet(
+                title: l10n.effortLabel,
+                value: value,
+                why: l10n.effortReadOnly(agentNameIn(context, engine)),
+              )
             : _PickSheet<String?>(
                 title: l10n.effortLabel,
                 current: current,
                 options: <_Option<String?>>[
                   _Option<String?>(value: null, title: l10n.effortDefault),
-                  for (final String level in model.effortLevels)
+                  for (final String level in offered)
                     _Option<String?>(value: level, title: effortName(l10n, level)),
                 ],
                 onPick: onPick,
@@ -294,7 +317,7 @@ class _ModelSheet extends ConsumerWidget {
         title: l10n.modelLabel,
         value: modelName(l10n, current, const <InstallationModel>[]),
         why: l10n.modelsFailed(
-          failure is Failure ? translateFailure(l10n, failure) : l10n.commonErrorUnexpected,
+          failure is Failure ? failureText(context, failure) : l10n.commonErrorUnexpected,
         ),
       );
     }

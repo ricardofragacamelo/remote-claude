@@ -4,14 +4,14 @@ library;
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 import 'package:remote_claude/features/permission/domain/repositories/permission_repository.dart';
 
-/// What Claude is told when somebody refuses from the phone.
+/// What the agent is told when somebody refuses from the phone.
 ///
 /// English and technical on purpose: it is not shown to a person — it goes into the trail and back
 /// to the model as a message, which is how the agent learns to propose something else instead of
 /// retrying the same command. The contract requires one on every refusal.
 const String refusedFromThePhone = 'refused from the mobile app';
 
-/// What Claude is told when a person chose not to answer its question from the phone, and wrote
+/// What the agent is told when a person chose not to answer its question from the phone, and wrote
 /// nothing (plan 24, D-15). English, because it is for the model.
 const String declinedFromThePhone = 'The user chose not to answer the question.';
 

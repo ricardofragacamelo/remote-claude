@@ -18,6 +18,7 @@ import {
 } from '@application/permission';
 import type { PermissionSettings } from '@application/permission';
 import { UserId } from '@domain/auth';
+import type { CanonicalTool } from '@domain/engine';
 import type { PermissionMode } from '@domain/session';
 import { SessionId } from '@domain/session';
 import { FixedClock } from '../fakes/fixed-clock';
@@ -29,6 +30,7 @@ import { RecordingPermissionBroadcaster } from '../fakes/recording-permission-br
 import { RecordingPermissionEvents } from '../fakes/recording-permission-events';
 import { SequentialIds } from '../fakes/sequential-ids';
 import { SESSION_ID } from './session.builder';
+import { claudeTool } from './tool.builder';
 
 /**
  * The numbers a test runs with.
@@ -59,8 +61,6 @@ export interface PermissionHarness {
   /** Failures the rule book reported instead of letting them decide anything. */
   readonly lookupFailures: readonly unknown[];
 
-  /** The `allow` rules the rule book found and would not read as an answer (plan 24, D-26). */
-  readonly ignoredRules: readonly string[];
   readonly broadcaster: RecordingPermissionBroadcaster;
   readonly events: RecordingPermissionEvents;
   readonly scheduler: ManualScheduler;
@@ -116,17 +116,9 @@ export function aPermissionModule(
   const rules = new InMemoryPermissionRuleRepository();
   const trail = new RecordingAuditEvents();
   const lookupFailures: unknown[] = [];
-  const ignoredRules: string[] = [];
-  const ruleBook = new PermissionRuleBook(
-    registry,
-    rules,
-    (error) => {
-      lookupFailures.push(error);
-    },
-    (rule) => {
-      ignoredRules.push(rule.id);
-    },
-  );
+  const ruleBook = new PermissionRuleBook(registry, rules, (error) => {
+    lookupFailures.push(error);
+  });
   const recordEvent = new RecordAuditEventUseCase(trail, ids);
   const grant = new GrantPermissionRuleUseCase(rules, recordEvent, ids, clock, settings);
 
@@ -151,7 +143,6 @@ export function aPermissionModule(
     trail,
     ruleBook,
     lookupFailures,
-    ignoredRules,
     broadcaster,
     events,
     scheduler,
@@ -190,27 +181,40 @@ export function aPermissionModule(
   };
 }
 
+/** What a test may say of a question; everything else is defaulted. */
+interface QuestionOverrides {
+  requestId?: string;
+  toolName?: string;
+  input?: Record<string, unknown>;
+  toolUseId?: string | null;
+  userId?: UserId;
+  sessionId?: SessionId;
+  projectPath?: string | null;
+  permissionMode?: PermissionMode;
+  /** The call as the core reads it, for a kind Claude's classifier never builds — Claude's by default. */
+  tool?: CanonicalTool;
+}
+
+/** The call a question is about, as the engine names it and as the core reads it (plan 28, B-16). */
+function callOf(overrides: QuestionOverrides) {
+  const projectPath =
+    overrides.projectPath === undefined ? PERMISSION_PROJECT : overrides.projectPath;
+  const toolName = overrides.toolName ?? 'Bash';
+  const input = overrides.input ?? { command: 'rm -rf build/' };
+
+  const tool = overrides.tool ?? claudeTool(toolName, input, projectPath ?? '');
+
+  return { projectPath, toolName, input, tool };
+}
+
 /** One question, with everything a test does not care about defaulted. */
-export function aPermissionQuestion(
-  overrides: {
-    requestId?: string;
-    toolName?: string;
-    input?: Record<string, unknown>;
-    toolUseId?: string | null;
-    userId?: UserId;
-    sessionId?: SessionId;
-    projectPath?: string | null;
-    permissionMode?: PermissionMode;
-  } = {},
-) {
+export function aPermissionQuestion(overrides: QuestionOverrides = {}) {
   return {
     requestId: overrides.requestId ?? 'request-1',
     sessionId: overrides.sessionId ?? PERMISSION_SESSION,
     userId: overrides.userId ?? PERMISSION_OWNER,
-    projectPath: overrides.projectPath === undefined ? PERMISSION_PROJECT : overrides.projectPath,
-    permissionMode: overrides.permissionMode ?? 'default',
+    permissionMode: overrides.permissionMode ?? 'ask',
     toolUseId: overrides.toolUseId === undefined ? 'toolu-1' : overrides.toolUseId,
-    toolName: overrides.toolName ?? 'Bash',
-    input: overrides.input ?? { command: 'rm -rf build/' },
+    ...callOf(overrides),
   };
 }

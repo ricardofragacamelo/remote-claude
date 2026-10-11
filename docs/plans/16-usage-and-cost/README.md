@@ -39,7 +39,7 @@ A verificação no código e no SDK, feita ao escrever este plano, mudou o desen
 
 | Fato verificado | Onde | Consequência aqui |
 |---|---|---|
-| Uso e custo **não são persistidos** em lugar nenhum — `grep costUsd` em `backend/src` só acha o mapper | `backend/src/adapter/outbound/claude/sdk-message.mapper.ts` (`fromResult`) | tabela nova, migration versionada nova (B-04, B-08) |
+| Uso e custo **não são persistidos** em lugar nenhum — `grep costUsd` em `backend/src` só acha o mapper | `backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts` (`fromResult`) | tabela nova, migration versionada nova (B-04, B-08) |
 | O `total_cost_usd` do `result` é **acumulado por `query()`** em sessão de streaming input, não do turno. O mapper o publica como `costUsd` do turno, e o schema diz "Cost of the turn" — **o número mostrado hoje a partir do segundo turno está errado** | `sdk.d.ts` (`SDKResultSuccess.total_cost_usd`), `packages/contracts/schema/events/turn-completed.schema.json` | o custo do turno passa a ser a **diferença** entre acumulados (B-06, B-07), e o contrato continua o mesmo — quem estava errado era o backend |
 | `modelUsage` (por modelo, acumulado, com subagentes e compactação) é "o campo certo para contabilidade"; `usage` é **só o loop principal** e por turno | `sdk.d.ts` (`ModelUsage`, `SDKResultSuccess.usage`) | a contabilidade é por modelo, diferenciada ([D-01](decisions.md#d-01--de-onde-sai-o-custo-e-quão-preciso-ele-é)) |
 | Sessão retomada ou bifurcada **continua do total que o transcript salvou**; `/clear` zera o acumulado; resultado de crash pode vir zerado | `sdk.d.ts` (comentário de `total_cost_usd` e `modelUsage`) | linha de base por conversa e detecção de reset ([D-02](decisions.md#d-02--linha-de-base-na-retomada-e-os-resets-do-acumulado)) |
@@ -121,19 +121,19 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Requisito | Tarefas | Documento normativo | Cenários |
 |---|---|---|---|
 | Módulo `usage` com fronteira por porta, sem ciclo, sem alcançar o transcript | B-01 | [backend/03-modules](../../architecture/backend/03-modules.md#fronteiras--quem-pode-falar-com-quem) | S-01, S-02 |
-| A semântica do custo do SDK medida e escrita, antes de gravar um centavo | B-02 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#o-mapper--a-tradução-que-protege-o-contrato) | S-07 |
+| A semântica do custo do SDK medida e escrita, antes de gravar um centavo | B-02 | [backend/04a-claude](../../architecture/backend/04a-claude.md#o-mapper--a-tradução-que-protege-o-contrato) | S-07 |
 | Contrato HTTP e códigos novos no catálogo, com `messageKey` en/pt-BR | B-03 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) | S-04 |
 | Esquema só com números, migration versionada nova, índices com a query que os justifica | B-04 | [backend/05-persistence](../../architecture/backend/05-persistence.md#convenções-de-schema) | S-03, S-05 |
 | Rotas web com o estado na URL | B-05, B-18 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md#a-url-é-estado) | S-06, S-75 |
 | O custo do turno é o do turno — diferença de acumulados por modelo, exata ao nano-dólar | B-06, B-07 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#eventos-servidor--cliente) | S-08…S-15, S-20, S-23 |
-| Retomada, fork, `/clear` e crash não duplicam nem apagam custo | B-06, B-07 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#retomada--fork-fora-in-place-dentro) | S-10, S-11, S-21, S-22, S-24 |
+| Retomada, fork, `/clear` e crash não duplicam nem apagam custo | B-06, B-07 | [backend/04a-claude](../../architecture/backend/04a-claude.md#retomada--fork-fora-in-place-dentro) | S-10, S-11, S-21, S-22, S-24 |
 | Dia, semana e mês no fuso do usuário — DST, meia hora e virada do mês | B-06, B-09, B-13 | [backend/05-persistence](../../architecture/backend/05-persistence.md#convenções-de-schema) | S-16…S-19, S-33, S-63, S-64, S-120 |
 | Gravação idempotente e concorrente, sem perda e sem nada pela metade | B-08 | [backend/05-persistence](../../architecture/backend/05-persistence.md#transações) | S-27…S-31 |
 | Uso não é fronteira: falha ao gravar não derruba a sessão, e nenhum texto vai para log | B-07, B-08 | [03-logging](../../architecture/shared/03-logging.md) | S-25, S-26 |
 | Agregações corretas, paginadas, sobre índice | B-09 | [backend/05-persistence](../../architecture/backend/05-persistence.md#convenções-de-schema) | S-32, S-34…S-39, S-44…S-47 |
 | Isolamento: ninguém vê o uso de outra pessoa | B-09, B-10, B-32 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#regras-de-tratamento) | S-40…S-43, S-48, S-87, S-119 |
 | Export CSV fiel aos filtros, seguro contra injeção, com teto | B-10, B-20 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#tabela-de-status-http) | S-49…S-53, S-79, S-121 |
-| Limites de uso da conta a partir do `rate_limit_event`, na extensão do Claude, sem mentir o status da sessão | B-11, B-21 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#o-mapper--a-tradução-que-protege-o-contrato) | S-54…S-59, S-80 |
+| Limites de uso da conta a partir do `rate_limit_event`, na extensão do Claude, sem mentir o status da sessão | B-11, B-21 | [backend/04a-claude](../../architecture/backend/04a-claude.md#o-mapper--a-tradução-que-protege-o-contrato) | S-54…S-59, S-80 |
 | Retenção com purga explícita | B-12 | [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-60…S-62 |
 | Fuso e taxa manual do usuário no servidor | B-13 | [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-63…S-65 |
 | Tela com os quatro estados, cartões, tabelas, filtros, detalhe — atualizada pelo stream | B-14, B-15, B-17…B-19 | [web/03-ui-system](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre), [web/04-state-and-data](../../architecture/web/04-state-and-data.md#tanstack-query--dado-do-servidor) | S-66…S-70, S-75…S-78, S-86 |

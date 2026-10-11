@@ -7,12 +7,14 @@ import { sql } from 'drizzle-orm';
 
 import { DrizzlePermissionRequestRepository } from '@adapter/outbound/persistence/permission/drizzle-permission-request.repository';
 import { UserId } from '@domain/auth';
-import { PermissionRequest, interactionFor } from '@domain/permission';
+import { normalizeQuestion } from '@adapter/outbound/engines/claude/question-input';
+import { PermissionRequest } from '@domain/permission';
 import { SessionId } from '@domain/session';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { migrate } from '@infra/database/migrator';
 import { SESSION_ID } from '../../../../../support/builders/session.builder';
+import { claudeTool } from '../../../../../support/builders/tool.builder';
 import { startPostgres } from '../../../../../support/containers/postgres';
 import type { DisposablePostgres } from '../../../../../support/containers/postgres';
 import { aPersistenceContext } from '../../../../../support/fakes/persistence-context';
@@ -108,7 +110,8 @@ describe('the answers of a question in the history of requests', () => {
       toolUseId: 'toolu-question',
       toolName: 'AskUserQuestion',
       input,
-      interaction: interactionFor('AskUserQuestion', input),
+      tool: claudeTool('AskUserQuestion', input),
+      interaction: normalizeQuestion(input),
       riskHint: 'read',
       requestedAt: at,
       expiresAt: new Date(at.getTime() + 600_000),

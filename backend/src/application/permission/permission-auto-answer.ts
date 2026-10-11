@@ -1,4 +1,4 @@
-import { answeredByMode } from '@domain/permission';
+import { answeredByMode, refusedByMode } from '@domain/permission';
 import type { PermissionRequest } from '@domain/permission';
 import type { PermissionMode } from '@domain/session';
 import type { PermissionRuleBook } from './permission-rule-book';
@@ -12,6 +12,10 @@ import type { PermissionSettlement } from './settle-permission';
  * from a `messageKey`, and this is not that.
  */
 const DENIED_BY_RULE = 'denied by a permission rule the user granted earlier';
+
+/** What the agent is told of a change refused because the session is read-only. */
+const READ_ONLY =
+  'the session is read-only: nothing that changes files or runs commands is allowed';
 
 /**
  * Answering a request without putting it to anybody — by a rule, or by Permitir tudo.
@@ -40,14 +44,33 @@ export class PermissionAutoAnswer {
 
   /** @returns whether the request is settled now — by this call, or by somebody meanwhile */
   async tryAnswer(request: PermissionRequest, mode: PermissionMode, now: Date): Promise<boolean> {
+    if (refusedByMode(mode, request.tool.kind)) {
+      // Before the rules: no `allow`, however wide, changes anything in a read-only session (B-26).
+      await this.settlement.settle(
+        request,
+        {
+          decision: 'deny',
+          reason: READ_ONLY,
+          scope: 'once',
+          resolvedBy: request.userId,
+          resolvedFrom: null,
+          auto: true,
+          via: 'readOnly',
+          at: now,
+        },
+        { announce: true },
+      );
+
+      return true;
+    }
+
     const lookup = await this.rules.lookup(request.id, {
       subject: {
         userId: request.userId,
         sessionId: request.sessionId,
         projectPath: request.projectPath,
       },
-      toolName: request.toolName,
-      input: request.input,
+      tool: request.tool,
       permissionMode: mode,
       now,
     });
@@ -80,7 +103,7 @@ export class PermissionAutoAnswer {
       return true;
     }
 
-    if (lookup.kind === 'none' && answeredByMode(mode, request.toolName)) {
+    if (lookup.kind === 'none' && answeredByMode(mode, request.tool.kind)) {
       // The owner is the author: they switched the mode on, and the record says so. `once`,
       // because the mode leaves no rule behind — switching it off stops it at the next tool.
       await this.settlement.settle(

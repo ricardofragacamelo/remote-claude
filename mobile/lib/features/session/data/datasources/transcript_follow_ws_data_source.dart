@@ -12,6 +12,7 @@ library;
 
 import 'dart:async';
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_operations.dart';
 import 'package:remote_claude/core/network/contracts/protocol.g.dart';
@@ -39,11 +40,11 @@ class TranscriptFollowWsDataSource {
   Stream<FollowUpdate> get updates => _updates.stream;
 
   /// Sends `transcript.follow`. Answers the id it left with, or `null` when nothing left.
-  String? follow(String conversationId, {String? afterMessageId}) {
+  String? follow(ConversationKey conversation, {String? afterMessageId}) {
     final String? commandId = _client.send(
       transcriptFollowType,
       TranscriptFollowPayload(
-        conversationId: conversationId,
+        conversation: ConversationRef(engine: conversation.engine, id: conversation.id),
         afterMessageId: afterMessageId,
       ).toJson(),
     );
@@ -52,7 +53,7 @@ class TranscriptFollowWsDataSource {
       'transcript follow sent',
       op: LogOp.transcriptFollow,
       fields: <String, Object?>{
-        'conversationId': conversationId,
+        'conversation': conversation.toString(),
         'afterMessageId': afterMessageId,
         'sent': commandId != null,
       },

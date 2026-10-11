@@ -25,11 +25,11 @@ export interface CodeBlockProps {
 }
 
 /**
- * A block of code of Claude's answer (plan 08, B-15): coloured as the editor colours its language,
- * loaded on demand — monospaced when it names none the editor knows (S-65) — with "copy", which
- * copies it exactly and says so (S-66), and "insert in the editor", which puts it at the cursor of the
- * editor of the same tab and leaves the file dirty, never saved (S-67). With no editor open, insert
- * is disabled with the reason (S-68).
+ * A block of code of the agent's answer (plan 08, B-15): coloured as the editor colours its
+ * language, loaded on demand — monospaced when it names none the editor knows (S-65) — with "copy",
+ * which copies it exactly and says so (S-66), and "insert in the editor", which puts it at the
+ * cursor of the editor of the same tab and leaves the file dirty, never saved (S-67). With no
+ * editor open, insert is disabled with the reason (S-68).
  */
 export function CodeBlock({ code, language, folder }: CodeBlockProps): React.JSX.Element {
   const { t } = useTranslation();

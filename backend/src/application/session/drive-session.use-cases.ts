@@ -1,5 +1,6 @@
 import type { UserId } from '@domain/auth';
 import type { IdGenerator } from '@domain/shared';
+import { EngineCapabilityUnavailableError, requireCapability } from '@domain/engine';
 import {
   commandIn,
   menuOf,
@@ -12,9 +13,11 @@ import type { MenuCommand, PermissionMode, SessionClient, SlashCommand } from '@
 import type { SessionPermissionGate } from './ports/permission-gate.port';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { CommandCatalog } from './command-catalog';
+import type { EngineRegistry } from './engine-registry';
 import type { OutgoingPrompt, PromptAttachment, PromptContextResolver } from './prompt-context';
 import { handOverPrompt } from './prompt-hand-over';
 import type { SessionEnder } from './session-ender';
+import { liveControl } from './session-registry';
 import type { LiveSession, SessionRegistry } from './session-registry';
 
 /**
@@ -230,9 +233,11 @@ export interface SessionCommandMenu {
  * entries are left out by metadata, in the domain, once — rather than twice, in two languages.
  */
 export class ListSessionCommandsUseCase extends SessionCommandUseCase {
+  /** @param engines what says how each engine orders and badges its menu (plan 28, B-37) */
   constructor(
     registry: SessionRegistry,
     private readonly catalog: CommandCatalog,
+    private readonly engines: EngineRegistry,
   ) {
     super(registry);
   }
@@ -240,18 +245,55 @@ export class ListSessionCommandsUseCase extends SessionCommandUseCase {
   /**
    * @throws {import('@domain/session').SessionNotFoundError} unknown or closed
    * @throws {import('@domain/session').SessionForbiddenError} somebody else's
-   * @throws {import('@domain/session').ClaudeUnavailableError} the CLI failed to answer
-   * @throws {import('@domain/session').ClaudeTimeoutError} the CLI did not answer in time
+   * @throws {import('@domain/engine').AgentUnavailableError} the CLI failed to answer
+   * @throws {import('@domain/engine').AgentTimeoutError} the CLI did not answer in time
    */
   async execute(rawSessionId: string, userId: UserId): Promise<SessionCommandMenu> {
     const live = this.require(rawSessionId, userId);
     const commands = await this.catalog.commandsOf(live);
 
-    return { cliVersion: live.handle.cliVersion, commands: menuOf(commands) };
+    const menu = this.engines.require(live.conversation.ref.engine).commandMenu;
+    return { cliVersion: live.handle.cliVersion, commands: menuOf(commands, menu) };
   }
 }
 
 /** Interrupts the running turn. Any connection watching the session may ask for it. */
+/**
+ * Compacts a live session's conversation (plan 28, B-23): the engine's own prompt for it, sent through
+ * the queue like any prompt, so it waits for the running turn and is acknowledged before it starts.
+ * The client never knows that prompt; an engine without `compaction` refuses, with the capability.
+ */
+export class CompactSessionUseCase extends SessionCommandUseCase {
+  constructor(
+    registry: SessionRegistry,
+    private readonly prompts: PromptSessionUseCase,
+  ) {
+    super(registry);
+  }
+
+  /**
+   * @returns the send, to run once the command was acknowledged
+   * @throws {import('@domain/engine').EngineCapabilityUnavailableError} no `compaction` (S-70)
+   */
+  async execute(
+    rawSessionId: string,
+    userId: UserId,
+    from: SessionClient = 'web',
+  ): Promise<() => void> {
+    const live = this.require(rawSessionId, userId);
+    const engine = live.conversation.ref.engine.value;
+    const prompt = live.handle.control.compactionPrompt;
+
+    requireCapability(engine, live.handle.capabilities, 'compaction');
+
+    if (prompt === undefined) {
+      throw new EngineCapabilityUnavailableError(engine, 'compaction');
+    }
+
+    return this.prompts.execute(rawSessionId, prompt, userId, from);
+  }
+}
+
 export class InterruptSessionUseCase extends SessionCommandUseCase {
   async execute(rawSessionId: string, userId: UserId): Promise<void> {
     await this.require(rawSessionId, userId).handle.interrupt();
@@ -261,10 +303,10 @@ export class InterruptSessionUseCase extends SessionCommandUseCase {
 /** Changes the model of a running session. */
 export class SetSessionModelUseCase extends SessionCommandUseCase {
   async execute(rawSessionId: string, model: string, userId: UserId): Promise<void> {
-    const { session, handle } = this.require(rawSessionId, userId);
+    const live = this.require(rawSessionId, userId);
 
-    await handle.setModel(model);
-    session.setModel(model);
+    await liveControl(live, 'setModel')(model);
+    live.session.setModel(model);
   }
 }
 

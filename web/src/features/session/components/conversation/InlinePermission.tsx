@@ -2,11 +2,15 @@ import { useTranslation } from 'react-i18next';
 
 import { PermissionRequestCard } from '@/features/permission';
 import type { PermissionRequest } from '@/features/permission';
+import { changesFileText } from '@/shared/lib/tool-call';
 import type { InlineContext } from './timeline-context';
+import { ToolDiffView } from './ToolDiffView';
 
 /**
  * A request, in the conversation (plan 09, B-23, B-24): the card of plan 03 — or the plan to approve
- * of plan 08 — whole, with nothing cut, standing where the line of its tool would be.
+ * of plan 08 — whole, with nothing cut, standing where the line of its tool would be. A request that
+ * edits or writes a file carries what the change would do to it, as the server previews it against
+ * the disk now (plan 28, B-17).
  */
 export function InlinePermission({
   request,
@@ -25,7 +29,17 @@ export function InlinePermission({
       onExtend={requests.extend}
       onOpenRules={inline.onOpenRules}
       onPlanApproved={inline.onPlanApproved}
-      folder={inline.folder}
+      planModes={inline.planModes}
+      preview={
+        changesFileText(request.changes) ? (
+          <ToolDiffView
+            toolUseId={request.toolUseId}
+            sessionId={inline.sessionId}
+            folder={inline.folder}
+            pending
+          />
+        ) : undefined
+      }
       question={{
         drafts: requests.drafts,
         onDraft: requests.saveDraft,

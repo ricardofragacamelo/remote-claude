@@ -21,6 +21,7 @@ export { InspectSessionUseCase } from './session-insight.use-cases';
 export type { SessionModels } from './session-insight.use-cases';
 export {
   CancelQueuedPromptUseCase,
+  CompactSessionUseCase,
   CloseSessionUseCase,
   InterruptSessionUseCase,
   ListSessionCommandsUseCase,
@@ -82,34 +83,50 @@ export { ReapIdleSessionsUseCase } from './reap-idle-sessions.use-case';
 export { ShutdownSessionsUseCase } from './shutdown-sessions.use-case';
 export { observedStatus } from './session-status';
 export type { LiveSession } from './session-registry';
+export { liveControl } from './session-registry';
 export type {
-  ClaudeSessionHandle,
-  ClaudeSessionPort,
-  ClaudeSessionStart,
+  AgentEnginePort,
+  AgentSessionHandle,
+  AgentSessionStart,
+  ComponentReading,
+  ComponentUnread,
+  EngineControl,
+  EngineSelfDescription,
   SessionConversation,
   SessionEvent,
-} from './ports/claude-session.port';
+} from './ports/agent-engine.port';
+export type {
+  EngineSecurityContract,
+  SecurityAssertion,
+  SecurityClause,
+} from './ports/engine-security.port';
+export { SECURITY_CLAUSES, SECURITY_UNMET_REASON } from './ports/engine-security.port';
+export { controlOf, payloadRecord } from './ports/agent-engine.port';
+export { EngineRegistry } from './engine-registry';
 export type {
   ResumableConversation,
   ResumableConversationSource,
 } from './ports/resumable-conversation.source';
 export { RESUMABLE_CONVERSATION_SOURCE } from './ports/resumable-conversation.source';
-export { CLAUDE_SESSION_PORT } from './ports/claude-session.port';
 export type { SessionBroadcaster } from './ports/session-broadcaster.port';
 export type { SessionAccess, SessionOwnership } from './ports/session-ownership.port';
 export { SESSION_BROADCASTER } from './ports/session-broadcaster.port';
 export type {
+  AgentLoopRelease,
   PermissionQuestion,
   PermissionVerdict,
   SessionPermissionGate,
+  SettledPermission,
 } from './ports/permission-gate.port';
-export { SESSION_PERMISSION_GATE } from './ports/permission-gate.port';
+export { AGENT_LOOP_RELEASE, SESSION_PERMISSION_GATE } from './ports/permission-gate.port';
 export type { SessionFileJournal } from './ports/session-file-journal.port';
 export { SESSION_FILE_JOURNAL } from './ports/session-file-journal.port';
 export type { SessionFileEvents } from './ports/session-file-events.port';
 export { SESSION_FILE_EVENTS } from './ports/session-file-events.port';
 export type { ToolInvocation, ToolInvocationRecorder } from './ports/tool-invocation.port';
 export { TOOL_INVOCATION_RECORDER } from './ports/tool-invocation.port';
+export { canonicalToolPayload, interactionPayload } from './canonical-tool-payload';
+export type { CanonicalToolPayload } from './canonical-tool-payload';
 export type { WorkspaceResolver } from './ports/workspace-resolver.port';
 export type { InspectedReference, ReferenceInspector } from './ports/prompt-reference.port';
 export { REFERENCE_INSPECTOR } from './ports/prompt-reference.port';
@@ -134,7 +151,4 @@ export type {
 } from './ports/session-configuration.source';
 export { SESSION_CONFIGURATION_SOURCE } from './ports/session-configuration.source';
 export type { SessionOrigin, SessionOriginRepository } from './ports/session-origin.repository';
-export {
-  CLAUDE_SESSION_ID_GENERATOR,
-  SESSION_ORIGIN_REPOSITORY,
-} from './ports/session-origin.repository';
+export { SESSION_ORIGIN_REPOSITORY } from './ports/session-origin.repository';

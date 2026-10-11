@@ -161,14 +161,14 @@ test(`${changes.id} — in plan mode, approving the plan changes the mode and Cl
   const summaries = await turnSummaries(page).count();
   await send(page, `plan it [fixture:${expected.planTurn}]`);
   // What Claude asks first is a question of its own, answered by its card (plan 24, S-108).
-  const question = panelOf(page).getByRole('listitem', { name: "Claude's question" });
+  const question = panelOf(page).getByRole('listitem', { name: "Claude Code's question" });
   await question
     .getByRole('radio', { name: new RegExp(`^${literally(expected.planQuestion)}`) })
     .check();
   await question.getByRole('button', { name: 'Send answers' }).click();
 
   // The plan, in its own card: approved, to go on asking before each edit.
-  const plan = panelOf(page).getByRole('listitem', { name: 'The plan Claude proposes' });
+  const plan = panelOf(page).getByRole('listitem', { name: 'The plan Claude Code proposes' });
   await expect(plan.getByRole('heading', { name: expected.planHeading })).toBeVisible();
   expect(contentOf(path.join(folder, expected.written))).toBeNull();
   await plan.getByRole('radio', { name: expected.goOn }).check();

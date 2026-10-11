@@ -199,7 +199,7 @@ entram.
 4. **`usage` do turno descartado.** `TurnSummary` só tem custo e duração. O web mostra os tokens de
    entrada, saída e cache.
 5. **`tool.progress` concatenado.** O backend manda o tempo decorrido, não a saída
-   ([sdk-message.mapper.ts:69-79](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L69-L79)).
+   ([sdk-message.mapper.ts:69-79](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L69-L79)).
    O app faz `output + chunk` ([conversation.dart:316-319](../../mobile/lib/features/session/domain/entities/conversation.dart#L316-L319))
    e mostra o resultado como OUT de um Bash em andamento ([tool_card.dart:294](../../mobile/lib/features/session/presentation/widgets/tool_card.dart#L294)).
    É um bug, à parte da paridade.
@@ -222,7 +222,7 @@ entram.
 
 ## 7. Perdas das duas pontas (backend)
 
-O mapper ([sdk-message.mapper.ts](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts)) e
+O mapper ([sdk-message.mapper.ts](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts)) e
 a leitura do histórico (`transcript.adapter.ts`) descartam, antes do WS:
 
 | O quê | Onde | Fica pior com o plano 13? |
@@ -461,7 +461,7 @@ F2 a F5 não dependem do plano 13 e podem começar já. F5 e F6 são o que o pla
 
 **Backend:**
 
-- [sdk-message.mapper.ts](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts):
+- [sdk-message.mapper.ts](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts):
   - `tool_progress`: 69-79;
   - `system:init`, `rate_limit_event`, `default`: 85-146;
   - subtipos quietos: 156-164;
@@ -482,7 +482,7 @@ F2 a F5 não dependem do plano 13 e podem começar já. F5 e F6 são o que o pla
 
 - [conversation-reducer.ts](../../web/src/features/session/services/conversation-reducer.ts) (`BLOCK_KINDS` 332-337, leitores 690-705);
 - [ChatMarkdown.tsx](../../web/src/features/session/components/conversation/ChatMarkdown.tsx);
-- [tool-labels.ts](../../web/src/features/session/lib/tool-labels.ts);
+- `tool-labels.ts` (removido no plano 28 · F2);
 - [Markdown.tsx](../../web/src/shared/components/markdown/Markdown.tsx).
 
 **App:**

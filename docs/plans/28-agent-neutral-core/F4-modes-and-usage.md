@@ -26,7 +26,7 @@ dizem algo para quem conhece o Claude ([D-16](decisions.md#f4--modos-esforço-us
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-26 — Os modos canônicos no backend e no banco 🔲
+### B-26 — Os modos canônicos no backend e no banco ✅
 
 `PermissionMode` passa a ser `ask · acceptEdits · readOnly · allowAll`, os da
 [discovery 03 §6.5](../../discovery/03-multiplos-motores-de-agente.md#65-modos-de-permissão-canônicos) mais
@@ -41,7 +41,7 @@ No contrato, os três schemas (`session.start`, `session.setPermissionMode`, `se
 os valores antigos só em `v-1`. No banco, uma migration nova troca a `CHECK` e os dados de
 `claude_defaults.permission_mode`, e o ADR-022 é atualizado. Cenários S-77…S-80.
 
-### B-27 — Os modos nos clientes, pelo que o motor anuncia 🔲
+### B-27 — Os modos nos clientes, pelo que o motor anuncia ✅
 
 Os modos oferecidos são os de `capabilities.permissionModes`. Saem as listas escritas à mão:
 
@@ -53,14 +53,14 @@ As chaves `sessions.mode.*` e `mode*` passam a ser pelos nomes canônicos, com `
 "Claude". O estado guardado nos clientes com o valor antigo (o restaurador do painel, a escolha do app)
 é traduzido na leitura, uma vez. Cenários S-81, S-82.
 
-### B-28 — Os níveis de esforço anunciados 🔲
+### B-28 — Os níveis de esforço anunciados ✅
 
 `capabilities.effortLevels` diz o subconjunto do enum canônico que o motor tem. Saem as listas do web
 (`claude-panel.store.ts`, `claude-panel-restorer.ts`, `insight.service.ts`, `defaults.ts`) e a do app
 (`session_choices.dart`). Sem a capacidade, o seletor não existe. O `refuseUnsupportedEffort` do domínio
 continua, pelo que o motor anuncia. Cenários S-83, S-84.
 
-### B-29 — O `usage` canônico 🔲
+### B-29 — O `usage` canônico ✅
 
 `turn.completed.usage` passa a ser `{ inputTokens?, outputTokens?, cacheReadTokens?, cacheWriteTokens? }`,
 e o `costUsd` fica **opcional**. As duas coisas seguem a [discovery 03 §6.8](../../discovery/03-multiplos-motores-de-agente.md#68-uso-e-custo)
@@ -71,7 +71,7 @@ Saem as chaves `input_tokens`/`cache_*` do `conversation-reducer.ts`. O `TurnRow
 esta forma, e as contagens de raciocínio e de buscas web que ele mostra entram como campos opcionais se
 a [D-17](decisions.md#f4--modos-esforço-uso-e-blocos) confirmar. Cenários S-85…S-87.
 
-### B-30 — Os blocos com nome nosso 🔲
+### B-30 — Os blocos com nome nosso ✅
 
 Os blocos de `message.completed` passam a ter nomes nossos: `redactedThinking`, `toolUse` e `toolResult`.
 O `thinking` fica, e só é emitido com a capacidade `thinking`. Mudam o mapper do adapter, o histórico, o

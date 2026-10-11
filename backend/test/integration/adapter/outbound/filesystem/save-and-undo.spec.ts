@@ -12,7 +12,7 @@ import type { LiveSession, UndoDisk } from '@application/session';
 import { UserId } from '@domain/auth';
 import { Etag } from '@domain/files';
 import { SessionId, TurnFileCheckpoint } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
 import { NodeUndoDisk } from '@adapter/outbound/checkpoint/node-undo.disk';
 import { IconvTextCodec } from '@adapter/outbound/files/iconv.text-codec';
@@ -24,9 +24,10 @@ import { InMemoryUndoJournal } from '../../../../support/fakes/in-memory-undo';
 import { RecordingAuditEvents } from '../../../../support/fakes/recording-audit-events';
 import { RecordingLogger } from '../../../../support/fakes/recording-logger';
 import { SequentialIds } from '../../../../support/fakes/sequential-ids';
+import { PRODUCT_SENSITIVE_FILES } from '../../../../support/files/sensitive-files';
 
 const SESSION = SessionId.create('01J0SESS0000000000000000S1');
-const CONVERSATION = ClaudeSessionId.create('5c6f0d2e-6a3b-4f7e-9d1c-2b8a7e4f3c10');
+const CONVERSATION = ConversationRef.create('claude', '5c6f0d2e-6a3b-4f7e-9d1c-2b8a7e4f3c10');
 const owner = UserId.create('auth|42');
 const now = new Date('2026-09-30T12:00:00.000Z');
 
@@ -91,6 +92,7 @@ describe('a save and an undo of the same file', () => {
         trail: trail,
         limits: { maxEditBytes: 1_000_000 },
         writes: new UserWrites(new FixedClock(new Date(0))),
+        sensitive: PRODUCT_SENSITIVE_FILES,
       },
       aHistoryKeeper(disk),
     );
@@ -125,7 +127,7 @@ describe('a save and an undo of the same file', () => {
   const checkpointOf = (): TurnFileCheckpoint =>
     TurnFileCheckpoint.capture({
       sessionId: SESSION,
-      claudeSessionId: CONVERSATION,
+      conversation: CONVERSATION,
       promptId: 'p1',
       path: file,
       existedBefore: 'present',

@@ -47,7 +47,7 @@ LiveSessionSummary aLive(String id, {int pending = 0}) => LiveSessionSummary(
   workspacePath: '/w/a',
   status: SessionStatus.running,
   model: 'opus',
-  permissionMode: 'default',
+  permissionMode: 'ask',
   startedAt: DateTime.utc(2026, 10, 4),
   openedFrom: SessionOrigin.web,
   pendingPermissions: pending,
@@ -274,7 +274,7 @@ void main() {
 
     await tester.tap(find.byTooltip(l10n.foldersHelpOpen));
     await tester.pumpAndSettle();
-    expect(find.text(l10n.foldersHelpBody), findsOneWidget);
+    expect(find.text(l10n.foldersHelpBody(l10n.engineNameFallback)), findsOneWidget);
   });
 
   // D-04 of plan 03 and S-108 of plan 10, moved here with the actions.

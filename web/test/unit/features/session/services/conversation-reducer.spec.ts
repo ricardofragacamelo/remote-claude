@@ -10,6 +10,7 @@ import {
   withHistory,
 } from '@/features/session/services/conversation-reducer';
 import type { Conversation } from '@/features/session/types/live-session';
+import { aToolCall } from '../../../../support/canonical-tool';
 
 const T0 = '2026-09-19T12:00:00.000Z';
 
@@ -42,7 +43,7 @@ describe('the conversation reducer', () => {
     it('adds each block the CLI finishes under one id, never replacing the text before it', () => {
       const state = fold(
         completed('m1', [{ type: 'text', text: 'Looking.' }]),
-        completed('m1', [{ type: 'tool_use', id: 't1', name: 'Bash', input: {} }]),
+        completed('m1', [{ type: 'toolUse', toolUseId: 't1' }]),
       );
 
       expect(state.messages).toHaveLength(1);
@@ -78,10 +79,40 @@ describe('the conversation reducer', () => {
 
     it('ignores a block of a type it does not draw, and an item that is not a block', () => {
       const state = fold(
-        completed('m1', ['text', { type: 'tool_use' }, { type: 'text', text: 'ok' }]),
+        completed('m1', ['text', { type: 'toolUse' }, { type: 'text', text: 'ok' }]),
       );
 
       expect(state.messages[0]?.blocks).toEqual([{ kind: 'text', text: 'ok' }]);
+    });
+
+    it('draws a call and its result as their tool, never as blocks of the message — plan 28, S-88', () => {
+      const state = fold(
+        completed('m1', [
+          { type: 'text', text: 'Looking.' },
+          { type: 'toolUse', toolUseId: 't1' },
+          { type: 'toolResult', toolUseId: 't1' },
+        ]),
+      );
+
+      expect(state.messages[0]?.blocks).toEqual([{ kind: 'text', text: 'Looking.' }]);
+    });
+
+    it('keeps the blocks it draws around a kind it does not know — plan 28, S-90', () => {
+      const state = fold(
+        completed('m1', [
+          { type: 'text', text: 'Before.' },
+          { type: 'hologram', text: 'unknown' },
+          { type: 'text', text: 'After.' },
+        ]),
+      );
+
+      expect(state.messages[0]).toMatchObject({ isComplete: true, text: 'Before.After.' });
+    });
+
+    it('reads the names of the previous protocol as nothing it draws — plan 28, B-30', () => {
+      const state = fold(completed('m1', [{ type: 'redacted_thinking' }, { type: 'tool_use' }]));
+
+      expect(state.messages[0]?.blocks).toEqual([]);
     });
 
     it('reads a message with no content as one with no blocks', () => {
@@ -164,7 +195,7 @@ describe('the conversation reducer', () => {
     });
 
     it('keeps a redacted thinking as a block with nothing in it — S-83', () => {
-      const state = fold(completed('m1', [{ type: 'redacted_thinking', data: 'opaque' }]));
+      const state = fold(completed('m1', [{ type: 'redactedThinking' }]));
 
       expect(state.messages[0]?.blocks).toEqual([{ kind: 'redactedThinking', text: '' }]);
     });
@@ -182,11 +213,10 @@ describe('the conversation reducer', () => {
   describe('subagents — B-21', () => {
     it('keeps the tool and the messages of a subagent under the tool that opened it — S-88', () => {
       const state = fold(
-        frame('tool.started', { toolUseId: 'a1', toolName: 'Agent', input: {} }),
+        frame('tool.started', { toolUseId: 'a1', ...aToolCall('Agent', {}) }),
         frame('tool.started', {
           toolUseId: 't2',
-          toolName: 'Read',
-          input: {},
+          ...aToolCall('Read', {}),
           parentToolUseId: 'a1',
         }),
         delta('s1', 'sub text', { parentToolUseId: 'a1' }),
@@ -202,8 +232,8 @@ describe('the conversation reducer', () => {
 
     it('never mixes the children of two subagents running at once — S-89', () => {
       const state = fold(
-        frame('tool.started', { toolUseId: 'a1', toolName: 'Agent', input: {} }),
-        frame('tool.started', { toolUseId: 'a2', toolName: 'Agent', input: {} }),
+        frame('tool.started', { toolUseId: 'a1', ...aToolCall('Agent', {}) }),
+        frame('tool.started', { toolUseId: 'a2', ...aToolCall('Agent', {}) }),
         delta('x', 'of one', { parentToolUseId: 'a1' }),
         delta('y', 'of two', { parentToolUseId: 'a2' }),
         delta('x', ' still one', { parentToolUseId: 'a1' }),
@@ -219,7 +249,7 @@ describe('the conversation reducer', () => {
   describe('tools', () => {
     it('replaces the elapsed time with each progress, never appending to it — S-80', () => {
       const state = fold(
-        frame('tool.started', { toolUseId: 't1', toolName: 'Bash', input: { command: 'x' } }),
+        frame('tool.started', { toolUseId: 't1', ...aToolCall('Bash', { command: 'x' }) }),
         frame('tool.progress', { toolUseId: 't1', chunk: 'Bash · 2s' }),
         frame('tool.progress', { toolUseId: 't1', chunk: 'Bash · 2s' }),
         frame('tool.progress', { toolUseId: 't1', chunk: 'Bash · 3s' }),
@@ -229,7 +259,7 @@ describe('the conversation reducer', () => {
     });
 
     it('leaves a tool as it was for a progress with no text, or an outcome it does not know', () => {
-      const started = fold(frame('tool.started', { toolUseId: 't1', toolName: 'Bash' }));
+      const started = fold(frame('tool.started', { toolUseId: 't1', ...aToolCall('Bash') }));
       const after = [
         frame('tool.progress', { toolUseId: 't1' }),
         frame('tool.completed', { toolUseId: 't1', status: 'exploded' }),
@@ -237,34 +267,71 @@ describe('the conversation reducer', () => {
       ].reduce(readEvent, started);
 
       expect(after.tools).toEqual(started.tools);
-      expect(started.tools[0]?.input).toEqual({});
+      expect(started.tools[0]?.rawInput).toEqual({});
     });
 
     it('starts a tool that is started again once, in the timeline as in the tools', () => {
-      const started = frame('tool.started', { toolUseId: 't1', toolName: 'Bash', input: {} });
+      const started = frame('tool.started', { toolUseId: 't1', ...aToolCall('Bash', {}) });
       const state = fold(started, started);
 
       expect(state.tools).toHaveLength(1);
       expect(state.timeline).toEqual([{ kind: 'tool', id: 't1' }]);
     });
 
-    it('ignores a start with no name', () => {
+    it('ignores a start with no kind, or with no id — plan 28 B-18', () => {
       expect(fold(frame('tool.started', { toolUseId: 't1' }))).toBe(SILENT);
+      expect(fold(frame('tool.started', { ...aToolCall('Bash') }))).toBe(SILENT);
+    });
+
+    it('keeps the kind, the label, the subject, the changes and the exact input — plan 28 B-18', () => {
+      const call = aToolCall(
+        'Edit',
+        { file_path: '/w/a.ts', old_string: 'a', new_string: 'b' },
+        '/w',
+      );
+      const state = fold(frame('tool.started', { toolUseId: 't1', ...call, title: '  Fix  ' }));
+
+      expect(state.tools[0]).toMatchObject({ ...call, title: 'Fix', status: 'running' });
+    });
+
+    it('starts a tool of a kind it does not know, drawn later as the generic line — plan 28 S-56', () => {
+      const state = fold(
+        frame('tool.started', {
+          toolUseId: 't1',
+          kind: 'vcs.commit',
+          label: 'not a label',
+          subject: null,
+          changes: 'none',
+          origin: 7,
+          rawInput: { message: 'wip' },
+        }),
+      );
+
+      expect(state.tools[0]).toMatchObject({
+        kind: 'vcs.commit',
+        label: { messageKey: '', params: {} },
+        subject: {},
+        changes: [],
+        origin: { engine: '', native: '' },
+        rawInput: { message: 'wip' },
+      });
     });
   });
 
   describe('turns — B-23', () => {
-    it('reads cost, duration and every count of tokens of a turn — S-97', () => {
+    it('reads cost, duration and every count of tokens of a turn, in our names — S-97, plan 28 S-85', () => {
       const state = fold(
         frame('turn.completed', {
           turnId: 'turn-1',
           costUsd: '0.0123',
           durationMs: 2400,
           usage: {
-            input_tokens: 10,
-            output_tokens: 20,
-            cache_read_input_tokens: 30,
-            cache_creation_input_tokens: 40,
+            inputTokens: 10,
+            outputTokens: 20,
+            cacheReadTokens: 30,
+            cacheWriteTokens: 40,
+            reasoningTokens: 5,
+            webSearches: 2,
           },
         }),
       );
@@ -273,30 +340,63 @@ describe('the conversation reducer', () => {
         turnId: 'turn-1',
         costUsd: '0.0123',
         durationMs: 2400,
-        usage: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40 },
+        usage: {
+          inputTokens: 10,
+          outputTokens: 20,
+          cacheReadTokens: 30,
+          cacheWriteTokens: 40,
+          reasoningTokens: 5,
+          webSearches: 2,
+        },
       });
       expect(state.timeline).toEqual([{ kind: 'turn', id: 'turn-1' }]);
     });
 
-    it('keeps no tokens for a turn that ended without them, and zero for a missing count — S-98', () => {
+    it('keeps no tokens for a turn that reported none, and only the counts that came — S-98, S-86', () => {
       const state = fold(
         frame('turn.completed', { turnId: 'a', costUsd: '0', durationMs: 1, usage: {} }),
         frame('turn.completed', {
           turnId: 'b',
           costUsd: '0',
           durationMs: 1,
-          usage: { output_tokens: Number.NaN },
+          usage: { outputTokens: Number.NaN, inputTokens: 7 },
+        }),
+        frame('turn.completed', { turnId: 'c', durationMs: 1 }),
+      );
+
+      expect(state.turns.map((turn) => turn.usage)).toEqual([null, { inputTokens: 7 }, null]);
+    });
+
+    it('reads the names of the previous protocol as no count at all — plan 28, B-29', () => {
+      const state = fold(
+        frame('turn.completed', {
+          turnId: 'a',
+          costUsd: '0.01',
+          durationMs: 1,
+          usage: { input_tokens: 10, output_tokens: 20 },
         }),
       );
 
-      expect(state.turns.map((turn) => turn.usage)).toEqual([
-        null,
-        { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-      ]);
+      expect(state.lastTurn?.usage).toBeNull();
     });
 
-    it('ignores a turn missing its cost or its duration', () => {
-      expect(fold(frame('turn.completed', { turnId: 'a', durationMs: 1 }))).toBe(SILENT);
+    it('keeps a turn with no cost, its cost unknown and not zero — plan 28, S-86', () => {
+      const state = fold(frame('turn.completed', { turnId: 'a', durationMs: 1, usage: {} }));
+
+      expect(state.lastTurn).toEqual({ turnId: 'a', costUsd: null, durationMs: 1, usage: null });
+      expect(state.timeline).toEqual([{ kind: 'turn', id: 'a' }]);
+    });
+
+    it('keeps a cost of zero as zero — plan 28, S-87', () => {
+      const state = fold(
+        frame('turn.completed', { turnId: 'a', costUsd: '0.000000', durationMs: 1, usage: {} }),
+      );
+
+      expect(state.lastTurn?.costUsd).toBe('0.000000');
+    });
+
+    it('ignores a turn missing its id or its duration', () => {
+      expect(fold(frame('turn.completed', { durationMs: 1 }))).toBe(SILENT);
       expect(fold(frame('turn.completed', { turnId: 'a', costUsd: '1' }))).toBe(SILENT);
     });
 
@@ -322,6 +422,17 @@ describe('the conversation reducer', () => {
 
       expect(sessionCostOf(turns)).toBe('0.300000');
       expect(sessionCostOf([])).toBe('0.000000');
+    });
+
+    it('adds nothing for a turn whose engine reports no cost — plan 28, S-86', () => {
+      const turns = ['0.1', null].map((costUsd, index) => ({
+        turnId: String(index),
+        costUsd,
+        durationMs: 0,
+        usage: null,
+      }));
+
+      expect(sessionCostOf(turns)).toBe('0.100000');
     });
   });
 

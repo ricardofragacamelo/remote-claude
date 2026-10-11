@@ -9,7 +9,8 @@ import { render, translator } from '../../../support/render';
 import {
   aConversationDto,
   aHistoryPage,
-  claudeUnavailable,
+  agentUnavailable,
+  conversationRef,
   EDITOR,
   OURS,
   said,
@@ -17,15 +18,20 @@ import {
 } from '../../../support/history';
 import { ack, aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
+import { aToolCall } from '../../../support/canonical-tool';
 
 const t = translator('en');
 const LIVE = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 
-function mount(conversationId = OURS) {
+function mount(id = OURS) {
   const onResumed = vi.fn();
   const onClose = vi.fn();
   const view = render(
-    <ConversationReader conversationId={conversationId} onResumed={onResumed} onClose={onClose} />,
+    <ConversationReader
+      conversation={conversationRef(id)}
+      onResumed={onResumed}
+      onClose={onClose}
+    />,
   );
   return { ...view, onResumed, onClose };
 }
@@ -60,11 +66,13 @@ describe('the history of a conversation', () => {
     it('shows a failure translated, with a way to try again — S-17', async () => {
       const get = vi
         .spyOn(api, 'get')
-        .mockRejectedValueOnce(claudeUnavailable)
+        .mockRejectedValueOnce(agentUnavailable)
         .mockResolvedValueOnce(aHistoryPage([said('m1', 'Back again')]));
       mount();
 
-      expect(await screen.findByText(t('transcript.error.claudeUnavailable'))).toBeInTheDocument();
+      expect(
+        await screen.findByText(t('transcript.error.agentUnavailable', agentUnavailable.params)),
+      ).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: t('common.action.retry') }));
 
       expect(await screen.findByText('Back again')).toBeInTheDocument();
@@ -84,7 +92,7 @@ describe('the history of a conversation', () => {
           said('m1', 'Why does it fail?', 'user'),
           {
             type: 'tool.started',
-            payload: { toolUseId: 't1', toolName: 'Bash', input: { command: 'pnpm test' } },
+            payload: { toolUseId: 't1', ...aToolCall('Bash', { command: 'pnpm test' }) },
           },
           said('m2', 'Because of the clock.'),
         ]),
@@ -94,7 +102,7 @@ describe('the history of a conversation', () => {
       expect(await screen.findByText('Because of the clock.')).toBeInTheDocument();
       expect(screen.getByText('Why does it fail?')).toBeInTheDocument();
       expect(
-        screen.getByText(t('sessions.tool.bash', { command: 'pnpm test' })),
+        screen.getByText(t('sessions.tool.shell', { command: 'pnpm test' })),
       ).toBeInTheDocument();
       expect(screen.getByText('Fix the flaky test')).toBeInTheDocument();
       expect(screen.getByText(t('history.origin.ours'))).toBeInTheDocument();
@@ -104,7 +112,7 @@ describe('the history of a conversation', () => {
       const get = vi
         .spyOn(api, 'get')
         .mockResolvedValueOnce(aHistoryPage([said('m3', 'third')], { nextCursor: 'm3' }))
-        .mockRejectedValueOnce(claudeUnavailable)
+        .mockRejectedValueOnce(agentUnavailable)
         .mockResolvedValueOnce(aHistoryPage([said('m1', 'first'), said('m2', 'second')]));
       mount();
 
@@ -113,7 +121,7 @@ describe('the history of a conversation', () => {
       );
       // The failure is said beside the button, and what is already on screen stays.
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        t('transcript.error.claudeUnavailable'),
+        t('transcript.error.agentUnavailable', agentUnavailable.params),
       );
       expect(screen.getByText('third')).toBeInTheDocument();
 
@@ -122,7 +130,7 @@ describe('the history of a conversation', () => {
       await screen.findByText('first');
       const texts = screen.getAllByText(/first|second|third/).map((node) => node.textContent);
       expect(texts).toEqual(['first', 'second', 'third']);
-      expect(get).toHaveBeenLastCalledWith(`/transcripts/${OURS}/messages?cursor=m3`);
+      expect(get).toHaveBeenLastCalledWith(`/transcripts/claude/${OURS}/messages?cursor=m3`);
       expect(screen.queryByRole('button', { name: t('history.screen.loadEarlier') })).toBeNull();
     });
 
@@ -155,13 +163,21 @@ describe('the history of a conversation', () => {
       const get = vi.spyOn(api, 'get').mockResolvedValue(aHistoryPage([said('m1', 'cached')]));
       const onResumed = vi.fn();
       const view = render(
-        <ConversationReader conversationId={OURS} onResumed={onResumed} onClose={vi.fn()} />,
+        <ConversationReader
+          conversation={conversationRef(OURS)}
+          onResumed={onResumed}
+          onClose={vi.fn()}
+        />,
       );
       await screen.findByText('cached');
 
       view.rerender(<p aria-label="elsewhere" />);
       view.rerender(
-        <ConversationReader conversationId={OURS} onResumed={onResumed} onClose={vi.fn()} />,
+        <ConversationReader
+          conversation={conversationRef(OURS)}
+          onResumed={onResumed}
+          onClose={vi.fn()}
+        />,
       );
 
       expect(await screen.findByText('cached')).toBeInTheDocument();
@@ -180,15 +196,15 @@ describe('the history of a conversation', () => {
       );
 
       expect(socket.lastSent('session.start')).toMatchObject({
-        payload: { workspacePath: WORKSPACE, resumeSessionId: OURS },
+        payload: { workspacePath: WORKSPACE, resumeFrom: conversationRef(OURS) },
       });
       expect(screen.getByRole('button', { name: t('history.screen.resuming') })).toBeDisabled();
 
       socket.receive(
         hubEvent(LIVE, 'session.started', 1, {
           sessionId: LIVE,
-          claudeSessionId: OURS,
-          resumedFrom: OURS,
+          conversation: conversationRef(OURS),
+          resumedFrom: conversationRef(OURS),
         }),
       );
 
@@ -209,8 +225,8 @@ describe('the history of a conversation', () => {
           replayed: 0,
           oldestAvailableSeq: 1,
           gap: false,
-          claudeSessionId: OURS,
-          resumedFrom: OURS,
+          conversation: conversationRef(OURS),
+          resumedFrom: conversationRef(OURS),
         }),
       );
 
@@ -233,8 +249,8 @@ describe('the history of a conversation', () => {
       socket.receive(
         hubEvent(LIVE, 'session.started', 1, {
           sessionId: LIVE,
-          claudeSessionId: '00000000-0000-4000-8000-000000000001',
-          resumedFrom: EDITOR,
+          conversation: conversationRef('00000000-0000-4000-8000-000000000001'),
+          resumedFrom: conversationRef(EDITOR),
         }),
       );
 
@@ -292,7 +308,10 @@ describe('the history of a conversation', () => {
         await screen.findByRole('button', { name: t('history.screen.resume') }),
       );
       socket.receive(
-        hubEvent(LIVE, 'session.started', 1, { sessionId: LIVE, claudeSessionId: EDITOR }),
+        hubEvent(LIVE, 'session.started', 1, {
+          sessionId: LIVE,
+          conversation: conversationRef(EDITOR),
+        }),
       );
 
       expect(onResumed).not.toHaveBeenCalled();
@@ -377,7 +396,7 @@ describe('a conversation in the panel of its tab', () => {
     await user.click(screen.getByRole('button', { name: t('history.screen.resume') }));
     await user.click(await screen.findByRole('button', { name: t('sessions.fork.confirm') }));
     expect(socket.lastSent('session.start')?.['payload']).toMatchObject({
-      resumeSessionId: EDITOR,
+      resumeFrom: conversationRef(EDITOR),
     });
   });
 

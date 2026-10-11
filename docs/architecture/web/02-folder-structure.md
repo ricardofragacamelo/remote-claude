@@ -188,3 +188,21 @@ Relativo (`./`, `../`) só **dentro** da mesma feature. Atravessou fronteira, us
 | `no-literal-jsx-text` | texto literal apresentável no JSX |
 | `no-console` | `console.*` em qualquer lugar |
 | `no-test-in-src` | arquivo de teste dentro de `src/` |
+
+---
+
+## Alvo do plano 28 — `engines/` e a composição
+
+> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)). As regras de lint já valem desde a F0; as pastas chegam na
+> F6.
+
+```
+web/src/
+├── features/            núcleo: desenha pelo `kind`, sem nome de motor
+├── engines/
+│   └── claude/          F6 — ex-features/claude-settings/, e a ajuda própria do Claude
+└── app/engines.ts       F6 — a composição: o único arquivo que importa engines/*
+```
+
+`features/`, `shared/` e `app/` nunca importam `engines/`, e uma extensão só importa o barril de uma
+feature ([12-engines](../shared/12-engines.md)).

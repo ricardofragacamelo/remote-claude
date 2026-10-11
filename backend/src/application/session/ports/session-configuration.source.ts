@@ -19,6 +19,9 @@ export interface SessionConfiguration {
 /** What a session asks before it opens: whose, where, and what the client already chose. */
 export interface SessionConfigurationRequest {
   readonly userId: UserId;
+
+  /** The engine the session opens on: the defaults are that engine's (plan 28, B-36). */
+  readonly engine: string;
   readonly workspace: WorkspacePath;
   readonly client: {
     readonly model: string | null;

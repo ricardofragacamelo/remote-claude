@@ -1,7 +1,7 @@
 /**
  * A slash command the installation offers, as `supportedCommands()` describes it.
  *
- * Our shape and not the SDK's: the adapter translates, and nothing inside `domain/` learns the
+ * Our shape and not the engine's: the adapter translates, and nothing inside `domain/` learns the
  * package exists.
  */
 export interface SlashCommand {
@@ -16,28 +16,37 @@ export interface SlashCommand {
   readonly aliases: readonly string[];
 
   /**
-   * Whether it is Claude Code's own — the SDK's marker. Absent or `false` for a command or a skill of
+   * Whether it is the engine's own — the engine's marker. Absent or `false` for a command or a skill of
    * the project, of a plugin or of an MCP server.
    */
   readonly builtin?: boolean;
 }
 
 /**
- * Where a command or a skill comes from — the badge of the menu (plan 08, B-50): Claude Code's own,
- * the project's `.claude/`, or the skills of the user and of the system, which plan 13 brings in
- * through a local plugin of ours.
+ * Where a command or a skill comes from — the badge of the menu (plan 08, B-50): the engine's own,
+ * the project's, or the skills of the user and of the system, which an engine's extension brings in
+ * through plugins of its own.
  */
 export type CommandOrigin = 'builtin' | 'project' | 'user' | 'system';
 
 /**
- * The names of the local plugins plan 13 builds with the skills of the user and of the system,
- * fixed by plan 08 ([progress](../../../../../docs/plans/08-claude-panel/progress.md)) so the two plans
- * agree on them before 11 exists: a skill of theirs arrives
- * qualified, `remote-claude-user:<skill>`, and the name of the plugin is what says its origin. Any
- * other plugin comes in by the project's settings, and is the project's.
+ * How an engine's menu is ordered and badged — said by the engine, never supposed by the core
+ * (plan 28, B-37):
+ *
+ * - `suggested` — the names put first, in this order. A **ranking of names, not a list of
+ *   commands**: a name the installation does not offer is simply not shown, which is what keeps it
+ *   from becoming a hardcoded menu
+ *   ([D-05](../../../../../docs/plans/04-transcript-and-resume/decisions.md#d-05--o-menu-é-descoberta-não-fronteira));
+ * - `pluginOrigins` — the namespaces (`<plugin>:<name>`) whose rows are the user's or the system's
+ *   skills. Any other namespace is the project's.
  */
-export const USER_SKILLS_PLUGIN = 'remote-claude-user';
-export const SYSTEM_SKILLS_PLUGIN = 'remote-claude-system';
+export interface CommandMenu {
+  readonly suggested: readonly string[];
+  readonly pluginOrigins: Readonly<Record<string, 'user' | 'system'>>;
+}
+
+/** An engine that says nothing of its menu: nothing first, every namespace the project's. */
+export const PLAIN_MENU: CommandMenu = { suggested: [], pluginOrigins: {} };
 
 /** A command as the menu shows it. */
 export interface MenuCommand extends SlashCommand {
@@ -49,8 +58,8 @@ export interface MenuCommand extends SlashCommand {
   readonly label: string;
 
   /**
-   * `/name` runs another row: an unmarked row whose name a Claude Code command also has. Listed, so
-   * nothing vanishes in silence, and said to be covered (S-243).
+   * `/name` runs another row: an unmarked row whose name a command of the engine's own also has.
+   * Listed, so nothing vanishes in silence, and said to be covered (S-243).
    */
   readonly shadowed: boolean;
 }
@@ -59,7 +68,7 @@ export interface MenuCommand extends SlashCommand {
 const ORIGIN_ORDER: readonly CommandOrigin[] = ['builtin', 'project', 'user', 'system'];
 
 /** Where a row comes from: the marker, then the namespace of the plugin of a qualified name. */
-export function originOf(command: SlashCommand): CommandOrigin {
+export function originOf(command: SlashCommand, menu: CommandMenu = PLAIN_MENU): CommandOrigin {
   if (command.builtin === true) {
     return 'builtin';
   }
@@ -67,11 +76,7 @@ export function originOf(command: SlashCommand): CommandOrigin {
   const separator = command.name.lastIndexOf(':');
   const plugin = separator === -1 ? null : command.name.slice(0, separator);
 
-  if (plugin === USER_SKILLS_PLUGIN) {
-    return 'user';
-  }
-
-  return plugin === SYSTEM_SKILLS_PLUGIN ? 'system' : 'project';
+  return (plugin === null ? undefined : menu.pluginOrigins[plugin]) ?? 'project';
 }
 
 /** The name without the namespace of a plugin. */
@@ -79,27 +84,7 @@ function labelOf(name: string): string {
   return name.slice(name.lastIndexOf(':') + 1);
 }
 
-/**
- * The names the menu puts first, in this order.
- *
- * A **ranking of names, not a list of commands**: a name the installation does not offer is simply
- * not shown, which is what keeps this from becoming the hardcoded menu B-14 forbids — the day a
- * command is removed from the CLI, it disappears from here without anybody editing this line
- * ([D-05](../../../../../docs/plans/04-transcript-and-resume/decisions.md#d-05--o-menu-é-descoberta-não-fronteira)).
- *
- * Chosen for somebody who is not at the terminal: generating the project's instructions, reviewing
- * what changed, and keeping an eye on context and cost.
- */
-export const SUGGESTED_COMMANDS: readonly string[] = [
-  'init',
-  'code-review',
-  'security-review',
-  'compact',
-  'context',
-  'usage',
-];
-
-/** The prefix Claude Code gives a command that is not meant for a person. */
+/** The prefix an engine gives a command that is not meant for a person. */
 const INTERNAL_PREFIX = '__';
 
 /**
@@ -124,16 +109,19 @@ export function isHidden(command: SlashCommand): boolean {
 /**
  * The menu: what the installation offers, without the internal and the dead, suggested first.
  *
- * The suggested group follows {@link SUGGESTED_COMMANDS}; everything else is sorted by name, so two
- * installations that offer the same commands show them in the same order whatever order the CLI
- * listed them in.
+ * The suggested group follows the engine's {@link CommandMenu}; everything else is sorted by name,
+ * so two installations that offer the same commands show them in the same order whatever order
+ * the engine listed them in.
  *
  * Two rows may share a name (plan 08, B-50, S-243): both are listed, told apart by their origin.
- * Between a Claude Code row and an unmarked one, `/name` runs Claude Code's **whatever the order**
- * — the SDK says so of its marker — and the unmarked one is listed as covered. A row listed twice
- * with the same marker is one row.
+ * Between a row of the engine's own and an unmarked one, `/name` runs the engine's **whatever the
+ * order** — the engine says so of its marker — and the unmarked one is listed as covered. A row
+ * listed twice with the same marker is one row.
  */
-export function menuOf(commands: readonly SlashCommand[]): MenuCommand[] {
+export function menuOf(
+  commands: readonly SlashCommand[],
+  menu: CommandMenu = PLAIN_MENU,
+): MenuCommand[] {
   const seen = new Set<string>();
   const visible: SlashCommand[] = [];
 
@@ -151,15 +139,15 @@ export function menuOf(commands: readonly SlashCommand[]): MenuCommand[] {
   );
 
   const rank = (command: SlashCommand): number => {
-    const position = SUGGESTED_COMMANDS.indexOf(command.name);
-    return position === -1 ? SUGGESTED_COMMANDS.length : position;
+    const position = menu.suggested.indexOf(command.name);
+    return position === -1 ? menu.suggested.length : position;
   };
 
   return visible
     .map((command) => ({
       ...command,
-      suggested: rank(command) < SUGGESTED_COMMANDS.length,
-      origin: originOf(command),
+      suggested: rank(command) < menu.suggested.length,
+      origin: originOf(command, menu),
       label: labelOf(command.name),
       shadowed: command.builtin !== true && builtinNames.has(command.name),
     }))
@@ -174,7 +162,7 @@ export function menuOf(commands: readonly SlashCommand[]): MenuCommand[] {
 /**
  * `/name` at the very start of a prompt, followed by the end of the text or by whitespace.
  *
- * The name takes what Claude Code names take — letters, digits, `-`, `_`, `.` and the `:` of a
+ * The name takes what an engine's command names take — letters, digits, `-`, `_`, `.` and the `:` of a
  * plugin's namespace — and nothing else, so an absolute path is not a command: `/tmp/x is empty`
  * stops at the second `/` and never matches.
  */

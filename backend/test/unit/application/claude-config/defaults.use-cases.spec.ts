@@ -1,3 +1,4 @@
+import { AgentUnavailableError } from '@domain/engine';
 import { describe, expect, it } from 'vitest';
 
 import { RecordAuditEventUseCase } from '@application/audit';
@@ -16,7 +17,7 @@ import type {
 import { UserId } from '@domain/auth';
 import { ModelNotAvailableError, NO_DEFAULTS } from '@domain/claude-config';
 import type { ClaudeDefaults, FolderDefaults } from '@domain/claude-config';
-import { ClaudeUnavailableError } from '@domain/session';
+
 import type { SessionInitialization } from '@domain/session';
 import { WorkspacePath, WorkspaceNotAllowedError } from '@domain/workspace';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
@@ -131,7 +132,11 @@ describe('the defaults use cases — plan 13, B-14', () => {
   it('saves the user default, recording it first, and answers what applies — S-37', async () => {
     const h = harness();
 
-    const view = await h.save.execute(USER, null, set({ model: 'sonnet', permissionMode: 'plan' }));
+    const view = await h.save.execute(
+      USER,
+      null,
+      set({ model: 'sonnet', permissionMode: 'readOnly' }),
+    );
 
     expect(h.events.kinds).toEqual(['claude.defaultsChanged']);
     expect(h.events.appended[0]?.details).toMatchObject({ changed: ['model', 'permissionMode'] });
@@ -164,10 +169,10 @@ describe('the defaults use cases — plan 13, B-14', () => {
   });
 
   it('refuses rather than saving unchecked when the catalogue does not answer — S-47', async () => {
-    const h = harness({ probe: () => Promise.reject(new ClaudeUnavailableError('/srv')) });
+    const h = harness({ probe: () => Promise.reject(new AgentUnavailableError('claude', '/srv')) });
 
     await expect(h.save.execute(USER, null, set({ model: 'sonnet' }))).rejects.toThrow(
-      ClaudeUnavailableError,
+      AgentUnavailableError,
     );
     expect(h.defaults.saves).toBe(0);
     // A default naming no model needs no catalogue, and saves with it down.
@@ -177,7 +182,7 @@ describe('the defaults use cases — plan 13, B-14', () => {
 
   it('saves a folder override, read back with where each field comes from — S-38', async () => {
     const h = harness();
-    await h.save.execute(USER, null, set({ model: 'haiku', permissionMode: 'plan' }));
+    await h.save.execute(USER, null, set({ model: 'haiku', permissionMode: 'readOnly' }));
     await h.save.execute(USER, '/srv/repo', set({ model: 'sonnet' }));
 
     const view = await h.read.execute(USER, '/srv/repo/pkg');

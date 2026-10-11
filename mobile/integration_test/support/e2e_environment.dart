@@ -394,6 +394,16 @@ class BackendAsBrowser {
     return (response.data!['sessions']! as List<Object?>).cast<Map<String, Object?>>();
   }
 
+  /// The engine a session opens on when nobody names one, as `GET /engines` says — what a
+  /// conversation planted for a test is kept by (plan 28, B-13).
+  Future<String> defaultEngine() async {
+    final Response<Map<String, Object?>> response = await _dio.get<Map<String, Object?>>(
+      '/engines',
+    );
+
+    return response.data!['defaultEngine']! as String;
+  }
+
   /// The standing rules of this account, as the browser lists them.
   Future<List<Map<String, Object?>>> rules() async {
     final Response<Map<String, Object?>> response = await _dio.get<Map<String, Object?>>(

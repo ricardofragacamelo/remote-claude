@@ -12,9 +12,11 @@ import {
   ACCOUNT,
   backendAnswers,
   DEFAULTS,
+  ENGINES,
   installationOnly,
   NONE,
 } from '../../../support/claude-settings';
+import { anEngineDto, anEngineList, CAPABILITIES } from '../../../support/engines';
 import { translator } from '../../../support/render';
 
 const t = translator('en');
@@ -57,13 +59,11 @@ describe('Claude settings — account, installation, models and defaults (plan 1
   it('keeps the place while loading, and says why and offers to retry when it fails — S-54', async () => {
     backendAnswers({
       '/claude/account': () =>
-        Promise.reject(new AppError('CLAUDE_UNAVAILABLE', 'session.error.claudeUnavailable', 't1')),
+        Promise.reject(new AppError('AGENT_UNAVAILABLE', 'session.error.agentUnavailable', 't1')),
     });
     mountApp('/claude-settings?section=account');
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      t('session.error.claudeUnavailable'),
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(t('session.error.agentUnavailable'));
     expect(screen.getByRole('button', { name: t('common.action.retry') })).toBeVisible();
   });
 
@@ -93,7 +93,7 @@ describe('Claude settings — account, installation, models and defaults (plan 1
 
   it('saves the user default, and refuses an effort the model does not take before sending — S-37, S-60', async () => {
     const user = userEvent.setup();
-    backendAnswers();
+    backendAnswers(ENGINES);
     const putting = vi
       .spyOn(api, 'put')
       .mockResolvedValue({ ...DEFAULTS, user: { ...NONE, model: 'haiku' } });
@@ -105,13 +105,79 @@ describe('Claude settings — account, installation, models and defaults (plan 1
       'haiku',
     );
 
-    const effort = within(form).getByLabelText(t('claudeSettings.models.effort'));
+    const effort = await within(form).findByLabelText(t('claudeSettings.models.effort'));
     expect(
       within(effort).getByRole('option', { name: t('claudeSettings.models.effortHigh') }),
     ).toBeDisabled();
 
     await user.click(within(form).getByRole('button', { name: t('claudeSettings.models.save') }));
     expect(putting).toHaveBeenCalledWith('/claude/defaults', { ...NONE, model: 'haiku' });
+  });
+
+  it('offers the modes and the levels the engine announces, in its order — plan 28, S-81, S-83', async () => {
+    backendAnswers({
+      '/engines': () =>
+        Promise.resolve(
+          anEngineList({
+            engines: [
+              anEngineDto({
+                capabilities: {
+                  ...CAPABILITIES,
+                  permissionModes: ['readOnly', 'ask'],
+                  effortLevels: ['high', 'turbo'],
+                },
+              }),
+            ],
+          }),
+        ),
+    });
+    mountApp('/claude-settings?section=models');
+
+    const form = await screen.findByRole('form', { name: t('claudeSettings.models.forUser') });
+    const effort = await within(form).findByLabelText(t('claudeSettings.models.effort'));
+    const mode = within(form).getByLabelText(t('claudeSettings.models.permissionMode'));
+
+    expect(
+      within(mode)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual([
+      t('claudeSettings.models.installationDefault'),
+      t('claudeSettings.models.modeReadOnly'),
+      t('claudeSettings.models.modeAsk'),
+    ]);
+    // A level this build has no name for is shown as the engine names it.
+    expect(
+      within(effort)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual([
+      t('claudeSettings.models.installationDefault'),
+      t('claudeSettings.models.effortHigh'),
+      'turbo',
+    ]);
+  });
+
+  it('has no field of effort for an engine that announces no level — plan 28, S-83', async () => {
+    backendAnswers({
+      '/engines': () =>
+        Promise.resolve(
+          anEngineList({
+            engines: [anEngineDto({ capabilities: { ...CAPABILITIES, effortLevels: [] } })],
+          }),
+        ),
+      '/claude/defaults': () => Promise.resolve({ ...DEFAULTS, user: { ...NONE, effort: 'high' } }),
+    });
+    mountApp('/claude-settings?section=models');
+
+    const form = await screen.findByRole('form', { name: t('claudeSettings.models.forUser') });
+    await within(form).findByRole('option', { name: t('claudeSettings.models.modeAllowAll') });
+
+    expect(within(form).queryByLabelText(t('claudeSettings.models.effort'))).toBeNull();
+    // An effort kept before refuses nothing it cannot show.
+    expect(
+      within(form).getByRole('button', { name: t('claudeSettings.models.save') }),
+    ).toBeEnabled();
   });
 
   it('brings a refusal of the server back translated, saying what to do — S-61', async () => {

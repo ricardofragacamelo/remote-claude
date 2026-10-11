@@ -26,6 +26,12 @@ function isDecision(value: string): value is PermissionDecision {
   return value === 'allow' || value === 'deny';
 }
 
+/**
+ * Why a rule still in an engine's grammar reads as switched off: the migration at boot has not read
+ * it yet. It answers nothing until it has — failing closed is a question more (plan 28, B-33).
+ */
+export const UNMIGRATED = 'unmigrated';
+
 /** Translation between the table and the entity. The two change for different reasons. */
 export function toEntity(row: PermissionRuleRow): PermissionRule {
   if (!isPersistedPermissionScope(row.scope)) {
@@ -41,15 +47,20 @@ export function toEntity(row: PermissionRuleRow): PermissionRule {
     sessionId: null,
     projectPath: row.projectPath,
     pattern: row.pattern,
+    engine: row.engine,
     decision: row.decision,
     scope: row.scope,
     createdAt: row.grantedAt,
     expiresAt: row.expiresAt,
     revokedAt: row.revokedAt,
+    disabledReason: row.grammar === 'native' ? UNMIGRATED : row.disabledReason,
   });
 }
 
-/** The row a rule should be written as. `updatedAt` is set here, never left to a trigger. */
+/**
+ * The row a rule should be written as — always in the canonical grammar, the only one a rule is
+ * granted in. `updatedAt` is set here, never left to a trigger.
+ */
 export function toRow(rule: PermissionRule, now: Date): PermissionRuleInsert {
   const snapshot = rule.snapshot();
 
@@ -59,6 +70,10 @@ export function toRow(rule: PermissionRule, now: Date): PermissionRuleInsert {
     scope: snapshot.scope,
     projectPath: snapshot.projectPath,
     pattern: snapshot.pattern,
+    engine: snapshot.engine ?? null,
+    grammar: 'canonical',
+    disabledReason: snapshot.disabledReason ?? null,
+    nativePattern: null,
     decision: snapshot.decision,
     grantedAt: snapshot.createdAt,
     expiresAt: snapshot.expiresAt,

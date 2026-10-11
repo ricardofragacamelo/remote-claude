@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/confirm_dialog.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
@@ -43,6 +45,33 @@ Future<void> copySessionId(BuildContext context, String sessionId) async {
           fields: <String, Object?>{'sessionId': sessionId, 'platformError': error.code},
         );
     messenger.showSnackBar(SnackBar(content: Text(l10n.sessionMenuCopyFailed(sessionId))));
+  }
+}
+
+/// Copies the id of [conversation] — what its engine calls it in its own store, the id a person
+/// takes to the terminal or the editor — and says, naming the engine, whether it went (plan 28,
+/// S-40).
+Future<void> copyConversationId(BuildContext context, ConversationKey conversation) async {
+  final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+  final AppLocalizations l10n = AppLocalizations.of(context);
+  final String agent = AgentNamesScope.of(context).nameOf(conversation.engine);
+  final ProviderContainer container = ProviderScope.containerOf(context, listen: false);
+
+  try {
+    await Clipboard.setData(ClipboardData(text: conversation.id));
+    messenger.showSnackBar(SnackBar(content: Text(l10n.sessionMenuConversationIdCopied(agent))));
+  } on PlatformException catch (error) {
+    container
+        .read(appLoggerProvider)
+        .warn(
+          'the clipboard refused the conversation id',
+          op: 'session.copyId',
+          fields: <String, Object?>{
+            'conversation': conversation.toString(),
+            'platformError': error.code,
+          },
+        );
+    messenger.showSnackBar(SnackBar(content: Text(l10n.sessionMenuCopyFailed(conversation.id))));
   }
 }
 
@@ -106,10 +135,15 @@ class SessionMenu extends StatelessWidget {
               title: Text(l10n.sessionMenuUndo),
               onTap: after(() => unawaited(showRewindSheet(screen, session))),
             ),
-            ListTile(
-              leading: const Icon(Icons.copy),
-              title: Text(l10n.sessionMenuCopyId),
-              onTap: after(() => unawaited(copySessionId(screen, session))),
+            _CopyIdItem(
+              sessionId: session,
+              onCopy: (ConversationKey? conversation) => after(
+                () => unawaited(
+                  conversation == null
+                      ? copySessionId(screen, session)
+                      : copyConversationId(screen, conversation),
+                ),
+              )(),
             ),
             _HistoryItem(
               folder: folder,
@@ -130,6 +164,37 @@ class SessionMenu extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Copy the id": the id of the conversation, named by its engine, once the session said which it
+/// is — and the session's own until then, so the item never copies nothing (plan 28, S-40).
+class _CopyIdItem extends ConsumerWidget {
+  const _CopyIdItem({required this.sessionId, required this.onCopy});
+
+  final String sessionId;
+  final void Function(ConversationKey? conversation) onCopy;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ConversationKey? conversation = ref.watch(
+      liveSessionControllerProvider(
+        sessionId,
+      ).select((LiveSession live) => live.conversation.facts.conversation),
+    );
+
+    return ListTile(
+      leading: const Icon(Icons.copy),
+      title: Text(
+        conversation == null
+            ? l10n.sessionMenuCopyId
+            : l10n.sessionMenuCopyConversationId(
+                AgentNamesScope.of(context).nameOf(conversation.engine),
+              ),
+      ),
+      onTap: () => onCopy(conversation),
     );
   }
 }
@@ -212,7 +277,16 @@ class EndDialog extends ConsumerWidget {
 
     return ConfirmDialog(
       title: l10n.sessionCloseTitle,
-      body: l10n.sessionCloseDescription,
+      body: l10n.sessionCloseDescription(
+        agentNameIn(
+          context,
+          ref.watch(
+            liveSessionControllerProvider(
+              sessionId,
+            ).select((LiveSession live) => live.conversation.facts.engine),
+          ),
+        ),
+      ),
       keep: l10n.sessionCloseKeep,
       confirm: l10n.sessionCloseConfirm,
       destructive: true,

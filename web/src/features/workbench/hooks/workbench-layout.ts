@@ -57,7 +57,7 @@ export function layoutFrom(saved: unknown): WorkbenchLayout {
 
 /**
  * The columns of the workbench, in percent — the side bar, the centre (the editor over the panel) and
- * Claude — with the centre taking what the side bars leave.
+ * the agent — with the centre taking what the side bars leave.
  */
 export function columnsOf(
   layout: WorkbenchLayout,

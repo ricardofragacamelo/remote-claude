@@ -2,7 +2,7 @@ import type { Etag } from '../value-objects/etag.value-object';
 import type { ChangeKind } from './folder-changes';
 
 /** Who changed a path, as far as the server can tell — the contract's `changes[].origin`. */
-export type ChangeOrigin = 'claude' | 'user' | 'external';
+export type ChangeOrigin = 'agent' | 'user' | 'external';
 
 /** Who left a mark: a session of Claude, or a person through the routes of `files`. */
 export type Writer = Exclude<ChangeOrigin, 'external'>;
@@ -25,6 +25,8 @@ export interface WriteMark {
   readonly by: Writer;
   readonly at: Date;
   readonly left: WriteOutcome;
+  /** The engine whose agent wrote it — only on a write of the agent. */
+  readonly engine?: string;
 }
 
 /**
@@ -60,13 +62,24 @@ export function originOf(
   marks: readonly WriteMark[],
   current: Etag | null,
 ): ChangeOrigin {
+  return writerOf(kind, marks, current)?.by ?? 'external';
+}
+
+/**
+ * The write that explains a change — the latest of the marks that left what the disk holds — or
+ * `null` when none does, and the change is somebody else's. What {@link originOf} names, with the
+ * engine of an agent's write.
+ */
+export function writerOf(
+  kind: ChangeKind,
+  marks: readonly WriteMark[],
+  current: Etag | null,
+): WriteMark | null {
   const explaining = marks.filter((mark) => explains(mark.left, kind, current));
-  const latest = explaining.reduce<WriteMark | null>(
+  return explaining.reduce<WriteMark | null>(
     (best, mark) => (best === null || mark.at > best.at ? mark : best),
     null,
   );
-
-  return latest?.by ?? 'external';
 }
 
 function explains(left: WriteOutcome, kind: ChangeKind, current: Etag | null): boolean {

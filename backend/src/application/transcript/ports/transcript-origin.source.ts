@@ -1,5 +1,5 @@
 import type { UserId } from '@domain/auth';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * Which conversations this backend opened, and for whom.
@@ -11,7 +11,7 @@ import type { ClaudeSessionId } from '@domain/transcript';
  */
 export interface TranscriptOriginSource {
   /** Who opened each of these here. An id this backend never opened is absent from the map. */
-  openersOf(ids: readonly ClaudeSessionId[]): Promise<ReadonlyMap<string, UserId>>;
+  openersOf(ids: readonly ConversationRef[]): Promise<ReadonlyMap<string, UserId>>;
 }
 
 export const TRANSCRIPT_ORIGIN_SOURCE = Symbol('TranscriptOriginSource');

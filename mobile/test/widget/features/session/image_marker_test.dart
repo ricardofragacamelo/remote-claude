@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
@@ -22,6 +23,9 @@ import '../../../support/pump_app.dart';
 
 /// The smallest PNG there is: one transparent pixel.
 const PromptImage png = PromptImage(blockId: 'u1:1', mediaType: 'image/png', size: 48213);
+
+/// The conversation the content is read from.
+const ConversationKey c1 = ConversationKey(engine: 'engine-a', id: 'c-1');
 
 void main() {
   late AppLocalizations l10n;
@@ -45,7 +49,7 @@ void main() {
 
   group('S-118 · the marker', () {
     testWidgets('says it is an image, its type and its size', (WidgetTester tester) async {
-      await pump(tester, const ImageMarker(image: png, conversationId: 'c-1'));
+      await pump(tester, const ImageMarker(image: png, conversationKey: c1));
 
       expect(find.text(l10n.sessionImageAttachedWith('PNG, 48.2 kB')), findsOneWidget);
       expect(find.text(l10n.sessionImageOpen), findsOneWidget);
@@ -78,7 +82,7 @@ void main() {
         tester,
         const ImageMarker(
           image: PromptImage(mediaType: 'image/png'),
-          conversationId: 'c-1',
+          conversationKey: c1,
         ),
       );
       expect(find.text(l10n.sessionImageOpen), findsNothing);
@@ -90,7 +94,7 @@ void main() {
       await pump(
         tester,
         const ConversationView(
-          conversationId: 'c-1',
+          conversationKey: c1,
           conversation: Conversation(
             entries: <ConversationEntry>[
               StreamMessage(
@@ -125,17 +129,17 @@ void main() {
     ) async {
       content.images['u1:1'] = PromptImageBytes(bytes: onePixel, mediaType: 'image/png');
       content.gate = Completer<void>();
-      await pump(tester, const ImageMarker(image: png, conversationId: 'c-1'));
+      await pump(tester, const ImageMarker(image: png, conversationKey: c1));
 
       await tester.tap(find.text(l10n.sessionImageOpen));
       await tester.pump();
       expect(find.text(l10n.sessionImageLoading), findsOneWidget);
-      expect(find.text(l10n.sessionImageDescription), findsOneWidget);
+      expect(find.text(l10n.sessionImageDescription('engine-a')), findsOneWidget);
 
       content.gate!.complete();
       await tester.pumpAndSettle();
 
-      expect(content.imageReads, <(String, String)>[('c-1', 'u1:1')]);
+      expect(content.imageReads, <(ConversationKey, String)>[(c1, 'u1:1')]);
       final Image shown = tester.widget<Image>(find.byType(Image));
       expect(shown.image, isA<MemoryImage>());
       expect(shown.semanticLabel, l10n.sessionImageAlt);
@@ -145,7 +149,7 @@ void main() {
       WidgetTester tester,
     ) async {
       content.images['u1:1'] = PromptImageBytes(bytes: onePixel, mediaType: 'image/png');
-      await pump(tester, const ImageMarker(image: png, conversationId: 'c-1'));
+      await pump(tester, const ImageMarker(image: png, conversationKey: c1));
 
       await open(tester);
       await tester.tap(find.byTooltip(l10n.sessionImageClose));
@@ -159,7 +163,7 @@ void main() {
 
     testWidgets('bytes that are no image say so, in words', (WidgetTester tester) async {
       content.images['u1:1'] = PromptImageBytes(bytes: Uint8List.fromList(<int>[1, 2, 3]));
-      await pump(tester, const ImageMarker(image: png, conversationId: 'c-1'));
+      await pump(tester, const ImageMarker(image: png, conversationKey: c1));
 
       await tester.runAsync(() async {
         await tester.tap(find.text(l10n.sessionImageOpen));
@@ -206,7 +210,7 @@ void main() {
         WidgetTester tester,
       ) async {
         content.failure = refusal.value.$1;
-        await pump(tester, const ImageMarker(image: png, conversationId: 'c-1'));
+        await pump(tester, const ImageMarker(image: png, conversationKey: c1));
         await open(tester);
 
         expect(find.text(refusal.value.$2), findsOneWidget);
@@ -219,7 +223,7 @@ void main() {
       WidgetTester tester,
     ) async {
       content.failure = const NetworkFailure(traceId: 't');
-      await pump(tester, const ImageMarker(image: png, conversationId: 'c-1'));
+      await pump(tester, const ImageMarker(image: png, conversationKey: c1));
       await open(tester);
 
       expect(find.text(l10n.commonErrorOffline), findsOneWidget);

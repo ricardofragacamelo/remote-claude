@@ -9,7 +9,7 @@ import type { MobileView } from '../types/workbench';
 const ICONS: Readonly<Record<MobileView, LucideIcon>> = {
   explorer: Files,
   editor: FileCode,
-  claude: MessageSquare,
+  agent: MessageSquare,
   panel: PanelBottom,
 };
 
@@ -17,7 +17,7 @@ const ICONS: Readonly<Record<MobileView, LucideIcon>> = {
 const LABELS: Readonly<Record<MobileView, string>> = {
   explorer: 'workbench.mobile.explorer',
   editor: 'workbench.mobile.editor',
-  claude: 'workbench.mobile.claude',
+  agent: 'workbench.mobile.agent',
   panel: 'workbench.mobile.panel',
 };
 
@@ -28,7 +28,7 @@ export interface MobileViewBarProps {
 
 /**
  * Under `md`, the bar at the bottom that puts one view of the folder tab on screen at a time —
- * Explorer, Editor, Claude, Panel — all of them still **inside the same tab**
+ * Explorer, Editor, the agent, Panel — all of them still **inside the same tab**
  * ([06 · D-08](../../../../../docs/plans/06-workbench/decisions.md#d-08--o-workbench-em-tela-pequena)).
  * Each target is at least 44 × 44 px.
  */

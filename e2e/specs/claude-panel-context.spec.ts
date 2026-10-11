@@ -19,6 +19,7 @@ import { transcriptOf } from '../fixtures/history';
 import type { TranscriptPage } from '../fixtures/history';
 import { sessionInTab } from '../fixtures/workbench';
 import { scenario } from '../scenarios';
+import type { ConversationRef } from '../fixtures/conversation';
 
 /**
  * The context of a prompt, through the door a person uses — plan 08, F6, B-54 (S-258…S-260).
@@ -67,7 +68,7 @@ async function sessionHere(page: Page): Promise<string> {
 }
 
 /** The conversation a session writes to. */
-function conversationOf(sessionId: string): Promise<string> {
+function conversationOf(sessionId: string): Promise<ConversationRef> {
   return conversationOfSession(suite.user(), sessionId);
 }
 

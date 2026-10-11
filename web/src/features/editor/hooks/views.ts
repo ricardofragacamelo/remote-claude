@@ -34,7 +34,7 @@ export function focusEditor(folder: string): void {
 
 /**
  * What is selected in the active editor of a folder tab — its file and every selection that is not
- * empty — or `null` with no editor, or nothing selected: the `@selection` of Claude's panel
+ * empty — or `null` with no editor, or nothing selected: the `@selection` of the agent's panel
  * (plan 08, B-48).
  */
 export function activeSelections(

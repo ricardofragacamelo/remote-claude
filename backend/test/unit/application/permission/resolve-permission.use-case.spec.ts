@@ -18,6 +18,7 @@ import {
   aPermissionQuestion,
 } from '../../../support/builders/permission.builder';
 import type { PermissionHarness } from '../../../support/builders/permission.builder';
+import { claudeTool } from '../../../support/builders/tool.builder';
 
 const watching = () => true;
 const elsewhere = () => false;
@@ -160,9 +161,8 @@ describe('ResolvePermissionUseCase', () => {
             sessionId: PERMISSION_SESSION,
             projectPath: PERMISSION_PROJECT,
           },
-          toolName: 'Bash',
-          input: { command: 'rm -rf build/' },
-          permissionMode: 'default',
+          tool: claudeTool('Bash', { command: 'rm -rf build/' }, PERMISSION_PROJECT),
+          permissionMode: 'ask',
           now: harness.clock.now(),
         }),
       ).not.toBeNull();
@@ -212,7 +212,7 @@ describe('ResolvePermissionUseCase', () => {
         scope: 'project',
         projectPath: PERMISSION_PROJECT,
         sessionId: null,
-        pattern: 'Bash(rm -rf build/)',
+        pattern: 'shell(rm -rf build/)',
         decision: 'allow',
         createdAt: PERMISSION_NOW,
         expiresAt: new Date(
@@ -240,7 +240,7 @@ describe('ResolvePermissionUseCase', () => {
       expect(harness.trail.kinds).toEqual(['permission.ruleGranted']);
       expect(harness.trail.appended[0]?.snapshot()).toMatchObject({
         subjectId: harness.rules.rules[0]?.id,
-        subjectLabel: 'Bash(rm -rf build/)',
+        subjectLabel: 'shell(rm -rf build/)',
       });
     });
 

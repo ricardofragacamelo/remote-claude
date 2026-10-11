@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/help_button.dart';
 import 'package:remote_claude/core/widgets/loaded_view.dart';
@@ -35,7 +36,7 @@ class FoldersPage extends StatelessWidget {
     return AppScreen(
       title: l10n.foldersTitle,
       actions: <Widget>[
-        HelpButton(tooltip: l10n.foldersHelpOpen, body: l10n.foldersHelpBody),
+        HelpButton(tooltip: l10n.foldersHelpOpen, body: l10n.foldersHelpBody(agentNameIn(context))),
         // The rules screen, one tap from where sessions start — as the list of roots had it.
         IconButton(
           tooltip: l10n.rulesOpen,

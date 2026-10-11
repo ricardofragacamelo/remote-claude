@@ -6,10 +6,15 @@
   "x-kind": "event",
   "x-type": "transcript.appended",
   "type": "object",
-  "required": ["followId", "conversationId", "events", "activity", "working"],
+  "required": ["followId", "conversation", "events", "activity", "working"],
   "properties": {
-    "followId": { "type": "string" },
-    "conversationId": { "type": "string" },
+    "followId": {
+      "type": "string"
+    },
+    "conversation": {
+      "$ref": "../definitions/conversation-ref.schema.json",
+      "description": "The conversation the entries are of."
+    },
     "events": {
       "type": "array",
       "description": "The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:sessionId/messages` carries, oldest first, in the order of the SDK's chain and never of the clock. A client folds them with the same reducer as the page.",
@@ -17,8 +22,12 @@
         "type": "object",
         "required": ["type", "payload"],
         "properties": {
-          "type": { "type": "string" },
-          "payload": { "type": "object" }
+          "type": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          }
         }
       }
     },

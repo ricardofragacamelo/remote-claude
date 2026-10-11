@@ -9,9 +9,13 @@
   "required": [
     "requestId",
     "toolUseId",
-    "toolName",
+    "kind",
+    "label",
+    "subject",
+    "changes",
+    "origin",
+    "rawInput",
     "title",
-    "input",
     "riskHint",
     "defaultToNo",
     "expiresAt"
@@ -25,25 +29,47 @@
       "type": "string",
       "description": "The invocation this request is about, tying it to the `tool.started` already on screen."
     },
-    "toolName": {
-      "type": "string"
+    "kind": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "The canonical kind of the call being asked about, exactly as its `tool.started` carries it — open: an unknown kind is drawn as the generic card."
+    },
+    "label": {
+      "$ref": "../definitions/tool-label.schema.json",
+      "description": "The label of the call, as its `tool.started` carries it."
+    },
+    "subject": {
+      "$ref": "../definitions/tool-subject.schema.json",
+      "description": "What the call is about — the command, the paths, the URL."
+    },
+    "changes": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "../definitions/file-change.schema.json"
+      },
+      "description": "The files the call would change: a non-empty list turns on the preview, which the diff route serves while the request is pending (B-17)."
+    },
+    "origin": {
+      "$ref": "../definitions/engine-origin.schema.json",
+      "description": "The engine and its own name for the tool — opaque, as on `tool.started`."
+    },
+    "rawInput": {
+      "type": "object",
+      "description": "The exact input the call would run with — what is shown is what executes. Opaque: drawn whole, never read field by field (plan 28, D-04)."
     },
     "title": {
       "type": "string",
-      "description": "Short label of what is being asked, derived by the backend."
+      "description": "An i18n key naming what is being asked, by kind — `permission.tool.<kind>` with the dots of the kind removed and the next letter upper-cased (`permission.tool.fileEdit`). A client without the key shows the translated `label`."
     },
     "description": {
       "type": "string",
       "description": "The detail a human needs to decide — the command line, the path being written."
     },
-    "input": {
-      "type": "object",
-      "description": "The exact input the tool would run with. What is shown is what executes."
-    },
     "riskHint": {
       "type": "string",
       "enum": ["read", "write", "destructive"],
-      "description": "Derived in the backend, by a per-tool list **plus** a heuristic over the input, and it fails closed: a command the heuristic does not recognise is marked `destructive`. A false positive is an annoyance; a false negative is the accident."
+      "description": "Derived in the backend, by the `kind` **plus** a heuristic over a `shell` command, and it fails closed: a command the heuristic does not recognise, and every kind outside the read and write lists, is `destructive`. A false positive is an annoyance; a false negative is the accident."
     },
     "defaultToNo": {
       "type": "boolean",
@@ -70,7 +96,7 @@
           },
           "pattern": {
             "type": "string",
-            "description": "What a rule granted with the `exact` reach would match, in the grammar of the Claude Code settings. Kept for clients that do not read `reaches`; absent when there is no `exact` reach."
+            "description": "What a rule granted with the `exact` reach would match, in the canonical grammar (`<kind>(<matcher>)`, plan 28, B-31). Kept for clients that do not read `reaches`; absent when there is no `exact` reach."
           },
           "lifetimeMs": {
             "type": "integer",
@@ -89,20 +115,20 @@
           "reach": {
             "type": "string",
             "enum": ["exact", "prefix", "tool"],
-            "description": "`exact` is this very input; `prefix` (shell only) covers every command that starts like each command of this line; `tool` (never shell) is every invocation of the tool."
+            "description": "`exact` is this very call; `prefix` (`shell` only) covers every command that starts like each command of this line; `tool` (never `shell`) is every call of the kind."
           },
           "patterns": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "The rules this reach would leave, one per pattern, in the grammar of the Claude Code settings. Shown in full before anybody confirms."
+            "description": "The rules this reach would leave, one per pattern, in the canonical grammar — `shell(git status:*)`, `file.edit(src/a.ts)`, `web.fetch(domain:example.com)`, `mcp(srv:tool)`, or the bare kind. Shown in full before anybody confirms; the client treats them as text and never builds one."
           }
         }
       }
     },
     "interaction": {
-      "$ref": "../definitions/question-interaction.schema.json",
+      "$ref": "../definitions/interaction.schema.json",
       "description": "Set when the request is a question rather than a permission. Absent on every other request."
     }
   }

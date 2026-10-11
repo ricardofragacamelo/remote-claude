@@ -11,10 +11,15 @@
 library;
 
 import 'package:remote_claude/core/network/contracts/protocol.g.dart';
+import 'package:remote_claude/core/conversation/tool_call.dart';
+import 'package:remote_claude/core/network/conversation_wire.dart';
+import 'package:remote_claude/core/network/tool_wire.dart';
+import 'package:remote_claude/features/session/data/mappers/engine_mapper.dart';
 import 'package:remote_claude/features/session/data/mappers/pong_mapper.dart';
 import 'package:remote_claude/features/session/data/mappers/rewind_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
+import 'package:remote_claude/features/session/domain/entities/engine.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
@@ -54,7 +59,7 @@ SessionEvent? sessionEventFrom(Envelope frame) {
 
 /// The `seq` every event of the history carries: none.
 ///
-/// History is read from Claude's store, not from a live session's buffer, so it has no place in
+/// History is read from the engine's store, not from a live session's buffer, so it has no place in
 /// any session's numbering. Zero is at or below every resume point, which is what keeps it from
 /// ever moving one (S-21).
 const int historySeq = 0;
@@ -118,6 +123,7 @@ const Map<String, SessionEvent Function(_Frame frame)> _readers =
       'tool.started': _invoked,
       'tool.progress': _output,
       'tool.completed': _toolOutcome,
+      'session.tasksChanged': _tasksChanged,
       'turn.completed': _turn,
       'prompt.queued': _queued,
       'prompt.dequeued': _dequeued,
@@ -159,11 +165,13 @@ SessionEvent _opened(_Frame frame) {
       : SessionOpened(
           frame.seq,
           sessionId,
-          claudeSessionId: _text(payload, 'claudeSessionId'),
-          resumedFrom: _text(payload, 'resumedFrom'),
+          conversation: conversationKeyFrom(payload['conversation']),
+          resumedFrom: conversationKeyFrom(payload['resumedFrom']),
+          engine: _text(payload, 'engine'),
+          capabilities: engineCapabilitiesFrom(payload['capabilities']),
           workspacePath: _text(payload, 'workspacePath'),
           model: _text(payload, 'model'),
-          permissionMode: _text(payload, 'permissionMode'),
+          permissionMode: canonicalPermissionMode(_text(payload, 'permissionMode')),
           commandId: frame.commandId,
         );
 }
@@ -218,8 +226,8 @@ String blockTypeOf(Map<String, Object?> payload) => _text(payload, 'blockType') 
 
 /// Whether a fragment or a message is a subagent's.
 ///
-/// What a subagent says reaches the web panel, which nests it under the `Task` that opened it (plan
-/// 08, B-02); this app does not. Read as the answer, a subagent's text would interleave with it. It
+/// What a subagent says reaches the web panel, which nests it under the `agent` call that opened it
+/// (plan 08, B-02); this app does not. Read as the answer, a subagent's text would interleave with it. It
 /// is not dropped from the numbering: the event is unread, and its `seq` still moves past.
 bool _isSubagent(Map<String, Object?> payload) => payload['parentToolUseId'] != null;
 
@@ -284,26 +292,25 @@ String _writtenAt(Map<String, Object?> payload) => _text(payload, 'at') ?? '';
 /// A block of thinking, or `null` for any other kind.
 Thought? _thoughtOf(Map<String, Object?> block) => switch (block['type']) {
   'thinking' => Thought(_text(block, 'thinking') ?? '', blockId: _text(block, 'blockId')),
-  'redacted_thinking' => Thought('', isRedacted: true, blockId: _text(block, 'blockId')),
+  'redactedThinking' => Thought('', isRedacted: true, blockId: _text(block, 'blockId')),
   _ => null,
 };
 
 SessionEvent _invoked(_Frame frame) {
   final Map<String, Object?> payload = frame.payload;
   final String? toolUseId = _text(payload, 'toolUseId');
-  final String? toolName = _text(payload, 'toolName');
+  // What the row is drawn by: the kind and the label the backend built — never the engine's own name
+  // for the tool, which this build does not read (plan 28, B-19).
+  final ToolCall? call = toolCallFrom(payload);
 
-  if (toolUseId == null || toolName == null) {
+  if (toolUseId == null || call == null) {
     return UnreadEvent(frame.seq);
   }
 
   return ToolInvoked(
     frame.seq,
     toolUseId: toolUseId,
-    toolName: toolName,
-    input: payload['input'] is Map<String, Object?>
-        ? payload['input']! as Map<String, Object?>
-        : const <String, Object?>{},
+    call: call,
     isSubagent: _isSubagent(payload),
     title: _titleOf(payload),
     writtenAt: _writtenAt(payload),
@@ -336,10 +343,43 @@ SessionEvent _toolOutcome(_Frame frame) {
           toolUseId: toolUseId,
           status: status,
           summary: _text(frame.payload, 'summary'),
-          taskId: _text(frame.payload, 'taskId'),
           writtenAt: _writtenAt(frame.payload),
           question: _record(frame.payload, 'question'),
         );
+}
+
+/// The states of a task, as the contract writes them.
+const Map<String, TaskStatus> _taskStatuses = <String, TaskStatus>{
+  'pending': TaskStatus.pending,
+  'inProgress': TaskStatus.inProgress,
+  'completed': TaskStatus.completed,
+};
+
+/// The whole task list, as it is now (plan 28, B-22) — the same reader live and in the history, so a
+/// reload draws the list the stream drew. A task this build cannot read — a state added after it
+/// shipped — is left out; the rest of the list still is the agent's.
+SessionEvent _tasksChanged(_Frame frame) {
+  final Object? tasks = frame.payload['tasks'];
+
+  return tasks is! List<Object?>
+      ? UnreadEvent(frame.seq)
+      : TasksChanged(frame.seq, <SessionTask>[
+          for (final Object? task in tasks) ?_taskOf(task),
+        ], writtenAt: _writtenAt(frame.payload));
+}
+
+SessionTask? _taskOf(Object? entry) {
+  if (entry is! Map<String, Object?>) {
+    return null;
+  }
+
+  final String? id = _text(entry, 'id');
+  final String? title = _text(entry, 'title');
+  final TaskStatus? status = _taskStatuses[entry['status']];
+
+  return id == null || title == null || status == null
+      ? null
+      : SessionTask(id: id, title: title, status: status, activeTitle: _text(entry, 'activeTitle'));
 }
 
 SessionEvent _turn(_Frame frame) {
@@ -347,7 +387,8 @@ SessionEvent _turn(_Frame frame) {
   final String? costUsd = _text(frame.payload, 'costUsd');
   final Object? durationMs = frame.payload['durationMs'];
 
-  if (turnId == null || costUsd == null || durationMs is! int) {
+  // No cost is not an unreadable turn: the engine reports none (plan 28, B-29, S-86).
+  if (turnId == null || durationMs is! int) {
     return UnreadEvent(frame.seq);
   }
 

@@ -51,7 +51,7 @@ export class SnapshotPurgeJob extends PeriodicJob {
       const keep = await this.journal.reachOf(
         this.registry.all().map((live) => ({
           sessionId: live.session.id,
-          claudeSessionId: live.conversation.claudeSessionId,
+          conversation: live.conversation.ref,
         })),
       );
       const removed = await this.store.purge(keep);

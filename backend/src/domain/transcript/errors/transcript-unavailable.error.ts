@@ -8,10 +8,10 @@ import { DomainError } from '@domain/shared';
  * the right thing (docs/architecture/shared/04-errors-and-http.md).
  */
 export class TranscriptUnavailableError extends DomainError {
-  readonly code = 'CLAUDE_UNAVAILABLE';
-  readonly messageKey = 'transcript.error.claudeUnavailable';
+  readonly code = 'AGENT_UNAVAILABLE';
+  readonly messageKey = 'transcript.error.agentUnavailable';
 
-  constructor(operation: string) {
-    super(`the Agent SDK failed to ${operation}`, { operation });
+  constructor(engine: string, operation: string) {
+    super(`the agent ${engine} failed to ${operation}`, { engine, operation });
   }
 }

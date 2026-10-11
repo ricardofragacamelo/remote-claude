@@ -4,7 +4,7 @@
 // dart format off
 
 /// The protocol version this build speaks.
-const int protocolVersion = 1;
+const int protocolVersion = 2;
 
 /// Every frame `type` the classes below cover.
 const List<String> frameTypes = <String>[
@@ -20,6 +20,7 @@ const List<String> frameTypes = <String>[
   'session.attach',
   'session.cancelQueuedPrompt',
   'session.close',
+  'session.compact',
   'session.detach',
   'session.interrupt',
   'session.prompt',
@@ -51,6 +52,7 @@ const List<String> frameTypes = <String>[
   'session.rewound',
   'session.started',
   'session.statusChanged',
+  'session.tasksChanged',
   'tool.completed',
   'tool.progress',
   'tool.started',
@@ -133,6 +135,12 @@ const String sessionCloseKind = 'command';
 
 /// `type` of a session.close frame.
 const String sessionCloseType = 'session.close';
+
+/// `kind` of a session.compact frame.
+const String sessionCompactKind = 'command';
+
+/// `type` of a session.compact frame.
+const String sessionCompactType = 'session.compact';
 
 /// `kind` of a session.detach frame.
 const String sessionDetachKind = 'command';
@@ -320,6 +328,12 @@ const String sessionStatusChangedKind = 'event';
 /// `type` of a session.statusChanged frame.
 const String sessionStatusChangedType = 'session.statusChanged';
 
+/// `kind` of a session.tasksChanged frame.
+const String sessionTasksChangedKind = 'event';
+
+/// `type` of a session.tasksChanged frame.
+const String sessionTasksChangedType = 'session.tasksChanged';
+
 /// `kind` of a tool.completed frame.
 const String toolCompletedKind = 'event';
 
@@ -403,7 +417,7 @@ class Envelope {
         payload: json['payload'] as Map<String, Object?>?,
       );
 
-  /// Protocol version. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does.
+  /// Protocol version — `x-protocol-version` is the one this build speaks. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does. The server also accepts the version before it, during the window of deprecation, and answers each connection in the version it speaks (plan 28, D-08).
   final int v;
 
   /// ULID unique to this frame.
@@ -479,6 +493,590 @@ bool envelopeConditionalsHold(Map<String, Object?> json) {
   return true;
 }
 
+/// Whether [json] keeps within the bounds the schema gives [Envelope].
+bool envelopeLimitsHold(Map<String, Object?> json) {
+  if (json['v'] is int && (json['v']! as int) < 1) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Which conversation of which coding agent: the engine, and the id the conversation has in that engine's own store. It is not the `sessionId` of a live session, which names a subprocess and ends with it; this one outlives every session that ever continued it, and is what the history reads and a resume takes (ADR-025).
+class ConversationRef {
+  const ConversationRef({
+    required this.engine,
+    required this.id,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ConversationRef.fromJson(Map<String, Object?> json) => ConversationRef(
+        engine: json['engine']! as String,
+        id: json['id']! as String,
+      );
+
+  /// The engine — an `id` of `GET /engines`. Opaque to the client, which never decides by it.
+  final String engine;
+
+  /// The id of the conversation in the engine's store, in the engine's own form — opaque.
+  final String id;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'engine': engine,
+      'id': id,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ConversationRef].
+bool conversationRefLimitsHold(Map<String, Object?> json) {
+  if (json['engine'] is String && (json['engine']! as String).length > 32) {
+    return false;
+  }
+
+  if (json['id'] is String && (json['id']! as String).length > 256) {
+    return false;
+  }
+
+  return true;
+}
+
+/// What the engine of a session can do, declared and never supposed (ADR-025). The client hides the controls of what the engine does not have, rather than disabling them: the engine will never have it. Per session, since the version of the binary or the model can change what holds; `GET /engines` gives the engine's before a session exists.
+class EngineCapabilities {
+  const EngineCapabilities({
+    required this.resume,
+    required this.fork,
+    required this.history,
+    required this.images,
+    required this.promptWhileBusy,
+    required this.questions,
+    required this.planApproval,
+    required this.taskList,
+    required this.subagents,
+    required this.thinking,
+    required this.slashCommands,
+    required this.modelSwitch,
+    required this.effortLevels,
+    required this.contextUse,
+    required this.mcp,
+    required this.compaction,
+    required this.cost,
+    required this.permissionModes,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EngineCapabilities.fromJson(Map<String, Object?> json) => EngineCapabilities(
+        resume: json['resume']! as bool,
+        fork: json['fork']! as String,
+        history: json['history']! as bool,
+        images: json['images']! as bool,
+        promptWhileBusy: json['promptWhileBusy']! as bool,
+        questions: json['questions']! as bool,
+        planApproval: json['planApproval']! as bool,
+        taskList: json['taskList']! as bool,
+        subagents: json['subagents']! as bool,
+        thinking: json['thinking']! as bool,
+        slashCommands: json['slashCommands']! as bool,
+        modelSwitch: json['modelSwitch']! as bool,
+        effortLevels: (json['effortLevels']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        contextUse: json['contextUse']! as bool,
+        mcp: json['mcp']! as bool,
+        compaction: json['compaction']! as bool,
+        cost: json['cost']! as String,
+        permissionModes: (json['permissionModes']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+      );
+
+  /// A conversation can be continued where it stopped.
+  final bool resume;
+
+  /// A conversation can be forked at a message (edit-and-resend), whole, or not at all.
+  final String fork;
+
+  /// The conversations of a folder can be listed and read back.
+  final bool history;
+
+  /// A prompt can carry images.
+  final bool images;
+
+  /// A prompt sent while a turn runs is queued.
+  final bool promptWhileBusy;
+
+  /// The agent asks the person a structured question.
+  final bool questions;
+
+  /// The agent asks for a plan to be approved before it acts.
+  final bool planApproval;
+
+  /// The agent keeps a list of tasks the person can follow.
+  final bool taskList;
+
+  /// The agent delegates to subagents, whose work nests under the call.
+  final bool subagents;
+
+  /// The agent's reasoning streams as its own block.
+  final bool thinking;
+
+  /// The installation offers commands the composer lists.
+  final bool slashCommands;
+
+  /// The model can be switched while the session lives.
+  final bool modelSwitch;
+
+  /// The levels of effort the engine takes, in order — empty when it takes none.
+  final List<String> effortLevels;
+
+  /// The use of the context window can be asked, by category.
+  final bool contextUse;
+
+  /// MCP servers can be given to the session and their status read.
+  final bool mcp;
+
+  /// The conversation can be compacted on request.
+  final bool compaction;
+
+  /// What a turn costs is reported, and in which unit — or not at all.
+  final String cost;
+
+  /// The canonical modes the engine runs in — what the clients offer, and nothing else. One mode only hides the selector.
+  final List<String> permissionModes;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'resume': resume,
+      'fork': fork,
+      'history': history,
+      'images': images,
+      'promptWhileBusy': promptWhileBusy,
+      'questions': questions,
+      'planApproval': planApproval,
+      'taskList': taskList,
+      'subagents': subagents,
+      'thinking': thinking,
+      'slashCommands': slashCommands,
+      'modelSwitch': modelSwitch,
+      'effortLevels': effortLevels,
+      'contextUse': contextUse,
+      'mcp': mcp,
+      'compaction': compaction,
+      'cost': cost,
+      'permissionModes': permissionModes,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [EngineCapabilities].
+bool engineCapabilitiesLimitsHold(Map<String, Object?> json) {
+  if (json['effortLevels'] is List<Object?> && (json['effortLevels']! as List<Object?>).length > 16) {
+    return false;
+  }
+
+  if (json['permissionModes'] is List<Object?> && (json['permissionModes']! as List<Object?>).length > 16) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Which engine a call came from, and the engine's own name for it. Opaque text, for diagnosis and for the dialect of the rules: no client decides by it — it decides by the `kind` (ADR-025).
+class EngineOrigin {
+  const EngineOrigin({
+    required this.engine,
+    required this.native,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EngineOrigin.fromJson(Map<String, Object?> json) => EngineOrigin(
+        engine: json['engine']! as String,
+        native: json['native']! as String,
+      );
+
+  /// An `id` of `GET /engines`.
+  final String engine;
+
+  /// The name the engine gave the tool, exactly.
+  final String native;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'engine': engine,
+      'native': native,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [EngineOrigin].
+bool engineOriginLimitsHold(Map<String, Object?> json) {
+  if (json['engine'] is String && (json['engine']! as String).length > 32) {
+    return false;
+  }
+
+  if (json['native'] is String && (json['native']! as String).length > 256) {
+    return false;
+  }
+
+  return true;
+}
+
+/// A file a tool call changes, and how. It is what the backend's undo snapshots and what turns on the diff of a row and of a pending request: the diff itself comes from `GET /sessions/:sessionId/tools/:toolUseId/diff`, never computed by the client, so the text being replaced never travels here (plan 28, D-28).
+class FileChange {
+  const FileChange({
+    required this.path,
+    required this.op,
+    this.to,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory FileChange.fromJson(Map<String, Object?> json) => FileChange(
+        path: json['path']! as String,
+        op: json['op']! as String,
+        to: json['to'] as String?,
+      );
+
+  /// The file, absolute. A call that names a relative path has no change: it would resolve against the wrong folder.
+  final String path;
+
+  /// `edit` changes part of the file, `write` replaces it whole or creates it, `delete` removes it, `move` renames it to `to`.
+  final String op;
+
+  /// Where a `move` takes the file. Absent on every other operation.
+  final String? to;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'op': op,
+    };
+
+    if (to != null) {
+      json['to'] = to;
+    }
+
+    return json;
+  }
+}
+
+class InteractionQuestionsItemOptionsItem {
+  const InteractionQuestionsItemOptionsItem({
+    required this.label,
+    required this.description,
+    this.preview,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory InteractionQuestionsItemOptionsItem.fromJson(Map<String, Object?> json) => InteractionQuestionsItemOptionsItem(
+        label: json['label']! as String,
+        description: json['description']! as String,
+        preview: json['preview'] as String?,
+      );
+
+  /// Shown and answered exactly as it is — a label ending in "(Recommended)" keeps it, and a screen may highlight it but never pre-select it.
+  final String label;
+
+  final String description;
+
+  /// A mockup or a snippet, in markdown, rendered with the safe renderer — never HTML. Absent when the option has none.
+  final String? preview;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'label': label,
+      'description': description,
+    };
+
+    if (preview != null) {
+      json['preview'] = preview;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [InteractionQuestionsItemOptionsItem].
+bool interactionQuestionsItemOptionsItemLimitsHold(Map<String, Object?> json) {
+  if (json['label'] is String && (json['label']! as String).length > 200) {
+    return false;
+  }
+
+  if (json['description'] is String && (json['description']! as String).length > 1000) {
+    return false;
+  }
+
+  if (json['preview'] is String && (json['preview']! as String).length > 20000) {
+    return false;
+  }
+
+  return true;
+}
+
+class InteractionQuestionsItem {
+  const InteractionQuestionsItem({
+    required this.id,
+    required this.header,
+    required this.prompt,
+    required this.multiSelect,
+    required this.options,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory InteractionQuestionsItem.fromJson(Map<String, Object?> json) => InteractionQuestionsItem(
+        id: json['id']! as String,
+        header: json['header']! as String,
+        prompt: json['prompt']! as String,
+        multiSelect: json['multiSelect']! as bool,
+        options: (json['options']! as List<Object?>).map((item) => InteractionQuestionsItemOptionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// `q1`…`q4`, by position — stable within the request, and what an answer names.
+  final String id;
+
+  /// The short chip of the question (engines ask for a short one; the model does not always obey). Cut, never refused.
+  final String header;
+
+  /// The question itself, as the agent wrote it. Text to show, never markup. Cut, never refused.
+  final String prompt;
+
+  /// Several options may be chosen. A single choice is one label, or the free answer (`other`).
+  final bool multiSelect;
+
+  /// What the agent offers. The free answer ("Other") is not here: the screen offers it.
+  final List<InteractionQuestionsItemOptionsItem> options;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'header': header,
+      'prompt': prompt,
+      'multiSelect': multiSelect,
+      'options': options.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [InteractionQuestionsItem].
+bool interactionQuestionsItemLimitsHold(Map<String, Object?> json) {
+  if (json['id'] is String && (json['id']! as String).length > 8) {
+    return false;
+  }
+
+  if (json['header'] is String && (json['header']! as String).length > 60) {
+    return false;
+  }
+
+  if (json['prompt'] is String && (json['prompt']! as String).length > 2000) {
+    return false;
+  }
+
+  if (json['options'] is List<Object?> && (json['options']! as List<Object?>).length > 4) {
+    return false;
+  }
+
+  if (json['options'] is List<Object?> && (json['options']! as List<Object?>).length < 2) {
+    return false;
+  }
+
+  return true;
+}
+
+/// What a permission request asks of the person beyond leave to run a tool, normalised by the adapter of the engine (plan 24; plan 28, B-20): a `question` — the questions the agent asks, with their options — or a `plan` to approve before the agent changes anything. A client renders this and never reads the raw input.
+class Interaction {
+  const Interaction({
+    required this.kind,
+    this.malformed,
+    this.questions,
+    this.markdown,
+    this.path,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory Interaction.fromJson(Map<String, Object?> json) => Interaction(
+        kind: json['kind']! as String,
+        malformed: json['malformed'] as bool?,
+        questions: json['questions'] == null ? null : (json['questions']! as List<Object?>).map((item) => InteractionQuestionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        markdown: json['markdown'] as String?,
+        path: json['path'] as String?,
+      );
+
+  /// `question` — the agent asks something and waits for the answers; `plan` — the agent presents a plan, approved or refused with a reason. A client that meets another value shows the generic card.
+  final String kind;
+
+  /// On `question`: the input could not be read safely — no questions or more than four, fewer than two or more than four options, an option with no label, a question with no options, a question repeated, a label repeated within a question. `questions` is then empty, the card offers only a refusal, and an `allow` is refused with `PERMISSION_ANSWERS_INVALID`.
+  final bool? malformed;
+
+  /// One to four, in the order the agent asked them; empty when `malformed`.
+  final List<InteractionQuestionsItem>? questions;
+
+  /// The plan, in markdown, on `plan`. Text to render safely, never markup to trust.
+  final String? markdown;
+
+  /// The file the agent saved the plan to, on `plan`, when it says.
+  final String? path;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kind': kind,
+    };
+
+    if (malformed != null) {
+      json['malformed'] = malformed;
+    }
+
+    if (questions != null) {
+      json['questions'] = questions?.map((item) => item.toJson()).toList(growable: false);
+    }
+
+    if (markdown != null) {
+      json['markdown'] = markdown;
+    }
+
+    if (path != null) {
+      json['path'] = path;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] satisfies the conditional requirements of [Interaction].
+///
+/// `malformed` is also required when `kind`
+/// is `question` — a question says whether it could be read, so a screen never offers half of what was asked.
+/// `questions` is also required when `kind`
+/// is `question` — a question is its questions — empty only when malformed.
+/// `markdown` is also required when `kind`
+/// is `plan` — a plan to approve is its text; approving one nobody could read is what the card exists to prevent.
+bool interactionConditionalsHold(Map<String, Object?> json) {
+  if (json['kind'] == 'question' && json['malformed'] is! bool) {
+    return false;
+  }
+
+  if (json['kind'] == 'question' && json['questions'] is! List<Object?>) {
+    return false;
+  }
+
+  if (json['kind'] == 'plan' && json['markdown'] is! String) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Whether [json] keeps within the bounds the schema gives [Interaction].
+bool interactionLimitsHold(Map<String, Object?> json) {
+  if (json['questions'] is List<Object?> && (json['questions']! as List<Object?>).length > 4) {
+    return false;
+  }
+
+  if (json['markdown'] is String && (json['markdown']! as String).length > 200000) {
+    return false;
+  }
+
+  if (json['path'] is String && (json['path']! as String).length > 4096) {
+    return false;
+  }
+
+  return true;
+}
+
+/// One conversation of the history, as a listing shows it: the conversation, where it ran, and what it is doing now.
+class ListedTranscript {
+  const ListedTranscript({
+    required this.conversation,
+    required this.sessionId,
+    required this.summary,
+    required this.origin,
+    required this.cwd,
+    required this.gitBranch,
+    required this.createdAt,
+    required this.lastModified,
+    required this.activity,
+    required this.liveSessionId,
+    required this.writtenAgoSeconds,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ListedTranscript.fromJson(Map<String, Object?> json) => ListedTranscript(
+        conversation: ConversationRef.fromJson(json['conversation']! as Map<String, Object?>),
+        sessionId: json['sessionId']! as String,
+        summary: json['summary']! as String,
+        origin: json['origin']! as String,
+        cwd: json['cwd']! as String,
+        gitBranch: json['gitBranch'] as String?,
+        createdAt: json['createdAt'] as String?,
+        lastModified: json['lastModified']! as String,
+        activity: json['activity']! as String,
+        liveSessionId: json['liveSessionId'] as String?,
+        writtenAgoSeconds: json['writtenAgoSeconds']! as int,
+      );
+
+  /// The conversation — what `session.start` takes as `resumeFrom`.
+  final ConversationRef conversation;
+
+  /// The id of the conversation alone, for the published app of the previous protocol — gone when its window closes (plan 28, D-08).
+  final String sessionId;
+
+  /// What the conversation is about, as the engine summarises it.
+  final String summary;
+
+  /// `ours` — opened here, by the caller — or `external`: begun elsewhere on the machine.
+  final String origin;
+
+  /// The folder it ran in.
+  final String cwd;
+
+  /// The branch it ran on, when the engine recorded one.
+  final String? gitBranch;
+
+  /// When it began, ISO 8601, when the engine recorded it.
+  final String? createdAt;
+
+  /// When it was last written, ISO 8601.
+  final String lastModified;
+
+  /// `liveHere` · `activeElsewhere` · `idle` — the last an estimate, said to be one.
+  final String activity;
+
+  /// The caller's live session that holds it, when it is `liveHere`.
+  final String? liveSessionId;
+
+  /// How long ago it was last written, in whole seconds.
+  final int writtenAgoSeconds;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'conversation': conversation.toJson(),
+      'sessionId': sessionId,
+      'summary': summary,
+      'origin': origin,
+      'cwd': cwd,
+      'gitBranch': gitBranch,
+      'createdAt': createdAt,
+      'lastModified': lastModified,
+      'activity': activity,
+      'liveSessionId': liveSessionId,
+      'writtenAgoSeconds': writtenAgoSeconds,
+    };
+
+    return json;
+  }
+}
+
 /// The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the SDK's joined string.
 class QuestionAnswer {
   const QuestionAnswer({
@@ -535,175 +1133,172 @@ bool questionAnswerLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
-class QuestionInteractionQuestionsItemOptionsItem {
-  const QuestionInteractionQuestionsItemOptionsItem({
-    required this.label,
-    required this.description,
-    this.preview,
+/// The label of a tool call, built by the backend from what the engine sent, which the client translates and never builds (plan 28, D-02). The adapter of the engine is the one that reads the call; a client that met an unknown `messageKey` shows the generic line.
+class ToolLabel {
+  const ToolLabel({
+    required this.messageKey,
+    required this.params,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory QuestionInteractionQuestionsItemOptionsItem.fromJson(Map<String, Object?> json) => QuestionInteractionQuestionsItemOptionsItem(
-        label: json['label']! as String,
-        description: json['description']! as String,
-        preview: json['preview'] as String?,
+  factory ToolLabel.fromJson(Map<String, Object?> json) => ToolLabel(
+        messageKey: json['messageKey']! as String,
+        params: json['params']! as Map<String, Object?>,
       );
 
-  /// Shown and answered exactly as it is — a label ending in "(Recommended)" keeps it, and a screen may highlight it but never pre-select it.
-  final String label;
+  /// An i18n key of `sessions.tool.*`, one per way of labelling a kind — `sessions.tool.fileEdit`, `sessions.tool.searchIn`, `sessions.tool.other`.
+  final String messageKey;
 
-  final String description;
-
-  /// A mockup or a snippet, in markdown, rendered with the safe renderer — never HTML. Absent when the option has none.
-  final String? preview;
+  /// The values the key interpolates, strings and numbers only: a path relative to the session's folder, the lines added and removed, the first line of a command, a pattern, a host, a query, a server and its tool, the engine's own name for a tool of kind `other`.
+  final Map<String, Object?> params;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
-      'label': label,
-      'description': description,
+      'messageKey': messageKey,
+      'params': params,
     };
 
-    if (preview != null) {
-      json['preview'] = preview;
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ToolLabel].
+bool toolLabelLimitsHold(Map<String, Object?> json) {
+  if (json['messageKey'] is String && (json['messageKey']! as String).length > 128) {
+    return false;
+  }
+
+  return true;
+}
+
+/// What a tool call is about, normalised by the adapter of the engine so that a client reads it the same whatever engine made the call. Every field is optional, and a kind sets the ones it has: the paths of a `file.*`, the command of a `shell`, the pattern of a `search`, the URL of a `web.fetch`.
+class ToolSubject {
+  const ToolSubject({
+    this.paths,
+    this.command,
+    this.pattern,
+    this.url,
+    this.query,
+    this.server,
+    this.tool,
+    this.description,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolSubject.fromJson(Map<String, Object?> json) => ToolSubject(
+        paths: json['paths'] == null ? null : (json['paths']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        command: json['command'] as String?,
+        pattern: json['pattern'] as String?,
+        url: json['url'] as String?,
+        query: json['query'] as String?,
+        server: json['server'] as String?,
+        tool: json['tool'] as String?,
+        description: json['description'] as String?,
+      );
+
+  /// The files the call reads or writes, absolute, as the engine gave them.
+  final List<String>? paths;
+
+  /// The whole command line of a `shell` — what the IN of the row shows.
+  final String? command;
+
+  /// What a `search` looks for: the text or the glob.
+  final String? pattern;
+
+  /// The address a `web.fetch` reads.
+  final String? url;
+
+  /// What a `web.search` asks.
+  final String? query;
+
+  /// The MCP server of an `mcp` call.
+  final String? server;
+
+  /// The tool of that MCP server.
+  final String? tool;
+
+  /// What an `agent` was sent to do, in the words the model gave.
+  final String? description;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+    };
+
+    if (paths != null) {
+      json['paths'] = paths;
+    }
+
+    if (command != null) {
+      json['command'] = command;
+    }
+
+    if (pattern != null) {
+      json['pattern'] = pattern;
+    }
+
+    if (url != null) {
+      json['url'] = url;
+    }
+
+    if (query != null) {
+      json['query'] = query;
+    }
+
+    if (server != null) {
+      json['server'] = server;
+    }
+
+    if (tool != null) {
+      json['tool'] = tool;
+    }
+
+    if (description != null) {
+      json['description'] = description;
     }
 
     return json;
   }
 }
 
-/// Whether [json] keeps within the bounds the schema gives [QuestionInteractionQuestionsItemOptionsItem].
-bool questionInteractionQuestionsItemOptionsItemLimitsHold(Map<String, Object?> json) {
-  if (json['label'] is String && (json['label']! as String).length > 200) {
-    return false;
-  }
-
-  if (json['description'] is String && (json['description']! as String).length > 1000) {
-    return false;
-  }
-
-  if (json['preview'] is String && (json['preview']! as String).length > 20000) {
+/// Whether [json] keeps within the bounds the schema gives [ToolSubject].
+bool toolSubjectLimitsHold(Map<String, Object?> json) {
+  if (json['paths'] is List<Object?> && (json['paths']! as List<Object?>).length > 256) {
     return false;
   }
 
   return true;
 }
 
-class QuestionInteractionQuestionsItem {
-  const QuestionInteractionQuestionsItem({
-    required this.id,
-    required this.header,
-    required this.prompt,
-    required this.multiSelect,
-    required this.options,
+/// One event of the history: a frame of the live contract without its envelope — `{ type, payload }`, exactly as `message.completed`, `tool.started` and `tool.completed` arrive on the socket — so a client feeds the history and the live stream through one reducer.
+class TranscriptEvent {
+  const TranscriptEvent({
+    required this.type,
+    required this.payload,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory QuestionInteractionQuestionsItem.fromJson(Map<String, Object?> json) => QuestionInteractionQuestionsItem(
-        id: json['id']! as String,
-        header: json['header']! as String,
-        prompt: json['prompt']! as String,
-        multiSelect: json['multiSelect']! as bool,
-        options: (json['options']! as List<Object?>).map((item) => QuestionInteractionQuestionsItemOptionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+  factory TranscriptEvent.fromJson(Map<String, Object?> json) => TranscriptEvent(
+        type: json['type']! as String,
+        payload: json['payload']! as Map<String, Object?>,
       );
 
-  /// `q1`…`q4`, by position — stable within the request, and what an answer names.
-  final String id;
+  /// A `type` of the live contract.
+  final String type;
 
-  /// The short chip of the question (the SDK asks for 12 characters; the model does not always obey). Cut, never refused.
-  final String header;
-
-  /// The question itself, as Claude wrote it. Text to show, never markup. Cut, never refused.
-  final String prompt;
-
-  /// Several options may be chosen. A single choice is one label, or the free answer (`other`).
-  final bool multiSelect;
-
-  /// What Claude offers. The free answer ("Other") is not here: the screen offers it.
-  final List<QuestionInteractionQuestionsItemOptionsItem> options;
+  /// The payload that `type` carries on the socket.
+  final Map<String, Object?> payload;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
-      'id': id,
-      'header': header,
-      'prompt': prompt,
-      'multiSelect': multiSelect,
-      'options': options.map((item) => item.toJson()).toList(growable: false),
+      'type': type,
+      'payload': payload,
     };
 
     return json;
   }
-}
-
-/// Whether [json] keeps within the bounds the schema gives [QuestionInteractionQuestionsItem].
-bool questionInteractionQuestionsItemLimitsHold(Map<String, Object?> json) {
-  if (json['id'] is String && (json['id']! as String).length > 8) {
-    return false;
-  }
-
-  if (json['header'] is String && (json['header']! as String).length > 60) {
-    return false;
-  }
-
-  if (json['prompt'] is String && (json['prompt']! as String).length > 2000) {
-    return false;
-  }
-
-  if (json['options'] is List<Object?> && (json['options']! as List<Object?>).length > 4) {
-    return false;
-  }
-
-  if (json['options'] is List<Object?> && (json['options']! as List<Object?>).length < 2) {
-    return false;
-  }
-
-  return true;
-}
-
-/// Claude asking the person something (`AskUserQuestion`) rather than asking leave to run a tool, with the questions the backend normalised out of the SDK's input. A client renders this and never reads the SDK's `input` (plan 24).
-class QuestionInteraction {
-  const QuestionInteraction({
-    required this.kind,
-    required this.malformed,
-    required this.questions,
-  });
-
-  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory QuestionInteraction.fromJson(Map<String, Object?> json) => QuestionInteraction(
-        kind: json['kind']! as String,
-        malformed: json['malformed']! as bool,
-        questions: (json['questions']! as List<Object?>).map((item) => QuestionInteractionQuestionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
-      );
-
-  /// The only variant for now. `plan` (for `ExitPlanMode`) would be the second, and the generator has no `oneOf` yet.
-  final String kind;
-
-  /// The SDK's input could not be read safely — no questions or more than four, fewer than two or more than four options, an option with no label, a question with no options, a question repeated, a label repeated within a question. `questions` is then empty, the card offers only a refusal, and an `allow` is refused with `PERMISSION_ANSWERS_INVALID`.
-  final bool malformed;
-
-  /// One to four, in the order Claude asked them; empty when `malformed`.
-  final List<QuestionInteractionQuestionsItem> questions;
-
-  /// A JSON map with the absent optional fields left out.
-  Map<String, Object?> toJson() {
-    final Map<String, Object?> json = <String, Object?>{
-      'kind': kind,
-      'malformed': malformed,
-      'questions': questions.map((item) => item.toJson()).toList(growable: false),
-    };
-
-    return json;
-  }
-}
-
-/// Whether [json] keeps within the bounds the schema gives [QuestionInteraction].
-bool questionInteractionLimitsHold(Map<String, Object?> json) {
-  if (json['questions'] is List<Object?> && (json['questions']! as List<Object?>).length > 4) {
-    return false;
-  }
-
-  return true;
 }
 
 /// A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream.
@@ -805,14 +1400,14 @@ class ConnectionReadyPayload {
   }
 }
 
-/// Answer to `session.attach` — and to a `session.start` whose `resumeSessionId` names a conversation already live for the caller. Says what was replayed and whether anything was lost.
+/// Answer to `session.attach` — and to a `session.start` whose `resumeFrom` names a conversation already live for the caller. Says what was replayed and whether anything was lost.
 class SessionAttachedPayload {
   const SessionAttachedPayload({
     required this.sessionId,
     required this.replayed,
     required this.oldestAvailableSeq,
     required this.gap,
-    this.claudeSessionId,
+    this.conversation,
     this.resumedFrom,
   });
 
@@ -822,8 +1417,8 @@ class SessionAttachedPayload {
         replayed: json['replayed']! as int,
         oldestAvailableSeq: json['oldestAvailableSeq']! as int,
         gap: json['gap']! as bool,
-        claudeSessionId: json['claudeSessionId'] as String?,
-        resumedFrom: json['resumedFrom'] as String?,
+        conversation: json['conversation'] == null ? null : ConversationRef.fromJson(json['conversation']! as Map<String, Object?>),
+        resumedFrom: json['resumedFrom'] == null ? null : ConversationRef.fromJson(json['resumedFrom']! as Map<String, Object?>),
       );
 
   final String sessionId;
@@ -837,11 +1432,11 @@ class SessionAttachedPayload {
   /// The requested sequence had already fallen out of the buffer. The client drops its local state and reloads over HTTP — it never stitches a partial hole.
   final bool gap;
 
-  /// The conversation of a live session of Claude — where a client reloads from after a `gap`, which is exactly when the buffer no longer holds the `session.started` that named it. Absent for a stream that is not a conversation, such as the diagnostic round trip.
-  final String? claudeSessionId;
+  /// The conversation of a live session — where a client reloads from after a `gap`, which is exactly when the buffer no longer holds the `session.started` that named it. Absent for a stream that is not a conversation, such as the diagnostic round trip.
+  final ConversationRef? conversation;
 
   /// The conversation this session continues, when it is a resume. Present on the ack a `session.start` answers with when the conversation it asked to resume was already live for the caller: resuming what is live is an attach, never a second subprocess.
-  final String? resumedFrom;
+  final ConversationRef? resumedFrom;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -852,12 +1447,12 @@ class SessionAttachedPayload {
       'gap': gap,
     };
 
-    if (claudeSessionId != null) {
-      json['claudeSessionId'] = claudeSessionId;
+    if (conversation != null) {
+      json['conversation'] = conversation?.toJson();
     }
 
     if (resumedFrom != null) {
-      json['resumedFrom'] = resumedFrom;
+      json['resumedFrom'] = resumedFrom?.toJson();
     }
 
     return json;
@@ -868,14 +1463,14 @@ class SessionAttachedPayload {
 class TranscriptFollowingPayload {
   const TranscriptFollowingPayload({
     required this.followId,
-    required this.conversationId,
+    required this.conversation,
     required this.activity,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory TranscriptFollowingPayload.fromJson(Map<String, Object?> json) => TranscriptFollowingPayload(
         followId: json['followId']! as String,
-        conversationId: json['conversationId']! as String,
+        conversation: ConversationRef.fromJson(json['conversation']! as Map<String, Object?>),
         activity: json['activity']! as String,
       );
 
@@ -883,7 +1478,7 @@ class TranscriptFollowingPayload {
   final String followId;
 
   /// The conversation being followed.
-  final String conversationId;
+  final ConversationRef conversation;
 
   /// What the conversation is doing now, by the rule of the listing: `activeElsewhere` is an estimate — something wrote to it recently —, never a fact about which client has it open.
   final String activity;
@@ -892,7 +1487,7 @@ class TranscriptFollowingPayload {
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'followId': followId,
-      'conversationId': conversationId,
+      'conversation': conversation.toJson(),
       'activity': activity,
     };
 
@@ -1214,6 +1809,29 @@ class SessionClosePayload {
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory SessionClosePayload.fromJson(Map<String, Object?> json) => SessionClosePayload(
+        sessionId: json['sessionId']! as String,
+      );
+
+  final String sessionId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessionId': sessionId,
+    };
+
+    return json;
+  }
+}
+
+/// Compacts the conversation of a live session (plan 28, B-23). The backend sends the engine's own prompt for it through the queue, so it waits for a running turn and is acknowledged before its turn starts; `session.compacted` says when it happened. Refused with `ENGINE_CAPABILITY_UNAVAILABLE` (409) when the engine has no `compaction`. A slash command the person types still goes as a `session.prompt`: it is the engine that reads it, not us.
+class SessionCompactPayload {
+  const SessionCompactPayload({
+    required this.sessionId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionCompactPayload.fromJson(Map<String, Object?> json) => SessionCompactPayload(
         sessionId: json['sessionId']! as String,
       );
 
@@ -1728,7 +2346,7 @@ class SessionSetPermissionModePayload {
 
   final String sessionId;
 
-  /// The mode to switch to. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured.
+  /// The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused.
   final String mode;
 
   /// A JSON map with the absent optional fields left out.
@@ -1749,7 +2367,8 @@ class SessionStartPayload {
     this.model,
     this.permissionMode,
     this.effort,
-    this.resumeSessionId,
+    this.engine,
+    this.resumeFrom,
     this.forkAt,
   });
 
@@ -1759,7 +2378,8 @@ class SessionStartPayload {
         model: json['model'] as String?,
         permissionMode: json['permissionMode'] as String?,
         effort: json['effort'] as String?,
-        resumeSessionId: json['resumeSessionId'] as String?,
+        engine: json['engine'] as String?,
+        resumeFrom: json['resumeFrom'] == null ? null : ConversationRef.fromJson(json['resumeFrom']! as Map<String, Object?>),
         forkAt: json['forkAt'] as String?,
       );
 
@@ -1769,16 +2389,19 @@ class SessionStartPayload {
   /// Model to open with. Absent means the server default.
   final String? model;
 
-  /// Permission mode to open with. Absent means the server default. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured.
+  /// The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused.
   final String? permissionMode;
 
-  /// How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client.
+  /// How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client. Only a level the engine announces in `capabilities.effortLevels` — any other is `INVALID_INPUT`.
   final String? effort;
 
-  /// Session of the Agent SDK to resume instead of starting fresh.
-  final String? resumeSessionId;
+  /// The engine to open on — an `id` of `GET /engines`. Absent for the installation's default. Ignored by a resume, which opens on the engine of the conversation it continues.
+  final String? engine;
 
-  /// Edit and resend: the `messageId` of the user prompt to rewrite. The conversation `resumeSessionId` names continues from **just before** it, always in a new id — the original stays as it was (plan 08, D-19). A point the conversation does not have is `INVALID_INPUT` (`session.error.forkPointUnknown`); one the CLI refuses is `SESSION_FORK_REJECTED`.
+  /// The conversation to continue instead of starting fresh. Checked by the engine's own rule before anything is spawned: an engine that is not enabled, or an id it never hands out, is `INVALID_INPUT`.
+  final ConversationRef? resumeFrom;
+
+  /// Edit and resend: the `messageId` of the user prompt to rewrite. The conversation `resumeFrom` names continues from **just before** it, always in a new id — the original stays as it was (plan 08, D-19). A point the conversation does not have is `INVALID_INPUT` (`session.error.forkPointUnknown`); one the CLI refuses is `SESSION_FORK_REJECTED`.
   final String? forkAt;
 
   /// A JSON map with the absent optional fields left out.
@@ -1799,8 +2422,12 @@ class SessionStartPayload {
       json['effort'] = effort;
     }
 
-    if (resumeSessionId != null) {
-      json['resumeSessionId'] = resumeSessionId;
+    if (engine != null) {
+      json['engine'] = engine;
+    }
+
+    if (resumeFrom != null) {
+      json['resumeFrom'] = resumeFrom?.toJson();
     }
 
     if (forkAt != null) {
@@ -1813,10 +2440,19 @@ class SessionStartPayload {
 
 /// Whether [json] satisfies the conditional requirements of [SessionStartPayload].
 ///
-/// `resumeSessionId` is also required when `forkAt`
+/// `resumeFrom` is also required when `forkAt`
 /// is present — a fork point is a message of a conversation, and only a resumed conversation has one.
 bool sessionStartPayloadConditionalsHold(Map<String, Object?> json) {
-  if (json['forkAt'] != null && json['resumeSessionId'] is! String) {
+  if (json['forkAt'] != null && json['resumeFrom'] is! Map<String, Object?>) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionStartPayload].
+bool sessionStartPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['engine'] is String && (json['engine']! as String).length > 32) {
     return false;
   }
 
@@ -1869,18 +2505,18 @@ bool sessionToggleMcpServerPayloadLimitsHold(Map<String, Object?> json) {
 /// Starts following a conversation of the history that this backend does not run — begun in the editor or the terminal, and maybe still being written there. Answered with `transcript.following`, which names the subscription; what the transcript gains then arrives as `transcript.appended`, with a `seq` of its own that starts at 1. The first `transcript.appended` carries **everything** after `afterMessageId`, even what was written between the page the client read and this command, so there is no hole between the two. There is **no replay**: after a reconnect the client follows again with the last `lastMessageId` it has. Refused with `INVALID_INPUT` (every invalid field in `details[]`), `NOT_FOUND` for a conversation that does not exist **or** that the caller does not read — the same answer on purpose —, `TRANSCRIPT_FOLLOW_LIVE_HERE` for a conversation a live session of the caller holds (`session.attach` shows it), and `TRANSCRIPT_FOLLOW_LIMIT` past the ceiling of the connection or of the server.
 class TranscriptFollowPayload {
   const TranscriptFollowPayload({
-    required this.conversationId,
+    required this.conversation,
     this.afterMessageId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory TranscriptFollowPayload.fromJson(Map<String, Object?> json) => TranscriptFollowPayload(
-        conversationId: json['conversationId']! as String,
+        conversation: ConversationRef.fromJson(json['conversation']! as Map<String, Object?>),
         afterMessageId: json['afterMessageId'] as String?,
       );
 
-  /// The conversation in Claude's store, a canonical UUID — the `sessionId` of `GET /transcripts/:sessionId/messages`.
-  final String conversationId;
+  /// The conversation to follow — the `engine` and `id` of `GET /transcripts/:engine/:id/messages`.
+  final ConversationRef conversation;
 
   /// The last entry the client has: the `lastMessageId` of the page it read, or of the last `transcript.appended`. Absent when the conversation it read was empty — then everything is new.
   final String? afterMessageId;
@@ -1888,7 +2524,7 @@ class TranscriptFollowPayload {
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
-      'conversationId': conversationId,
+      'conversation': conversation.toJson(),
     };
 
     if (afterMessageId != null) {
@@ -2124,7 +2760,7 @@ class MessageCompletedPayloadContentItem {
         size: json['size'] as int?,
       );
 
-  /// Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result`, `image` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped.
+  /// Block kind, in our names (plan 28, B-30) — `text`, `thinking` (only from an engine with the `thinking` capability), `redactedThinking`, `toolUse`, `toolResult`, `image` — and whatever comes next. Not an enum on purpose: a published app has to survive a kind added after it shipped, and shows it as text it does not know rather than dropping it.
   final String type;
 
   /// The text of a `text` block.
@@ -2343,7 +2979,7 @@ class PermissionRequestedPayloadSuggestionsItem {
   /// An i18n key. The server never sends prose.
   final String labelKey;
 
-  /// What a rule granted with the `exact` reach would match, in the grammar of the Claude Code settings. Kept for clients that do not read `reaches`; absent when there is no `exact` reach.
+  /// What a rule granted with the `exact` reach would match, in the canonical grammar (`<kind>(<matcher>)`, plan 28, B-31). Kept for clients that do not read `reaches`; absent when there is no `exact` reach.
   final String? pattern;
 
   /// How long a rule granted by this suggestion would live, counted from the answer. Present on `project` and `always`; the number is the installation's, never the client's.
@@ -2380,10 +3016,10 @@ class PermissionRequestedPayloadReachesItem {
         patterns: (json['patterns']! as List<Object?>).map((item) => item! as String).toList(growable: false),
       );
 
-  /// `exact` is this very input; `prefix` (shell only) covers every command that starts like each command of this line; `tool` (never shell) is every invocation of the tool.
+  /// `exact` is this very call; `prefix` (`shell` only) covers every command that starts like each command of this line; `tool` (never `shell`) is every call of the kind.
   final String reach;
 
-  /// The rules this reach would leave, one per pattern, in the grammar of the Claude Code settings. Shown in full before anybody confirms.
+  /// The rules this reach would leave, one per pattern, in the canonical grammar — `shell(git status:*)`, `file.edit(src/a.ts)`, `web.fetch(domain:example.com)`, `mcp(srv:tool)`, or the bare kind. Shown in full before anybody confirms; the client treats them as text and never builds one.
   final List<String> patterns;
 
   /// A JSON map with the absent optional fields left out.
@@ -2402,10 +3038,14 @@ class PermissionRequestedPayload {
   const PermissionRequestedPayload({
     required this.requestId,
     required this.toolUseId,
-    required this.toolName,
+    required this.kind,
+    required this.label,
+    required this.subject,
+    required this.changes,
+    required this.origin,
+    required this.rawInput,
     required this.title,
     this.description,
-    required this.input,
     required this.riskHint,
     required this.defaultToNo,
     required this.expiresAt,
@@ -2418,16 +3058,20 @@ class PermissionRequestedPayload {
   factory PermissionRequestedPayload.fromJson(Map<String, Object?> json) => PermissionRequestedPayload(
         requestId: json['requestId']! as String,
         toolUseId: json['toolUseId']! as String,
-        toolName: json['toolName']! as String,
+        kind: json['kind']! as String,
+        label: ToolLabel.fromJson(json['label']! as Map<String, Object?>),
+        subject: ToolSubject.fromJson(json['subject']! as Map<String, Object?>),
+        changes: (json['changes']! as List<Object?>).map((item) => FileChange.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        origin: EngineOrigin.fromJson(json['origin']! as Map<String, Object?>),
+        rawInput: json['rawInput']! as Map<String, Object?>,
         title: json['title']! as String,
         description: json['description'] as String?,
-        input: json['input']! as Map<String, Object?>,
         riskHint: json['riskHint']! as String,
         defaultToNo: json['defaultToNo']! as bool,
         expiresAt: json['expiresAt']! as String,
         suggestions: json['suggestions'] == null ? null : (json['suggestions']! as List<Object?>).map((item) => PermissionRequestedPayloadSuggestionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         reaches: json['reaches'] == null ? null : (json['reaches']! as List<Object?>).map((item) => PermissionRequestedPayloadReachesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
-        interaction: json['interaction'] == null ? null : QuestionInteraction.fromJson(json['interaction']! as Map<String, Object?>),
+        interaction: json['interaction'] == null ? null : Interaction.fromJson(json['interaction']! as Map<String, Object?>),
       );
 
   /// Idempotency is by **this** field, never by `toolUseId`.
@@ -2436,18 +3080,31 @@ class PermissionRequestedPayload {
   /// The invocation this request is about, tying it to the `tool.started` already on screen.
   final String toolUseId;
 
-  final String toolName;
+  /// The canonical kind of the call being asked about, exactly as its `tool.started` carries it — open: an unknown kind is drawn as the generic card.
+  final String kind;
 
-  /// Short label of what is being asked, derived by the backend.
+  /// The label of the call, as its `tool.started` carries it.
+  final ToolLabel label;
+
+  /// What the call is about — the command, the paths, the URL.
+  final ToolSubject subject;
+
+  /// The files the call would change: a non-empty list turns on the preview, which the diff route serves while the request is pending (B-17).
+  final List<FileChange> changes;
+
+  /// The engine and its own name for the tool — opaque, as on `tool.started`.
+  final EngineOrigin origin;
+
+  /// The exact input the call would run with — what is shown is what executes. Opaque: drawn whole, never read field by field (plan 28, D-04).
+  final Map<String, Object?> rawInput;
+
+  /// An i18n key naming what is being asked, by kind — `permission.tool.<kind>` with the dots of the kind removed and the next letter upper-cased (`permission.tool.fileEdit`). A client without the key shows the translated `label`.
   final String title;
 
   /// The detail a human needs to decide — the command line, the path being written.
   final String? description;
 
-  /// The exact input the tool would run with. What is shown is what executes.
-  final Map<String, Object?> input;
-
-  /// Derived in the backend, by a per-tool list **plus** a heuristic over the input, and it fails closed: a command the heuristic does not recognise is marked `destructive`. A false positive is an annoyance; a false negative is the accident.
+  /// Derived in the backend, by the `kind` **plus** a heuristic over a `shell` command, and it fails closed: a command the heuristic does not recognise, and every kind outside the read and write lists, is `destructive`. A false positive is an annoyance; a false negative is the accident.
   final String riskHint;
 
   /// The UI pre-selects refusal. Silence never authorises. `false` only on a question (`interaction`), where the focus goes to the first option.
@@ -2463,16 +3120,20 @@ class PermissionRequestedPayload {
   final List<PermissionRequestedPayloadReachesItem>? reaches;
 
   /// Set when the request is a question rather than a permission. Absent on every other request.
-  final QuestionInteraction? interaction;
+  final Interaction? interaction;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'requestId': requestId,
       'toolUseId': toolUseId,
-      'toolName': toolName,
+      'kind': kind,
+      'label': label.toJson(),
+      'subject': subject.toJson(),
+      'changes': changes.map((item) => item.toJson()).toList(growable: false),
+      'origin': origin.toJson(),
+      'rawInput': rawInput,
       'title': title,
-      'input': input,
       'riskHint': riskHint,
       'defaultToNo': defaultToNo,
       'expiresAt': expiresAt,
@@ -2496,6 +3157,19 @@ class PermissionRequestedPayload {
 
     return json;
   }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRequestedPayload].
+bool permissionRequestedPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['kind'] is String && (json['kind']! as String).length > 64) {
+    return false;
+  }
+
+  if (json['changes'] is List<Object?> && (json['changes']! as List<Object?>).length > 256) {
+    return false;
+  }
+
+  return true;
 }
 
 /// A permission request is settled. It reaches **every** connection, including the one that answered — that is how a second client learns it lost the race, and who won it.
@@ -2541,7 +3215,7 @@ class PermissionResolvedPayload {
   /// The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`.
   final String? toolUseId;
 
-  /// Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), or the session running in Permitir tudo (`allowAll`). Absent when a human answered or the deadline passed.
+  /// Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), the session running in Permitir tudo (`allowAll`), or a call that changes something refused because the session is read-only (`readOnly`, plan 28, B-26). Absent when a human answered or the deadline passed.
   final String? via;
 
   /// What the person answered, when the request was a question and the decision `allow` — what lets another screen show the question answered, and the tool's line say what was chosen.
@@ -2984,15 +3658,17 @@ class SessionRewoundPayload {
   }
 }
 
-/// The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006).
+/// The session is open and its engine has initialised. Normalised by the adapter of the engine — the engine's own message is never emitted raw (ADR-006, ADR-025).
 class SessionStartedPayload {
   const SessionStartedPayload({
     required this.sessionId,
     required this.workspacePath,
     required this.model,
     required this.permissionMode,
-    required this.claudeSessionId,
+    required this.engine,
+    required this.conversation,
     this.resumedFrom,
+    required this.capabilities,
     this.effort,
     this.outputStyle,
     this.defaultsFrom,
@@ -3004,8 +3680,10 @@ class SessionStartedPayload {
         workspacePath: json['workspacePath']! as String,
         model: json['model']! as String,
         permissionMode: json['permissionMode']! as String,
-        claudeSessionId: json['claudeSessionId']! as String,
-        resumedFrom: json['resumedFrom'] as String?,
+        engine: json['engine']! as String,
+        conversation: ConversationRef.fromJson(json['conversation']! as Map<String, Object?>),
+        resumedFrom: json['resumedFrom'] == null ? null : ConversationRef.fromJson(json['resumedFrom']! as Map<String, Object?>),
+        capabilities: EngineCapabilities.fromJson(json['capabilities']! as Map<String, Object?>),
         effort: json['effort'] as String?,
         outputStyle: json['outputStyle'] as String?,
         defaultsFrom: json['defaultsFrom'] as String?,
@@ -3018,14 +3696,20 @@ class SessionStartedPayload {
 
   final String model;
 
-  /// The permission mode. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured.
+  /// The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused.
   final String permissionMode;
 
-  /// The id of the conversation in Claude's store, which is not ours: it is what `GET /transcripts/:sessionId/messages` reads and what a later `session.start` takes as `resumeSessionId`. Equal to `resumedFrom` when one of our own conversations is continued in place; new when a conversation begun elsewhere is forked.
-  final String claudeSessionId;
+  /// The engine the session runs on — an `id` of `GET /engines`, whose `displayName` is how a screen names it. The client never decides by it.
+  final String engine;
+
+  /// The conversation the session is: what `GET /transcripts/:engine/:id/messages` reads, and what a later `session.start` takes as `resumeFrom`. Equal to `resumedFrom` when one of our own conversations is continued in place; new when a conversation begun elsewhere is forked.
+  final ConversationRef conversation;
 
   /// The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP — the replay buffer only ever holds what this session said.
-  final String? resumedFrom;
+  final ConversationRef? resumedFrom;
+
+  /// What this session can do. The client hides what it cannot.
+  final EngineCapabilities capabilities;
 
   /// How hard the model thinks for the life of the session, when one was chosen — by the client, a folder's default or the user's. Absent for the model's own default.
   final String? effort;
@@ -3043,11 +3727,13 @@ class SessionStartedPayload {
       'workspacePath': workspacePath,
       'model': model,
       'permissionMode': permissionMode,
-      'claudeSessionId': claudeSessionId,
+      'engine': engine,
+      'conversation': conversation.toJson(),
+      'capabilities': capabilities.toJson(),
     };
 
     if (resumedFrom != null) {
-      json['resumedFrom'] = resumedFrom;
+      json['resumedFrom'] = resumedFrom?.toJson();
     }
 
     if (effort != null) {
@@ -3099,6 +3785,100 @@ class SessionStatusChangedPayload {
   }
 }
 
+class SessionTasksChangedPayloadTasksItem {
+  const SessionTasksChangedPayloadTasksItem({
+    required this.id,
+    required this.title,
+    this.activeTitle,
+    required this.status,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionTasksChangedPayloadTasksItem.fromJson(Map<String, Object?> json) => SessionTasksChangedPayloadTasksItem(
+        id: json['id']! as String,
+        title: json['title']! as String,
+        activeTitle: json['activeTitle'] as String?,
+        status: json['status']! as String,
+      );
+
+  /// Opaque and stable for the life of the task — what a client keys a task by between two lists.
+  final String id;
+
+  /// What the task is.
+  final String title;
+
+  /// What the task is called while it runs ("Running the tests"). Absent when the agent gave none: the client shows the `title`.
+  final String? activeTitle;
+
+  final String status;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'title': title,
+      'status': status,
+    };
+
+    if (activeTitle != null) {
+      json['activeTitle'] = activeTitle;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionTasksChangedPayloadTasksItem].
+bool sessionTasksChangedPayloadTasksItemLimitsHold(Map<String, Object?> json) {
+  if (json['id'] is String && (json['id']! as String).length > 2000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// The agent's task list changed: the whole list, as it is now, after a call of the main conversation that changed it ended well (plan 28, B-22). Read by the adapter of the engine from its own tools — a client draws it and never rebuilds it. A session event with its `seq`, so it is replayed; in the history (`transcript.appended`, `GET /transcripts/…/messages`) it follows the `tool.completed` of the call, by the same function as live. Only for an engine with the `taskList` capability.
+class SessionTasksChangedPayload {
+  const SessionTasksChangedPayload({
+    required this.tasks,
+    this.at,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionTasksChangedPayload.fromJson(Map<String, Object?> json) => SessionTasksChangedPayload(
+        tasks: (json['tasks']! as List<Object?>).map((item) => SessionTasksChangedPayloadTasksItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        at: json['at'] as String?,
+      );
+
+  /// Every task, in the agent's order. Empty when the agent cleared the list.
+  final List<SessionTasksChangedPayloadTasksItem> tasks;
+
+  /// When the call that changed the list was written, ISO 8601 — on the history only, like the `at` of the `tool.completed` it follows. Absent live, where the frame's `ts` is the clock.
+  final String? at;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'tasks': tasks.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    if (at != null) {
+      json['at'] = at;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionTasksChangedPayload].
+bool sessionTasksChangedPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['tasks'] is List<Object?> && (json['tasks']! as List<Object?>).length > 500) {
+    return false;
+  }
+
+  return true;
+}
+
 /// On an `AskUserQuestion` of the **history** (`transcript.appended`, the follower): the questions, normalised, and how they ended — joined by `toolUseId` with what the backend recorded. Live, a screen already has the `permission.requested` and `permission.resolved`, and this is absent.
 class ToolCompletedPayloadQuestion {
   const ToolCompletedPayloadQuestion({
@@ -3110,14 +3890,14 @@ class ToolCompletedPayloadQuestion {
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory ToolCompletedPayloadQuestion.fromJson(Map<String, Object?> json) => ToolCompletedPayloadQuestion(
-        interaction: QuestionInteraction.fromJson(json['interaction']! as Map<String, Object?>),
+        interaction: Interaction.fromJson(json['interaction']! as Map<String, Object?>),
         outcome: json['outcome'] as String?,
         answers: json['answers'] == null ? null : (json['answers']! as List<Object?>).map((item) => QuestionAnswer.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         reason: json['reason'] as String?,
       );
 
   /// The questions, normalised as the request carried them.
-  final QuestionInteraction interaction;
+  final Interaction interaction;
 
   /// Absent when the backend has no record of it — a session answered in another client — and the line shows the questions and the `summary`.
   final String? outcome;
@@ -3159,7 +3939,7 @@ bool toolCompletedPayloadQuestionLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
-/// A tool invocation ended, from the `tool_result` the SDK reports on a `user` message.
+/// A tool invocation ended, from the result the engine reported. It carries no `kind` nor `label`: the `tool.started` of the same `toolUseId` always came first, live and in the history, and the client has them from it (plan 28, D-28).
 class ToolCompletedPayload {
   const ToolCompletedPayload({
     required this.toolUseId,
@@ -3190,10 +3970,10 @@ class ToolCompletedPayload {
   /// A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:sessionId/tools/:toolUseId/result`.
   final String? summary;
 
-  /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
+  /// Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation.
   final String? parentToolUseId;
 
-  /// The task of the list a `TaskCreate` made or a `TaskUpdate` changed — taken from the tool's structured result live, and from its result in the history. Absent for every other tool. The `summary` is the CLI's text, cut, and never carries it reliably (plan 08, B-20).
+  /// The task a call that creates or changes one made or changed, taken from the call's result. Kept for the previous protocol, whose clients rebuild the list themselves; the list is `session.tasksChanged` now (plan 28, B-22), and this goes with the window, in F7 (B-47).
   final String? taskId;
 
   /// When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for.
@@ -3233,7 +4013,7 @@ class ToolCompletedPayload {
   }
 }
 
-/// Output of a tool while it is still running, from the SDK's `tool_progress`.
+/// A tool is still running: how long it has been at it, from the engine. The text of the row is the client's, from the `label` of the `tool.started` with the same `toolUseId`.
 class ToolProgressPayload {
   const ToolProgressPayload({
     required this.toolUseId,
@@ -3250,10 +4030,10 @@ class ToolProgressPayload {
 
   final String toolUseId;
 
-  /// This fragment of the output, and only this one.
+  /// The elapsed time, as `<seconds>s` — never the tool's name, which the client already has as the `label` of the `tool.started` (plan 28, S-48).
   final String chunk;
 
-  /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
+  /// Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation.
   final String? parentToolUseId;
 
   /// A JSON map with the absent optional fields left out.
@@ -3275,8 +4055,13 @@ class ToolProgressPayload {
 class ToolStartedPayload {
   const ToolStartedPayload({
     required this.toolUseId,
-    required this.toolName,
-    required this.input,
+    required this.kind,
+    required this.label,
+    required this.subject,
+    required this.changes,
+    required this.origin,
+    required this.rawInput,
+    this.interaction,
     this.title,
     this.parentToolUseId,
     this.at,
@@ -3285,25 +4070,46 @@ class ToolStartedPayload {
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory ToolStartedPayload.fromJson(Map<String, Object?> json) => ToolStartedPayload(
         toolUseId: json['toolUseId']! as String,
-        toolName: json['toolName']! as String,
-        input: json['input']! as Map<String, Object?>,
+        kind: json['kind']! as String,
+        label: ToolLabel.fromJson(json['label']! as Map<String, Object?>),
+        subject: ToolSubject.fromJson(json['subject']! as Map<String, Object?>),
+        changes: (json['changes']! as List<Object?>).map((item) => FileChange.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        origin: EngineOrigin.fromJson(json['origin']! as Map<String, Object?>),
+        rawInput: json['rawInput']! as Map<String, Object?>,
+        interaction: json['interaction'] == null ? null : Interaction.fromJson(json['interaction']! as Map<String, Object?>),
         title: json['title'] as String?,
         parentToolUseId: json['parentToolUseId'] as String?,
         at: json['at'] as String?,
       );
 
-  /// The SDK's id for this invocation. It is what ties started, progress and completed together.
+  /// The engine's id for this invocation. It is what ties started, progress and completed together.
   final String toolUseId;
 
-  final String toolName;
+  /// The canonical kind of the tool, decided by the adapter of the engine: `file.read`, `file.edit`, `file.write`, `file.delete`, `file.move`, `search`, `shell`, `shell.output`, `web.fetch`, `web.search`, `mcp`, `agent`, `question`, `plan`, `tasks`, `other`. **Open**: a kind the client does not know is drawn as the generic line, never an error (ADR-025).
+  final String kind;
 
-  /// The exact input the tool was called with.
-  final Map<String, Object?> input;
+  /// The label of the row, built by the backend.
+  final ToolLabel label;
 
-  /// A short human label for the invocation, already derived by the backend: the `description` the model gave the call (`Bash` always carries one), when it is non-blank text. Absent otherwise, and the client labels the tool as it did before.
+  /// What the call is about, normalised.
+  final ToolSubject subject;
+
+  /// The files the call changes — what turns on the diff. Empty for a kind that changes no file.
+  final List<FileChange> changes;
+
+  /// The engine and its own name for the tool — opaque.
+  final EngineOrigin origin;
+
+  /// The exact input the tool was called with, **opaque**: shown whole as the exact input and exported, and no client reads a field of it (plan 28, D-04). Everything a client draws comes from `label`, `subject` and `changes`.
+  final Map<String, Object?> rawInput;
+
+  /// On a `question` or a `plan`: what it asks, normalised by the adapter — the same the `permission.requested` of the call carries, so the history draws it without the raw input (plan 28, B-21). Absent on every other kind.
+  final Interaction? interaction;
+
+  /// A short human label for the invocation, already derived by the backend: the description the model gave the call, when it is non-blank text. Absent otherwise, and the client shows the `label` alone.
   final String? title;
 
-  /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
+  /// Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation.
   final String? parentToolUseId;
 
   /// When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for.
@@ -3313,9 +4119,17 @@ class ToolStartedPayload {
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'toolUseId': toolUseId,
-      'toolName': toolName,
-      'input': input,
+      'kind': kind,
+      'label': label.toJson(),
+      'subject': subject.toJson(),
+      'changes': changes.map((item) => item.toJson()).toList(growable: false),
+      'origin': origin.toJson(),
+      'rawInput': rawInput,
     };
+
+    if (interaction != null) {
+      json['interaction'] = interaction?.toJson();
+    }
 
     if (title != null) {
       json['title'] = title;
@@ -3331,6 +4145,19 @@ class ToolStartedPayload {
 
     return json;
   }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ToolStartedPayload].
+bool toolStartedPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['kind'] is String && (json['kind']! as String).length > 64) {
+    return false;
+  }
+
+  if (json['changes'] is List<Object?> && (json['changes']! as List<Object?>).length > 256) {
+    return false;
+  }
+
+  return true;
 }
 
 class TranscriptAppendedPayloadEventsItem {
@@ -3364,7 +4191,7 @@ class TranscriptAppendedPayloadEventsItem {
 class TranscriptAppendedPayload {
   const TranscriptAppendedPayload({
     required this.followId,
-    required this.conversationId,
+    required this.conversation,
     required this.events,
     this.lastMessageId,
     required this.activity,
@@ -3374,7 +4201,7 @@ class TranscriptAppendedPayload {
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory TranscriptAppendedPayload.fromJson(Map<String, Object?> json) => TranscriptAppendedPayload(
         followId: json['followId']! as String,
-        conversationId: json['conversationId']! as String,
+        conversation: ConversationRef.fromJson(json['conversation']! as Map<String, Object?>),
         events: (json['events']! as List<Object?>).map((item) => TranscriptAppendedPayloadEventsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         lastMessageId: json['lastMessageId'] as String?,
         activity: json['activity']! as String,
@@ -3383,7 +4210,8 @@ class TranscriptAppendedPayload {
 
   final String followId;
 
-  final String conversationId;
+  /// The conversation the entries are of.
+  final ConversationRef conversation;
 
   /// The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:sessionId/messages` carries, oldest first, in the order of the SDK's chain and never of the clock. A client folds them with the same reducer as the page.
   final List<TranscriptAppendedPayloadEventsItem> events;
@@ -3401,7 +4229,7 @@ class TranscriptAppendedPayload {
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'followId': followId,
-      'conversationId': conversationId,
+      'conversation': conversation.toJson(),
       'events': events.map((item) => item.toJson()).toList(growable: false),
       'activity': activity,
       'working': working,
@@ -3419,20 +4247,21 @@ class TranscriptAppendedPayload {
 class TranscriptResetPayload {
   const TranscriptResetPayload({
     required this.followId,
-    required this.conversationId,
+    required this.conversation,
     required this.reason,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory TranscriptResetPayload.fromJson(Map<String, Object?> json) => TranscriptResetPayload(
         followId: json['followId']! as String,
-        conversationId: json['conversationId']! as String,
+        conversation: ConversationRef.fromJson(json['conversation']! as Map<String, Object?>),
         reason: json['reason']! as String,
       );
 
   final String followId;
 
-  final String conversationId;
+  /// The conversation that was reset.
+  final ConversationRef conversation;
 
   /// `rewritten` — the entry the client had is no longer in the chain: a rewind, a compaction or a fork rebuilt it; `gone` — the store no longer has the conversation.
   final String reason;
@@ -3441,7 +4270,7 @@ class TranscriptResetPayload {
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'followId': followId,
-      'conversationId': conversationId,
+      'conversation': conversation.toJson(),
       'reason': reason,
     };
 
@@ -3449,13 +4278,114 @@ class TranscriptResetPayload {
   }
 }
 
-/// A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost.
+/// What the turn used, in our names (plan 28, B-29) — each count present only when the engine reports it; an empty object when it reports none.
+class TurnCompletedPayloadUsage {
+  const TurnCompletedPayloadUsage({
+    this.inputTokens,
+    this.outputTokens,
+    this.cacheReadTokens,
+    this.cacheWriteTokens,
+    this.reasoningTokens,
+    this.webSearches,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TurnCompletedPayloadUsage.fromJson(Map<String, Object?> json) => TurnCompletedPayloadUsage(
+        inputTokens: json['inputTokens'] as int?,
+        outputTokens: json['outputTokens'] as int?,
+        cacheReadTokens: json['cacheReadTokens'] as int?,
+        cacheWriteTokens: json['cacheWriteTokens'] as int?,
+        reasoningTokens: json['reasoningTokens'] as int?,
+        webSearches: json['webSearches'] as int?,
+      );
+
+  /// Tokens read as new input.
+  final int? inputTokens;
+
+  /// Tokens written.
+  final int? outputTokens;
+
+  /// Input tokens read from the cache.
+  final int? cacheReadTokens;
+
+  /// Input tokens written to the cache.
+  final int? cacheWriteTokens;
+
+  /// Tokens spent reasoning, when the engine counts them apart (plan 28, D-17).
+  final int? reasoningTokens;
+
+  /// Web searches the turn made, when the engine counts them (D-17).
+  final int? webSearches;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+    };
+
+    if (inputTokens != null) {
+      json['inputTokens'] = inputTokens;
+    }
+
+    if (outputTokens != null) {
+      json['outputTokens'] = outputTokens;
+    }
+
+    if (cacheReadTokens != null) {
+      json['cacheReadTokens'] = cacheReadTokens;
+    }
+
+    if (cacheWriteTokens != null) {
+      json['cacheWriteTokens'] = cacheWriteTokens;
+    }
+
+    if (reasoningTokens != null) {
+      json['reasoningTokens'] = reasoningTokens;
+    }
+
+    if (webSearches != null) {
+      json['webSearches'] = webSearches;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [TurnCompletedPayloadUsage].
+bool turnCompletedPayloadUsageLimitsHold(Map<String, Object?> json) {
+  if (json['inputTokens'] is int && (json['inputTokens']! as int) < 0) {
+    return false;
+  }
+
+  if (json['outputTokens'] is int && (json['outputTokens']! as int) < 0) {
+    return false;
+  }
+
+  if (json['cacheReadTokens'] is int && (json['cacheReadTokens']! as int) < 0) {
+    return false;
+  }
+
+  if (json['cacheWriteTokens'] is int && (json['cacheWriteTokens']! as int) < 0) {
+    return false;
+  }
+
+  if (json['reasoningTokens'] is int && (json['reasoningTokens']! as int) < 0) {
+    return false;
+  }
+
+  if (json['webSearches'] is int && (json['webSearches']! as int) < 0) {
+    return false;
+  }
+
+  return true;
+}
+
+/// A turn finished. It is what closes the turn in the UI and what carries what it used and, when the engine says, what it cost.
 class TurnCompletedPayload {
   const TurnCompletedPayload({
     required this.turnId,
     this.promptedBy,
     required this.usage,
-    required this.costUsd,
+    this.costUsd,
     required this.durationMs,
   });
 
@@ -3463,8 +4393,8 @@ class TurnCompletedPayload {
   factory TurnCompletedPayload.fromJson(Map<String, Object?> json) => TurnCompletedPayload(
         turnId: json['turnId']! as String,
         promptedBy: json['promptedBy'] as String?,
-        usage: json['usage']! as Map<String, Object?>,
-        costUsd: json['costUsd']! as String,
+        usage: TurnCompletedPayloadUsage.fromJson(json['usage']! as Map<String, Object?>),
+        costUsd: json['costUsd'] as String?,
         durationMs: json['durationMs']! as int,
       );
 
@@ -3473,11 +4403,11 @@ class TurnCompletedPayload {
   /// Who sent the prompt this turn answered.
   final String? promptedBy;
 
-  /// Token counts as the SDK reports them. An open map on purpose — the SDK adds fields to it, and a closed shape here would drop them.
-  final Map<String, Object?> usage;
+  /// What the turn used, in our names (plan 28, B-29) — each count present only when the engine reports it; an empty object when it reports none.
+  final TurnCompletedPayloadUsage usage;
 
-  /// Cost of the turn, as a decimal string. A string and not a number because money through a float is money that rounds where nobody looked.
-  final String costUsd;
+  /// Cost of the turn in US dollars, as a decimal string — absent when the engine reports no cost (`capabilities.cost: none`). Zero is `"0.000000"`, never absent. A string and not a number because money through a float is money that rounds where nobody looked.
+  final String? costUsd;
 
   final int durationMs;
 
@@ -3485,13 +4415,16 @@ class TurnCompletedPayload {
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'turnId': turnId,
-      'usage': usage,
-      'costUsd': costUsd,
+      'usage': usage.toJson(),
       'durationMs': durationMs,
     };
 
     if (promptedBy != null) {
       json['promptedBy'] = promptedBy;
+    }
+
+    if (costUsd != null) {
+      json['costUsd'] = costUsd;
     }
 
     return json;
@@ -3503,6 +4436,7 @@ class WorkspaceFilesChangedPayloadChangesItem {
     required this.path,
     required this.kind,
     this.origin,
+    this.engine,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -3510,6 +4444,7 @@ class WorkspaceFilesChangedPayloadChangesItem {
         path: json['path']! as String,
         kind: json['kind']! as String,
         origin: json['origin'] as String?,
+        engine: json['engine'] as String?,
       );
 
   /// Relative to the folder, POSIX.
@@ -3517,8 +4452,11 @@ class WorkspaceFilesChangedPayloadChangesItem {
 
   final String kind;
 
-  /// Who changed it, as far as the server can tell: a write of Claude's, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say.
+  /// Who changed it, as far as the server can tell: a write of the agent of a session, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say. (`claude` until plan 28, B-25; a connection of the previous protocol still reads that.)
   final String? origin;
+
+  /// On `agent`: the engine whose agent wrote it — an `id` of `GET /engines`, opaque, for naming the agent in the text. Absent on every other origin.
+  final String? engine;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -3531,8 +4469,21 @@ class WorkspaceFilesChangedPayloadChangesItem {
       json['origin'] = origin;
     }
 
+    if (engine != null) {
+      json['engine'] = engine;
+    }
+
     return json;
   }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [WorkspaceFilesChangedPayloadChangesItem].
+bool workspaceFilesChangedPayloadChangesItemLimitsHold(Map<String, Object?> json) {
+  if (json['engine'] is String && (json['engine']! as String).length > 32) {
+    return false;
+  }
+
+  return true;
 }
 
 /// What changed on disk in a folder being followed, coalesced. The frame's `seq` belongs to the subscription, not to any session: monotonic per `watchId`, from 1, and never replayed. A client that is not following this `watchId` — the mobile app never asks to — ignores it, and never lets its `seq` move the resume point of a session.
@@ -3597,6 +4548,610 @@ class WorkspaceWatchStoppedPayload {
       'watchId': watchId,
       'reason': reason,
     };
+
+    return json;
+  }
+}
+
+class ContextUsePayloadCategoriesItem {
+  const ContextUsePayloadCategoriesItem({
+    required this.id,
+    this.messageKey,
+    this.text,
+    required this.name,
+    required this.tokens,
+    required this.kind,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ContextUsePayloadCategoriesItem.fromJson(Map<String, Object?> json) => ContextUsePayloadCategoriesItem(
+        id: json['id']! as String,
+        messageKey: json['messageKey'] as String?,
+        text: json['text'] as String?,
+        name: json['name']! as String,
+        tokens: json['tokens']! as int,
+        kind: json['kind']! as String,
+      );
+
+  /// `system`, `tools`, `messages`, `memory`, `free` or `reserved` — the canonical categories, each with a `messageKey` — or an id of the engine's own, opaque, for what only it counts apart.
+  final String id;
+
+  /// The key that names a canonical category, `sessions.context.<id>`. Absent otherwise: the client shows `text`.
+  final String? messageKey;
+
+  /// The engine's own name for a category with no key — its words, shown as they are. Absent on a canonical one.
+  final String? text;
+
+  /// The engine's own name, always — kept for the clients of the previous protocol, which read it for an id they do not know (plan 28, D-22). Goes with the window, in F7.
+  final String name;
+
+  final int tokens;
+
+  /// What the category is: in use, free, kept aside, or deferred until needed.
+  final String kind;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'name': name,
+      'tokens': tokens,
+      'kind': kind,
+    };
+
+    if (messageKey != null) {
+      json['messageKey'] = messageKey;
+    }
+
+    if (text != null) {
+      json['text'] = text;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ContextUsePayloadCategoriesItem].
+bool contextUsePayloadCategoriesItemLimitsHold(Map<String, Object?> json) {
+  if (json['id'] is String && (json['id']! as String).length > 128) {
+    return false;
+  }
+
+  if (json['messageKey'] is String && (json['messageKey']! as String).length > 128) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `GET /sessions/:sessionId/context`: how full the context window of a live session is, by category, against the window of its model (plan 08, B-37; plan 28, B-24). `409 ENGINE_CAPABILITY_UNAVAILABLE` when the engine has no `contextUse`.
+class ContextUsePayload {
+  const ContextUsePayload({
+    required this.model,
+    required this.totalTokens,
+    required this.maxTokens,
+    required this.percentage,
+    required this.categories,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ContextUsePayload.fromJson(Map<String, Object?> json) => ContextUsePayload(
+        model: json['model']! as String,
+        totalTokens: json['totalTokens']! as int,
+        maxTokens: json['maxTokens']! as int,
+        percentage: json['percentage']! as int,
+        categories: (json['categories']! as List<Object?>).map((item) => ContextUsePayloadCategoriesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// The model whose window this is.
+  final String model;
+
+  /// What the conversation takes now.
+  final int totalTokens;
+
+  /// The size of the window.
+  final int maxTokens;
+
+  /// How full it is, 0 to 100.
+  final int percentage;
+
+  /// What the window holds, by category.
+  final List<ContextUsePayloadCategoriesItem> categories;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'model': model,
+      'totalTokens': totalTokens,
+      'maxTokens': maxTokens,
+      'percentage': percentage,
+      'categories': categories.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ContextUsePayload].
+bool contextUsePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['categories'] is List<Object?> && (json['categories']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  return true;
+}
+
+class EngineListPayloadEnginesItem {
+  const EngineListPayloadEnginesItem({
+    required this.id,
+    required this.displayName,
+    required this.state,
+    required this.reason,
+    required this.version,
+    required this.capabilities,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EngineListPayloadEnginesItem.fromJson(Map<String, Object?> json) => EngineListPayloadEnginesItem(
+        id: json['id']! as String,
+        displayName: json['displayName']! as String,
+        state: json['state']! as String,
+        reason: json['reason'] as String?,
+        version: json['version'] as String?,
+        capabilities: EngineCapabilities.fromJson(json['capabilities']! as Map<String, Object?>),
+      );
+
+  /// The name the contract carries in `engine` and in every `ConversationRef`.
+  final String id;
+
+  /// How a screen names the engine: a proper noun, never translated — the `{agent}` of a string.
+  final String displayName;
+
+  /// Whether it can open a session now.
+  final String state;
+
+  /// Why it is unavailable, as a key the client translates; `null` when available.
+  final String? reason;
+
+  /// The version of the binary the engine drives, or `null` when it could not tell.
+  final String? version;
+
+  /// What the engine can do.
+  final EngineCapabilities capabilities;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'displayName': displayName,
+      'state': state,
+      'reason': reason,
+      'version': version,
+      'capabilities': capabilities.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// What `GET /engines` answers: the coding agents this installation drives, the default first, and what each can do — before a session exists (plan 28, B-12; ADR-025). Nothing is spawned, no quota is spent, and no credential is part of it.
+class EngineListPayload {
+  const EngineListPayload({
+    required this.defaultEngine,
+    required this.engines,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EngineListPayload.fromJson(Map<String, Object?> json) => EngineListPayload(
+        defaultEngine: json['defaultEngine']! as String,
+        engines: (json['engines']! as List<Object?>).map((item) => EngineListPayloadEnginesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// The engine a session opens on when the client names none.
+  final String defaultEngine;
+
+  /// The engines enabled, in the order the configuration lists them.
+  final List<EngineListPayloadEnginesItem> engines;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'defaultEngine': defaultEngine,
+      'engines': engines.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// What `GET /transcripts/:engine/:id/subagents/:toolUseId/messages` answers: a page of what a subagent said, from the tail (plan 28, B-12).
+class SubagentPagePayload {
+  const SubagentPagePayload({
+    required this.events,
+    required this.nextCursor,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SubagentPagePayload.fromJson(Map<String, Object?> json) => SubagentPagePayload(
+        events: (json['events']! as List<Object?>).map((item) => TranscriptEvent.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        nextCursor: json['nextCursor'] as String?,
+      );
+
+  /// What the subagent said in this page, oldest first — the same frames as a page of its parent.
+  final List<TranscriptEvent> events;
+
+  /// The message the earlier page of the subagent starts from; `null` once its first message is in.
+  final String? nextCursor;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'events': events.map((item) => item.toJson()).toList(growable: false),
+      'nextCursor': nextCursor,
+    };
+
+    return json;
+  }
+}
+
+/// What is known of the file before the call.
+class ToolDiffPayloadBefore {
+  const ToolDiffPayloadBefore({
+    required this.state,
+    this.content,
+    this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolDiffPayloadBefore.fromJson(Map<String, Object?> json) => ToolDiffPayloadBefore(
+        state: json['state']! as String,
+        content: json['content'] as String?,
+        reason: json['reason'] as String?,
+      );
+
+  final String state;
+
+  /// The text, on `content`.
+  final String? content;
+
+  /// Why it is not known: on `unavailable`, `laterTouch` (an earlier write of the same turn reached the file) or `noSnapshot`; on `notRestorable`, `tooLarge` or `unreadable`.
+  final String? reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'state': state,
+    };
+
+    if (content != null) {
+      json['content'] = content;
+    }
+
+    if (reason != null) {
+      json['reason'] = reason;
+    }
+
+    return json;
+  }
+}
+
+/// What is known of the file after the call — or after it would run.
+class ToolDiffPayloadAfter {
+  const ToolDiffPayloadAfter({
+    required this.state,
+    this.content,
+    this.reason,
+    this.edit,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolDiffPayloadAfter.fromJson(Map<String, Object?> json) => ToolDiffPayloadAfter(
+        state: json['state']! as String,
+        content: json['content'] as String?,
+        reason: json['reason'] as String?,
+        edit: json['edit'] as int?,
+      );
+
+  final String state;
+
+  /// The text, on `content`.
+  final String? content;
+
+  /// Why it is not known, on `unavailable`: the session wrote the file again (`laterWrite`), somebody else did (`changedSince`), or — pending — a replacement would not apply, its text not there (`editMissing`) or there more than once (`editAmbiguous`).
+  final String? reason;
+
+  /// Which replacement would not apply, from 0 — on `editMissing` and `editAmbiguous`.
+  final int? edit;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'state': state,
+    };
+
+    if (content != null) {
+      json['content'] = content;
+    }
+
+    if (reason != null) {
+      json['reason'] = reason;
+    }
+
+    if (edit != null) {
+      json['edit'] = edit;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ToolDiffPayloadAfter].
+bool toolDiffPayloadAfterLimitsHold(Map<String, Object?> json) {
+  if (json['edit'] is int && (json['edit']! as int) < 0) {
+    return false;
+  }
+
+  return true;
+}
+
+class ToolDiffPayloadHunksItemLinesItem {
+  const ToolDiffPayloadHunksItemLinesItem({
+    required this.kind,
+    required this.text,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolDiffPayloadHunksItemLinesItem.fromJson(Map<String, Object?> json) => ToolDiffPayloadHunksItemLinesItem(
+        kind: json['kind']! as String,
+        text: json['text']! as String,
+      );
+
+  final String kind;
+
+  /// Without its line break.
+  final String text;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kind': kind,
+      'text': text,
+    };
+
+    return json;
+  }
+}
+
+class ToolDiffPayloadHunksItem {
+  const ToolDiffPayloadHunksItem({
+    required this.id,
+    required this.oldStart,
+    required this.oldLines,
+    required this.newStart,
+    required this.newLines,
+    required this.lines,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolDiffPayloadHunksItem.fromJson(Map<String, Object?> json) => ToolDiffPayloadHunksItem(
+        id: json['id']! as String,
+        oldStart: json['oldStart']! as int,
+        oldLines: json['oldLines']! as int,
+        newStart: json['newStart']! as int,
+        newLines: json['newLines']! as int,
+        lines: (json['lines']! as List<Object?>).map((item) => ToolDiffPayloadHunksItemLinesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// Names the hunk for a rejection; the same texts give the same ids.
+  final String id;
+
+  /// The first line of the hunk on the old side, from 1 — or where it inserts.
+  final int oldStart;
+
+  final int oldLines;
+
+  final int newStart;
+
+  final int newLines;
+
+  final List<ToolDiffPayloadHunksItemLinesItem> lines;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'oldStart': oldStart,
+      'oldLines': oldLines,
+      'newStart': newStart,
+      'newLines': newLines,
+      'lines': lines.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /sessions/:sessionId/tools/:toolUseId/diff`: the diff of one tool call of a live session — of what it did, or, while its permission request is pending, of what it would do, the disk now against the disk with the change applied (plan 28, B-17). Served for a call whose `changes` write one file; any other is `422 DIFF_NOT_APPLICABLE`. One side may be unknown, and the answer says which and why rather than inventing it.
+class ToolDiffPayload {
+  const ToolDiffPayload({
+    required this.path,
+    required this.kind,
+    required this.pending,
+    required this.scope,
+    required this.before,
+    required this.after,
+    required this.hunks,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolDiffPayload.fromJson(Map<String, Object?> json) => ToolDiffPayload(
+        path: json['path']! as String,
+        kind: json['kind']! as String,
+        pending: json['pending']! as bool,
+        scope: json['scope']! as String,
+        before: ToolDiffPayloadBefore.fromJson(json['before']! as Map<String, Object?>),
+        after: ToolDiffPayloadAfter.fromJson(json['after']! as Map<String, Object?>),
+        hunks: (json['hunks']! as List<Object?>).map((item) => ToolDiffPayloadHunksItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// The file, absolute.
+  final String path;
+
+  /// The kind of the call — `file.edit` or `file.write`.
+  final String kind;
+
+  /// The call is still waiting for an answer: `before` is the disk now, `after` the disk with the change applied.
+  final bool pending;
+
+  /// `file` — the hunks are of the whole file, before against after; `edit` — they are of the strings the call replaces, because one side of the file is not known.
+  final String scope;
+
+  /// What is known of the file before the call.
+  final ToolDiffPayloadBefore before;
+
+  /// What is known of the file after the call — or after it would run.
+  final ToolDiffPayloadAfter after;
+
+  /// The changes, in order.
+  final List<ToolDiffPayloadHunksItem> hunks;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'kind': kind,
+      'pending': pending,
+      'scope': scope,
+      'before': before.toJson(),
+      'after': after.toJson(),
+      'hunks': hunks.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ToolDiffPayload].
+bool toolDiffPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['kind'] is String && (json['kind']! as String).length > 64) {
+    return false;
+  }
+
+  return true;
+}
+
+/// What `GET /transcripts?workspacePath=…` answers: a page of the conversations of a folder, of every engine enabled, newest first (plan 28, B-12).
+class TranscriptListPayload {
+  const TranscriptListPayload({
+    required this.sessions,
+    required this.nextCursor,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptListPayload.fromJson(Map<String, Object?> json) => TranscriptListPayload(
+        sessions: (json['sessions']! as List<Object?>).map((item) => ListedTranscript.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        nextCursor: json['nextCursor'] as String?,
+      );
+
+  /// The conversations of the page.
+  final List<ListedTranscript> sessions;
+
+  /// Opaque: sent back as `cursor` for the next page. `null` on the last one.
+  final String? nextCursor;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sessions': sessions.map((item) => item.toJson()).toList(growable: false),
+      'nextCursor': nextCursor,
+    };
+
+    return json;
+  }
+}
+
+/// What `GET /transcripts/:engine/:id/messages` answers: a page of a conversation, newest page first and oldest first within it (plan 28, B-12). The route of the previous protocol, `GET /transcripts/:sessionId/messages`, answers the same during its window.
+class TranscriptPagePayload {
+  const TranscriptPagePayload({
+    required this.session,
+    required this.events,
+    required this.nextCursor,
+    required this.lastMessageId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptPagePayload.fromJson(Map<String, Object?> json) => TranscriptPagePayload(
+        session: ListedTranscript.fromJson(json['session']! as Map<String, Object?>),
+        events: (json['events']! as List<Object?>).map((item) => TranscriptEvent.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        nextCursor: json['nextCursor'] as String?,
+        lastMessageId: json['lastMessageId'] as String?,
+      );
+
+  /// The conversation the page is of.
+  final ListedTranscript session;
+
+  /// The events of the page.
+  final List<TranscriptEvent> events;
+
+  /// The id of the message the next page — what came before — starts from, or `null` at the first message.
+  final String? nextCursor;
+
+  /// The last entry of the conversation, `null` when it has none — what `transcript.follow` takes as `afterMessageId`.
+  final String? lastMessageId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'session': session.toJson(),
+      'events': events.map((item) => item.toJson()).toList(growable: false),
+      'nextCursor': nextCursor,
+      'lastMessageId': lastMessageId,
+    };
+
+    return json;
+  }
+}
+
+/// What `GET /transcripts/:engine/:id/tools/:toolUseId/result` answers: the whole output of one tool of a conversation, read from the transcript when a client unfolds the tool — never on the stream, whose `tool.completed.summary` is short on purpose. Over HTTP, but one contract in three languages all the same. An output above the ceiling is not an error: it comes cut, its beginning and its end, with `truncated: true`.
+class TranscriptToolResultPayload {
+  const TranscriptToolResultPayload({
+    required this.text,
+    required this.truncated,
+    required this.bytes,
+    this.cutAt,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranscriptToolResultPayload.fromJson(Map<String, Object?> json) => TranscriptToolResultPayload(
+        text: json['text']! as String,
+        truncated: json['truncated']! as bool,
+        bytes: json['bytes']! as int,
+        cutAt: json['cutAt'] as int?,
+      );
+
+  /// The output as text — a result made of blocks is their text joined. Cut in the middle when `truncated`.
+  final String text;
+
+  /// Whether the output was above the ceiling, and `text` holds only its first and its last part.
+  final bool truncated;
+
+  /// The size of the whole output, in bytes of UTF-8 — what the screen says was there when it shows a cut.
+  final int bytes;
+
+  /// Where in `text` the first part ends and the last begins, in characters — present only when `truncated`, so the screen can say there what was left out.
+  final int? cutAt;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'text': text,
+      'truncated': truncated,
+      'bytes': bytes,
+    };
+
+    if (cutAt != null) {
+      json['cutAt'] = cutAt;
+    }
 
     return json;
   }
@@ -3687,49 +5242,4 @@ bool permissionResolvePayloadLimitsHold(Map<String, Object?> json) {
   }
 
   return true;
-}
-
-/// What `GET /transcripts/:sessionId/tools/:toolUseId/result` answers: the whole output of one tool of a conversation, read from the transcript when a client unfolds the tool — never on the stream, whose `tool.completed.summary` is short on purpose. Over HTTP, but one contract in three languages all the same. An output above the ceiling is not an error: it comes cut, its beginning and its end, with `truncated: true`.
-class TranscriptToolResultPayload {
-  const TranscriptToolResultPayload({
-    required this.text,
-    required this.truncated,
-    required this.bytes,
-    this.cutAt,
-  });
-
-  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory TranscriptToolResultPayload.fromJson(Map<String, Object?> json) => TranscriptToolResultPayload(
-        text: json['text']! as String,
-        truncated: json['truncated']! as bool,
-        bytes: json['bytes']! as int,
-        cutAt: json['cutAt'] as int?,
-      );
-
-  /// The output as text — a result made of blocks is their text joined. Cut in the middle when `truncated`.
-  final String text;
-
-  /// Whether the output was above the ceiling, and `text` holds only its first and its last part.
-  final bool truncated;
-
-  /// The size of the whole output, in bytes of UTF-8 — what the screen says was there when it shows a cut.
-  final int bytes;
-
-  /// Where in `text` the first part ends and the last begins, in characters — present only when `truncated`, so the screen can say there what was left out.
-  final int? cutAt;
-
-  /// A JSON map with the absent optional fields left out.
-  Map<String, Object?> toJson() {
-    final Map<String, Object?> json = <String, Object?>{
-      'text': text,
-      'truncated': truncated,
-      'bytes': bytes,
-    };
-
-    if (cutAt != null) {
-      json['cutAt'] = cutAt;
-    }
-
-    return json;
-  }
 }

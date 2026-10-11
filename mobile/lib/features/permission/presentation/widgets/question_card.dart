@@ -1,4 +1,4 @@
-/// A question of Claude (`AskUserQuestion`), answered from the phone (plan 24, B-18).
+/// A question of the agent (a call of kind `question`), answered from the phone (plan 24, B-18).
 ///
 /// The card of the web, laid out for a narrow screen (docs/architecture/mobile/04-ui.md):
 ///
@@ -8,7 +8,7 @@
 ///   Back always in view (D-24); a **multiple** one is a checkbox, and stays;
 /// - **"Other"** is always the last option, and opens a field with the focus; marked and empty, it is
 ///   no answer;
-/// - the option Claude **recommends** is marked, never chosen for the person (D-23);
+/// - the option the agent **recommends** is marked, never chosen for the person (D-23);
 /// - **"See preview"** opens a sheet with the option's preview, monospaced (D-21);
 /// - **"Send answers"** waits for every question (D-04); **"Don't answer"** refuses, with a reason the
 ///   person may leave empty (D-15).
@@ -19,16 +19,18 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/domain/entities/question.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/permission_card_view.dart';
+import 'package:remote_claude/features/permission/presentation/widgets/permission_title.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
-/// The value of "Other" among the radios of a single choice — no label of Claude's can be it.
+/// The value of "Other" among the radios of a single choice — no label of the agent's can be it.
 const String _otherValue = '\u0000other';
 
-/// The card of one question of Claude.
+/// The card of one question of the agent.
 class QuestionCard extends StatefulWidget {
   const QuestionCard({
     required this.card,
@@ -83,20 +85,22 @@ class _QuestionCardState extends State<QuestionCard> {
     final bool answerable =
         widget.block == null && card.isAnswerable && card.phase == CardPhase.idle;
     final String? notice = widget.notice;
+    final String agent = agentNameIn(context, card.request.engine);
 
     return Semantics(
       container: true,
       liveRegion: true,
-      label: l10n.permissionQuestionLabel,
+      label: l10n.permissionQuestionLabel(agent),
       child: Card(
         child: ContentColumn(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(l10n.permissionToolAskUserQuestion, style: theme.textTheme.titleSmall),
+            Text(questionTitleOf(context, card.request), style: theme.textTheme.titleSmall),
             const SizedBox(height: Tokens.spaceSm),
-            if (interaction.malformed) Text(l10n.permissionQuestionMalformed),
+            if (interaction.malformed) Text(l10n.permissionQuestionMalformed(agent)),
             if (_declining || interaction.malformed)
               _DeclineForm(
+                agent: agent,
                 enabled: answerable,
                 canGoBack: !interaction.malformed,
                 onConfirm: widget.onDecline,
@@ -309,7 +313,7 @@ class _Options extends StatelessWidget {
   }
 }
 
-/// The label of an option, exact — and marked when Claude recommends it.
+/// The label of an option, exact — and marked when the agent recommends it.
 class _OptionTitle extends StatelessWidget {
   const _OptionTitle({required this.option});
 
@@ -450,12 +454,15 @@ class _OtherFieldState extends State<_OtherField> {
 /// Not answering: a reason the person may leave empty, and the way back to the questions.
 class _DeclineForm extends StatefulWidget {
   const _DeclineForm({
+    required this.agent,
     required this.enabled,
     required this.canGoBack,
     required this.onConfirm,
     required this.onBack,
   });
 
+  /// The display name of the engine that asked, which reads the reason.
+  final String agent;
   final bool enabled;
   final bool canGoBack;
   final void Function(String reason) onConfirm;
@@ -483,7 +490,7 @@ class _DeclineFormState extends State<_DeclineForm> {
           minLines: 2,
           maxLines: 5,
           decoration: InputDecoration(
-            labelText: l10n.permissionQuestionDeclineReason,
+            labelText: l10n.permissionQuestionDeclineReason(widget.agent),
             border: const OutlineInputBorder(),
           ),
         ),

@@ -84,7 +84,7 @@ adapter em `adapter/outbound/terminal/` — o único lugar que importa `node-pty
 
 `OpenTerminal`, `AttachTerminal`, `WriteTerminalInput`, `ResizeTerminal`, `CloseTerminal`, sobre um
 registro **em memória** (`Map<TerminalId, …>`), como o de sessões: é estado de processo e morre com
-ele ([backend/04 · Ciclo de vida](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos)).
+ele ([backend/04 · Ciclo de vida](../../architecture/backend/04a-claude.md#ciclo-de-vida-e-recursos)).
 
 - A vaga do limite é **reservada** antes do spawn e devolvida se ele falhar: duas aberturas
   simultâneas nunca passam do teto.
@@ -156,7 +156,7 @@ Fecha a [D-10](decisions.md#d-10--o-ambiente-do-subprocesso-do-claude). Hoje o
 `session-runner.ts` passa `markedEnvironment(process.env, …)` inteiro ao SDK, e o `pnpm dev` põe o
 `.env` inteiro no `process.env`: um `Bash` do Claude que rode `env` vê a senha do banco. Passa a
 receber `childEnvironment(process.env, claudePolicy)` com a marca do processo por cima.
-[backend/04 · Ciclo de vida](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos)
+[backend/04 · Ciclo de vida](../../architecture/backend/04a-claude.md#ciclo-de-vida-e-recursos)
 passa a dizer o que o subprocesso herda e o que não.
 
 A prova de que o CLI continua funcionando é o Claude real: `pnpm test:e2e:live` entra no critério

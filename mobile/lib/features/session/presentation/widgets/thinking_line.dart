@@ -1,11 +1,11 @@
 /// What the model thought, as a line of its own in the conversation.
 ///
-/// Never part of the answer (S-08), and drawn the way the web and the Claude Code draw it (plan 22,
-/// B-31): "Thinking…" while it arrives; a thinking the model **summarised** in text is in view, quiet,
-/// under "Thought" (D-15) — and can still be folded; one the model **omitted** says "Thought", folded,
-/// and opened says the model did not show it (S-101); a **redacted** one says it was hidden. How long:
-/// "Thought for *n* s" when the stream measured it, "for up to *n* s" from the history's instants
-/// (D-14), and nothing without them — never "0 s" for an absence (S-106).
+/// Never part of the answer (S-08), and drawn the way the web and the agent's own terminal draw it
+/// (plan 22, B-31): "Thinking…" while it arrives; a thinking the model **summarised** in text is in
+/// view, quiet, under "Thought" (D-15) — and can still be folded; one the model **omitted** says
+/// "Thought", folded, and opened says the model did not show it (S-101); a **redacted** one says it
+/// was hidden. How long: "Thought for *n* s" when the stream measured it, "for up to *n* s" from
+/// the history's instants (D-14), and nothing without them — never "0 s" for an absence (S-106).
 library;
 
 import 'package:flutter/material.dart';

@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 
 import {
-  CLAUDE_SESSION_ID_GENERATOR,
-  CLAUDE_SESSION_PORT,
+  EngineRegistry,
   FOLDER_LOCATOR,
   ListLiveSessionsUseCase,
   PENDING_PERMISSIONS,
   CancelQueuedPromptUseCase,
+  CompactSessionUseCase,
   CloseSessionUseCase,
   CommandCatalog,
   InspectSessionUseCase,
@@ -50,7 +50,6 @@ import {
 import type {
   ChangeStores,
   ChangeWriting,
-  ClaudeSessionPort,
   FolderLocator,
   PendingPermissions,
   ReferenceInspector,
@@ -85,7 +84,6 @@ import { NodeUndoDisk } from '@adapter/outbound/checkpoint/node-undo.disk';
 import { JournalUndoStore } from '@adapter/outbound/session/journal-undo.store';
 import { SnapshotPurgeJob } from '../jobs/snapshot-purge.job';
 import { SessionReaperJob } from '../jobs/session-reaper.job';
-import { PermissionBridge } from '@adapter/outbound/claude/permission-bridge';
 import {
   LogQuestionAnswered,
   RecordDecisionOnResolved,
@@ -93,10 +91,7 @@ import {
 } from '@adapter/outbound/permission/permission-resolved.listeners';
 import { SESSION_HANDLERS, sessionSchemas } from '@adapter/inbound/ws/session/session-commands';
 import { SessionStartHandler } from '@adapter/inbound/ws/session/session-start.gateway-handler';
-import { AgentSdkClaudeSessionAdapter } from '@adapter/outbound/claude/agent-sdk.adapter';
-import { BUNDLED_CLI_VERSION } from '@adapter/outbound/claude/cli-version';
-import { ClaudeConfigModuleConfiguration } from '@adapter/outbound/session/claude-config-module.configuration';
-import { SESSION_LIMITS } from '@adapter/outbound/claude/session-limits';
+import { AgentSettingsModuleConfiguration } from '@adapter/outbound/session/agent-settings-module.configuration';
 import { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.store';
 import { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
 import { TranscriptModuleConversationSource } from '@adapter/outbound/session/transcript-module-conversation.source';
@@ -109,17 +104,12 @@ import { WorkspaceModuleResolver } from '@adapter/outbound/session/workspace-mod
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { RecordAuditEventUseCase } from '@application/audit';
-import {
-  ApplyPermissionModeUseCase,
-  EndSessionPermissionsUseCase,
-  RequestPermissionUseCase,
-} from '@application/permission';
-import { UuidGenerator } from '@shared/ids/uuid-generator';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
-import { ClaudeConfigModule } from './claude-config.module';
-import { ClaudeSdkModule } from './claude-sdk.module';
+import { EnginesController } from '@adapter/inbound/http/engines/engines.controller';
+import { AgentSettingsModule } from './agent-settings.module';
+import { ClaudeEngineModule, engineSessionProviders } from './engines';
 import { PermissionModule } from './permission.module';
 import { WebsocketModule } from './websocket.module';
 import { SessionOriginModule } from './session-origin.module';
@@ -143,9 +133,9 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
 @Module({
   imports: [
     AuditModule,
+    AgentSettingsModule,
     AuthModule,
-    ClaudeConfigModule,
-    ClaudeSdkModule,
+    ClaudeEngineModule,
     PermissionModule,
     SessionOriginModule,
     SessionRegistryModule,
@@ -160,14 +150,11 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     LiveSessionsController,
     SessionAttachmentsController,
     CatalogController,
+    EnginesController,
   ],
   providers: [
-    { provide: SESSION_CONFIGURATION_SOURCE, useClass: ClaudeConfigModuleConfiguration },
-    {
-      provide: SESSION_LIMITS,
-      inject: [APP_CONFIG],
-      useFactory: (config: AppConfig) => config.session.limits,
-    },
+    { provide: SESSION_CONFIGURATION_SOURCE, useClass: AgentSettingsModuleConfiguration },
+    ...engineSessionProviders,
     { provide: TOOL_INVOCATION_RECORDER, useClass: AuditToolInvocationRecorder },
     DrizzleSessionFileRepository,
     {
@@ -235,9 +222,13 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     },
     {
       provide: ShowToolDiffUseCase,
-      inject: [SessionRegistry, SessionChangeMemory, CHANGE_STORES],
-      useFactory: (registry: SessionRegistry, memory: SessionChangeMemory, stores: ChangeStores) =>
-        new ShowToolDiffUseCase(registry, memory, stores),
+      inject: [SessionRegistry, SessionChangeMemory, CHANGE_STORES, PENDING_PERMISSIONS],
+      useFactory: (
+        registry: SessionRegistry,
+        memory: SessionChangeMemory,
+        stores: ChangeStores,
+        pending: PendingPermissions,
+      ) => new ShowToolDiffUseCase(registry, memory, stores, pending),
     },
     {
       provide: ListSessionChangesUseCase,
@@ -274,36 +265,12 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     SnapshotPurgeJob,
     // Where a conversation to continue ran, and who opened it here — `transcript` and provenance.
     { provide: RESUMABLE_CONVERSATION_SOURCE, useClass: TranscriptModuleConversationSource },
-    { provide: CLAUDE_SESSION_ID_GENERATOR, useClass: UuidGenerator },
-    {
-      // Built by factory rather than by reflection, because it needs the broadcaster token and a
-      // token cannot be inferred from a type.
-      provide: PermissionBridge,
-      inject: [
-        RequestPermissionUseCase,
-        EndSessionPermissionsUseCase,
-        ApplyPermissionModeUseCase,
-        SessionRegistry,
-        SESSION_BROADCASTER,
-        LOGGER,
-      ],
-      useFactory: (
-        request: RequestPermissionUseCase,
-        endPermissions: EndSessionPermissionsUseCase,
-        applyMode: ApplyPermissionModeUseCase,
-        registry: SessionRegistry,
-        broadcaster: SessionBroadcaster,
-        logger: Logger,
-      ) => new PermissionBridge(request, endPermissions, applyMode, registry, broadcaster, logger),
-    },
-    { provide: SESSION_PERMISSION_GATE, useExisting: PermissionBridge },
     // The two consumers of `permission.resolved` that need something from this module. They are
     // registered here and not in `PermissionModule` because that module deliberately knows nothing
     // about sessions, and one of these releases the agent loop of one.
     ReleaseAgentLoopOnResolved,
     RecordDecisionOnResolved,
     LogQuestionAnswered,
-    { provide: CLAUDE_SESSION_PORT, useClass: AgentSdkClaudeSessionAdapter },
     { provide: SESSION_BROADCASTER, useClass: HubSessionBroadcaster },
     WorkspaceModuleResolver,
     { provide: WORKSPACE_RESOLVER, useExisting: WorkspaceModuleResolver },
@@ -347,12 +314,11 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
       inject: [
         WORKSPACE_RESOLVER,
         SessionRegistry,
-        CLAUDE_SESSION_PORT,
+        EngineRegistry,
         SESSION_BROADCASTER,
         CLOCK,
         ID_GENERATOR,
         APP_CONFIG,
-        CLAUDE_SESSION_ID_GENERATOR,
         SESSION_ORIGIN_REPOSITORY,
         RESUMABLE_CONVERSATION_SOURCE,
         RecordAuditEventUseCase,
@@ -362,12 +328,11 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
       useFactory: (
         workspaces: WorkspaceResolver,
         registry: SessionRegistry,
-        claude: ClaudeSessionPort,
+        engines: EngineRegistry,
         broadcaster: SessionBroadcaster,
         clock: Clock,
         ids: IdGenerator,
         config: AppConfig,
-        claudeIds: IdGenerator,
         origins: SessionOriginRepository,
         conversations: ResumableConversationSource,
         trail: RecordAuditEventUseCase,
@@ -377,12 +342,12 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         new StartSessionUseCase(
           workspaces,
           registry,
-          claude,
+          engines,
           broadcaster,
           clock,
           ids,
           config.session.defaults,
-          { ids: claudeIds, origins },
+          { origins },
           { conversations, trail },
           models,
           configuration,
@@ -457,10 +422,8 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         SessionRegistry,
         CommandCatalog,
         ModelCatalog,
-        CLAUDE_SESSION_PORT,
+        EngineRegistry,
         ID_GENERATOR,
-        CLAUDE_SESSION_ID_GENERATOR,
-        BUNDLED_CLI_VERSION,
         APP_CONFIG,
       ],
       useFactory: (
@@ -468,17 +431,15 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         registry: SessionRegistry,
         commands: CommandCatalog,
         models: ModelCatalog,
-        claude: ClaudeSessionPort,
+        engines: EngineRegistry,
         sessionIds: IdGenerator,
-        conversationIds: IdGenerator,
-        cliVersion: string | null,
         config: AppConfig,
       ) =>
         new ReadCatalogUseCase(
           folders,
           registry,
           { commands, models },
-          { claude, sessionIds, conversationIds, cliVersion },
+          { engines, sessionIds },
           {
             attachmentMaxBytes: config.composer.attachments.maxBytes,
             attachmentImageTypes: ATTACHMENT_IMAGE_TYPES,
@@ -499,9 +460,9 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     },
     {
       provide: ListSessionCommandsUseCase,
-      inject: [SessionRegistry, CommandCatalog],
-      useFactory: (registry: SessionRegistry, catalog: CommandCatalog) =>
-        new ListSessionCommandsUseCase(registry, catalog),
+      inject: [SessionRegistry, CommandCatalog, EngineRegistry],
+      useFactory: (registry: SessionRegistry, catalog: CommandCatalog, engines: EngineRegistry) =>
+        new ListSessionCommandsUseCase(registry, catalog, engines),
     },
     {
       provide: InterruptSessionUseCase,
@@ -598,6 +559,30 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         ),
     },
     {
+      provide: CompactSessionUseCase,
+      inject: [SessionRegistry, PromptSessionUseCase],
+      useFactory: (registry: SessionRegistry, prompts: PromptSessionUseCase) =>
+        new CompactSessionUseCase(registry, prompts),
+    },
+    {
+      provide: SESSION_HANDLERS.compact,
+      inject: [CompactSessionUseCase],
+      useFactory: (compact: CompactSessionUseCase) =>
+        new ContractCommandHandler(
+          'session.compact',
+          sessionSchemas.session,
+          async (command, context) =>
+            // Through the queue, like the prompt it becomes: acknowledged before its turn starts.
+            ({
+              afterAck: await compact.execute(
+                command.sessionId,
+                context.userId,
+                context.installId === null ? 'web' : 'mobile',
+              ),
+            }),
+        ),
+    },
+    {
       provide: SESSION_HANDLERS.interrupt,
       inject: [InterruptSessionUseCase],
       useFactory: (interrupt: InterruptSessionUseCase) =>
@@ -662,6 +647,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     ...Object.values(SESSION_HANDLERS),
     RegistrySessionOwnership,
     SessionRegistryModule,
+    EngineRegistry,
     ShutdownSessionsUseCase,
     SessionReaperJob,
   ],

@@ -103,7 +103,7 @@ describe('the audit trail screen', () => {
     mount();
 
     const row = await screen.findByRole('listitem', {
-      name: t('audit.row.label', { tool: t('permission.tool.Bash'), at: shown(AT) }),
+      name: t('audit.row.label', { tool: 'Bash', at: shown(AT) }),
     });
     expect(within(row).getByText(t('audit.decision.recorded'))).toBeInTheDocument();
     expect(within(row).getByText(/rm -rf build\//)).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe('the audit trail screen', () => {
     const { onOpenRule } = mount();
 
     const row = await screen.findByRole('listitem', {
-      name: t('audit.row.label', { tool: t('permission.tool.Bash'), at: shown(AT) }),
+      name: t('audit.row.label', { tool: 'Bash', at: shown(AT) }),
     });
     expect(within(row).getByText(t('audit.row.unasked'))).toBeInTheDocument();
     expect(
@@ -208,9 +208,7 @@ describe('the audit trail screen', () => {
     });
     mount();
 
-    expect(
-      await screen.findByText(t('permission.tool.unknown', { tool: 'mcp__fs__stat' })),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('mcp__fs__stat')).toBeInTheDocument();
   });
 
   it('appends older entries, and keeps them all when the next page fails — S-77', async () => {
@@ -295,7 +293,7 @@ describe('the audit trail screen', () => {
     const { onFilter } = mount({ toolName: 'Bash' });
 
     const row = await screen.findByRole('listitem', {
-      name: t('audit.row.label', { tool: t('permission.tool.Bash'), at: shown(AT) }),
+      name: t('audit.row.label', { tool: 'Bash', at: shown(AT) }),
     });
     await userEvent.click(within(row).getByText(t('audit.row.details')));
     await userEvent.click(
@@ -324,7 +322,7 @@ describe('the audit trail screen', () => {
       <AuditTrail filters={{ toolName: 'Write' }} onFilter={onFilter} onOpenRule={onOpenRule} />,
     );
 
-    expect(await screen.findByText(t('permission.tool.Write'))).toBeInTheDocument();
+    expect(await screen.findByText('Write')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
     expect(screen.queryByRole('button', { name: t('audit.list.loadMore') })).toBeNull();
     expect(screen.getByLabelText(t('audit.filter.tool'))).toHaveValue('Write');

@@ -2,113 +2,172 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PermissionRulePatternInvalidError,
-  matchedInput,
+  PermissionRuleToolInteractiveError,
+  RULE_KINDS,
+  hostOf,
+  isRuleKind,
   parseRulePattern,
   patternForInvocation,
+  readRulePattern,
   ruleMatches,
 } from '@domain/permission';
+import type { RulePattern } from '@domain/permission';
+import { canonicalTool, claudeTool } from '../../../../support/builders/tool.builder';
+
+const folder = '/srv/projects/app';
+const shell = (command: string) => canonicalTool('shell', { command });
+const file = (kind: string, path: string) => canonicalTool(kind, { paths: [path] });
+const allows = (pattern: string, tool: ReturnType<typeof canonicalTool>, at = folder) =>
+  ruleMatches(parseRulePattern(pattern), tool, 'allow', at);
 
 /**
- * The grammar of the Claude Code settings, which is ours because it has to be.
- *
- * The stored pattern is **literally** the grammar of the SDK's `PermissionUpdate` — not sent back
- * today (D-09 of the rules plan), but a grammar of our own would need translating the day it is,
- * and a translation that is one character out makes our half authorise a set of commands the
- * Claude half does not, or the other way round.
+ * The canonical grammar of a rule — plan 28, B-31, D-11. A rule is written by kind, and the domain
+ * reads it knowing no engine.
  */
 describe('parseRulePattern', () => {
-  it('reads a bare tool name as the whole tool', () => {
-    expect(parseRulePattern('Bash')).toEqual({ toolName: 'Bash', kind: 'tool', content: '' });
-  });
-
-  it('reads parentheses as an exact match', () => {
-    expect(parseRulePattern('Bash(git status)')).toEqual({
-      toolName: 'Bash',
-      kind: 'exact',
-      content: 'git status',
-    });
-  });
-
-  it('reads a trailing :* as a prefix', () => {
-    expect(parseRulePattern('Bash(git status:*)')).toEqual({
-      toolName: 'Bash',
-      kind: 'prefix',
-      content: 'git status',
-    });
+  it.each<[string, RulePattern]>([
+    ['shell(git status)', { kind: 'shell', reach: 'exact', content: 'git status' }],
+    ['shell(git status:*)', { kind: 'shell', reach: 'prefix', content: 'git status' }],
+    ['shell', { kind: 'shell', reach: 'tool', content: '' }],
+    ['file.edit(src/**)', { kind: 'file.edit', reach: 'glob', content: 'src/**' }],
+    ['file.read(/etc/hosts)', { kind: 'file.read', reach: 'exact', content: '/etc/hosts' }],
+    ['file.write(a.ts)', { kind: 'file.write', reach: 'exact', content: 'a.ts' }],
+    ['file.delete(tmp/*)', { kind: 'file.delete', reach: 'glob', content: 'tmp/*' }],
+    ['file.move', { kind: 'file.move', reach: 'tool', content: '' }],
+    ['search(src)', { kind: 'search', reach: 'exact', content: 'src' }],
+    [
+      'web.fetch(domain:Example.COM)',
+      { kind: 'web.fetch', reach: 'exact', content: 'example.com' },
+    ],
+    ['web.search', { kind: 'web.search', reach: 'tool', content: '' }],
+    ['mcp(github:create_issue)', { kind: 'mcp', reach: 'exact', content: 'github:create_issue' }],
+    ['mcp(github:*)', { kind: 'mcp', reach: 'prefix', content: 'github' }],
+    ['agent', { kind: 'agent', reach: 'tool', content: '' }],
+    ['  shell(ls)  ', { kind: 'shell', reach: 'exact', content: 'ls' }],
+  ])('reads %j — S-92', (pattern, read) => {
+    expect(parseRulePattern(pattern)).toEqual(read);
   });
 
   it.each([
-    ['Bash()', 'empty parentheses are a pattern somebody meant to fill in, not "every Bash"'],
-    ['Bash(:*)', 'a prefix of nothing would be every command there is'],
-    ['(git status)', 'no tool at all'],
-    ['9Bash(x)', 'a tool name that is not an identifier'],
-    ['', 'nothing'],
-  ])('refuses %j — %s — S-47', (pattern) => {
-    expect(() => parseRulePattern(pattern)).toThrow(PermissionRulePatternInvalidError);
+    ['Bash(git status:*)', 'syntax', "the engine's own grammar is not the canonical one"],
+    ['Bash', 'syntax', 'an engine name is not a kind'],
+    ['mcp__github__create_issue', 'syntax', "an engine's name of an MCP tool"],
+    ['', 'syntax', 'nothing'],
+    ['(git status)', 'syntax', 'no kind at all'],
+    ['file.', 'syntax', 'a kind cut short'],
+    ['shell(x', 'syntax', 'a parenthesis left open'],
+    ['tasks', 'unknownKind', 'a kind that takes no rule'],
+    ['other(x)', 'unknownKind', 'the generic line takes no rule'],
+    ['shell.output', 'unknownKind', "a command's output takes no rule"],
+    ['file.copy(a)', 'unknownKind', 'a kind the core does not know'],
+    ['shell()', 'emptyMatcher', 'empty parentheses are a pattern somebody meant to fill in'],
+    ['shell(echo (x))', 'parenthesis', 'a `)` inside would read back as something else'],
+    ['shell(:*)', 'emptyPrefix', 'a prefix of nothing would be every command'],
+    ['file.edit(src:*)', 'prefixOutsideShell', 'a path is a glob, never a prefix'],
+    ['web.fetch(a.com:*)', 'prefixOutsideShell', 'a host is never a prefix'],
+    ['web.fetch(https://a.com/x)', 'domainExpected', 'an exact URL is not a domain'],
+    ['web.fetch(domain:)', 'domainExpected', 'a domain of nothing'],
+    ['web.fetch(domain:a b)', 'domainExpected', 'a host with a space'],
+    ['web.search(vitest)', 'matcherNotAllowed', 'a web search takes no matcher'],
+    ['agent(explore)', 'matcherNotAllowed', 'a subagent takes no matcher'],
+    ['mcp(github)', 'serverToolExpected', 'a server with no tool'],
+    ['mcp(:tool)', 'serverToolExpected', 'a tool with no server'],
+  ])('refuses %j with %s — %s — S-93', (pattern, reason) => {
+    const refusal = (() => {
+      try {
+        parseRulePattern(pattern);
+      } catch (error) {
+        return error;
+      }
+      return null;
+    })();
+
+    expect(refusal).toBeInstanceOf(PermissionRulePatternInvalidError);
+    expect((refusal as PermissionRulePatternInvalidError).params).toEqual({ pattern, reason });
+    expect((refusal as PermissionRulePatternInvalidError).code).toBe(
+      'PERMISSION_RULE_PATTERN_INVALID',
+    );
+    expect(readRulePattern(pattern)).toBeNull();
   });
-});
 
-describe('ruleMatches', () => {
-  const pattern = parseRulePattern('Bash(git status:*)');
+  it.each(['question', 'plan', 'question(x)', 'plan()'])(
+    'refuses %j as a call that asks the person — S-95',
+    (pattern) => {
+      expect(() => parseRulePattern(pattern)).toThrow(PermissionRuleToolInteractiveError);
+      expect(readRulePattern(pattern)).toBeNull();
+    },
+  );
 
-  it('covers the prefix itself', () => {
-    expect(ruleMatches(pattern, 'Bash', { command: 'git status' }, 'allow')).toBe(true);
-  });
-
-  it('covers what continues it at a token boundary — S-48', () => {
-    expect(ruleMatches(pattern, 'Bash', { command: 'git status --short' }, 'allow')).toBe(true);
-  });
-
-  it('does not cover a word that merely starts with it — S-48', () => {
-    // The hole a bare `startsWith` leaves, and the one nobody notices until something is named
-    // just so: `git statusx` is a different command.
-    expect(ruleMatches(pattern, 'Bash', { command: 'git statusx' }, 'allow')).toBe(false);
-  });
-
-  it('does not cover another tool', () => {
-    expect(ruleMatches(pattern, 'Write', { command: 'git status' }, 'allow')).toBe(false);
-  });
-
-  it('covers every input of a whole-tool pattern', () => {
-    expect(ruleMatches(parseRulePattern('Read'), 'Read', { file_path: '/anything' }, 'allow')).toBe(
-      true,
+  it('knows the rule kinds, and no other', () => {
+    expect(RULE_KINDS.every(isRuleKind)).toBe(true);
+    expect(['question', 'plan', 'tasks', 'other', 'shell.output', 'Bash'].some(isRuleKind)).toBe(
+      false,
     );
   });
+});
 
-  it('matches an exact pattern only on the exact value', () => {
-    const exact = parseRulePattern('Bash(git status)');
+/** S-131: a rule is by kind, so it holds for every engine's call of the kind, and for no other kind. */
+describe('ruleMatches by kind — S-131', () => {
+  const npmTest = parseRulePattern('shell(npm test:*)');
 
-    expect(ruleMatches(exact, 'Bash', { command: 'git status' }, 'allow')).toBe(true);
-    expect(ruleMatches(exact, 'Bash', { command: 'git status --short' }, 'allow')).toBe(false);
+  it("matches Claude's shell and the test engine's shell, and not a file edit", () => {
+    expect(ruleMatches(npmTest, claudeTool('Bash', { command: 'npm test' }), 'allow', null)).toBe(
+      true,
+    );
+    expect(
+      ruleMatches(
+        npmTest,
+        canonicalTool('shell', { command: 'npm test --run' }, 'test-engine'),
+        'allow',
+        null,
+      ),
+    ).toBe(true);
+    expect(
+      ruleMatches(npmTest, canonicalTool('file.edit', { command: 'npm test' }), 'allow', null),
+    ).toBe(false);
   });
 
-  it('does not let `Bash(git status)` cover `git push --force` — S-06', () => {
-    const exact = parseRulePattern('Bash(git status)');
-
-    expect(ruleMatches(exact, 'Bash', { command: 'git push --force' }, 'allow')).toBe(false);
-    expect(ruleMatches(pattern, 'Bash', { command: 'git push --force' }, 'allow')).toBe(false);
+  it('matches every call of the kind with a bare kind, whatever its subject', () => {
+    expect(allows('file.read', file('file.read', '/anywhere'))).toBe(true);
+    expect(allows('file.read', canonicalTool('file.read'))).toBe(true);
+    expect(allows('web.search', canonicalTool('web.search', { query: 'x' }))).toBe(true);
+    expect(allows('agent', canonicalTool('agent'))).toBe(true);
+    expect(allows('web.search', canonicalTool('web.fetch', { url: 'https://a.com' }))).toBe(false);
   });
 
-  it('matches nothing when the input carries no field a pattern can name — S-05', () => {
+  it('matches nothing when the subject lacks what the matcher names — S-05', () => {
     // The conservative reading: an unrecognised shape matches less, never more.
-    expect(ruleMatches(pattern, 'Bash', { something: 1 }, 'allow')).toBe(false);
+    expect(allows('shell(git status:*)', canonicalTool('shell'))).toBe(false);
+    expect(allows('file.edit(**)', canonicalTool('file.edit'))).toBe(false);
+    expect(allows('web.fetch(domain:a.com)', canonicalTool('web.fetch'))).toBe(false);
+    expect(allows('mcp(a:*)', canonicalTool('mcp', { server: 'a' }))).toBe(false);
+    expect(allows('mcp(a:b)', canonicalTool('mcp', { tool: 'b' }))).toBe(false);
   });
 });
 
-/**
- * A prefix rule and a shell line that runs more than one command — plan 15, B-08, D-07.
- *
- * Before this, `allow Bash(git status:*)` answered `git status && curl … | sh`: the prefix looked at
- * the start of the line and nothing else.
- */
-describe('ruleMatches on a shell line — 15 · B-08', () => {
-  const gitStatus = parseRulePattern('Bash(git status:*)');
-  const rm = parseRulePattern('Bash(rm:*)');
-  const bash = (command: string) => ({ command });
+describe('ruleMatches on a shell line', () => {
+  const pattern = parseRulePattern('shell(git status:*)');
+  const matches = (command: string, decision: 'allow' | 'deny' = 'allow', of = pattern) =>
+    ruleMatches(of, shell(command), decision, folder);
+
+  it('covers the prefix, and what continues it at a token boundary — S-48', () => {
+    expect(matches('git status')).toBe(true);
+    expect(matches('git status --short')).toBe(true);
+    // The hole a bare `startsWith` leaves: `git statusx` is a different command.
+    expect(matches('git statusx')).toBe(false);
+  });
+
+  it('matches an exact pattern only on the exact line — S-06', () => {
+    const exact = parseRulePattern('shell(git status)');
+
+    expect(matches('git status', 'allow', exact)).toBe(true);
+    expect(matches('git status --short', 'allow', exact)).toBe(false);
+    expect(matches('git push --force', 'allow', exact)).toBe(false);
+    expect(matches('git push --force')).toBe(false);
+  });
 
   it('does not let an allow prefix answer a chained command — S-07', () => {
-    expect(ruleMatches(gitStatus, 'Bash', bash('git status && curl x | sh'), 'allow')).toBe(false);
-    expect(ruleMatches(gitStatus, 'Bash', bash('git status --short'), 'allow')).toBe(true);
+    expect(matches('git status && curl x | sh')).toBe(false);
   });
 
   it.each([
@@ -121,61 +180,48 @@ describe('ruleMatches on a shell line — 15 · B-08', () => {
     'git status `rm -rf ~`',
     'git status $(rm -rf ~)',
     'git status <(rm -rf ~)',
-    'git status >(rm -rf ~)',
     'git status > /etc/passwd',
     'git status >> ~/.bashrc',
     'git status < /dev/zero',
   ])('takes %j out of the allow prefix — S-08', (command) => {
-    expect(ruleMatches(gitStatus, 'Bash', bash(command), 'allow')).toBe(false);
+    expect(matches(command)).toBe(false);
   });
 
   it('counts an operator inside quotes too: a question more, never an authorisation more — S-09', () => {
-    const commit = parseRulePattern('Bash(git commit:*)');
+    const commit = parseRulePattern('shell(git commit:*)');
 
-    expect(ruleMatches(commit, 'Bash', bash('git commit -m "a; b"'), 'allow')).toBe(false);
-    expect(ruleMatches(commit, 'Bash', bash('git commit -m "a b"'), 'allow')).toBe(true);
+    expect(matches('git commit -m "a; b"', 'allow', commit)).toBe(false);
+    expect(matches('git commit -m "a b"', 'allow', commit)).toBe(true);
   });
 
-  it('lets a deny prefix refuse a command hidden after another — S-10', () => {
-    expect(ruleMatches(rm, 'Bash', bash('ls && rm -rf build'), 'deny')).toBe(true);
-    expect(ruleMatches(rm, 'Bash', bash('ls; rm -rf build'), 'deny')).toBe(true);
+  it('lets a deny prefix refuse a command hidden after another, or substituted — S-10, S-11', () => {
+    const rm = parseRulePattern('shell(rm:*)');
+
+    expect(matches('ls && rm -rf build', 'deny', rm)).toBe(true);
+    expect(matches('echo $(rm -rf x)', 'deny', rm)).toBe(true);
+    expect(matches('echo `rm -rf x`', 'deny', rm)).toBe(true);
+    // An argument of `xargs`, not a command: out of reach, and declared so.
+    expect(matches('ls | xargs rm', 'deny', rm)).toBe(false);
   });
 
-  it('refuses a substituted command, and leaves xargs out of reach as the help says — S-11', () => {
-    expect(ruleMatches(rm, 'Bash', bash('echo $(rm -rf x)'), 'deny')).toBe(true);
-    expect(ruleMatches(rm, 'Bash', bash('echo `rm -rf x`'), 'deny')).toBe(true);
-    // `rm` is an argument of `xargs` here, not a command at the start of a segment: out of reach,
-    // and declared so — a deny on `Bash` is a speed bump, not a sandbox.
-    expect(ruleMatches(rm, 'Bash', bash('ls | xargs rm'), 'deny')).toBe(false);
-  });
+  it('lets an exact allow cover the identical composite line, and nothing else — S-12', () => {
+    const exact = parseRulePattern('shell(make && make test)');
 
-  it('still lets an exact allow cover the identical composite line, and nothing else — S-12', () => {
-    const exact = parseRulePattern('Bash(make && make test)');
-
-    expect(ruleMatches(exact, 'Bash', bash('make && make test'), 'allow')).toBe(true);
-    expect(ruleMatches(exact, 'Bash', bash('make && make test && rm -rf ~'), 'allow')).toBe(false);
+    expect(matches('make && make test', 'allow', exact)).toBe(true);
+    expect(matches('make && make test && rm -rf ~', 'allow', exact)).toBe(false);
   });
 
   it('lets an exact deny refuse the same command inside a longer line', () => {
-    const exact = parseRulePattern('Bash(rm -rf /)');
+    const exact = parseRulePattern('shell(rm -rf /)');
 
-    expect(ruleMatches(exact, 'Bash', bash('ls && rm -rf /'), 'deny')).toBe(true);
-    expect(ruleMatches(exact, 'Bash', bash('ls && rm -rf /tmp'), 'deny')).toBe(false);
-  });
-
-  it('reads a path tool as before: shell operators mean nothing in a file name', () => {
-    const read = parseRulePattern('Read(/srv/a;b:*)');
-
-    expect(ruleMatches(read, 'Read', { file_path: '/srv/a;b c' }, 'allow')).toBe(true);
+    expect(matches('ls && rm -rf /', 'deny', exact)).toBe(true);
+    expect(matches('ls && rm -rf /tmp', 'deny', exact)).toBe(false);
   });
 
   /**
-   * The change only ever moves in the safe direction — S-20.
-   *
-   * Every line of up to three words and two operators from a small vocabulary, against every prefix
-   * of the same vocabulary: whatever the new allow answers, the old one answered; whatever the old
-   * deny refused, the new one refuses. Enumerated rather than sampled, so it is the same proof on
-   * every run.
+   * The change only ever moves in the safe direction — S-20 of plan 15, kept in the canonical
+   * grammar: whatever the allow answers, the bare prefix answered; whatever the bare prefix
+   * covered, the deny refuses. Enumerated, so it is the same proof on every run.
    */
   it('answers a subset with allow and refuses a superset with deny, over every generated line — S-20', () => {
     const words = ['git', 'status', 'rm', '-rf', 'x'];
@@ -196,24 +242,21 @@ describe('ruleMatches on a shell line — 15 · B-08', () => {
     }
 
     const prefixes = ['git', 'git status', 'rm', 'rm -rf'].map((p) =>
-      parseRulePattern(`Bash(${p}:*)`),
+      parseRulePattern(`shell(${p}:*)`),
     );
     const before = (prefix: string, line: string): boolean =>
       line === prefix || line.startsWith(`${prefix} `);
 
     let checked = 0;
-    for (const pattern of prefixes) {
+    for (const prefix of prefixes) {
       for (const line of lines) {
-        const old = before(pattern.content, line);
+        const old = before(prefix.content, line);
 
-        if (ruleMatches(pattern, 'Bash', bash(line), 'allow')) {
-          expect(old, `allow ${pattern.content} on ${line}`).toBe(true);
+        if (matches(line, 'allow', prefix)) {
+          expect(old, `allow ${prefix.content} on ${line}`).toBe(true);
         }
         if (old) {
-          expect(
-            ruleMatches(pattern, 'Bash', bash(line), 'deny'),
-            `deny ${pattern.content} on ${line}`,
-          ).toBe(true);
+          expect(matches(line, 'deny', prefix), `deny ${prefix.content} on ${line}`).toBe(true);
         }
         checked += 1;
       }
@@ -223,30 +266,139 @@ describe('ruleMatches on a shell line — 15 · B-08', () => {
   });
 });
 
-describe('matchedInput', () => {
-  it('prefers the command, then the path', () => {
-    expect(matchedInput({ file_path: '/a', command: 'ls' })).toBe('ls');
-    expect(matchedInput({ file_path: '/a' })).toBe('/a');
+/** A path matcher is a glob, relative to the folder unless it starts with `/` (plan 28, B-31). */
+describe('ruleMatches on a path', () => {
+  it.each([
+    ['file.edit(src/**)', `${folder}/src/a.ts`, true],
+    ['file.edit(src/**)', `${folder}/src/deep/er/a.ts`, true],
+    ['file.edit(src/*)', `${folder}/src/a.ts`, true],
+    ['file.edit(src/*)', `${folder}/src/deep/a.ts`, false],
+    ['file.edit(src/*.ts)', `${folder}/src/a.ts`, true],
+    ['file.edit(src/*.ts)', `${folder}/src/a.tsx`, false],
+    ['file.edit(src)', `${folder}/src/a.ts`, false],
+    ['file.edit(src/a.ts)', `${folder}/src/a.ts`, true],
+    ['file.edit(src/a.ts)', `${folder}/src/a.tsx`, false],
+    ['file.edit(src/./a.ts)', `${folder}/src/a.ts`, true],
+    ['file.edit(**)', `${folder}/anything/at/all`, true],
+    ['file.edit(**)', '/etc/passwd', false],
+    ['file.edit(/etc/**)', '/etc/passwd', true],
+    ['file.edit(/etc/passwd)', '/etc/passwd', true],
+    ['file.edit(/etc/passwd)', '/etc/passwd2', false],
+    ['file.edit(/srv/projects/app/src/*)', `${folder}/src/a.ts`, true],
+    ['file.edit(a+b.[c].ts)', `${folder}/a+b.[c].ts`, true],
+    ['file.edit(a+b.[c].ts)', `${folder}/aab.c.ts`, false],
+    ['file.edit(../app/**)', `${folder}/x`, false],
+  ])('%s against %s is %s', (pattern, path, expected) => {
+    expect(allows(pattern, file('file.edit', path))).toBe(expected);
   });
 
-  it('is null when nothing it knows is a string', () => {
-    expect(matchedInput({ command: 42 })).toBeNull();
+  it('reads a relative path of the call as relative to the folder', () => {
+    expect(allows('file.edit(src/**)', file('file.edit', 'src/a.ts'))).toBe(true);
+    expect(allows('file.edit(/srv/projects/app/src/*)', file('file.edit', 'src/a.ts'))).toBe(true);
+  });
+
+  it('never matches a path that climbs out of the folder, or out of the root', () => {
+    expect(allows('file.edit(**)', file('file.edit', `${folder}/../secret`))).toBe(false);
+    expect(allows('file.edit(**)', file('file.edit', '../secret'))).toBe(false);
+    expect(allows('file.edit(/**)', file('file.edit', '/../etc/passwd'))).toBe(false);
+    expect(allows('file.edit(**)', file('file.edit', '.'))).toBe(false);
+  });
+
+  it('matches a relative matcher on nothing when the folder is not known', () => {
+    expect(allows('file.edit(src/**)', file('file.edit', `${folder}/src/a.ts`), '')).toBe(false);
+    expect(allows('file.edit(/srv/**)', file('file.edit', `${folder}/src/a.ts`), '')).toBe(true);
+    expect(allows('file.edit(/srv/**)', file('file.edit', 'src/a.ts'), '')).toBe(false);
+    expect(
+      ruleMatches(parseRulePattern('file.edit(src/**)'), file('file.edit', 'src/a'), 'allow', null),
+    ).toBe(true);
+  });
+
+  it('reads a search by the path it searches in, and a search with none only bare', () => {
+    expect(allows('search(src)', canonicalTool('search', { paths: [`${folder}/src`] }))).toBe(true);
+    expect(allows('search(src)', canonicalTool('search', { pattern: 'TODO' }))).toBe(false);
+    expect(allows('search', canonicalTool('search', { pattern: 'TODO' }))).toBe(true);
+  });
+
+  it('reads a path without the shell: an operator means nothing in a file name', () => {
+    expect(allows('file.read(a;b c)', file('file.read', `${folder}/a;b c`))).toBe(true);
   });
 });
 
+describe('ruleMatches on the web and on MCP', () => {
+  const fetch = (url: string) => canonicalTool('web.fetch', { url });
+  const mcp = (server: string, tool: string) => canonicalTool('mcp', { server, tool });
+
+  it('matches a domain by the host of the URL, exactly and in any case', () => {
+    expect(allows('web.fetch(domain:example.com)', fetch('https://EXAMPLE.com/docs?q=1'))).toBe(
+      true,
+    );
+    expect(allows('web.fetch(domain:example.com)', fetch('http://example.com:8080/'))).toBe(true);
+    expect(allows('web.fetch(domain:example.com)', fetch('https://docs.example.com/'))).toBe(false);
+    expect(allows('web.fetch(domain:example.com)', fetch('https://example.com.evil.io/'))).toBe(
+      false,
+    );
+    expect(allows('web.fetch(domain:example.com)', fetch('not a url'))).toBe(false);
+  });
+
+  it('matches an MCP tool, or every tool of its server', () => {
+    expect(allows('mcp(github:create_issue)', mcp('github', 'create_issue'))).toBe(true);
+    expect(allows('mcp(github:create_issue)', mcp('github', 'close_issue'))).toBe(false);
+    expect(allows('mcp(github:*)', mcp('github', 'close_issue'))).toBe(true);
+    expect(allows('mcp(github:*)', mcp('gitlab', 'close_issue'))).toBe(false);
+  });
+});
+
+describe('hostOf', () => {
+  it.each([
+    ['https://Example.com/x', 'example.com'],
+    ['http://127.0.0.1:3000', '127.0.0.1'],
+    ['nope', null],
+    ['http://[::1]/', null],
+    ['file:///etc/passwd', null],
+  ])('reads %j as %j', (url, host) => {
+    expect(hostOf(url)).toBe(host);
+  });
+});
+
+/** The narrowest pattern that covers one call — what the card's `exact` reach and `session` leave. */
 describe('patternForInvocation', () => {
-  it('names the narrowest pattern that covers the invocation', () => {
-    expect(patternForInvocation('Bash', { command: 'git status' })).toBe('Bash(git status)');
+  it.each([
+    [claudeTool('Bash', { command: 'git status' }), 'shell(git status)'],
+    [claudeTool('Edit', { file_path: `${folder}/src/a.ts` }), 'file.edit(src/a.ts)'],
+    [claudeTool('Write', { file_path: '/etc/hosts' }), 'file.write(/etc/hosts)'],
+    [claudeTool('Read', { file_path: 'notes.md' }), 'file.read(notes.md)'],
+    [claudeTool('Grep', { pattern: 'x', path: `${folder}/src` }), 'search(src)'],
+    [claudeTool('WebFetch', { url: 'https://Example.com/a' }), 'web.fetch(domain:example.com)'],
+    [claudeTool('mcp__github__create_issue', {}), 'mcp(github:create_issue)'],
+  ])('names %j as %s', (tool, pattern) => {
+    expect(patternForInvocation(tool, folder)).toBe(pattern);
   });
 
   it.each([
-    // The only available pattern would be the whole tool, which is far more than was approved…
-    [{ nothing: true }],
-    // …and this one would read back as something other than what was written.
-    [{ command: 'echo (x)' }],
-  ])('refuses to write one for %j', (input) => {
-    // `null` and not the tool name: falling back to `Bash` would grant far more than what was
-    // approved, which is the one direction a permission system may not fall back in.
-    expect(patternForInvocation('Bash', input)).toBeNull();
+    ['a shell with no command', canonicalTool('shell')],
+    ['a value with `)`, which would read back differently', shell('echo (x)')],
+    ['a line ending like a prefix', shell('foo:*')],
+    ['a path with a glob character', file('file.edit', `${folder}/a*.ts`)],
+    ['a path ending like a prefix', file('file.edit', `${folder}/a:*`)],
+    ['a path with no file', canonicalTool('file.edit')],
+    ['a path that climbs out', file('file.edit', '../x')],
+    ['a search with no path', canonicalTool('search', { pattern: 'x' })],
+    ['a URL with no host', canonicalTool('web.fetch', { url: 'nope' })],
+    ['a fetch with no URL', canonicalTool('web.fetch')],
+    ['an MCP call with no tool', canonicalTool('mcp', { server: 'a' })],
+    ['an MCP tool named like the wildcard', canonicalTool('mcp', { server: 'a', tool: '*' })],
+    ['a web search', canonicalTool('web.search', { query: 'x' })],
+    ['a subagent', canonicalTool('agent', { description: 'x' })],
+    ['a question', claudeTool('AskUserQuestion', { questions: [] })],
+    ['a kind the core does not know', canonicalTool('file.copy', { paths: ['/a'] })],
+  ])('refuses to write one for %s', (_, tool) => {
+    // `null` and not the whole kind: falling back to it would grant far more than was approved.
+    expect(patternForInvocation(tool, folder)).toBeNull();
+  });
+
+  it('writes the absolute path when the folder is not known', () => {
+    expect(patternForInvocation(file('file.read', '/srv/x/a.ts'), null)).toBe(
+      'file.read(/srv/x/a.ts)',
+    );
   });
 });

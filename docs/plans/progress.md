@@ -45,7 +45,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 25-mobile-file-browser        ████████████████████ 100%   ✅ concluído
 26-mobile-conversation-parity █████░░░░░░░░░░░░░░░  23%   🔄 em andamento
 27-conversation-losses        ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-28-agent-neutral-core         ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
+28-agent-neutral-core         ███████████████░░░░░  73%   🔄 em andamento
 ```
 
 ---
@@ -84,8 +84,8 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [25 — Navegador de arquivos no app](25-mobile-file-browser/README.md) | 8/8 | 32/32 | 153/153 | 34/34 | ✅ |
 | [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 2/8 | 6/26 | 12/78 | 15/15 | 🔄 |
 | [27 — Perdas da conversa](27-conversation-losses/README.md) | 0/8 | 0/28 | 0/107 | 3/14 | 🔲 |
-| [28 — Agent neutral core](28-agent-neutral-core/README.md) | 0/8 | 0/48 | 0/136 | 18/18 | 🔲 |
-| **Total** | **115/177** | **610/977** | **2388/3969** | **457/549** | 🔄 |
+| [28 — Agent neutral core](28-agent-neutral-core/README.md) | 6/8 | 35/48 | 106/136 | 46/46 | 🔄 |
+| **Total** | **121/177** | **645/977** | **2494/3969** | **485/577** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 

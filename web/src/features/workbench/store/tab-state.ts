@@ -14,6 +14,12 @@ export interface TabRestorer<T = unknown> extends RegistryEntry {
    */
   readonly version: number;
 
+  /**
+   * The ids the part was kept under before it was renamed — read once, when nothing is kept under
+   * {@link RegistryEntry.id}, and written under the new id from then on (plan 28, B-39).
+   */
+  readonly formerIds?: readonly string[];
+
   /** A kept value, as far as it can be trusted — `undefined` for "start from the default". */
   parse(saved: unknown): T | undefined;
 
@@ -97,6 +103,20 @@ function keep(path: string, restorers: readonly TabRestorer[]): void {
   }
 }
 
+/** What a part kept, under its id or — kept by an older build — under one it had before. */
+function keptPart(
+  kept: Readonly<Record<string, KeptPart>>,
+  restorer: TabRestorer,
+): KeptPart | undefined {
+  const former = (restorer.formerIds ?? []).find((id) => Object.hasOwn(kept, id));
+
+  if (Object.hasOwn(kept, restorer.id)) {
+    return kept[restorer.id];
+  }
+
+  return former === undefined ? undefined : kept[former];
+}
+
 /**
  * Gives a folder's tab back what it kept, then keeps what changes from now on.
  *
@@ -109,7 +129,7 @@ export function restoreTab(path: string, restorers: readonly TabRestorer[]): voi
   const kept = readKept()[path] ?? {};
 
   for (const restorer of restorers) {
-    const part = kept[restorer.id];
+    const part = keptPart(kept, restorer);
     const value = part?.version === restorer.version ? restorer.parse(part.state) : undefined;
 
     if (value !== undefined) {

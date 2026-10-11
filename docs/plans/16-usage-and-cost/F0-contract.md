@@ -56,7 +56,7 @@ conversa externa; um `/clear` no meio. Com elas, fechar os gaps de
 na descoberta (`docs/discovery/01-descoberta-claude-agent-sdk.md`, seção nova), como os planos 01 e
 04 fizeram.
 
-Escrever em [backend/04](../../architecture/backend/04-claude-integration.md#o-mapper--a-tradução-que-protege-o-contrato)
+Escrever em [backend/04](../../architecture/backend/04a-claude.md#o-mapper--a-tradução-que-protege-o-contrato)
 uma seção "Uso e custo — o que o `result` diz": `total_cost_usd` e `modelUsage` acumulados por
 `query()`, `usage` só do loop principal e por turno, `costBasis`, reset por `/clear`, resultado
 zerado, linha de base da retomada, e que o custo é estimativa. O teste de S-07 lê a fixture e

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/events/tool-completed.json",
   "title": "ToolCompleted",
-  "description": "A tool invocation ended, from the `tool_result` the SDK reports on a `user` message.",
+  "description": "A tool invocation ended, from the result the engine reported. It carries no `kind` nor `label`: the `tool.started` of the same `toolUseId` always came first, live and in the history, and the client has them from it (plan 28, D-28).",
   "x-kind": "event",
   "x-type": "tool.completed",
   "type": "object",
@@ -22,11 +22,11 @@
     },
     "parentToolUseId": {
       "type": "string",
-      "description": "Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation."
+      "description": "Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation."
     },
     "taskId": {
       "type": "string",
-      "description": "The task of the list a `TaskCreate` made or a `TaskUpdate` changed — taken from the tool's structured result live, and from its result in the history. Absent for every other tool. The `summary` is the CLI's text, cut, and never carries it reliably (plan 08, B-20)."
+      "description": "The task a call that creates or changes one made or changed, taken from the call's result. Kept for the previous protocol, whose clients rebuild the list themselves; the list is `session.tasksChanged` now (plan 28, B-22), and this goes with the window, in F7 (B-47)."
     },
     "at": {
       "type": "string",
@@ -38,7 +38,7 @@
       "required": ["interaction"],
       "properties": {
         "interaction": {
-          "$ref": "../definitions/question-interaction.schema.json",
+          "$ref": "../definitions/interaction.schema.json",
           "description": "The questions, normalised as the request carried them."
         },
         "outcome": {

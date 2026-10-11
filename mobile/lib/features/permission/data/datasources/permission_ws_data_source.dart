@@ -8,9 +8,9 @@ library;
 
 import 'dart:async';
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 // The wire's own question classes stay out: the domain's are the ones read here (plan 24).
-import 'package:remote_claude/core/network/contracts/protocol.g.dart'
-    hide QuestionAnswer, QuestionInteraction;
+import 'package:remote_claude/core/network/contracts/protocol.g.dart' hide QuestionAnswer;
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/features/permission/data/mappers/permission_mapper.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
@@ -56,7 +56,7 @@ class SocketPermissionFeed implements PermissionFeed, SessionSubscriber {
   }
 
   @override
-  void onGap(String? claudeSessionId) => _emit(const PermissionFeedReset());
+  void onGap(ConversationKey? conversation) => _emit(const PermissionFeedReset());
 
   @override
   bool answer(OutgoingAnswer answer) => _client.respond(PermissionFrames.resolve, <String, Object?>{
@@ -66,7 +66,7 @@ class SocketPermissionFeed implements PermissionFeed, SessionSubscriber {
     // A one-off leaves no rule, so it names no reach (plan 23, B-16).
     if (answer.scope != PermissionScope.once) 'reach': ?answer.reach?.name,
     'reason': ?answer.reason,
-    // By question, the labels and the free answer apart — never the SDK's joined string (D-03).
+    // By question, the labels and the free answer apart — never the engine's joined string (D-03).
     'answers': ?answer.answers
         ?.map(
           (QuestionAnswer each) => <String, Object?>{

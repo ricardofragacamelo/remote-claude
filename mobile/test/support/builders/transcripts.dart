@@ -3,13 +3,15 @@ library;
 
 import 'package:remote_claude/features/transcript/transcript.dart';
 
+import 'conversations.dart';
+
 /// One row of `GET /transcripts`, complete, with [overrides] applied on top.
 ///
 /// A key overridden with `null` is **removed**, so a test can say "this row has no branch" without
 /// restating every other field.
 Map<String, Object?> conversationRow([Map<String, Object?> overrides = const <String, Object?>{}]) {
   final Map<String, Object?> row = <String, Object?>{
-    'sessionId': 'conv-1',
+    'conversation': conversationJson('conv-1'),
     'summary': 'Fix the build',
     'origin': 'ours',
     'cwd': '/home/someone/project',
@@ -31,7 +33,7 @@ ConversationSummary aConversation({
   String cwd = '/home/someone/project',
   String? gitBranch = 'main',
 }) => ConversationSummary(
-  conversationId: conversationId,
+  conversation: conversationOf(conversationId),
   summary: summary,
   origin: origin,
   cwd: cwd,

@@ -90,11 +90,11 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Transcript de outro dono não é acessível, e falha do SDK é `502` | B-04, B-05 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-04, S-05 |
 | A recarga por `gap: true` finalmente tem de onde recarregar | B-07 | [backend/06-realtime](../../architecture/backend/06-realtime.md#ring-buffer-e-replay) | S-14, S-15 |
 | Telas de histórico nas duas pontas, traduzidas | B-06, B-08, B-09 | [web/01](../../architecture/web/01-architecture.md), [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-11…S-13, S-16…S-18 |
-| Retomar continua a conversa, sem duplicar sessão viva | B-10, B-11 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-19, S-21, S-24, S-25 |
-| Retomar a sessão que começou fora — por fork, nunca escrevendo no transcript de origem | B-12 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-20, S-58, S-59 |
+| Retomar continua a conversa, sem duplicar sessão viva | B-10, B-11 | [backend/04a-claude](../../architecture/backend/04a-claude.md) | S-19, S-21, S-24, S-25 |
+| Retomar a sessão que começou fora — por fork, nunca escrevendo no transcript de origem | B-12 | [backend/04a-claude](../../architecture/backend/04a-claude.md) | S-20, S-58, S-59 |
 | Retomada respeita allowlist, limite e erros conhecidos | B-13 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-22, S-23, S-26…S-28 |
-| Slash commands vêm da instalação, sem lista hardcoded, e sem os internos e mortos | B-14, B-15, B-17 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-29…S-31, S-35, S-36, S-60 |
-| `/init` passa pelo fluxo normal de permissão | B-16 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-32…S-34 |
+| Slash commands vêm da instalação, sem lista hardcoded, e sem os internos e mortos | B-14, B-15, B-17 | [backend/04a-claude](../../architecture/backend/04a-claude.md#slash-commands-init-gerar-readme-e-agentsmd) | S-29…S-31, S-35, S-36, S-60 |
+| `/init` passa pelo fluxo normal de permissão | B-16 | [backend/04a-claude](../../architecture/backend/04a-claude.md#slash-commands-init-gerar-readme-e-agentsmd) | S-32…S-34 |
 | Desfazer tem alcance explícito, é auditado, não roda no meio de um turno e não destrói alteração manual | B-18…B-21 | [backend/03-modules](../../architecture/backend/03-modules.md#audit) | S-37…S-45, S-61…S-63 |
 | O ciclo provado pela porta do usuário, e o comando real pelo smoke-live | B-22…B-25 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-46…S-53 |
 

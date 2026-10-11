@@ -28,7 +28,7 @@ com `*`) → `428`; hash atual diferente → `412` com o `ETag` atual — inclus
 apagado, que nunca é recriado em silêncio; **mas** hash atual igual ao hash do corpo → `200` sem
 escrever (o reenvio depois de resposta perdida, S-66).
 
-A escrita é a mesma do desfazer ([backend/04](../../architecture/backend/04-claude-integration.md#desfazer-arquivos--o-store-é-nosso)):
+A escrita é a mesma do desfazer ([backend/04](../../architecture/backend/04a-claude.md#desfazer-arquivos--o-store-é-nosso)):
 temporário no **mesmo diretório** do alvo real (com prefixo reconhecível, `.<nome>.rc-<ulid>.tmp`),
 `fsync`, modo do original preservado, conferência do caminho real do descritor do temporário, nova
 conferência do hash imediatamente antes, e `rename`. Temporário órfão de um processo que morreu sai

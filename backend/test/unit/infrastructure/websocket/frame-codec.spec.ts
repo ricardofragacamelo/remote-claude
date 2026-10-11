@@ -43,7 +43,15 @@ describe('decodeFrame', () => {
   });
 
   it.each([
-    ['a future version', 2],
+    ['the current version', 2],
+    ['the one before it, in its window — plan 28, D-08', 1],
+  ])('accepts %s', (_case, version) => {
+    expect(decodeFrame(JSON.stringify({ ...valid, v: version }), LIMIT).v).toBe(version);
+  });
+
+  it.each([
+    ['a future version', 3],
+    ['one older than the window', 0],
     ['a missing version', undefined],
     ['a version that is a string', '1'],
   ])('refuses %s, so the client can be told to update', (_case, version) => {
@@ -58,7 +66,7 @@ describe('decodeFrame', () => {
     try {
       decodeFrame(JSON.stringify({ ...valid, v: 99 }), LIMIT);
     } catch (error) {
-      expect((error as UnsupportedProtocolVersionError).supportedVersions).toEqual([1]);
+      expect((error as UnsupportedProtocolVersionError).supportedVersions).toEqual([2, 1]);
     }
   });
 

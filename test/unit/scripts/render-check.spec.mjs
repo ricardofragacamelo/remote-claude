@@ -252,6 +252,37 @@ describe('the map of the repository — S-09, S-10', () => {
     expect(checkParity(map, tree).problems).toEqual([]);
   });
 
+  it('reads the labels from the classifier of the backend, every one paired with the app — plan 28, B-18', () => {
+    expect(map.labelSources).toEqual([
+      'backend/src/adapter/outbound/engines/claude/tool-classifier.ts',
+    ]);
+    expect(tree.labelKeys).toContain('sessions.tool.shell');
+    const labels = map.entries.filter((/** @type {any} */ entry) => entry.label !== undefined);
+    for (const entry of labels) {
+      expect(entry).toMatchObject({
+        state: 'ok',
+        web: expect.stringMatching(/^web\/src\/shared\/lib\/tool-label\.ts#/),
+      });
+    }
+  });
+
+  it('fails a kind the classifier labels with a key the map does not pair — plan 28, S-57', () => {
+    const classifier = read(map.labelSources[0]);
+    const grown = `${classifier}\nconst vcs: Classify = () => tool('vcs.commit', 'sessions.tool.vcsCommit', {});\n`;
+    const problems = checkParity(map, {
+      ...tree,
+      labelKeys: labelKeysIn(grown, map.labelPattern),
+    }).problems;
+
+    expect(problems).toEqual([
+      {
+        kind: 'unmapped-label',
+        subject: 'sessions.tool.vcsCommit',
+        detail: 'a label of a tool with no entry',
+      },
+    ]);
+  });
+
   it('starts as the discovery measured it: the inserting of code excluded, the rest ok or waiting for F2…F5', () => {
     const excluded = map.entries.filter((/** @type {any} */ entry) => entry.state === 'excluded');
     const phases = new Set(

@@ -5,7 +5,7 @@ import { HubSessionBroadcaster } from '@adapter/outbound/session/hub-session.bro
 import type { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.store';
 import type { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
 import { SessionId } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import type { TurnFileCheckpoint } from '@domain/session';
 import { ConnectionRegistry } from '@infra/websocket/connection-registry';
 import { EventBuffer } from '@infra/websocket/event-buffer';
@@ -20,12 +20,12 @@ import { SequentialIds } from '../../../../support/fakes/sequential-ids';
 const sessionId = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ');
 
 /** The conversation every session of this suite was. */
-const CONVERSATION = ClaudeSessionId.create('6b41b192-a41b-46c2-b8d7-5098d8c825be');
+const CONVERSATION = ConversationRef.create('claude', '6b41b192-a41b-46c2-b8d7-5098d8c825be');
 
 /** What the journal is told about a session: which one, and which conversation it was. */
-const scopeOf = (id: SessionId): { sessionId: SessionId; claudeSessionId: ClaudeSessionId } => ({
+const scopeOf = (id: SessionId): { sessionId: SessionId; conversation: ConversationRef } => ({
   sessionId: id,
-  claudeSessionId: CONVERSATION,
+  conversation: CONVERSATION,
 });
 const now = new Date('2026-09-18T12:00:00.000Z');
 

@@ -4,6 +4,7 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import {
   closeSession,
+  compactSession,
   conversationFrom,
   readEvent,
   conversationOfStart,
@@ -21,6 +22,8 @@ import {
   forkConversation,
 } from '@/features/session/services/live-session.service';
 import type { WsClient } from '@/shared/api/ws-client';
+import { CAPABILITIES } from '../../../../support/engines';
+import { aToolCall } from '../../../../support/canonical-tool';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 const AT = '2026-09-19T12:00:00.000Z';
@@ -58,27 +61,27 @@ describe('the session commands', () => {
       startDraft(client, {
         workspacePath: '/srv/projects/app',
         model: null,
-        permissionMode: 'default',
+        permissionMode: 'ask',
         effort: null,
       }),
     ).toBe('cmd-1');
     startDraft(client, {
       workspacePath: '/srv/projects/app',
       model: 'opus',
-      permissionMode: 'plan',
+      permissionMode: 'readOnly',
       effort: 'high',
     });
 
     expect(sent).toEqual([
       {
         type: 'session.start',
-        payload: { workspacePath: '/srv/projects/app', permissionMode: 'default' },
+        payload: { workspacePath: '/srv/projects/app', permissionMode: 'ask' },
       },
       {
         type: 'session.start',
         payload: {
           workspacePath: '/srv/projects/app',
-          permissionMode: 'plan',
+          permissionMode: 'readOnly',
           model: 'opus',
           effort: 'high',
         },
@@ -89,11 +92,18 @@ describe('the session commands', () => {
   it('forks a conversation up to before a prompt — never a truncation, D-19', () => {
     const { client, sent } = aClient();
 
-    expect(forkConversation(client, '/srv/projects/app', 'conv-1', 'msg-3')).toBe('cmd-1');
+    const conversation = { engine: 'claude', id: 'conv-1', extra: 'kept here' };
+
+    expect(forkConversation(client, '/srv/projects/app', conversation, 'msg-3')).toBe('cmd-1');
+    // `resumeFrom` carries the conversation, its two fields and nothing more — plan 28, S-39.
     expect(sent).toEqual([
       {
         type: 'session.start',
-        payload: { workspacePath: '/srv/projects/app', resumeSessionId: 'conv-1', forkAt: 'msg-3' },
+        payload: {
+          workspacePath: '/srv/projects/app',
+          resumeFrom: { engine: 'claude', id: 'conv-1' },
+          forkAt: 'msg-3',
+        },
       },
     ]);
   });
@@ -134,6 +144,13 @@ describe('the session commands', () => {
     of()(client, SESSION);
 
     expect(sent[0]).toEqual({ type, payload: { sessionId: SESSION } });
+  });
+
+  it('compacts with a command of its own, and answers the id its refusal would name — plan 28, S-69', () => {
+    const { client, sent } = aClient();
+
+    expect(compactSession(client, SESSION)).toBe('cmd-1');
+    expect(sent[0]).toEqual({ type: 'session.compact', payload: { sessionId: SESSION } });
   });
 
   it('changes the model', () => {
@@ -194,8 +211,8 @@ describe('recognising the refusal of one command — plan 04, S-34', () => {
 });
 
 describe('continuing a conversation — plan 04, F2', () => {
-  const CONVERSATION = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
-  const FORK = '00000000-0000-4000-8000-000000000001';
+  const CONVERSATION = { engine: 'claude', id: '6b41b192-a41b-46c2-b8d7-5098d8c825be' };
+  const FORK = { engine: 'claude', id: '00000000-0000-4000-8000-000000000001' };
 
   function frame(overrides: Partial<Envelope>): Envelope {
     return { v: 1, id: 'f1', kind: 'event', type: 'session.started', ts: AT, ...overrides };
@@ -214,13 +231,13 @@ describe('continuing a conversation — plan 04, F2', () => {
     expect(sent).toEqual([
       {
         type: 'session.start',
-        payload: { workspacePath: '/srv/projects/app', resumeSessionId: CONVERSATION },
+        payload: { workspacePath: '/srv/projects/app', resumeFrom: CONVERSATION },
       },
     ]);
   });
 
   describe('recognising the answer', () => {
-    const request = { conversationId: CONVERSATION, commandId: 'cmd-1' };
+    const request = { conversation: CONVERSATION, commandId: 'cmd-1' };
 
     it('is a session that started and continues it — in place or as a fork', () => {
       expect(
@@ -228,7 +245,7 @@ describe('continuing a conversation — plan 04, F2', () => {
           frame({
             payload: {
               sessionId: SESSION,
-              claudeSessionId: CONVERSATION,
+              conversation: CONVERSATION,
               resumedFrom: CONVERSATION,
             },
           }),
@@ -238,7 +255,7 @@ describe('continuing a conversation — plan 04, F2', () => {
       expect(
         resumeAnswer(
           frame({
-            payload: { sessionId: SESSION, claudeSessionId: FORK, resumedFrom: CONVERSATION },
+            payload: { sessionId: SESSION, conversation: FORK, resumedFrom: CONVERSATION },
           }),
           request,
         ),
@@ -251,7 +268,7 @@ describe('continuing a conversation — plan 04, F2', () => {
           frame({
             kind: 'ack',
             type: 'session.attached',
-            payload: { sessionId: SESSION, claudeSessionId: CONVERSATION, gap: false },
+            payload: { sessionId: SESSION, conversation: CONVERSATION, gap: false },
           }),
           request,
         ),
@@ -281,8 +298,21 @@ describe('continuing a conversation — plan 04, F2', () => {
         'a refusal of another command',
         { kind: 'error', type: 'error', correlationId: 'cmd-2', payload: {} },
       ],
-      ['another conversation starting', { payload: { sessionId: SESSION, claudeSessionId: FORK } }],
-      ['a start that names no session', { payload: { claudeSessionId: CONVERSATION } }],
+      ['another conversation starting', { payload: { sessionId: SESSION, conversation: FORK } }],
+      ['a start that names no session', { payload: { conversation: CONVERSATION } }],
+      [
+        'the same id of another engine',
+        {
+          payload: {
+            sessionId: SESSION,
+            conversation: { engine: 'other', id: CONVERSATION.id },
+          },
+        },
+      ],
+      [
+        'the id alone, as the previous protocol named it',
+        { payload: { sessionId: SESSION, claudeSessionId: CONVERSATION.id } },
+      ],
       ['anything else', { type: 'message.delta', payload: { messageId: 'm1' } }],
     ] as const)('is not %s', (_case, overrides) => {
       expect(resumeAnswer(frame(overrides as Partial<Envelope>), request)).toBeNull();
@@ -298,12 +328,39 @@ describe('continuing a conversation — plan 04, F2', () => {
     });
   });
 
-  it('reads which conversation a start is, and only from a start', () => {
+  it('reads which conversation a start is, what it continues and can do — only from a start', () => {
     expect(
-      conversationOfStart(frame({ payload: { claudeSessionId: FORK, resumedFrom: CONVERSATION } })),
-    ).toEqual({ claudeSessionId: FORK, resumedFrom: CONVERSATION });
-    expect(conversationOfStart(frame({}))).toEqual({ claudeSessionId: null, resumedFrom: null });
+      conversationOfStart(
+        frame({
+          payload: {
+            engine: 'claude',
+            conversation: FORK,
+            resumedFrom: CONVERSATION,
+            capabilities: CAPABILITIES,
+          },
+        }),
+      ),
+    ).toEqual({ conversation: FORK, resumedFrom: CONVERSATION, capabilities: CAPABILITIES });
+    expect(conversationOfStart(frame({}))).toEqual({
+      conversation: null,
+      resumedFrom: null,
+      capabilities: null,
+    });
     expect(conversationOfStart(frame({ type: 'turn.completed' }))).toBeNull();
+  });
+
+  it('reads a start that names its conversation in a shape it does not know as naming none', () => {
+    expect(
+      conversationOfStart(
+        frame({
+          payload: {
+            conversation: CONVERSATION.id,
+            resumedFrom: { engine: 'claude' },
+            capabilities: { resume: 'yes' },
+          },
+        }),
+      ),
+    ).toEqual({ conversation: null, resumedFrom: null, capabilities: null });
   });
 });
 
@@ -318,7 +375,7 @@ describe('the history, through the live reducer — plan 04, B-03', () => {
       said('m1', 'hi', 'user'),
       {
         type: 'tool.started',
-        payload: { toolUseId: 't1', toolName: 'Read', input: { file_path: 'a' } },
+        payload: { toolUseId: 't1', ...aToolCall('Read', { file_path: 'a' }) },
       },
       { type: 'tool.completed', payload: { toolUseId: 't1', status: 'succeeded' } },
       said('m2', 'done'),
@@ -351,21 +408,21 @@ describe('the history, through the live reducer — plan 04, B-03', () => {
     const live = conversationFrom([
       said('m2', 'two, live'),
       said('m3', 'three'),
-      { type: 'tool.started', payload: { toolUseId: 't1', toolName: 'Bash', input: {} } },
+      { type: 'tool.started', payload: { toolUseId: 't1', ...aToolCall('Bash', {}) } },
     ]);
 
     const merged = withHistory({ ...live, status: 'running' }, [
       said('m1', 'one'),
       said('m2', 'two, history'),
-      { type: 'tool.started', payload: { toolUseId: 't0', toolName: 'Read', input: {} } },
+      { type: 'tool.started', payload: { toolUseId: 't0', ...aToolCall('Read', {}) } },
       {
         type: 'tool.started',
-        payload: { toolUseId: 't1', toolName: 'Bash', input: { old: true } },
+        payload: { toolUseId: 't1', ...aToolCall('Bash', { old: true }) },
       },
     ]);
 
     expect(merged.messages.map((message) => message.text)).toEqual(['one', 'two, live', 'three']);
-    expect(merged.tools.map((tool) => [tool.toolUseId, tool.input])).toEqual([
+    expect(merged.tools.map((tool) => [tool.toolUseId, tool.rawInput])).toEqual([
       ['t0', {}],
       ['t1', {}],
     ]);

@@ -2,9 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
-import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
+import { TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -30,7 +30,7 @@ interface Spawn {
 /**
  * Continuing a conversation over the gateway — plan 04, F2.
  *
- * The resume is asked the way a client asks it: a `session.start` with `resumeSessionId`, on a real
+ * The resume is asked the way a client asks it: a `session.start` with `resumeFrom`, on a real
  * socket, against the real container and a real PostgreSQL. What no unit proves is here: that the
  * SDK is told to continue in place or to fork according to a row in the database, that the fork's
  * provenance and the trail are really written — the trail through the CHECK of migration `0012` —
@@ -157,7 +157,10 @@ describe('resuming a conversation', () => {
 
   /** Sends the resume, and answers the id of the command — what its own answer names. */
   function resume(socket: TestSocket, resumeSessionId: string, workspacePath = root): string {
-    const command = commandFrame('session.start', { workspacePath, resumeSessionId });
+    const command = commandFrame('session.start', {
+      workspacePath,
+      resumeFrom: { engine: 'claude', id: resumeSessionId },
+    });
     socket.send(command);
 
     return String(command['id']);
@@ -185,7 +188,9 @@ describe('resuming a conversation', () => {
   async function anEndedConversationOfOurs(socket: TestSocket): Promise<string> {
     socket.send(commandFrame('session.start', { workspacePath: root }));
     const started = await until(socket, 'session.started');
-    const conversation = String(started.payload?.['claudeSessionId']);
+    const conversation = String(
+      (started.payload?.['conversation'] as { id?: string } | undefined)?.id,
+    );
 
     await close(socket, String(started.payload?.['sessionId']));
     store.add({ sessionId: conversation, directory: root, cwd: root });
@@ -199,7 +204,9 @@ describe('resuming a conversation', () => {
     socket.send(commandFrame('session.start', { workspacePath: root }));
 
     const started = await until(socket, 'session.started');
-    const conversation = String(started.payload?.['claudeSessionId']);
+    const conversation = String(
+      (started.payload?.['conversation'] as { id?: string } | undefined)?.id,
+    );
 
     expect(await originOf(conversation)).toBe(SUBJECT);
     expect(started.payload).not.toHaveProperty('resumedFrom');
@@ -215,8 +222,8 @@ describe('resuming a conversation', () => {
     const started = await until(socket, 'session.started');
 
     expect(started.payload).toMatchObject({
-      claudeSessionId: conversation,
-      resumedFrom: conversation,
+      conversation: { engine: 'claude', id: conversation },
+      resumedFrom: { engine: 'claude', id: conversation },
       workspacePath: root,
     });
     expect(spawned).toEqual([
@@ -248,10 +255,10 @@ describe('resuming a conversation', () => {
 
     resume(socket, EDITOR);
     const started = await until(socket, 'session.started');
-    const fork = String(started.payload?.['claudeSessionId']);
+    const fork = String((started.payload?.['conversation'] as { id?: string } | undefined)?.id);
 
     expect(fork).not.toBe(EDITOR);
-    expect(started.payload).toMatchObject({ resumedFrom: EDITOR });
+    expect(started.payload).toMatchObject({ resumedFrom: { engine: 'claude', id: EDITOR } });
     expect(spawned).toEqual([{ resume: EDITOR, forkSession: true, sessionId: fork }]);
     // The fork is ours, recorded as such; the original stays the editor's — no row claims it.
     expect(await originOf(fork)).toBe(SUBJECT);
@@ -295,8 +302,8 @@ describe('resuming a conversation', () => {
         sessionId,
         replayed: 0,
         gap: false,
-        claudeSessionId: started.payload?.['claudeSessionId'],
-        resumedFrom: EDITOR,
+        conversation: started.payload?.['conversation'],
+        resumedFrom: { engine: 'claude', id: EDITOR },
       },
     });
     expect(spawned).toHaveLength(1);
@@ -394,8 +401,8 @@ describe('resuming a conversation', () => {
 
     expect(attached.payload).toMatchObject({
       sessionId,
-      claudeSessionId: started.payload?.['claudeSessionId'],
-      resumedFrom: EDITOR,
+      conversation: started.payload?.['conversation'],
+      resumedFrom: { engine: 'claude', id: EDITOR },
     });
 
     await close(socket, sessionId);

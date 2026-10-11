@@ -12,6 +12,7 @@ import 'package:remote_claude/features/session/domain/entities/session_event.dar
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 import 'package:remote_claude/features/session/domain/repositories/session_repository.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
 import '../../../../../support/fakes/fake_credentials.dart';
 import '../../../../../support/fakes/fake_frame_socket.dart';
@@ -132,8 +133,16 @@ void main() {
           seq: 500,
           payload: <String, Object?>{
             'watchId': 'w-1',
+            // The origins of plan 28 (B-25): the agent's write names the engine, not the agent.
             'changes': <Object?>[
               <String, Object?>{'path': 'a.ts', 'kind': 'changed'},
+              <String, Object?>{
+                'path': 'b.ts',
+                'kind': 'changed',
+                'origin': 'agent',
+                'engine': 'engine-a',
+              },
+              <String, Object?>{'path': 'c.ts', 'kind': 'created', 'origin': 'user'},
             ],
           },
         ),
@@ -300,10 +309,10 @@ void main() {
     repository.follow('ses-1', () => 0);
     final Future<SessionUpdate> first = repository.updates.first;
 
-    socket().deliver(sessionAttached(sessionId: 'ses-1', gap: true, claudeSessionId: 'conv-1'));
+    socket().deliver(sessionAttached(sessionId: 'ses-1', gap: true, conversation: 'conv-1'));
 
     // S-172 · the gap names its session, so only that session's screen reloads.
-    expect(await first, const StreamGap(sessionId: 'ses-1', claudeSessionId: 'conv-1'));
+    expect(await first, StreamGap(sessionId: 'ses-1', conversation: conversationOf('conv-1')));
   });
 
   test('S-24 · joining a live session reaches the stream, naming what it continues', () async {
@@ -311,12 +320,16 @@ void main() {
     final Future<SessionUpdate> first = repository.updates.first;
 
     socket().deliver(
-      sessionAttached(sessionId: 'ses-9', claudeSessionId: 'conv-1', resumedFrom: 'conv-0'),
+      sessionAttached(sessionId: 'ses-9', conversation: 'conv-1', resumedFrom: 'conv-0'),
     );
 
     expect(
       await first,
-      const SessionJoined(sessionId: 'ses-9', claudeSessionId: 'conv-1', resumedFrom: 'conv-0'),
+      SessionJoined(
+        sessionId: 'ses-9',
+        conversation: conversationOf('conv-1'),
+        resumedFrom: conversationOf('conv-0'),
+      ),
     );
   });
 
@@ -393,12 +406,12 @@ void main() {
 
     final String? id = repository.issue('session.start', <String, Object?>{
       'workspacePath': '/p',
-      'resumeSessionId': 'conv-1',
+      'resumeFrom': conversationJson('conv-1'),
     });
 
     expect(id, isNotNull);
     expect(socket().sent.last, contains('"id":"$id"'));
-    expect(socket().sent.last, contains('resumeSessionId'));
+    expect(socket().sent.last, contains('resumeFrom'));
   });
 
   test('a command issued before the handshake answers no id', () {

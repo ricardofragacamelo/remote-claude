@@ -10,8 +10,10 @@ Map<String, Object?> wireRule([Map<String, Object?> overrides = const <String, O
     <String, Object?>{
       'id': 'rule_1',
       'scope': 'project',
-      'toolName': 'Bash',
-      'pattern': 'Bash(git status)',
+      'kind': 'shell',
+      // Kept by the server for the published app, and never read by this build.
+      'toolName': 'shell',
+      'pattern': 'shell(git status:*)',
       'decision': 'allow',
       'projectPath': '/srv/app',
       'grantedBy': 'user-1',
@@ -19,6 +21,8 @@ Map<String, Object?> wireRule([Map<String, Object?> overrides = const <String, O
       'expiresAt': '2026-12-19T10:00:00.000Z',
       'status': 'active',
       'revokedAt': null,
+      'engine': null,
+      'disabled': null,
       ...overrides,
     };
 
@@ -30,8 +34,8 @@ void main() {
         PermissionRule(
           id: 'rule_1',
           scope: PermissionScope.project,
-          toolName: 'Bash',
-          pattern: 'Bash(git status)',
+          kind: 'shell',
+          pattern: 'shell(git status:*)',
           decision: PermissionDecision.allow,
           projectPath: '/srv/app',
           grantedBy: 'user-1',
@@ -58,6 +62,56 @@ void main() {
       expect(rule?.projectPath, isNull);
     });
 
+    test(
+      'reads a disabled rule: its old pattern, no kind, the engine and the reason — plan 28',
+      () {
+        final PermissionRule? rule = permissionRuleFrom(
+          wireRule(<String, Object?>{
+            'kind': null,
+            'toolName': 'Bash',
+            'pattern': 'Bash(npm run *)',
+            'status': 'disabled',
+            'engine': 'claude',
+            'disabled': <String, Object?>{'reason': 'untranslatable'},
+          }),
+        );
+
+        expect(rule?.status, RuleStatus.disabled);
+        expect(rule?.pattern, 'Bash(npm run *)');
+        expect(rule?.kind, isNull);
+        expect(rule?.engine, 'claude');
+        expect(rule?.disabledReason, 'untranslatable');
+      },
+    );
+
+    test('keeps a disabled rule whose reason it cannot read as disabled all the same', () {
+      expect(
+        permissionRuleFrom(
+          wireRule(<String, Object?>{
+            'disabled': <String, Object?>{'reason': 7},
+          }),
+        )?.disabledReason,
+        'unknown',
+      );
+    });
+
+    test('reads a backend from before the kind as a rule of no kind, for every engine', () {
+      final Map<String, Object?> older = wireRule()
+        ..remove('kind')
+        ..remove('engine')
+        ..remove('disabled');
+      final PermissionRule? rule = permissionRuleFrom(older);
+
+      expect(rule?.kind, isNull);
+      expect(rule?.engine, isNull);
+      expect(rule?.disabledReason, isNull);
+      expect(rule?.status, RuleStatus.active);
+    });
+
+    test('lists a rule that has no tool name — the kind is what names it', () {
+      expect(permissionRuleFrom(wireRule(<String, Object?>{'toolName': null})), isNotNull);
+    });
+
     test('reads a status added after this build shipped as unknown, not as an error', () {
       expect(
         permissionRuleFrom(wireRule(<String, Object?>{'status': 'paused'}))?.status,
@@ -65,14 +119,7 @@ void main() {
       );
     });
 
-    for (final String field in <String>[
-      'id',
-      'toolName',
-      'pattern',
-      'grantedBy',
-      'grantedAt',
-      'expiresAt',
-    ]) {
+    for (final String field in <String>['id', 'pattern', 'grantedBy', 'grantedAt', 'expiresAt']) {
       test('drops a rule with no $field — a row that cannot say what it authorises', () {
         expect(permissionRuleFrom(wireRule(<String, Object?>{field: null})), isNull);
       });

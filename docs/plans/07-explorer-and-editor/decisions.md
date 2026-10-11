@@ -277,7 +277,7 @@ plano e cai nos mesmos fatos.
 ### D-15 — arquivos que mudam a permissão
 
 Uma regra `allow` no `.claude/settings.json` do projeto **fura o `canUseTool`** em diretório confiado
-(medido — [backend/04](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido)),
+(medido — [backend/04](../../architecture/backend/04a-claude.md#diretório-confiado-fura-o-canusetool--medido)),
 e um hook ali é código que roda na próxima sessão. O plano 13 recomenda que a tela dele mostre isso
 só para leitura. Um editor genérico que salva qualquer arquivo abre a mesma porta por outro lado.
 

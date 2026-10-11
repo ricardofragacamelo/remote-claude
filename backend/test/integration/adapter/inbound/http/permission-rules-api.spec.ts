@@ -59,7 +59,7 @@ describe('the permission rules HTTP surface', () => {
     harness.app.get<PersistenceContext>(PERSISTENCE_CONTEXT);
 
   const rule = {
-    pattern: 'Bash(git status:*)',
+    pattern: 'shell(git status:*)',
     decision: 'allow',
     scope: 'project',
     projectPath: PROJECT,
@@ -98,13 +98,16 @@ describe('the permission rules HTTP surface', () => {
       expect(response.status).toBe(201);
       expect(response.body).toMatchObject({
         scope: 'project',
-        toolName: 'Bash',
-        pattern: 'Bash(git status:*)',
+        kind: 'shell',
+        toolName: 'shell',
+        pattern: 'shell(git status:*)',
         decision: 'allow',
         projectPath: PROJECT,
+        engine: null,
         grantedBy: SUBJECT,
         status: 'active',
         revokedAt: null,
+        disabled: null,
       });
       const lifetime =
         Date.parse(String(response.body.expiresAt)) - Date.parse(String(response.body.grantedAt));
@@ -137,41 +140,86 @@ describe('the permission rules HTTP surface', () => {
     });
 
     it('refuses a pattern outside the grammar, with 400 — S-47', async () => {
-      const response = await grant({ ...rule, pattern: 'Bash(git *' });
+      const response = await grant({ ...rule, pattern: 'shell(git *' });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toMatchObject({
         code: 'PERMISSION_RULE_PATTERN_INVALID',
         messageKey: 'permission.error.rulePatternInvalid',
+        params: { pattern: 'shell(git *', reason: 'syntax' },
       });
       expect(await rowCount()).toBe(0);
     });
 
-    it.each(['AskUserQuestion', 'ExitPlanMode'])(
-      'refuses an allow for %s, which asks the person, with 422, and stores nothing — plan 24, S-31, S-32',
-      async (pattern) => {
-        const response = await grant({ pattern, decision: 'allow', scope: 'always' });
+    it.each([
+      ['Bash(git status:*)', 'syntax'],
+      ['mcp__github__create_issue', 'syntax'],
+      ['file.edit(src:*)', 'prefixOutsideShell'],
+      ['web.fetch(https://example.com)', 'domainExpected'],
+      ['tasks', 'unknownKind'],
+    ])(
+      'refuses %j, outside the canonical grammar, with 400 and the reason %s — S-93',
+      async (pattern, reason) => {
+        const response = await grant({ ...rule, pattern });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toMatchObject({
+          code: 'PERMISSION_RULE_PATTERN_INVALID',
+          params: { pattern, reason },
+        });
+        expect(await rowCount()).toBe(0);
+      },
+    );
+
+    it.each([
+      ['question', 'allow'],
+      ['plan', 'allow'],
+      ['question', 'deny'],
+      ['plan(x)', 'deny'],
+    ])(
+      'refuses %s for %s, which asks the person, with 422, and stores nothing — plan 24, S-31; S-95',
+      async (pattern, decision) => {
+        const response = await grant({ pattern, decision, scope: 'always' });
 
         expect(response.status).toBe(422);
         expect(response.body.error).toMatchObject({
           code: 'PERMISSION_RULE_TOOL_INTERACTIVE',
           messageKey: 'permission.error.ruleToolInteractive',
-          params: { toolName: pattern },
+          params: { kind: pattern.split('(')[0] },
           httpEquivalent: 422,
         });
         expect(await rowCount()).toBe(0);
       },
     );
 
-    it.each(['AskUserQuestion', 'ExitPlanMode'])(
-      'grants a deny for %s, with 201 — "do not ask me anything here" — plan 24, S-31, S-32',
-      async (pattern) => {
-        const response = await grant({ pattern, decision: 'deny', scope: 'always' });
+    it.each([
+      ['file.edit(src/**)', 'file.edit'],
+      ['web.fetch(domain:example.com)', 'web.fetch'],
+      ['mcp(github:*)', 'mcp'],
+      ['agent', 'agent'],
+    ])('grants %s, of the kind %s — S-92', async (pattern, kind) => {
+      const response = await grant({ ...rule, pattern });
 
-        expect(response.status).toBe(201);
-        expect(response.body).toMatchObject({ toolName: pattern, decision: 'deny' });
-      },
-    );
+      expect(response.status).toBe(201);
+      expect(response.body).toMatchObject({ pattern, kind, toolName: kind });
+    });
+
+    it('grants a rule restricted to an engine, apart from the same rule for every engine — S-94', async () => {
+      const everyEngine = await grant();
+      const claudeOnly = await grant({ ...rule, engine: 'claude' });
+
+      expect(claudeOnly.status).toBe(201);
+      expect(claudeOnly.body).toMatchObject({ engine: 'claude', pattern: rule.pattern });
+      expect(claudeOnly.body.id).not.toBe(everyEngine.body.id);
+      expect((await grant({ ...rule, engine: 'claude' })).body.id).toBe(claudeOnly.body.id);
+    });
+
+    it.each(['Claude', 'a b', ''])('refuses the engine %j at the edge', async (engine) => {
+      const response = await grant({ ...rule, engine });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('INVALID_INPUT');
+    });
 
     it('accepts a lifetime at the ceiling', async () => {
       // A minute short of it, since the request takes time to reach the server and the ceiling is
@@ -203,7 +251,7 @@ describe('the permission rules HTTP surface', () => {
     });
 
     it('refuses a project rule that names no project', async () => {
-      const response = await grant({ pattern: 'Bash', decision: 'allow', scope: 'project' });
+      const response = await grant({ pattern: 'shell', decision: 'allow', scope: 'project' });
 
       expect(response.status).toBe(400);
       expect(response.body.error.messageKey).toBe('permission.error.scopeUnsupported');
@@ -230,9 +278,9 @@ describe('the permission rules HTTP surface', () => {
 
   describe('GET /permission-rules', () => {
     it('lists only the caller`s rules, newest first', async () => {
-      await grant({ ...rule, pattern: 'Bash(ls)' });
-      await grant({ ...rule, pattern: 'Bash(pwd)', scope: 'always', projectPath: undefined });
-      await grant({ ...rule, pattern: 'Bash(id)' }, otherToken);
+      await grant({ ...rule, pattern: 'shell(ls)' });
+      await grant({ ...rule, pattern: 'shell(pwd)', scope: 'always', projectPath: undefined });
+      await grant({ ...rule, pattern: 'shell(id)' }, otherToken);
 
       const response = await list();
 
@@ -243,8 +291,8 @@ describe('the permission rules HTTP surface', () => {
           listed.scope,
         ]),
       ).toEqual([
-        ['Bash(pwd)', 'always'],
-        ['Bash(ls)', 'project'],
+        ['shell(pwd)', 'always'],
+        ['shell(ls)', 'project'],
       ]);
     });
 
@@ -259,6 +307,36 @@ describe('the permission rules HTTP surface', () => {
       expect((await list()).body.rules).toEqual([
         expect.objectContaining({ id: granted.body.id, status: 'expired' }),
       ]);
+    });
+
+    it('lists a rule the migration switched off, with its old pattern and why — S-133', async () => {
+      await context().db.execute(
+        `INSERT INTO permission_rules
+           (id, user_id, scope, pattern, decision, granted_at, expires_at, grammar, disabled_reason, native_pattern)
+         VALUES ('disabled-1', '${SUBJECT}', 'always', 'Bash', 'allow', now(), now() + interval '1 hour',
+                 'canonical', 'untranslatable', 'Bash')`,
+      );
+
+      expect((await list()).body.rules).toEqual([
+        expect.objectContaining({
+          id: 'disabled-1',
+          kind: null,
+          toolName: 'Bash',
+          pattern: 'Bash',
+          engine: null,
+          status: 'disabled',
+          disabled: { reason: 'untranslatable' },
+        }),
+      ]);
+
+      const revoked = await revoke('disabled-1');
+
+      expect(revoked.status).toBe(200);
+      expect(revoked.body).toMatchObject({
+        status: 'revoked',
+        disabled: { reason: 'untranslatable' },
+      });
+      expect((await list()).body.rules).toEqual([]);
     });
 
     it('is empty, not an error, for somebody with no rule', async () => {
@@ -396,8 +474,8 @@ describe('the permission rules HTTP surface', () => {
     it('refuses a project rule without its project, whoever writes it', async () => {
       await expect(
         context().db.execute(
-          `INSERT INTO permission_rules (id, user_id, scope, pattern, decision, granted_at, expires_at)
-           VALUES ('r1', 'u', 'project', 'Bash', 'allow', now(), now() + interval '1 hour')`,
+          `INSERT INTO permission_rules (id, user_id, scope, pattern, decision, granted_at, expires_at, grammar)
+           VALUES ('r1', 'u', 'project', 'shell', 'allow', now(), now() + interval '1 hour', 'canonical')`,
         ),
       ).rejects.toThrow();
     });
@@ -405,8 +483,8 @@ describe('the permission rules HTTP surface', () => {
     it('refuses a rule that expires before it was granted, whoever writes it', async () => {
       await expect(
         context().db.execute(
-          `INSERT INTO permission_rules (id, user_id, scope, pattern, decision, granted_at, expires_at)
-           VALUES ('r2', 'u', 'always', 'Bash', 'allow', now(), now())`,
+          `INSERT INTO permission_rules (id, user_id, scope, pattern, decision, granted_at, expires_at, grammar)
+           VALUES ('r2', 'u', 'always', 'shell', 'allow', now(), now(), 'canonical')`,
         ),
       ).rejects.toThrow();
     });

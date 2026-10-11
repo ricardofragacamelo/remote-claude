@@ -79,7 +79,11 @@ test(`${revokeRace.id} — ${revokeRace.title}`, async () => {
 
   const granted = await callApi(user, '/permission-rules', {
     method: 'POST',
-    body: { pattern: 'Write(/workspace/e2e-revoke-race.md)', decision: 'allow', scope: 'always' },
+    body: {
+      pattern: 'file.write(/workspace/e2e-revoke-race.md)',
+      decision: 'allow',
+      scope: 'always',
+    },
   });
   expect(granted.status).toBe(201);
   const rule = (await granted.json()) as ListedRule;

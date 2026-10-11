@@ -16,13 +16,16 @@ import 'package:remote_claude/core/error/failure_messages.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/note_line.dart';
 import 'package:remote_claude/features/device/device.dart';
+import 'package:remote_claude/features/session/domain/entities/engine.dart';
 import 'package:remote_claude/features/session/domain/entities/insight.dart';
 import 'package:remote_claude/features/session/presentation/providers/draft_controller.dart';
+import 'package:remote_claude/features/session/presentation/providers/engine_catalogue.dart';
 import 'package:remote_claude/features/session/presentation/providers/insight_controllers.dart';
 import 'package:remote_claude/features/session/presentation/widgets/chat_composer.dart';
 import 'package:remote_claude/features/session/presentation/widgets/command_menu_sheet.dart';
@@ -53,6 +56,9 @@ class _DraftPageState extends ConsumerState<DraftPage> with BoxOwner<DraftPage> 
     final AsyncValue<InstallationCatalog> catalog = ref.watch(catalogControllerProvider(path));
     final List<InstallationModel> known = catalog.value?.models ?? const <InstallationModel>[];
     final ConnectionStatus connection = connectionOf(ref.watch(connectionStatusProvider));
+    // The modes and the levels of effort are the default engine's, as the list of engines says
+    // (plan 28, B-27, B-28): a draft names no engine, so it opens on that one.
+    final EngineCapabilities? offered = draftCapabilities(ref);
 
     // The session answers on the socket, not from the command: the screen moves when it opened.
     ref.listen<Draft>(draftControllerProvider(path), (Draft? previous, Draft next) {
@@ -93,6 +99,7 @@ class _DraftPageState extends ConsumerState<DraftPage> with BoxOwner<DraftPage> 
           mode: modeChoice(
             context,
             current: draft.choices.permissionMode,
+            modes: modesOf(offered),
             onPick: drafts.chooseMode,
           ),
           choices: <ComposerChoice>[
@@ -109,6 +116,7 @@ class _DraftPageState extends ConsumerState<DraftPage> with BoxOwner<DraftPage> 
             ?effortChoice(
               context,
               model: modelOf(known, draft.choices.model),
+              levels: levelsOf(offered),
               current: draft.choices.effort,
               onPick: drafts.chooseEffort,
             ),
@@ -138,13 +146,13 @@ class _Hints extends StatelessWidget {
         children: <Widget>[
           Text(l10n.draftTitle, style: theme.textTheme.titleLarge),
           Text(path, style: theme.textTheme.bodySmall),
-          NoteLine(l10n.draftDescription, style: theme.textTheme.bodyMedium),
+          NoteLine(l10n.draftDescription(agentNameIn(context)), style: theme.textTheme.bodyMedium),
           NoteLine(l10n.draftCommands),
           if (noModels) NoteLine(l10n.draftDefaultModel),
           if (failure != null)
             NoteLine(
               l10n.draftCatalogFailed(
-                failure is Failure ? translateFailure(l10n, failure) : l10n.commonErrorUnexpected,
+                failure is Failure ? failureText(context, failure) : l10n.commonErrorUnexpected,
               ),
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
             ),

@@ -10,9 +10,11 @@ import 'package:remote_claude/features/permission/domain/entities/permission_req
 /// Whether a rule still answers, as the server computed it.
 ///
 /// The server's and never the phone's: the list shows an expired rule marked rather than missing,
-/// and that cannot depend on the clock of whatever device is looking. [unknown] is a state added
-/// after this build shipped, shown as what it is rather than guessed at.
-enum RuleStatus { active, expired, unknown }
+/// and that cannot depend on the clock of whatever device is looking. [disabled] is a rule written
+/// for an agent in a form this version cannot carry over: it answers nothing, and can only be revoked
+/// (plan 28, D-18). [unknown] is a state added after this build shipped, shown as what it is rather
+/// than guessed at.
+enum RuleStatus { active, expired, disabled, unknown }
 
 /// How close to its expiry a rule is flagged.
 ///
@@ -29,14 +31,16 @@ class PermissionRule extends Equatable {
   const PermissionRule({
     required this.id,
     required this.scope,
-    required this.toolName,
     required this.pattern,
     required this.decision,
     required this.grantedBy,
     required this.grantedAt,
     required this.expiresAt,
     required this.status,
+    this.kind,
     this.projectPath,
+    this.engine,
+    this.disabledReason,
   });
 
   final String id;
@@ -44,9 +48,12 @@ class PermissionRule extends Equatable {
   /// `project` or `always` — the only two that outlive a session.
   final PermissionScope scope;
 
-  final String toolName;
+  /// The kind of call the rule answers (`shell`, `file.edit`), as the server read it from the
+  /// pattern. `null` on a disabled rule, whose pattern was never carried over.
+  final String? kind;
 
-  /// Exactly as granted, in the grammar of the Claude Code settings.
+  /// Exactly as granted, in the canonical grammar — `shell(git status:*)` —, shown and never parsed:
+  /// the server is the one that reads it. A disabled rule keeps the pattern it was written with.
   final String pattern;
 
   final PermissionDecision decision;
@@ -61,6 +68,12 @@ class PermissionRule extends Equatable {
   final DateTime expiresAt;
   final RuleStatus status;
 
+  /// The engine the rule is restricted to; `null` when it holds for every agent with the kind.
+  final String? engine;
+
+  /// Why the rule answers nothing any more — a code, `untranslatable` —, when it was disabled.
+  final String? disabledReason;
+
   /// Whether it is about to stop answering at [now].
   ///
   /// Without the warning a session starts asking again with no explanation: the convenience is
@@ -72,7 +85,7 @@ class PermissionRule extends Equatable {
   List<Object?> get props => <Object?>[
     id,
     scope,
-    toolName,
+    kind,
     pattern,
     decision,
     projectPath,
@@ -80,5 +93,7 @@ class PermissionRule extends Equatable {
     grantedAt,
     expiresAt,
     status,
+    engine,
+    disabledReason,
   ];
 }

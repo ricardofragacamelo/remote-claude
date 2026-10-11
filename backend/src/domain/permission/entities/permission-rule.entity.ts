@@ -1,10 +1,11 @@
 import type { UserId } from '@domain/auth';
+import type { CanonicalTool } from '@domain/engine';
 import type { SessionId } from '@domain/session';
 import { PermissionRuleExpiryInvalidError } from '../errors/permission-rule-expiry-invalid.error';
 import { PermissionRuleExpiryTooLongError } from '../errors/permission-rule-expiry-too-long.error';
 import { PermissionScopeUnsupportedError } from '../errors/permission-scope-unsupported.error';
 import { parseRulePattern, ruleMatches } from '../services/rule-pattern';
-import type { RulePattern } from '../services/rule-pattern';
+import type { RuleKind, RulePattern } from '../services/rule-pattern';
 import type { PermissionScope } from '../value-objects/permission-scope.value-object';
 import type { PermissionDecision } from './permission-request.entity';
 
@@ -14,10 +15,12 @@ export type PermissionRuleScope = Exclude<PermissionScope, 'once'>;
 /**
  * Where a rule stands at a given moment.
  *
- * Three values and not a boolean, because the list shows all three differently: an expired rule
- * stays listed and marked, a revoked one leaves the list, and both have stopped answering.
+ * Four values and not a boolean, because the list shows them differently: an expired rule stays
+ * listed and marked, a revoked one leaves the list, a disabled one stays listed with why — a rule
+ * written in an engine's grammar that had no unambiguous canonical translation (plan 28, D-18) —
+ * and none of the three answers anything.
  */
-export type PermissionRuleStatus = 'active' | 'expired' | 'revoked';
+export type PermissionRuleStatus = 'active' | 'expired' | 'revoked' | 'disabled';
 
 /** Who is asking, and from where — what decides whether a rule's scope reaches a request. */
 export interface RuleSubject {
@@ -41,8 +44,14 @@ export interface PermissionRuleDraft {
   /** The workspace root it covers. Set for `project`, and only for `project`. */
   readonly projectPath: string | null;
 
-  /** The pattern, in the grammar of the Claude Code settings. */
+  /** The pattern, in the canonical grammar — `shell(git status:*)`, `file.edit(src/**)`. */
   readonly pattern: string;
+
+  /**
+   * The engine the rule is restricted to, or `null` (absent) for a canonical rule, which holds for
+   * every engine whose calls have the kind (plan 28, B-33).
+   */
+  readonly engine?: string | null;
 
   readonly decision: PermissionDecision;
   readonly scope: PermissionRuleScope;
@@ -55,6 +64,12 @@ export interface PermissionRuleDraft {
 /** A rule as it was stored, including whether it has been taken back. */
 export interface PermissionRuleSnapshot extends PermissionRuleDraft {
   readonly revokedAt: Date | null;
+
+  /**
+   * Why the rule was switched off, or `null` (absent) for a rule that is not. A disabled rule keeps
+   * the pattern it was written with — an engine's grammar, which is not read — and never answers.
+   */
+  readonly disabledReason?: string | null;
 }
 
 /**
@@ -84,10 +99,14 @@ export class PermissionRule {
     readonly userId: UserId,
     readonly sessionId: SessionId | null,
     readonly projectPath: string | null,
-    readonly pattern: RulePattern,
 
-    /** The pattern as written, which is literally the grammar of the Claude Code settings. */
+    /** The pattern, read — `null` on a disabled rule, whose pattern is not the canonical grammar. */
+    readonly pattern: RulePattern | null,
+
+    /** The pattern as written: canonical, or the engine's own on a disabled rule. */
     readonly ruleContent: string,
+    readonly engine: string | null,
+    readonly disabledReason: string | null,
     readonly decision: PermissionDecision,
     readonly scope: PermissionRuleScope,
     readonly createdAt: Date,
@@ -129,14 +148,18 @@ export class PermissionRule {
    */
   static restore(snapshot: PermissionRuleSnapshot): PermissionRule {
     const written = snapshot.pattern.trim();
+    const disabledReason = snapshot.disabledReason ?? null;
 
     return new PermissionRule(
       snapshot.id,
       snapshot.userId,
       snapshot.sessionId,
       snapshot.projectPath,
-      parseRulePattern(written),
+      // A disabled rule is not read: its pattern is an engine's grammar, kept to be shown.
+      disabledReason === null ? parseRulePattern(written) : null,
       written,
+      snapshot.engine ?? null,
+      disabledReason,
       snapshot.decision,
       snapshot.scope,
       snapshot.createdAt,
@@ -150,10 +173,19 @@ export class PermissionRule {
       return 'revoked';
     }
 
+    if (this.disabledReason !== null) {
+      return 'disabled';
+    }
+
     return now.getTime() < this.expiresAt.getTime() ? 'active' : 'expired';
   }
 
-  /** Whether the rule still applies at `now`: neither expired nor revoked. */
+  /** The kind the rule names, or `null` on a disabled rule. */
+  get kind(): RuleKind | null {
+    return this.pattern?.kind ?? null;
+  }
+
+  /** Whether the rule still applies at `now`: neither expired, revoked nor disabled. */
   isActiveAt(now: Date): boolean {
     return this.statusAt(now) === 'active';
   }
@@ -185,27 +217,31 @@ export class PermissionRule {
       sameSession(this.sessionId, other.sessionId) &&
       this.projectPath === other.projectPath &&
       this.ruleContent === other.ruleContent &&
+      this.engine === other.engine &&
       this.decision === other.decision
     );
   }
 
   /**
-   * Whether this rule answers that invocation, for that person, in that place, at that moment.
+   * Whether this rule answers that call, for that person, in that place, at that moment.
    *
-   * A pure rule with no I/O — which is what lets it be tested by boundary, and what the UI reads
-   * to tell somebody how far a rule they are about to grant would reach.
+   * The call as the engine's adapter read it: its kind and subject are what the pattern matches, a
+   * relative path is read against the folder of the request, and a rule restricted to an engine
+   * answers only that engine's calls (S-94). A pure rule with no I/O — which is what lets it be
+   * tested by boundary.
    */
   matches(
     subject: RuleSubject,
-    toolName: string,
-    input: Readonly<Record<string, unknown>>,
+    tool: Pick<CanonicalTool, 'kind' | 'subject' | 'origin'>,
     now: Date,
   ): boolean {
     return (
+      this.pattern !== null &&
       this.userId.equals(subject.userId) &&
       this.isActiveAt(now) &&
       this.reaches(subject) &&
-      ruleMatches(this.pattern, toolName, input, this.decision)
+      (this.engine === null || this.engine === tool.origin.engine) &&
+      ruleMatches(this.pattern, tool, this.decision, subject.projectPath)
     );
   }
 
@@ -216,11 +252,13 @@ export class PermissionRule {
       sessionId: this.sessionId,
       projectPath: this.projectPath,
       pattern: this.ruleContent,
+      engine: this.engine,
       decision: this.decision,
       scope: this.scope,
       createdAt: this.createdAt,
       expiresAt: this.expiresAt,
       revokedAt: this.revokedAt,
+      disabledReason: this.disabledReason,
     };
   }
 

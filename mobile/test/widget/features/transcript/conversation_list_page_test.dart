@@ -14,6 +14,7 @@ import 'package:remote_claude/features/transcript/transcript.dart';
 import 'package:remote_claude/features/transcript/transcript_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/builders/transcripts.dart';
 import '../../../support/fakes/fake_transcript_repository.dart';
 import '../../../support/pump_app.dart';
@@ -21,8 +22,9 @@ import '../../../support/pump_app.dart';
 const String workspace = '/home/someone/project';
 
 const Failure unavailable = ServerFailure(
-  code: 'CLAUDE_UNAVAILABLE',
-  messageKey: 'transcript.error.claudeUnavailable',
+  code: 'AGENT_UNAVAILABLE',
+  messageKey: 'transcript.error.agentUnavailable',
+  params: <String, String>{'engine': anEngine},
   traceId: 'trace-31',
 );
 
@@ -75,10 +77,10 @@ void main() {
           ),
           routes: <RouteBase>[
             GoRoute(
-              path: ':conversationId',
+              path: ':engine/:conversationId',
               builder: (BuildContext context, GoRouterState state) => Scaffold(
                 body: Text(
-                  'reading ${state.pathParameters['conversationId']} in '
+                  'reading ${state.pathParameters['engine']}:${state.pathParameters['conversationId']} in '
                   '${state.uri.queryParameters[workspacePathParameter]}',
                 ),
               ),
@@ -114,7 +116,7 @@ void main() {
     ) async {
       await pumpList(tester, failure: unavailable);
 
-      expect(find.text(l10n.transcriptErrorClaudeUnavailable), findsOneWidget);
+      expect(find.text(l10n.transcriptErrorAgentUnavailable(anEngine)), findsOneWidget);
       expect(find.textContaining('trace-31'), findsOneWidget);
 
       transcripts.failure = null;
@@ -178,7 +180,8 @@ void main() {
     await tester.tap(find.text('Began in the terminal'));
     await tester.pumpAndSettle();
 
-    expect(find.text('reading conv-2 in $workspace'), findsOneWidget);
+    // S-39 · the address names the conversation's engine beside its id.
+    expect(find.text('reading $anEngine:conv-2 in $workspace'), findsOneWidget);
   });
 
   group('the next page', () {
@@ -232,7 +235,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Fix the build'), findsOneWidget);
-      expect(find.text(l10n.transcriptErrorClaudeUnavailable), findsOneWidget);
+      expect(find.text(l10n.transcriptErrorAgentUnavailable(anEngine)), findsOneWidget);
       expect(find.text(l10n.historyLoadMore), findsOneWidget);
     });
   });

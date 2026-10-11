@@ -3,6 +3,7 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { forgetPermissionQueues, permissionQueueOf } from '@/features/permission';
 import { claimArrival } from '@/features/permission/store/permission.store';
+import { aToolCall } from '../../../../support/canonical-tool';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 const EXPIRES = '2026-09-19T12:02:00.000Z';
@@ -19,10 +20,9 @@ function requested(overrides: Record<string, unknown> = {}): Envelope {
     payload: {
       requestId: 'req-1',
       toolUseId: 'toolu-1',
-      toolName: 'Bash',
-      title: 'permission.tool.Bash',
+      ...aToolCall('Bash', { command: 'rm -rf build/' }),
+      title: 'permission.tool.shell',
       description: 'rm -rf build/',
-      input: { command: 'rm -rf build/' },
       riskHint: 'destructive',
       defaultToNo: true,
       expiresAt: EXPIRES,
@@ -64,9 +64,8 @@ describe('the permission queue', () => {
         requestId: 'req-1',
         frameId: 'frame-1',
         toolUseId: 'toolu-1',
-        toolName: 'Bash',
+        ...aToolCall('Bash', { command: 'rm -rf build/' }),
         description: 'rm -rf build/',
-        input: { command: 'rm -rf build/' },
         riskHint: 'destructive',
         defaultToNo: true,
         expiresAt: EXPIRES,
@@ -288,7 +287,7 @@ describe('the permission queue', () => {
 
   it.each([
     ['no request id', { requestId: '' }],
-    ['no tool name', { toolName: '' }],
+    ['no kind', { kind: '' }],
     ['no deadline', { expiresAt: '' }],
     ['a risk this build does not know', { riskHint: 'apocalyptic' }],
     ['no title', { title: '' }],
@@ -336,7 +335,7 @@ const aQuestion = (): Envelope =>
   requested({
     requestId: 'req-q',
     toolUseId: 'toolu-q',
-    toolName: 'AskUserQuestion',
+    ...aToolCall('AskUserQuestion'),
     defaultToNo: false,
     interaction: {
       kind: 'question',
@@ -371,7 +370,8 @@ describe('the drafts of the questions — plan 24, B-13', () => {
     store().apply(aQuestion());
 
     expect(store().drafts['req-q']).toEqual(DRAFT);
-    expect(store().pending[0]?.interaction?.questions[0]?.id).toBe('q1');
+    expect(store().pending[0]?.interaction).toMatchObject({ kind: 'question' });
+    expect(store().pending[0]?.interaction).toHaveProperty(['questions', 0, 'id'], 'q1');
   });
 
   it('drops the draft when the question is settled anywhere, and carries its questions to the line — S-63', () => {

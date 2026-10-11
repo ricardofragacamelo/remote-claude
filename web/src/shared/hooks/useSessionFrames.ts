@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { Envelope } from '@remote-claude/contracts';
 
 import { wsClient } from '@/shared/api/ws';
+import type { ConversationRef } from '@/shared/lib/conversation';
 
 /** What a feature does with the stream of one session. */
 export interface SessionFrameHandlers {
@@ -11,9 +12,9 @@ export interface SessionFrameHandlers {
   /**
    * The buffer no longer holds what was missed: drop local state and start again.
    *
-   * @param claudeSessionId where the history of the stream reloads from, when it is a conversation
+   * @param conversation where the history of the stream reloads from, when it is a conversation
    */
-  reset(claudeSessionId: string | null): void;
+  reset(conversation: ConversationRef | null): void;
 
   /** The highest `seq` this feature has applied, so a reconnect can resume from it. */
   lastSeq(): number;
@@ -53,8 +54,8 @@ export function useSessionFrames(sessionId: string | null, handlers: SessionFram
       onEvent: (frame) => {
         latest.current.apply(frame);
       },
-      onGap: (claudeSessionId) => {
-        latest.current.reset(claudeSessionId);
+      onGap: (conversation) => {
+        latest.current.reset(conversation);
       },
       lastSeq: () => latest.current.lastSeq(),
     });

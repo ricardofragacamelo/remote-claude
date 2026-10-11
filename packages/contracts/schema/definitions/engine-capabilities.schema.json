@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/engine-capabilities.json",
+  "title": "EngineCapabilities",
+  "description": "What the engine of a session can do, declared and never supposed (ADR-025). The client hides the controls of what the engine does not have, rather than disabling them: the engine will never have it. Per session, since the version of the binary or the model can change what holds; `GET /engines` gives the engine's before a session exists.",
+  "type": "object",
+  "required": [
+    "resume",
+    "fork",
+    "history",
+    "images",
+    "promptWhileBusy",
+    "questions",
+    "planApproval",
+    "taskList",
+    "subagents",
+    "thinking",
+    "slashCommands",
+    "modelSwitch",
+    "effortLevels",
+    "contextUse",
+    "mcp",
+    "compaction",
+    "cost",
+    "permissionModes"
+  ],
+  "properties": {
+    "resume": {
+      "type": "boolean",
+      "description": "A conversation can be continued where it stopped."
+    },
+    "fork": {
+      "type": "string",
+      "enum": ["atMessage", "whole", "none"],
+      "description": "A conversation can be forked at a message (edit-and-resend), whole, or not at all."
+    },
+    "history": {
+      "type": "boolean",
+      "description": "The conversations of a folder can be listed and read back."
+    },
+    "images": {
+      "type": "boolean",
+      "description": "A prompt can carry images."
+    },
+    "promptWhileBusy": {
+      "type": "boolean",
+      "description": "A prompt sent while a turn runs is queued."
+    },
+    "questions": {
+      "type": "boolean",
+      "description": "The agent asks the person a structured question."
+    },
+    "planApproval": {
+      "type": "boolean",
+      "description": "The agent asks for a plan to be approved before it acts."
+    },
+    "taskList": {
+      "type": "boolean",
+      "description": "The agent keeps a list of tasks the person can follow."
+    },
+    "subagents": {
+      "type": "boolean",
+      "description": "The agent delegates to subagents, whose work nests under the call."
+    },
+    "thinking": {
+      "type": "boolean",
+      "description": "The agent's reasoning streams as its own block."
+    },
+    "slashCommands": {
+      "type": "boolean",
+      "description": "The installation offers commands the composer lists."
+    },
+    "modelSwitch": {
+      "type": "boolean",
+      "description": "The model can be switched while the session lives."
+    },
+    "effortLevels": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "string"
+      },
+      "description": "The levels of effort the engine takes, in order — empty when it takes none."
+    },
+    "contextUse": {
+      "type": "boolean",
+      "description": "The use of the context window can be asked, by category."
+    },
+    "mcp": {
+      "type": "boolean",
+      "description": "MCP servers can be given to the session and their status read."
+    },
+    "compaction": {
+      "type": "boolean",
+      "description": "The conversation can be compacted on request."
+    },
+    "cost": {
+      "type": "string",
+      "enum": ["usd", "none"],
+      "description": "What a turn costs is reported, and in which unit — or not at all."
+    },
+    "permissionModes": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "string",
+        "enum": ["ask", "acceptEdits", "readOnly", "allowAll"]
+      },
+      "description": "The canonical modes the engine runs in — what the clients offer, and nothing else. One mode only hides the selector."
+    }
+  }
+}

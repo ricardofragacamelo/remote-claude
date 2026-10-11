@@ -1,5 +1,6 @@
 import type { InstallationModel, SlashCommand } from '@domain/session';
 import { InstallationCache, MAX_CACHED_LISTS } from './installation-cache';
+import { liveControl } from './session-registry';
 import type { LiveSession } from './session-registry';
 
 export { MAX_CACHED_LISTS } from './installation-cache';
@@ -21,7 +22,7 @@ export class CommandCatalog {
    * @throws whatever the session's `supportedCommands()` threw — and then nothing was cached
    */
   commandsOf(live: LiveSession): Promise<readonly SlashCommand[]> {
-    return this.cache.of(live, (session) => session.handle.supportedCommands());
+    return this.cache.of(live, (session) => liveControl(session, 'supportedCommands')());
   }
 
   /** Keeps what the query of the catalogue was told (plan 08, D-13). */
@@ -50,7 +51,7 @@ export class ModelCatalog {
    * @throws whatever the session's `supportedModels()` threw — and then nothing was cached
    */
   modelsOf(live: LiveSession): Promise<readonly InstallationModel[]> {
-    return this.cache.of(live, (session) => session.handle.supportedModels());
+    return this.cache.of(live, (session) => liveControl(session, 'supportedModels')());
   }
 
   /** Keeps what the query of the catalogue was told (plan 08, D-13). */

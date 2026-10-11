@@ -1,9 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { skipToken, useQuery } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/api/errors';
-import { unfoldedOf } from './loaded';
+import { conversationKey } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { fetchToolResult } from '../services/transcript-content.service';
 import type { ToolOutput } from '../services/transcript-content.service';
+import { unfoldedOf } from './loaded';
 
 export type { ToolOutput } from '../services/transcript-content.service';
 
@@ -25,14 +27,20 @@ export interface ToolResult {
  * @param enabled the row is unfolded, and its tool has a result to read — never while it runs (S-116)
  */
 export function useToolResult(
-  conversationId: string | null,
+  conversation: ConversationRef | null,
   toolUseId: string,
   enabled: boolean,
 ): ToolResult {
   const query = useQuery<ToolOutput, AppError>({
-    queryKey: ['toolResult', conversationId, toolUseId],
-    queryFn: ({ signal }) => fetchToolResult(String(conversationId), toolUseId, signal),
-    enabled: enabled && conversationId !== null,
+    queryKey: [
+      'toolResult',
+      conversation === null ? null : conversationKey(conversation),
+      toolUseId,
+    ],
+    queryFn:
+      enabled && conversation !== null
+        ? ({ signal }) => fetchToolResult(conversation, toolUseId, signal)
+        : skipToken,
     staleTime: Number.POSITIVE_INFINITY,
     retry: false,
   });

@@ -4,7 +4,9 @@ import {
   PermissionRequestNotFoundError,
 } from '@domain/permission';
 import type { UserId } from '@domain/auth';
-import { interactionPayload, requestedPayload, resolvedPayload } from './permission-payloads';
+import { interactionPayload } from '@application/session';
+import type { Interaction as InteractionPayload } from '@remote-claude/contracts';
+import { requestedPayload, resolvedPayload } from './permission-payloads';
 import type { ResolvedPermissionPayload } from './permission-payloads';
 import type { PermissionRegistry } from './permission-registry';
 import type { PermissionSettings } from './permission-settings';
@@ -44,7 +46,7 @@ export type PermissionState =
        * answered (plan 24, S-94). `permission.resolved` does not carry them: every screen that
        * received it had the request already.
        */
-      readonly interaction?: Readonly<Record<string, unknown>>;
+      readonly interaction?: InteractionPayload;
     } & ResolvedPermissionPayload);
 
 /**

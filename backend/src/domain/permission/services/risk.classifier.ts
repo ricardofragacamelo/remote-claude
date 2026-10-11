@@ -1,41 +1,31 @@
+import type { CanonicalTool, ToolKind } from '@domain/engine';
 import type { RiskHint } from '../value-objects/risk-hint.value-object';
-import { SHELL_OPAQUE, SHELL_SEPARATORS, SHELL_TOOLS } from './shell-syntax';
+import { SHELL_OPAQUE, SHELL_SEPARATORS } from './shell-syntax';
 
 /**
- * Tools whose worst case is reading something.
+ * Kinds whose worst case is reading something.
  *
- * A fixed list rather than a guess about the name: a tool this build has never heard of gets no
- * benefit of the doubt, because the name of a tool says nothing about what it does.
+ * A fixed list rather than a guess: a kind this build has never heard of — and `other`, a tool the
+ * engine's adapter did not recognise — gets no benefit of the doubt, because what a tool is called
+ * says nothing about what it does (plan 28, B-16, R-01).
  */
-const READ_ONLY_TOOLS = new Set([
-  'Read',
-  'Glob',
-  'Grep',
-  'NotebookRead',
-  'WebFetch',
-  'WebSearch',
-  // The task list, in either form (plan 08, D-25): it writes the list of the session, nothing else.
-  'TodoWrite',
-  'TaskCreate',
-  'TaskGet',
-  'TaskUpdate',
-  'TaskList',
-  'Task',
-  'BashOutput',
-  // A question to the person (plan 24, D-10): it reads nothing and changes nothing — the CLI says
-  // `isReadOnly()` — and grading it `destructive` put a two-step confirmation in front of an answer.
-  'AskUserQuestion',
+const READ_ONLY_KINDS: ReadonlySet<ToolKind> = new Set([
+  'file.read',
+  'search',
+  'web.fetch',
+  'web.search',
+  // The task list (plan 08, D-25): it writes the list of the session, nothing else.
+  'tasks',
+  // The output of a shell already running: it reads what the shell printed.
+  'shell.output',
+  // A question to the person (plan 24, D-10): it reads nothing and changes nothing, and grading it
+  // `destructive` put a two-step confirmation in front of an answer.
+  'question',
 ]);
 
-/** Tools that change files, and nothing worse. */
-const WRITING_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
+/** Kinds that write a file the call names — and only that file. */
+const WRITING_KINDS: ReadonlySet<ToolKind> = new Set(['file.edit', 'file.write']);
 
-/**
- * Shell commands whose worst case is printing something.
- *
- * Deliberately short. Everything absent from it is destructive, so the cost of leaving a command
- * out is an extra confirmation, while the cost of putting a wrong one in is an unattended `rm`.
- */
 const READ_ONLY_COMMANDS = new Set([
   'basename',
   'cat',
@@ -103,9 +93,10 @@ const READ_ONLY_SUBCOMMANDS: Readonly<Record<string, ReadonlySet<string>>> = {
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
 /**
- * The risk of one invocation, by a per-tool list **plus** a heuristic over the input.
+ * The risk of one invocation, by its kind **plus** a heuristic over a shell command — which is
+ * neutral, and parsed here (plan 28, B-16).
  *
- * **It fails closed.** Anything the lists do not recognise is `destructive`: an unknown tool, an
+ * **It fails closed.** Anything the lists do not recognise is `destructive`: an unknown kind, an
  * unknown command, a line with a redirection in it. A false positive costs one more confirmation;
  * a false negative is an `rm -rf` that looked exactly like an `ls`
  * ([D-08](../../../../../docs/plans/01-live-session/decisions.md)).
@@ -114,21 +105,21 @@ const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
  * so the day this function starts guessing optimistically, that decision reopens
  * (docs/architecture/mobile/04-ui.md#a-tela-de-permissão).
  */
-export function classifyRisk(toolName: string, input: Readonly<Record<string, unknown>>): RiskHint {
-  if (READ_ONLY_TOOLS.has(toolName)) {
+export function classifyRisk(tool: Pick<CanonicalTool, 'kind' | 'subject'>): RiskHint {
+  if (READ_ONLY_KINDS.has(tool.kind)) {
     return 'read';
   }
 
-  if (WRITING_TOOLS.has(toolName)) {
+  if (WRITING_KINDS.has(tool.kind)) {
     return 'write';
   }
 
-  if (!SHELL_TOOLS.has(toolName)) {
+  if (tool.kind !== 'shell') {
     return 'destructive';
   }
 
-  const command = input.command;
-  return typeof command === 'string' ? classifyCommand(command) : 'destructive';
+  const command = tool.subject.command;
+  return command === undefined ? 'destructive' : classifyCommand(command);
 }
 
 /**

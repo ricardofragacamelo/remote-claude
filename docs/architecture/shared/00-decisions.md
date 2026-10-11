@@ -12,6 +12,8 @@ Formato: uma decisão por seção. Quando uma decisão for revista, não apague 
 
 **Status:** aceita · 2026-09-13
 
+> **Alterada por [ADR-025](#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)** (2026-10-10): o Agent SDK deixa de ser *a* porta e passa a ser a implementação do Claude da porta de motor (`AgentEnginePort`), a partir da [F1 do plano 28](../../plans/28-agent-neutral-core/F1-engine-port.md). O conteúdo continua válido para o Claude.
+
 O backend fala com o Claude local via `@anthropic-ai/claude-agent-sdk`.
 
 **Por quê:** é o Claude Code empacotado como biblioteca. Entrega pronto o loop do agente,
@@ -100,6 +102,8 @@ Contrato: [05-websocket-protocol.md](05-websocket-protocol.md).
 ## ADR-006 — Protocolo próprio, não `SDKMessage` cru
 
 **Status:** aceita · 2026-09-13
+
+> **Estendida por [ADR-025](#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)** (2026-10-10): o contrato próprio passa a cobrir nomes de ferramenta (`kind`), modos, ids de conversa e unidade de custo, com as convenções do plano 27 (`origin`, `kind` aberto, `messageKey` ou `text`), fase a fase no [plano 28](../../plans/28-agent-neutral-core/README.md#fases).
 
 O backend **normaliza** os eventos do Agent SDK para um union próprio e versionado antes de
 emitir no WebSocket.
@@ -202,10 +206,32 @@ Detalhes: [08-authentication.md](08-authentication.md).
 
 ## ADR-011 — `settingSources: ['project']` obrigatório, e auditoria ancorada no hook `PreToolUse`
 
-**Status:** aceita · 2026-09-13 · **decorre de spike, não de leitura de tipos**
+**Status:** aceita · 2026-09-13 · **decorre de spike, não de leitura de tipos** · reescrita em
+2026-10-10 pelo [ADR-025](#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)
+([28 · B-35](../../plans/28-agent-neutral-core/F5-permission-dialect.md#b-35--o-adr-011-reescrito-como-contrato-de-segurança-por-motor-))
+como o contrato de segurança que **todo** adapter de motor cumpre
 
-Duas decisões que vieram de um mesmo experimento contra o Claude local. Ver
-[descoberta §7](../../discovery/01-descoberta-claude-agent-sdk.md#7--resultados-do-spike-2026-09-13).
+### O contrato de segurança por motor
+
+Os seis itens que todo adapter de motor garante, e que a abertura de uma sessão confere
+([discovery 03 §6.6](../../discovery/03-multiplos-motores-de-agente.md#66-segurança-por-motor)):
+
+1. **gate bloqueante** — nenhuma ferramenta que precisa de licença roda sem passar pelo nosso
+   `permission`, e o motor espera a resposta;
+2. **auditoria antes da ferramenta** — toda chamada entra na trilha antes de rodar; sem trilha, a
+   ferramenta é recusada;
+3. **sem autoaprovação do motor** — nenhuma regra ou configuração do próprio motor aprova no lugar do
+   nosso gate (no máximo recusa, como segunda camada);
+4. **escopo de pasta** — a sessão roda na pasta liberada, e o motor não lê configuração de fora dela;
+5. **credencial fora do backend** — o login é do motor, na máquina; o backend nunca guarda a credencial;
+6. **a configuração do motor é arquivo sensível** — os arquivos de configuração que o motor declara
+   entram na lista de sensíveis do `files`.
+
+O motor cuja asserção falha fica `unavailable`, com o motivo, no `describe()`, e os outros sobem.
+Abaixo, as duas decisões que são **a implementação do Claude** desse contrato, vindas de um mesmo
+experimento contra o Claude local. Ver
+[descoberta §7](../../discovery/01-descoberta-claude-agent-sdk.md#7--resultados-do-spike-2026-09-13) e
+[04a-claude](../backend/04a-claude.md).
 
 ### A — Toda `query()` passa `settingSources: ['project']`
 
@@ -314,7 +340,9 @@ Ver [descoberta §8.3](../../discovery/01-descoberta-claude-agent-sdk.md#83--rei
 
 ## ADR-013 — O desfazer não usa `rewindFiles()`; o store de checkpoint é nosso
 
-**Status:** aceita · 2026-09-16 · **muda o mecanismo do desfazer, não a promessa**
+**Status:** aceita · 2026-09-16 · **muda o mecanismo do desfazer, não a promessa** · alterada por
+[ADR-025](#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas) em 2026-10-10
+(os caminhos vêm do `changes` canônico)
 
 O desenho anterior ligava `enableFileCheckpointing: true` para usar `query.rewindFiles()` como
 o desfazer do produto. **Medição contra o Claude real mostrou que essa API não sustenta a
@@ -336,6 +364,13 @@ primeiro toque de cada caminho, `PostToolUse` guarda hash e mtime do resultado, 
 `PostToolUseFailure` não guarda nada. A chave é `(session_id, prompt_id, path)`, e o
 `prompt_id` vem do `BaseHookInput` em todo hook — então o turno de um snapshot é sabido **sem
 ler o transcript**, o que preserva a regra de nunca fazer parser do JSONL.
+
+**Quais caminhos** ([28 · B-16](../../plans/28-agent-neutral-core/F2-canonical-tools.md#b-16--o-domínio-pelo-kind-e-pelo-filechange-)):
+os do `changes` da ferramenta canônica, que o adapter do motor monta — o arquivo de cada `FileChange`,
+e o destino de um `move` —, nunca uma tabela de nomes de ferramenta no núcleo. Só caminho absoluto
+entra: um relativo resolveria contra a pasta do backend, não a da sessão. Uma chamada sem `changes` (um
+`shell`, uma tool de MCP) fica fora do desfazer: prometer desfazer um caminho que não se identifica é
+pior que dizer que não se pode.
 
 O revert é arquivo por arquivo: restaura o que está como a sessão deixou, **preserva** o que
 divergiu, e informa os dois.
@@ -575,6 +610,8 @@ restart do backend.
 [descoberta §11](../../discovery/01-descoberta-claude-agent-sdk.md#11--quinta-rodada-de-spikes-2026-10-09)),
 e da ADR-011
 
+> **Será reclassificada pelo [ADR-025](#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)** como ADR da extensão `engines/claude/`, e o MCP sai dela para o núcleo, na [F6 do plano 28](../../plans/28-agent-neutral-core/F6-engine-extensions.md).
+
 **Contexto.** Servidor MCP, plugin, skill, subagent, hook e camada de flag são, cada um, uma forma de o
 Claude rodar código na máquina ou de a aprovação ser decidida por outra coisa que não o `canUseTool`.
 O produto já aprendeu três vezes que essas portas desligam a aprovação **em silêncio** — o
@@ -782,6 +819,15 @@ Detalhes: [08-authentication.md](08-authentication.md#validação-no-backend).
 "`bypassPermissions` nunca"** dos planos 08 (S-170), 09 (S-25), 10 (S-33) e 13 (S-40): o produto passa a
 oferecer um modo que não pergunta, e continua sem oferecer o do SDK.
 
+> **Alterada por [ADR-025](#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)** (2026-10-10, [28 · B-26](../../plans/28-agent-neutral-core/F4-modes-and-usage.md#b-26--os-modos-canônicos-no-backend-e-no-banco-)):
+> os modos são os canônicos — `ask` · `acceptEdits` · `readOnly` · `allowAll` —, e cada motor traduz os
+> seus (no Claude: `default`, `acceptEdits`, `plan` e, para `allowAll`, `default`). `allowAll` continua
+> nosso, pelo mesmo desenho: o motor segue perguntando, e o servidor responde. `bypassPermissions` **saiu
+> do enum**: não é mais um valor do contrato, e o pedido dele é `INVALID_INPUT` (nos padrões salvos,
+> `DEFAULT_MODE_NOT_ALLOWED`). O `readOnly` é garantido pelo servidor, que recusa antes das regras toda
+> escrita de arquivo e todo `shell` (`via: 'readOnly'`). Onde este texto diz `default` e `plan`, leia
+> `ask` e `readOnly`.
+
 **Contexto.** Em 2026-10-07 o usuário relatou que o web e o mobile pedem aprovação o tempo todo, apesar
 de ele aprovar e criar regras, e pediu uma opção nas duas telas que permita tudo, e que ele possa
 desligar. O banco de desenvolvimento mostrou 47 aprovações de Bash "para esta sessão" em 14 dias, e 11
@@ -824,7 +870,7 @@ auditoria continua sendo o hook `PreToolUse`, que não depende do modo.
 - Um `deny` nas settings do projeto continua recusando antes de nós. É o certo, mas a tela não sabe
   dizer por quê (R-04 do plano 23).
 
-Detalhes: [backend/04-claude-integration.md](../backend/04-claude-integration.md#permitir-tudo--allowall).
+Detalhes: [backend/04a-claude.md](../backend/04a-claude.md#os-modos-canônicos-e-o-permitir-tudo--allowall).
 
 ---
 
@@ -921,3 +967,92 @@ proibido; esta ADR vale só para o motor de diagramas, nos seis itens acima.
 
 **O que a revoga.** Um motor nativo que desenhe os oito tipos fiel e sem WebView — o `merman` com PNG
 no pacote publicado, por exemplo. Aí esta ADR fica `Substituída`.
+
+---
+
+## ADR-025 — Núcleo neutro de agente, extensões isoladas por motor nas três pontas
+
+**Status:** aceita · 2026-10-10 · [plano 28](../../plans/28-agent-neutral-core/README.md), a partir da
+[discovery 10](../../discovery/10-nucleo-canonico-e-agentes-isolados.md). **Altera** o
+[ADR-001](#adr-001--claude-agent-sdk-não-cli-direto-nem-managed-agents) e **estende** o
+[ADR-006](#adr-006--protocolo-próprio-não-sdkmessage-cru).
+
+**Contexto.** A Clean Architecture do backend estava respeitada no **import** (o SDK só entra pelo
+adapter, e o `sdk-is-isolated` confere), mas não no **vocabulário**. O Claude como produto entrou no
+meio do sistema por nome de ferramenta, de modo e de campo:
+
+- o `domain/permission` usa a gramática de regra e os nomes de ferramenta do Claude;
+- o `domain/session` lê o input do `Edit` para o diff;
+- o `ClaudeSessionId` está em 29 arquivos fora do adapter;
+- o contrato leva `toolName` e `input` crus.
+
+Por isso, quem interpretava o Claude eram os clientes, e duas vezes: 10 pares de lógica duplicada
+entre TypeScript e Dart ([discovery §4](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#4-inventário-de-2026-10-10)).
+Cada motor novo custaria essa interpretação duas vezes, e cada uma podia divergir da outra.
+
+**Decisão.**
+
+1. **Três anéis em cada ponta.** O **núcleo** é neutro. A **extensão de motor**
+   (`engines/<motor>/`) guarda o que só aquele motor tem e só depende do núcleo. A **composição** é o
+   único ponto que conhece as extensões: `infrastructure/modules/engines/` no backend, `app/engines.ts`
+   no web e `app/engines.dart` no app. A seta aponta para o núcleo, nas três pontas.
+2. **O cliente desenha pelo `kind`.** Toda ferramenta, interação e aviso chega com um `kind` canônico,
+   que é uma string aberta: o que o cliente não conhece é desenhado pela linha genérica (`other`). O
+   nome nativo só viaja como texto opaco em `origin { engine, native }`, para diagnóstico e para o
+   dialeto de regra. Nenhum cliente decide por `engine`, `origin.native` ou nome de ferramenta. Todo
+   `kind` serve a pelo menos um motor além do Claude, ou é genérico
+   ([27 · D-10](../../plans/27-conversation-losses/decisions.md#f2--contrato)).
+3. **Quem interpreta o motor é o adapter dele.** O backend entrega pronto:
+   - o rótulo (`messageKey` + `params`);
+   - o assunto normalizado;
+   - os caminhos que mudam e o diff;
+   - as tarefas, o plano e a pergunta.
+
+   O input cru só viaja como `rawInput` opaco, para a "entrada exata" e a exportação, e nenhum
+   cliente lê campo dele.
+4. **A regra de permissão tem gramática canônica**, por `kind`: `shell(git status:*)`,
+   `file.edit(src/**)`, `mcp(srv:tool)`, `web.fetch(domain:…)`. O domínio a entende sem saber de
+   motor. A porta `RuleDialect`, implementada por cada adapter, traduz a regra canônica para o formato
+   do motor e a sugestão nativa do motor para a canônica (na execução, só o `translate` foi construído: nada
+   vai ao motor, [28 · D-43](../../plans/28-agent-neutral-core/decisions.md#f5--permissão-pelo-dialeto)). As regras já gravadas na gramática do Claude
+   são migradas, e a que não tem tradução inequívoca é desligada, nunca apagada
+   ([28 · D-11, D-18](../../plans/28-agent-neutral-core/decisions.md#f5--permissão-pelo-dialeto)).
+5. **O contrato é nosso, WS e REST.** O pacote `contracts` passa a gerar também os tipos de **todas**
+   as rotas REST, para as duas pontas ([28 · D-09](../../plans/28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)).
+6. **Nenhum kind de auditoria tem nome de motor.** Os do núcleo seguem o módulo; os da extensão são
+   `engine.*`, com o motor no payload ([28 · D-10](../../plans/28-agent-neutral-core/decisions.md#f6--extensões-isoladas)).
+7. **Verificado por máquina.** São três verificações:
+   - o **portão de neutralidade** (`pnpm neutral:check`, portão 11) lê o código do núcleo, os schemas
+     do contrato e o i18n contra o vocabulário de `scripts/engine-vocabulary.json`. As violações de
+     2026-10-10 estão num baseline que só encolhe, cada uma com a fase do plano 28 que a remove;
+   - o **lint de arquitetura** das três pontas proíbe o núcleo de importar `engines/`, e uma extensão
+     de importar outra;
+   - o **motor de teste**, um adapter falso que não é o Claude, prova no e2e das duas pontas que a
+     conversa é desenhada igual. Ausência de palavra não prova neutralidade.
+
+**O que altera.** O [ADR-001](#adr-001--claude-agent-sdk-não-cli-direto-nem-managed-agents) continua
+válido para o Claude, mas o Agent SDK deixa de ser *a* porta: é a implementação do Claude da porta de
+motor (`AgentEnginePort`). O [ADR-006](#adr-006--protocolo-próprio-não-sdkmessage-cru) passa a cobrir
+nomes de ferramenta, modos, ids de conversa e unidade de custo, com as convenções do
+[plano 27](../../plans/27-conversation-losses/README.md) (`origin`, `kind` aberto, `messageKey` ou
+`text`).
+
+**Alternativas descartadas.**
+
+- **Neutralizar só o backend**: os clientes continuariam interpretando o Claude, duas vezes.
+- **Um segundo motor real como prova**: custa a [discovery 03](../../discovery/03-multiplos-motores-de-agente.md)
+  inteira antes de saber se o núcleo está neutro. O motor de teste prova o mesmo antes.
+- **Teste de vocabulário só sobre os schemas novos**, como previa a 27 · B-07: deixaria o código e o
+  i18n de fora, que é onde o acoplamento mora.
+
+**Consequências.**
+
+- Remover `claudeSessionId`, `toolName` e `input` e trocar os modos quebra o contrato: sobe `v`, com
+  uma janela de `v-1` ([28 · D-08](../../plans/28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)).
+- Os nomes do produto (`remote-claude`, `remote_claude`, `RemoteClaudeApp`, os bundle ids) ficam: são
+  do produto, não do motor, e o portão os lista como exceção permanente. Renomear o produto é outra
+  decisão ([03 · ME-12](../../discovery/03-multiplos-motores-de-agente.md#18-decisões-em-aberto)).
+- Os planos seguintes nascem sobre o núcleo canônico. A ordem está no
+  [índice dos planos](../../plans/README.md#ordem-de-execução).
+
+Detalhes: [shared/12-engines.md](12-engines.md).

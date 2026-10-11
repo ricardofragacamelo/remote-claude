@@ -10,9 +10,9 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F1 — mapa de paridade, **parada em 2026-10-10 por decisão do usuário**. As três tasks da F1 estão escritas, e o `render:check` passa na árvore; o `pnpm verify` que a fecha foi interrompido no portão 7, com os portões 1–6 verdes. Retomar = rodar o `pnpm verify` de novo desde o portão 1. A F0 fechou em 2026-10-10, com o `pnpm verify` verde no ciclo 2
+**Fase corrente:** nenhuma — F0 e F1 concluídas em 2026-10-10 (a F1 com o `pnpm verify` verde no ciclo 4). O plano para aqui pela ordem da [D-15](decisions.md#normas): o [plano 28](../28-agent-neutral-core/README.md) roda inteiro antes da F2
 **Última atualização:** 2026-10-10
-**Bloqueios:** nenhum. A D-10 fechou com o spike ([decisions.md](decisions.md)), e nenhuma decisão está aberta. Este plano **bloqueia** a F2 do [plano 13](../13-claude-settings/README.md), parada em 2026-10-09 ([D-01](decisions.md#normas)). A F2 espera o [plano 28](../28-agent-neutral-core/README.md) concluído: a F1 fecha com o `pnpm verify`, o 28 roda inteiro, e só então as F2…F7 ([D-15](decisions.md#normas))
+**Bloqueios:** nenhum. A D-10 fechou com o spike ([decisions.md](decisions.md)), e nenhuma decisão está aberta. Este plano **bloqueia** a F2 do [plano 13](../13-claude-settings/README.md), parada em 2026-10-09 ([D-01](decisions.md#normas)). A F2 espera o [plano 28](../28-agent-neutral-core/README.md) concluído: a F1 fechou em 2026-10-10, o 28 roda inteiro, e só então as F2…F7 ([D-15](decisions.md#normas))
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
@@ -127,6 +127,7 @@ Um registro por **ciclo**, conforme o
 | 1 | 2026-10-10 | F0 | 5 — duplicação | o spike novo repetia do spike do plano 13 a cópia da credencial e o começo do `main()` (2 clones) | a cópia, a abertura e o laço inteiro do spike foram para `scripts/lib/spike-session.mjs` (`copyCredential`, `openSpike`, `runSpike`), e os dois scripts ficaram só com as sondas | reinício do portão 1 |
 | 2 | 2026-10-10 | F0 | — | — | — | `pnpm verify` verde, portões 1–7 (cobertura em 1082 s) — **F0 concluída** |
 | 3 | 2026-10-10 | F1 | — (interrompido) | o usuário parou o plano durante o portão 7 | — | portões 1–6 verdes; o ciclo não conta como fechamento da F1 |
+| 4 | 2026-10-10 | F1 | — | — | — | `pnpm verify` verde, portões 1–7 (cobertura em 833 s), com o `render:check` e o `docs:check` verdes — **F1 concluída** |
 
 ---
 

@@ -12,7 +12,7 @@
     "listItems": 4,
     "tools": {
       "read": "Read \\S*notes\\.md",
-      "bash": "Bash · List files in current directory (Bash: ls)",
+      "bash": "Shell · List files in current directory (Shell: ls)",
       "bashCommand": "ls",
       "write": "Write \\S*summary\\.md \\(2 lines\\)"
     },

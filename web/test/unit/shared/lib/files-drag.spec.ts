@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  addToClaudeContext,
-  claudeContextTargets,
+  addToAgentContext,
+  agentContextTargets,
   FILES_DRAG_TYPE,
   filesDragPayload,
   plainPaths,
@@ -240,17 +240,17 @@ describe("adding to Claude's context — S-276, S-278", () => {
   const payload: FilesDragPayload = { folder: '/r', entries: [{ path: 'a.ts', kind: 'file' }] };
 
   it('takes nothing while nobody is registered to take it', () => {
-    expect(claudeContextTargets.entries()).toEqual([]);
-    expect(addToClaudeContext(payload)).toBe(false);
+    expect(agentContextTargets.entries()).toEqual([]);
+    expect(addToAgentContext(payload)).toBe(false);
   });
 
   it('hands the payload to the target, once per action', () => {
-    const targets = createRegistry<Parameters<typeof claudeContextTargets.register>[0]>('t');
+    const targets = createRegistry<Parameters<typeof agentContextTargets.register>[0]>('t');
     const add = vi.fn();
     targets.register({ id: 'claude.panel', position: 1, add });
 
-    expect(addToClaudeContext(payload, targets)).toBe(true);
-    expect(addToClaudeContext(payload, targets)).toBe(true);
+    expect(addToAgentContext(payload, targets)).toBe(true);
+    expect(addToAgentContext(payload, targets)).toBe(true);
     expect(add).toHaveBeenCalledTimes(2);
     expect(add).toHaveBeenNthCalledWith(1, payload);
   });

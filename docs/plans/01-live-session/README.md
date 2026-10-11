@@ -110,15 +110,15 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Requisito | Tarefas | Documento normativo | Cenários |
 |---|---|---|---|
 | Contrato WS de sessão e permissão, versionado e nas três pontas | B-01…B-06 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) | S-01…S-08, S-85…S-87 |
-| O furo do diretório confiado é medido **antes** de qualquer código | B-45 | [04-claude-integration](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources) | S-98 |
+| O furo do diretório confiado é medido **antes** de qualquer código | B-45 | [04a-claude](../../architecture/backend/04a-claude.md#a-armadilha-do-settingsources) | S-98 |
 | Allowlist de workspace é a primeira linha de defesa | B-07…B-11 | [backend/03-modules](../../architecture/backend/03-modules.md) | S-09…S-20 |
-| Uma `query()` por sessão, streaming input, sem vazar subprocesso | B-12…B-17 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-21…S-31, S-39, S-88 |
+| Uma `query()` por sessão, streaming input, sem vazar subprocesso | B-12…B-17 | [backend/04a-claude](../../architecture/backend/04a-claude.md) | S-21…S-31, S-39, S-88 |
 | O fake é confrontado com o SDK real: roteiro gravado, não escrito | B-44 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-89, S-90 |
 | `SDKMessage` nunca vaza cru; variante nova não derruba a sessão | B-15 | [ADR-006](../../architecture/shared/00-decisions.md#adr-006--protocolo-próprio-não-sdkmessage-cru) | S-24…S-27 |
 | Fan-out com `seq` único, ring buffer e replay sem buraco | B-18, B-19 | [backend/06-realtime](../../architecture/backend/06-realtime.md) | S-32…S-38 |
 | Toda invocação de tool auditada, append-only | B-21…B-24 | [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) | S-40…S-49 |
 | O checkpoint de arquivo — o antes e o depois de cada escrita — para o desfazer do plano 04 não destruir trabalho manual | B-46, B-47 | [backend/05-persistence](../../architecture/backend/05-persistence.md#o-que-vai-no-banco-e-o-que-não-vai) | S-99…S-108 |
-| `canUseTool` bloqueia, tem timeout que nega e é idempotente | B-25…B-31 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md) | S-50…S-65 |
+| `canUseTool` bloqueia, tem timeout que nega e é idempotente | B-25…B-31 | [backend/04a-claude](../../architecture/backend/04a-claude.md) | S-50…S-65 |
 | O prazo é extensível sem deixar de ser a única proteção | B-27, B-29 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#estender-o-prazo-é-mexer-na-única-proteção-que-existe) | S-91…S-94 |
 | `riskHint` é derivado no backend e **falha fechado** | B-30 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) | S-62, S-95 |
 | Reconexão republica pendentes do nosso registro, sem `reinitialize()` | B-28 | [ADR-012](../../architecture/shared/00-decisions.md#adr-012--reconexão-não-usa-reinitialize-o-registro-de-pendentes-é-nosso) | S-58, S-59 |
@@ -175,7 +175,7 @@ scripts/run-smoke-live.mjs                 `pnpm test:e2e:live`
 
 | # | Assunto | Estado |
 |---|---|---|
-| R-01 | Diretório já confiado (`hasTrustDialogAccepted`) faz o `allow` de projeto furar o `canUseTool` | **confirmado pela medição** (B-45, 2026-09-18): em diretório confiado o `canUseTool` não é chamado. Deixa de ser risco e vira requisito — a mitigação entra na F2 e a B-42 a prova em e2e ([medição](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido)) |
+| R-01 | Diretório já confiado (`hasTrustDialogAccepted`) faz o `allow` de projeto furar o `canUseTool` | **confirmado pela medição** (B-45, 2026-09-18): em diretório confiado o `canUseTool` não é chamado. Deixa de ser risco e vira requisito — a mitigação entra na F2 e a B-42 a prova em e2e ([medição](../../architecture/backend/04a-claude.md#diretório-confiado-fura-o-canusetool--medido)) |
 | R-02 | O fake do Agent SDK pode divergir do SDK real e dar confiança falsa | mitigar com B-41: o `smoke-live` é quem confronta o fake com a realidade |
 | R-03 | Mapear ~38 variantes de `SDKMessage` com 90 % de `branches` é caro | a regra de sobrevivência (variante desconhecida → `warn`) reduz o leque; o resto é tabela, testada por tabela |
 | R-04 | `~222 MB` por sessão foi medido em uma máquina só | neste plano o limite é **configurado**; derivá-lo da RAM é o [plano 05](../05-hardening-operations/README.md) |

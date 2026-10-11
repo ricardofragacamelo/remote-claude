@@ -26,7 +26,11 @@ const single: Question = {
 };
 
 const multiple: Question = { ...single, id: 'q2', multiSelect: true };
-const both: QuestionInteraction = { malformed: false, questions: [single, multiple] };
+const both: QuestionInteraction = {
+  kind: 'question',
+  malformed: false,
+  questions: [single, multiple],
+};
 
 describe('the draft of a question card — plan 24, B-13', () => {
   it('takes one label on a single choice, instead of the one before and of the free answer — S-64', () => {

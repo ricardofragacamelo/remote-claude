@@ -26,7 +26,7 @@ import { useTheme } from '@/shared/hooks/useTheme';
 import { forgetLiveSessions } from '@/features/session/store/live-session.store';
 import { useOwnedSessionsStore } from '@/features/session/store/owned-sessions.store';
 import { forgetSessionsView } from '@/features/session/store/sessions-view.store';
-import { forgetClaudePanel } from '@/features/session/store/claude-panel.store';
+import { forgetAgentPanel } from '@/features/session/store/agent-panel.store';
 
 expect.extend(matchers);
 // Accessibility is checked on every main screen, and a violation breaks the build: this product
@@ -92,7 +92,7 @@ afterEach(() => {
   // is this browser's, and a test is a browser of its own (plan 06, B-17…B-21).
   forgetFolderTabs();
   forgetSessionsView(null);
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
   localStorage.clear();
   useTheme.setState({ preference: 'system', theme: 'light' });
   useLocale.setState({ locale: 'en', picked: false });

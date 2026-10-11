@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engine-list.json",
+  "title": "EngineList",
+  "description": "What `GET /engines` answers: the coding agents this installation drives, the default first, and what each can do — before a session exists (plan 28, B-12; ADR-025). Nothing is spawned, no quota is spent, and no credential is part of it.",
+  "x-kind": "http",
+  "x-type": "engines.list",
+  "type": "object",
+  "required": ["defaultEngine", "engines"],
+  "properties": {
+    "defaultEngine": {
+      "type": "string",
+      "description": "The engine a session opens on when the client names none."
+    },
+    "engines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "displayName", "state", "reason", "version", "capabilities"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The name the contract carries in `engine` and in every `ConversationRef`."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "How a screen names the engine: a proper noun, never translated — the `{agent}` of a string."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["available", "unavailable"],
+            "description": "Whether it can open a session now."
+          },
+          "reason": {
+            "type": "string",
+            "x-nullable": true,
+            "description": "Why it is unavailable, as a key the client translates; `null` when available."
+          },
+          "version": {
+            "type": "string",
+            "x-nullable": true,
+            "description": "The version of the binary the engine drives, or `null` when it could not tell."
+          },
+          "capabilities": {
+            "$ref": "../definitions/engine-capabilities.schema.json",
+            "description": "What the engine can do."
+          }
+        }
+      },
+      "description": "The engines enabled, in the order the configuration lists them."
+    }
+  }
+}

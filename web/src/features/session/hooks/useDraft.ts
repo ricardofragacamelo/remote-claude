@@ -1,21 +1,35 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
 import type { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import { folderTabStore } from '@/features/workbench';
 import { attachmentsOf } from '../lib/context-set';
+import { effortToStart } from '../lib/effort-levels';
+import { offeredModes, shownMode } from '../lib/panel-modes';
 import { uploadHeld } from '../services/composer.service';
 import { refusalOf, sendPrompt, startDraft, startedBy } from '../services/live-session.service';
-import { claudePanelStore, DEFAULT_CHOICES, tabKeyOf } from '../store/claude-panel.store';
-import type { ClaudePanelStore, DraftChoices } from '../store/claude-panel.store';
+import { agentPanelStore, DEFAULT_CHOICES, tabKeyOf } from '../store/agent-panel.store';
+import type { AgentPanelStore, DraftChoices, PanelMode } from '../store/agent-panel.store';
+import type { EngineCapabilities } from '../types/engine';
 import { useOwnedSessionsStore } from '../store/owned-sessions.store';
 import { handOverFirstPrompt } from './useComposerSend';
+import { useEngineCapabilities } from './useEngines';
 import { usePanelDraft } from './usePanelTabs';
 
 /** A draft of the panel: what was chosen and written, and the way to send it. */
 export interface Draft {
+  /**
+   * What the session will start with: the mode chosen while the engine offers it — its first mode
+   * when it does not —, and the effort chosen while the engine announces it (plan 28, B-27, B-28).
+   */
   readonly choices: DraftChoices;
+
+  /** What the engine a draft opens on can do — the default engine's, as `GET /engines` lists it. */
+  readonly capabilities: EngineCapabilities | null;
+
+  /** The modes the draft offers: exactly the engine's (S-81). */
+  readonly modes: readonly PanelMode[];
   readonly text: string;
 
   /** A `session.start` left and neither the session nor its refusal came back. */
@@ -40,7 +54,7 @@ export interface Draft {
  * session (S-154); closing the draft leaves nothing in the backend (S-155).
  */
 export function useDraft(folder: string, key: string, workspacePath: string): Draft {
-  const panel = claudePanelStore(folder);
+  const panel = agentPanelStore(folder);
   const tab = useStore(panel, (state) => state.tabs.find((each) => each.key === key));
   const written = usePanelDraft(folder, key);
   const [error, setError] = useState<AppError | null>(null);
@@ -76,10 +90,23 @@ export function useDraft(folder: string, key: string, workspacePath: string): Dr
     [folder, key, panel],
   );
 
-  const choices = tab?.kind === 'draft' ? tab.choices : DEFAULT_CHOICES;
+  const chosen = tab?.kind === 'draft' ? tab.choices : DEFAULT_CHOICES;
+  // A draft names no engine: its session opens on the default one.
+  const capabilities = useEngineCapabilities(null);
+  const modes = offeredModes(capabilities);
+  const choices = useMemo<DraftChoices>(
+    () => ({
+      model: chosen.model,
+      mode: shownMode(modes, chosen.mode) ?? chosen.mode,
+      effort: effortToStart(capabilities, chosen.effort),
+    }),
+    [capabilities, chosen, modes],
+  );
 
   return {
     choices,
+    capabilities,
+    modes,
     text: written.text,
     isStarting: starting,
     error,
@@ -134,7 +161,7 @@ export interface FirstPrompt {
  * A session that ended and is resumed by its box sends its prompt the same way (plan 09, B-06): the
  * key is then the ended session's tab, which becomes the resumed one's.
  */
-export async function firstPrompt(panel: ClaudePanelStore, first: FirstPrompt): Promise<void> {
+export async function firstPrompt(panel: AgentPanelStore, first: FirstPrompt): Promise<void> {
   const items = await uploadHeld(panel.getState().contexts[first.key] ?? [], first.sessionId);
   const refused = items.some((item) => item.kind === 'upload' && item.error !== null);
 

@@ -65,7 +65,7 @@ export class SaveFileUseCase {
   async execute(command: SaveFileCommand, userId: UserId): Promise<SavedFile> {
     const { folders, disk, lock } = this.writing;
     const file = FilePath.create(await folders.resolve(command.folder, userId), command.path);
-    const sensitive = confirmSensitive(command.confirmSensitive, file);
+    const sensitive = confirmSensitive(this.writing.sensitive, command.confirmSensitive, file);
 
     if (command.ifMatch === null || isWildcard(command.ifMatch)) {
       throw new PreconditionRequiredError(file.relative, 'ifMatchMissing');

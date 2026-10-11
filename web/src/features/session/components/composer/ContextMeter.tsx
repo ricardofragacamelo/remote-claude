@@ -1,4 +1,5 @@
 import { CircleDashed, Minimize2 } from 'lucide-react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -10,19 +11,28 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { cn } from '@/shared/lib/utils';
 import { CONTEXT_WARNING_PERCENT, useContextUse } from '../../hooks/useSessionInsight';
-import type { ContextUse } from '../../types/insight';
+import type { ContextCategory, ContextUse } from '../../types/insight';
 
-/** The words of the categories this build knows — named in full; any other shows its own name. */
-const CATEGORY_NAMES: Readonly<Record<string, string>> = {
-  systemPrompt: 'sessions.context.systemPrompt',
-  systemTools: 'sessions.context.systemTools',
-  mcpTools: 'sessions.context.mcpTools',
-  messages: 'sessions.context.messages',
-  memoryFiles: 'sessions.context.memoryFiles',
-  skills: 'sessions.context.skills',
-  freeSpace: 'sessions.context.freeSpace',
-  autocompactBuffer: 'sessions.context.buffer',
-};
+/**
+ * The keys of the canonical categories (plan 28, B-24) — named in full, so the i18n check sees each.
+ * A key the server sends that is not one of these is one this build cannot say.
+ */
+const CATEGORY_KEYS: ReadonlySet<string> = new Set([
+  'sessions.context.system',
+  'sessions.context.tools',
+  'sessions.context.messages',
+  'sessions.context.memory',
+  'sessions.context.free',
+  'sessions.context.reserved',
+]);
+
+/** What a category is called: its key, translated; the engine's own words; or, at last, its id. */
+function categoryLabel(category: ContextCategory, t: TFunction): string {
+  const { messageKey } = category;
+  return messageKey !== undefined && CATEGORY_KEYS.has(messageKey)
+    ? t(messageKey)
+    : (category.text ?? category.id);
+}
 
 /** The place the meter takes in the bar — the same whether it shows, loads or steps aside (S-34). */
 const SLOT = 'inline-flex h-touch min-w-12 shrink-0 items-center justify-center md:h-7';
@@ -34,8 +44,11 @@ const CIRCLE = 2 * Math.PI * RADIUS;
 export interface ContextMeterProps {
   readonly sessionId: string;
 
-  /** Sends `/compact` as a prompt — the installation's own command, by the normal way (B-37). */
-  onCompact(): void;
+  /**
+   * Compacts the conversation — `session.compact` (plan 28, B-23). Absent for an engine that does not
+   * compact, and the menu has no such action then (S-70).
+   */
+  readonly onCompact?: (() => void) | undefined;
 }
 
 /**
@@ -82,7 +95,7 @@ function Ring({
   onCompact,
 }: {
   readonly use: ContextUse;
-  onCompact(): void;
+  readonly onCompact: (() => void) | undefined;
 }): React.JSX.Element {
   const { t } = useTranslation();
   const near = use.percentage >= CONTEXT_WARNING_PERCENT;
@@ -136,11 +149,7 @@ function Ring({
         <ul className="flex flex-col gap-0.5">
           {use.categories.map((category) => (
             <li key={category.id} className="flex justify-between gap-2">
-              <span>
-                {CATEGORY_NAMES[category.id] === undefined
-                  ? category.name
-                  : t(CATEGORY_NAMES[category.id] ?? '')}
-              </span>
+              <span>{categoryLabel(category, t)}</span>
               <span className="font-code text-ui-xs">
                 {t('sessions.context.tokens', { tokens: category.tokens })}
               </span>
@@ -152,10 +161,12 @@ function Ring({
             {t('sessions.context.near')}
           </p>
         )}
-        <DropdownMenuItem onSelect={onCompact}>
-          <Minimize2 className="size-4" aria-hidden />
-          {t('sessions.context.compact')}
-        </DropdownMenuItem>
+        {onCompact !== undefined && (
+          <DropdownMenuItem onSelect={onCompact}>
+            <Minimize2 className="size-4" aria-hidden />
+            {t('sessions.context.compact')}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

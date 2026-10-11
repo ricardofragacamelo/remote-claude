@@ -21,9 +21,9 @@ export interface CloseFoldersDialogProps {
 }
 
 /**
- * "Close these folders?" — and the one thing a person might fear, said plainly: **the Claude sessions
- * of those folders carry on**, on this machine, because they live in the backend and not in the tab
- * (plan 06, S-101).
+ * "Close these folders?" — and the one thing a person might fear, said plainly: **the agent's
+ * sessions of those folders carry on**, on this machine, because they live in the backend and not
+ * in the tab (plan 06, S-101).
  *
  * The way out is where the focus starts, not the closing — it is the first button, and the dialog
  * focuses its first: an Enter pressed out of habit keeps the tabs

@@ -9,6 +9,7 @@ import { APP_CONFIG, loadConfig } from '../config/environment';
 import { SystemClock } from '@shared/time/system-clock';
 import { SystemScheduler } from '@shared/time/system-scheduler';
 import { processEnvironment } from '../config/process-environment';
+import { ENGINE_ENVIRONMENTS } from './engines';
 
 /**
  * Configuration, clock, scheduler, identity and logging — the five things everything else needs —
@@ -22,7 +23,11 @@ import { processEnvironment } from '../config/process-environment';
 @Global()
 @Module({
   providers: [
-    { provide: APP_CONFIG, useFactory: () => loadConfig(processEnvironment()) },
+    // The core's variables and every engine's, validated together: one list of every problem.
+    {
+      provide: APP_CONFIG,
+      useFactory: () => loadConfig(processEnvironment(), ENGINE_ENVIRONMENTS),
+    },
     { provide: CLOCK, useClass: SystemClock },
     { provide: SCHEDULER, useClass: SystemScheduler },
     { provide: ID_GENERATOR, useClass: UlidGenerator },

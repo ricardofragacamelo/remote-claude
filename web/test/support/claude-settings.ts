@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
 import { api } from '@/shared/api/api';
+import { anEngineList } from './engines';
 
 /** The installation's models, as `GET /claude/models` answers them. */
 export const MODELS = [
@@ -58,6 +59,13 @@ export const INSTALLATION = {
   login: 'ready',
   lastModelCheck: null,
 };
+
+/**
+ * `GET /engines`, answered: what the form of the defaults offers — the modes and the levels of
+ * effort the engine announces (plan 28, B-27, B-28). Left out of {@link backendAnswers}, so the
+ * name of the agent of a text stays the one a spec computes before the list is read.
+ */
+export const ENGINES = { '/engines': () => Promise.resolve(anEngineList()) };
 
 /** The backend of the screen: every read answered, the rest never. */
 export function backendAnswers(overrides: Record<string, () => Promise<unknown>> = {}) {

@@ -29,6 +29,7 @@ import {
   isSessionStartPayload,
   isToolCompletedPayload,
   isToolStartedPayload,
+  isTurnCompletedPayload,
   isTranscriptAppendedPayload,
   isTranscriptFollowPayload,
   isTranscriptFollowingPayload,
@@ -77,9 +78,25 @@ function without(frame, field) {
   return Object.fromEntries(Object.entries(frame).filter(([name]) => name !== field));
 }
 
+/**
+ * The canonical fields of a shell call, as the backend emits them (plan 28, B-15).
+ *
+ * @param {string} command
+ */
+function shellCall(command) {
+  return {
+    kind: 'shell',
+    label: { messageKey: 'sessions.tool.shell', params: { command } },
+    subject: { command },
+    changes: [],
+    origin: { engine: 'claude', native: 'Bash' },
+    rawInput: { command },
+  };
+}
+
 describe('the generated protocol surface', () => {
   it('pins the version the envelope requires', () => {
-    expect(PROTOCOL_VERSION).toBe(1);
+    expect(PROTOCOL_VERSION).toBe(2);
   });
 
   it('lists every frame type of the contract', () => {
@@ -105,6 +122,7 @@ describe('the generated protocol surface', () => {
       'session.cancelQueuedPrompt',
       'session.close',
       'session.closed',
+      'session.compact',
       'session.compacted',
       'session.detach',
       'session.interrupt',
@@ -121,6 +139,7 @@ describe('the generated protocol surface', () => {
       'session.start',
       'session.started',
       'session.statusChanged',
+      'session.tasksChanged',
       'session.toggleMcpServer',
       'tool.completed',
       'tool.progress',
@@ -193,8 +212,14 @@ describe('isEnvelope', () => {
     expect(isEnvelope(authenticateFrame({ ts: 1_757_764_800_000 }))).toBe(false);
   });
 
-  it('rejects a version this build does not speak', () => {
-    expect(isEnvelope(authenticateFrame({ v: 2 }))).toBe(false);
+  it('rejects a version that is no version at all — the server says which it speaks', () => {
+    expect(isEnvelope(authenticateFrame({ v: 0 }))).toBe(false);
+    expect(isEnvelope(authenticateFrame({ v: '2' }))).toBe(false);
+  });
+
+  it('takes the version before the current one, for the window of plan 28, D-08', () => {
+    expect(isEnvelope(authenticateFrame({ v: 1 }))).toBe(true);
+    expect(isEnvelope(authenticateFrame({ v: 2 }))).toBe(true);
   });
 
   it('rejects what is not an object at all', () => {
@@ -467,9 +492,8 @@ describe('isPermissionRequestedFrame', () => {
     payload: {
       requestId: 'req_1',
       toolUseId: 'toolu_1',
-      toolName: 'Bash',
-      title: 'Run shell command',
-      input: { command: 'rm -rf build/' },
+      ...shellCall('rm -rf build/'),
+      title: 'permission.tool.shell',
       riskHint: 'destructive',
       defaultToNo: true,
       expiresAt: '2026-09-13T12:02:00.000Z',
@@ -644,15 +668,14 @@ describe('the stream and the commands of the panel', () => {
       isMessageCompletedPayload({
         messageId: 'm',
         role: 'assistant',
-        content: [{ type: 'thinking', thinking: 'hm' }, { type: 'redacted_thinking' }],
+        content: [{ type: 'thinking', thinking: 'hm' }, { type: 'redactedThinking' }],
         parentToolUseId: 'toolu_task',
       }),
     ).toBe(true);
     expect(
       isToolStartedPayload({
         toolUseId: 't',
-        toolName: 'Read',
-        input: {},
+        ...shellCall('ls'),
         parentToolUseId: 'toolu_task',
       }),
     ).toBe(true);
@@ -673,7 +696,11 @@ describe('the stream and the commands of the panel', () => {
   it('refuses a fork point without the conversation it belongs to', () => {
     expect(isSessionStartPayload({ workspacePath: '/w', forkAt: 'msg' })).toBe(false);
     expect(
-      isSessionStartPayload({ workspacePath: '/w', forkAt: 'msg', resumeSessionId: 'c' }),
+      isSessionStartPayload({
+        workspacePath: '/w',
+        forkAt: 'msg',
+        resumeFrom: { engine: 'claude', id: 'c' },
+      }),
     ).toBe(true);
     expect(isSessionStartPayload({ workspacePath: '/w' })).toBe(true);
   });
@@ -696,7 +723,7 @@ describe('the stream and the commands of the panel', () => {
 
 /** Plan 22, B-01 — following a conversation, and the fields the history gained. */
 describe('the live history', () => {
-  const conversationId = '6b41b192-a41b-46c2-b8d7-000000000001';
+  const conversation = { engine: 'claude', id: '6b41b192-a41b-46c2-b8d7-000000000001' };
 
   it('carries the follow of a conversation: two commands, an ack and two events', () => {
     for (const type of [
@@ -715,20 +742,20 @@ describe('the live history', () => {
     const examples = [
       {
         guard: isTranscriptFollowPayload,
-        example: { conversationId, afterMessageId: 'u-41' },
-        required: 'conversationId',
+        example: { conversation, afterMessageId: 'u-41' },
+        required: 'conversation',
       },
       { guard: isTranscriptUnfollowPayload, example: { followId: 't_1' }, required: 'followId' },
       {
         guard: isTranscriptFollowingPayload,
-        example: { followId: 't_1', conversationId, activity: 'idle' },
+        example: { followId: 't_1', conversation, activity: 'idle' },
         required: 'activity',
       },
       {
         guard: isTranscriptAppendedPayload,
         example: {
           followId: 't_1',
-          conversationId,
+          conversation,
           events: [{ type: 'message.completed', payload: {} }],
           lastMessageId: 'u-44',
           activity: 'activeElsewhere',
@@ -738,7 +765,7 @@ describe('the live history', () => {
       },
       {
         guard: isTranscriptResetPayload,
-        example: { followId: 't_1', conversationId, reason: 'rewritten' },
+        example: { followId: 't_1', conversation, reason: 'rewritten' },
         required: 'reason',
       },
       {
@@ -758,11 +785,11 @@ describe('the live history', () => {
   });
 
   it('accepts a follow of an empty conversation, and an update of one with nothing yet — S-01', () => {
-    expect(isTranscriptFollowPayload({ conversationId })).toBe(true);
+    expect(isTranscriptFollowPayload({ conversation })).toBe(true);
     expect(
       isTranscriptAppendedPayload({
         followId: 't_1',
-        conversationId,
+        conversation,
         events: [],
         activity: 'idle',
         working: false,
@@ -780,10 +807,29 @@ describe('the live history', () => {
         size: 5,
       }),
     ).toBe(true);
-    expect(isToolStartedPayload({ toolUseId: 't', toolName: 'Bash', input: {} })).toBe(true);
+    expect(isToolStartedPayload({ toolUseId: 't', ...shellCall('ls') })).toBe(true);
     expect(
-      isToolStartedPayload({ toolUseId: 't', toolName: 'Bash', input: {}, title: 'List', at: 'x' }),
+      isToolStartedPayload({ toolUseId: 't', ...shellCall('ls'), title: 'List', at: 'x' }),
     ).toBe(true);
+    // The previous shape is not the contract any more (plan 28, B-15).
+    expect(isToolStartedPayload({ toolUseId: 't', toolName: 'Bash', input: {} })).toBe(false);
     expect(isToolCompletedPayload({ toolUseId: 't', status: 'succeeded' })).toBe(true);
+  });
+});
+
+describe('the canonical turn (plan 28, B-29)', () => {
+  it('takes a turn with no cost and no usage — an engine that reports neither (S-86)', () => {
+    expect(isTurnCompletedPayload({ turnId: 't', usage: {}, durationMs: 5 })).toBe(true);
+  });
+
+  it('takes the canonical counts and a cost of zero', () => {
+    expect(
+      isTurnCompletedPayload({
+        turnId: 't',
+        usage: { inputTokens: 3, outputTokens: 4, cacheReadTokens: 0, webSearches: 1 },
+        costUsd: '0.000000',
+        durationMs: 5,
+      }),
+    ).toBe(true);
   });
 });

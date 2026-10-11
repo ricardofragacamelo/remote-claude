@@ -5,8 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
 import { startPostgres } from '../../../../support/containers/postgres';
 import type { DisposablePostgres } from '../../../../support/containers/postgres';
@@ -154,7 +154,7 @@ describe('the live sessions of a folder', () => {
     expect(listed.find((row) => row.sessionId === top)).toMatchObject({
       workspacePath: repo,
       status: 'idle',
-      permissionMode: 'default',
+      permissionMode: 'ask',
       openedFrom: 'web',
       pendingPermissions: 0,
       claudeSessionId: expect.stringMatching(/^[0-9a-f-]{36}$/),

@@ -5,6 +5,6 @@
   "expect": {
     "viewport": { "width": 360, "height": 740 },
     "target": 44,
-    "views": ["Explorer", "Editor", "Claude", "Panel"]
+    "views": ["Explorer", "Editor", "Claude Code", "Panel"]
   }
 }

@@ -22,12 +22,20 @@ export interface RowAction {
 
   /** A translation key, named in full where the action is declared. */
   readonly labelKey: string;
+
+  /** What the key interpolates — the `{{agent}}` of a copy of the id, say. */
+  readonly labelParams?: Readonly<Record<string, string>>;
   run(): void;
 }
 
-/** An action of a row, declared on one line: its id, its key, what it does. */
-export function rowAction(id: string, labelKey: string, run: () => void): RowAction {
-  return { id, labelKey, run };
+/** An action of a row, declared on one line: its id, its key, what it does — and the key's params. */
+export function rowAction(
+  id: string,
+  labelKey: string,
+  run: () => void,
+  labelParams?: Readonly<Record<string, string>>,
+): RowAction {
+  return labelParams === undefined ? { id, labelKey, run } : { id, labelKey, run, labelParams };
 }
 
 /**
@@ -63,7 +71,7 @@ export function RowActions({
             <DropdownMenuContent align="end">
               {actions.map((action) => (
                 <DropdownMenuItem key={action.id} onSelect={action.run}>
-                  {t(action.labelKey)}
+                  {t(action.labelKey, action.labelParams ?? {})}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -73,7 +81,7 @@ export function RowActions({
       <ContextMenuContent>
         {actions.map((action) => (
           <ContextMenuItem key={action.id} onSelect={action.run}>
-            {t(action.labelKey)}
+            {t(action.labelKey, action.labelParams ?? {})}
           </ContextMenuItem>
         ))}
       </ContextMenuContent>

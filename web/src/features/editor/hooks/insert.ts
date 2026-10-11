@@ -30,7 +30,7 @@ function offsetOf(text: string, line: number, column: number): number {
 
 /**
  * Puts text at the cursor of the active editor of a folder tab — "insert in the editor" of a code
- * block of Claude's answer (plan 08, B-15).
+ * block of the agent's answer (plan 08, B-15).
  *
  * An edit of the buffer, which leaves the file dirty and can be undone; **never** a write to the
  * disk — saving stays the person's (S-67). The cursor ends after what was put there.

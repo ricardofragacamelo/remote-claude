@@ -166,7 +166,7 @@ Cenários S-177, S-178.
   sem ninguém aprovar, e isso fica como risco aberto do plano ([R-03](README.md#riscos-e-decisões-em-aberto));
 - **permissões** — `deny` descrito como aplicado; `allow` descrito como **sem efeito aqui**, porque o
   backend limpa a marca de confiança antes de abrir sessão
-  ([backend/04](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido)),
+  ([backend/04](../../architecture/backend/04a-claude.md#diretório-confiado-fura-o-canusetool--medido)),
   com a nota de que no Claude Code do terminal ele roda sem perguntar;
 - **`enabledPlugins`** e **`enableAllProjectMcpServers`** — listados com aviso; o primeiro depende de o
   plugin estar instalado na máquina, o segundo não conta aqui (B-24).

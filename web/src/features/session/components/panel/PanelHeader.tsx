@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { folderTabStore } from '@/features/workbench';
 import { IconButton } from '@/shared/components/IconButton';
 import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
-import { useClaudePanel } from '../../hooks/useClaudePanel';
+import { useAgentPanel } from '../../hooks/useAgentPanel';
 import { sessionShownIn } from '../../hooks/usePanelTabs';
 import type { PanelTabs } from '../../hooks/usePanelTabs';
 import { useSessionChanges } from '../../hooks/useSessionChanges';
@@ -57,12 +57,7 @@ export function PanelHeader({
           }}
         />
         {sessionId === null ? (
-          <SessionMenu
-            session={null}
-            folder={folder}
-            onOpenHelp={onOpenHelp}
-            onOpenRules={onOpenRules}
-          />
+          <SessionMenu session={null} onOpenHelp={onOpenHelp} onOpenRules={onOpenRules} />
         ) : (
           <SessionActions
             key={sessionId}
@@ -96,12 +91,7 @@ function SessionActions({
       <ChangesToggle folder={folder} sessionId={sessionId} />
       <McpIndicator sessionId={sessionId} />
       <StatusDot session={session} />
-      <SessionMenu
-        session={session}
-        folder={folder}
-        onOpenHelp={onOpenHelp}
-        onOpenRules={onOpenRules}
-      />
+      <SessionMenu session={session} onOpenHelp={onOpenHelp} onOpenRules={onOpenRules} />
     </>
   );
 }
@@ -119,7 +109,7 @@ function ChangesToggle({
   readonly sessionId: string;
 }): React.JSX.Element {
   const { t } = useTranslation();
-  const panel = useClaudePanel(folder);
+  const panel = useAgentPanel(folder);
   const changes = useSessionChanges(folder, sessionId);
   const showing = panel.pane === 'changes';
   const pending = changes.pending;
@@ -131,7 +121,7 @@ function ChangesToggle({
         label={
           pending > 0
             ? t('sessions.header.changesPending', { pending })
-            : t('workbench.claude.showChanges')
+            : t('workbench.agent.showChanges')
         }
         aria-pressed={showing}
         onClick={() => {

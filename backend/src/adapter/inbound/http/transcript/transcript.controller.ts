@@ -2,18 +2,23 @@ import { Controller, Get, Inject, Param, Query, Res, UseGuards } from '@nestjs/c
 import type { Response } from 'express';
 
 import {
+  TranscriptStoreRegistry,
   ListTranscriptsUseCase,
   ReadPromptImageUseCase,
   ReadToolResultUseCase,
   ReadTranscriptUseCase,
 } from '@application/transcript';
 import type { UserId } from '@domain/auth';
-import { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
+import { TranscriptNotFoundError } from '@domain/transcript';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import {
   blockIdSchema,
   DEFAULT_PAGE_SIZE,
+  engineSchema,
+  previousImageSchema,
+  previousToolSchema,
   listTranscriptsSchema,
   readTranscriptSchema,
   subagentToolSchema,
@@ -26,6 +31,8 @@ import {
 } from './transcript.dto';
 import type {
   ListTranscriptsQueryDto,
+  PreviousImageParams,
+  PreviousToolParams,
   ReadTranscriptQueryDto,
   SubagentPageDto,
   ToolResultDto,
@@ -55,7 +62,25 @@ export class TranscriptController {
     @Inject(ReadTranscriptUseCase) private readonly reading: ReadTranscriptUseCase,
     @Inject(ReadToolResultUseCase) private readonly results: ReadToolResultUseCase,
     @Inject(ReadPromptImageUseCase) private readonly images: ReadPromptImageUseCase,
+    @Inject(TranscriptStoreRegistry) private readonly engines: TranscriptStoreRegistry,
   ) {}
+
+  /**
+   * The conversation a route names. An engine that is not enabled is a conversation that does not
+   * exist — `404`, the same answer as an id nobody has (S-38); an id the engine never hands out is
+   * `400`.
+   */
+  private conversation(engine: string, id: string): ConversationRef {
+    if (!this.engines.has(engine)) {
+      throw new TranscriptNotFoundError(id);
+    }
+    return this.engines.conversation(engine, id);
+  }
+
+  /** The conversation a route of the previous protocol names: one of the default engine (D-08). */
+  private previous(id: string): ConversationRef {
+    return this.conversation(this.engines.defaultEngine, id);
+  }
 
   /** The conversations of one workspace, most recently written first. */
   @Get()
@@ -75,15 +100,95 @@ export class TranscriptController {
   }
 
   /** One page of a conversation, from the latest message backwards. */
+  @Get(':engine/:id/messages')
+  read(
+    @Param('engine', new ZodPipe(engineSchema)) engine: string,
+    @Param('id', new ZodPipe(transcriptIdSchema)) id: string,
+    @Query(new ZodPipe(readTranscriptSchema)) query: ReadTranscriptQueryDto,
+    @CurrentUser() userId: UserId,
+  ): Promise<TranscriptPageDto> {
+    return this.page(this.conversation(engine, id), query, userId);
+  }
+
+  /** The route of the previous protocol, until its window closes (plan 28, D-08). */
   @Get(':sessionId/messages')
-  async read(
+  readPrevious(
     @Param('sessionId', new ZodPipe(transcriptIdSchema)) sessionId: string,
     @Query(new ZodPipe(readTranscriptSchema)) query: ReadTranscriptQueryDto,
     @CurrentUser() userId: UserId,
   ): Promise<TranscriptPageDto> {
+    return this.page(this.previous(sessionId), query, userId);
+  }
+
+  @Get(':engine/:id/subagents/:toolUseId/messages')
+  readSubagent(
+    @Param('engine', new ZodPipe(engineSchema)) engine: string,
+    @Param('id', new ZodPipe(transcriptIdSchema)) id: string,
+    @Param('toolUseId', new ZodPipe(subagentToolSchema)) toolUseId: string,
+    @Query(new ZodPipe(readTranscriptSchema)) query: ReadTranscriptQueryDto,
+    @CurrentUser() userId: UserId,
+  ): Promise<SubagentPageDto> {
+    return this.subagentPage(this.conversation(engine, id), toolUseId, query, userId);
+  }
+
+  /** The route of the previous protocol, until its window closes (plan 28, D-08). */
+  @Get(':sessionId/subagents/:toolUseId/messages')
+  readSubagentPrevious(
+    @Param(new ZodPipe(previousToolSchema)) tool: PreviousToolParams,
+    @Query(new ZodPipe(readTranscriptSchema)) query: ReadTranscriptQueryDto,
+    @CurrentUser() userId: UserId,
+  ): Promise<SubagentPageDto> {
+    return this.subagentPage(this.previous(tool.sessionId), tool.toolUseId, query, userId);
+  }
+
+  @Get(':engine/:id/tools/:toolUseId/result')
+  readToolResult(
+    @Param('engine', new ZodPipe(engineSchema)) engine: string,
+    @Param('id', new ZodPipe(transcriptIdSchema)) id: string,
+    @Param('toolUseId', new ZodPipe(subagentToolSchema)) toolUseId: string,
+    @CurrentUser() userId: UserId,
+  ): Promise<ToolResultDto> {
+    return this.toolResult(this.conversation(engine, id), toolUseId, userId);
+  }
+
+  /** The route of the previous protocol, until its window closes (plan 28, D-08). */
+  @Get(':sessionId/tools/:toolUseId/result')
+  readToolResultPrevious(
+    @Param(new ZodPipe(previousToolSchema)) tool: PreviousToolParams,
+    @CurrentUser() userId: UserId,
+  ): Promise<ToolResultDto> {
+    return this.toolResult(this.previous(tool.sessionId), tool.toolUseId, userId);
+  }
+
+  @Get(':engine/:id/images/:blockId')
+  async readImage(
+    @Param('engine', new ZodPipe(engineSchema)) engine: string,
+    @Param('id', new ZodPipe(transcriptIdSchema)) id: string,
+    @Param('blockId', new ZodPipe(blockIdSchema)) blockId: string,
+    @CurrentUser() userId: UserId,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.image(this.conversation(engine, id), blockId, userId, response);
+  }
+
+  /** The route of the previous protocol, until its window closes (plan 28, D-08). */
+  @Get(':sessionId/images/:blockId')
+  async readImagePrevious(
+    @Param(new ZodPipe(previousImageSchema)) image: PreviousImageParams,
+    @CurrentUser() userId: UserId,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.image(this.previous(image.sessionId), image.blockId, userId, response);
+  }
+
+  private async page(
+    sessionId: ConversationRef,
+    query: ReadTranscriptQueryDto,
+    userId: UserId,
+  ): Promise<TranscriptPageDto> {
     const page = await this.reading.execute({
       userId,
-      sessionId: ClaudeSessionId.create(sessionId),
+      sessionId,
       before: query.cursor ?? null,
       limit: query.limit ?? DEFAULT_PAGE_SIZE,
     });
@@ -91,21 +196,15 @@ export class TranscriptController {
     return toTranscriptPageDto(page);
   }
 
-  /**
-   * One page of what a subagent said, by the tool that opened it — from the latest message back
-   * (plan 08, B-21). `404` for a subagent the conversation does not have, and for a conversation the
-   * caller does not read, alike.
-   */
-  @Get(':sessionId/subagents/:toolUseId/messages')
-  async readSubagent(
-    @Param('sessionId', new ZodPipe(transcriptIdSchema)) sessionId: string,
-    @Param('toolUseId', new ZodPipe(subagentToolSchema)) toolUseId: string,
-    @Query(new ZodPipe(readTranscriptSchema)) query: ReadTranscriptQueryDto,
-    @CurrentUser() userId: UserId,
+  private async subagentPage(
+    sessionId: ConversationRef,
+    toolUseId: string,
+    query: ReadTranscriptQueryDto,
+    userId: UserId,
   ): Promise<SubagentPageDto> {
     const page = await this.reading.subagent({
       userId,
-      sessionId: ClaudeSessionId.create(sessionId),
+      sessionId,
       toolUseId,
       before: query.cursor ?? null,
       limit: query.limit ?? DEFAULT_PAGE_SIZE,
@@ -114,45 +213,29 @@ export class TranscriptController {
     return toSubagentPageDto(page);
   }
 
-  /**
-   * The whole output of one tool of the main chain, when its card is unfolded (plan 22, B-11). Cut
-   * above the ceiling, and said to be; `404` for a tool the chain has no result of.
-   */
-  @Get(':sessionId/tools/:toolUseId/result')
-  async readToolResult(
-    @Param('sessionId', new ZodPipe(transcriptIdSchema)) sessionId: string,
-    @Param('toolUseId', new ZodPipe(subagentToolSchema)) toolUseId: string,
-    @CurrentUser() userId: UserId,
+  private async toolResult(
+    sessionId: ConversationRef,
+    toolUseId: string,
+    userId: UserId,
   ): Promise<ToolResultDto> {
-    const output = await this.results.execute({
-      userId,
-      sessionId: ClaudeSessionId.create(sessionId),
-      toolUseId,
-    });
-
-    return toToolResultDto(output);
+    return toToolResultDto(await this.results.execute({ userId, sessionId, toolUseId }));
   }
 
   /**
-   * The image a prompt carried, opened on demand (plan 22, B-12). The headers of D-10 go first, so a
-   * refusal carries them too: whatever this route answers is never a document of the product's origin.
+   * The bytes of an image of the conversation, never interpreted here: `nosniff` and a sandbox, so a
+   * browser treats them as what the media type says and nothing else.
    */
-  @Get(':sessionId/images/:blockId')
-  async readImage(
-    @Param('sessionId', new ZodPipe(transcriptIdSchema)) sessionId: string,
-    @Param('blockId', new ZodPipe(blockIdSchema)) blockId: string,
-    @CurrentUser() userId: UserId,
-    @Res() response: Response,
+  private async image(
+    sessionId: ConversationRef,
+    blockId: string,
+    userId: UserId,
+    response: Response,
   ): Promise<void> {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Content-Security-Policy', 'sandbox');
     response.setHeader('Cache-Control', 'private, no-store');
 
-    const image = await this.images.execute({
-      userId,
-      sessionId: ClaudeSessionId.create(sessionId),
-      blockId,
-    });
+    const image = await this.images.execute({ userId, sessionId, blockId });
     const bytes = Buffer.from(image.data, 'base64');
 
     response.status(200);

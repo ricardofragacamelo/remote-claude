@@ -46,23 +46,34 @@ void main() {
 
   test('S-55 · the wait first, then the tool, then the verb', () {
     expect(
-      workingLabel(l10n, status: SessionStatus.waitingPermission, turn: 't', tool: 'Bash'),
+      workingLabel(
+        l10n,
+        status: SessionStatus.waitingPermission,
+        turn: 't',
+        tool: 'Shell: npm test',
+      ),
       l10n.sessionWorkingWaiting,
     );
     expect(
-      workingLabel(l10n, status: SessionStatus.running, turn: 't', tool: 'Bash', waiting: 1),
+      workingLabel(
+        l10n,
+        status: SessionStatus.running,
+        turn: 't',
+        tool: 'Shell: npm test',
+        waiting: 1,
+      ),
       l10n.sessionWorkingWaiting,
     );
     expect(
-      workingLabel(l10n, status: SessionStatus.running, turn: 't', tool: 'Bash'),
-      l10n.sessionWorkingRunningTool('Bash'),
+      workingLabel(l10n, status: SessionStatus.running, turn: 't', tool: 'Shell: npm test'),
+      l10n.sessionWorkingRunningTool('Shell: npm test'),
     );
     expect(
       workingLabel(l10n, status: SessionStatus.running, turn: 't'),
       verbText(l10n, verbOf('t')),
     );
     expect(
-      workingLabel(l10n, status: SessionStatus.thinking, turn: 't', tool: 'Bash'),
+      workingLabel(l10n, status: SessionStatus.thinking, turn: 't', tool: 'Shell: npm test'),
       verbText(l10n, verbOf('t')),
     );
   });
@@ -72,7 +83,7 @@ void main() {
       l10n,
       status: second >= 20 && second < 50 ? SessionStatus.running : SessionStatus.thinking,
       turn: 'session-1:0',
-      tool: second >= 20 && second < 50 ? 'Bash' : null,
+      tool: second >= 20 && second < 50 ? 'Shell: npm test' : null,
     );
 
     int announced = 0;

@@ -7,7 +7,9 @@
 /// of a page of the history, because they **are** entries of the history (05 §Acompanhar).
 library;
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/network/contracts/protocol.g.dart';
+import 'package:remote_claude/core/network/conversation_wire.dart';
 import 'package:remote_claude/core/network/failure_mapper.dart';
 import 'package:remote_claude/features/session/data/mappers/history_mapper.dart';
 import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
@@ -39,7 +41,9 @@ FollowUpdate? followUpdateFrom(Envelope frame) {
 }
 
 FollowUpdate? _started(Map<String, Object?> payload, String commandId) {
-  if (!_texts(payload, const <String>['followId', 'conversationId', 'activity'])) {
+  final ConversationKey? conversation = conversationKeyFrom(payload['conversation']);
+
+  if (conversation == null || !_texts(payload, const <String>['followId', 'activity'])) {
     return null;
   }
 
@@ -48,15 +52,17 @@ FollowUpdate? _started(Map<String, Object?> payload, String commandId) {
   return FollowStarted(
     commandId: commandId,
     followId: ack.followId,
-    conversationId: ack.conversationId,
+    conversation: conversation,
     activity: activityFrom(ack.activity),
   );
 }
 
 FollowUpdate? _appended(Map<String, Object?> payload, int seq) {
   final Object? lastMessageId = payload['lastMessageId'];
+  final ConversationKey? conversation = conversationKeyFrom(payload['conversation']);
 
-  if (!_texts(payload, const <String>['followId', 'conversationId', 'activity']) ||
+  if (conversation == null ||
+      !_texts(payload, const <String>['followId', 'activity']) ||
       payload['working'] is! bool ||
       !_entries(payload['events']) ||
       (lastMessageId != null && lastMessageId is! String)) {
@@ -67,7 +73,7 @@ FollowUpdate? _appended(Map<String, Object?> payload, int seq) {
 
   return FollowAppended(
     followId: appended.followId,
-    conversationId: appended.conversationId,
+    conversation: conversation,
     seq: seq,
     // The same reader as a page: an entry this build cannot read costs that entry, not the frame.
     events: appended.events
@@ -81,7 +87,9 @@ FollowUpdate? _appended(Map<String, Object?> payload, int seq) {
 }
 
 FollowUpdate? _reset(Map<String, Object?> payload, int seq) {
-  if (!_texts(payload, const <String>['followId', 'conversationId', 'reason'])) {
+  final ConversationKey? conversation = conversationKeyFrom(payload['conversation']);
+
+  if (conversation == null || !_texts(payload, const <String>['followId', 'reason'])) {
     return null;
   }
 
@@ -89,7 +97,7 @@ FollowUpdate? _reset(Map<String, Object?> payload, int seq) {
 
   return FollowReset(
     followId: reset.followId,
-    conversationId: reset.conversationId,
+    conversation: conversation,
     seq: seq,
     // A reason added after this build shipped still ends the subscription: read it again, as for a
     // chain rewritten, and the page says what is there.
@@ -102,7 +110,7 @@ Map<String, Object?> followLogFieldsOf(FollowUpdate update) => switch (update) {
   FollowStarted() => <String, Object?>{
     'type': transcriptFollowingType,
     'followId': update.followId,
-    'conversationId': update.conversationId,
+    'conversation': update.conversation.toString(),
     'activity': update.activity?.name,
   },
   FollowAppended() => <String, Object?>{

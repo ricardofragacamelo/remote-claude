@@ -28,7 +28,7 @@ export function SubagentChildren({
         : context.conversation.tools.find((each) => each.toolUseId === entry.id)
             ?.parentToolUseId) === tool.toolUseId,
   );
-  const history = useSubagentHistory(context.conversationId, tool.toolUseId, !streamed);
+  const history = useSubagentHistory(context.reference, tool.toolUseId, !streamed);
 
   if (streamed) {
     return <TimelineEntries context={context} parent={tool.toolUseId} />;

@@ -276,7 +276,7 @@ test(`${trusted.id} — ${trusted.title}`, async () => {
 
   const { socket, request } = await asked(expected.fixture);
 
-  expect(request.payload).toMatchObject({ toolName: expected.toolName });
+  expect(request.payload).toMatchObject({ origin: { native: expected.toolName } });
   expect(trustMarkOf(context().workspace)).toBe(false);
 
   socket.close();

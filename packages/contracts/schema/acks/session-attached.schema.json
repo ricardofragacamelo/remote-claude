@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/acks/session-attached.json",
   "title": "SessionAttached",
-  "description": "Answer to `session.attach` \u2014 and to a `session.start` whose `resumeSessionId` names a conversation already live for the caller. Says what was replayed and whether anything was lost.",
+  "description": "Answer to `session.attach` — and to a `session.start` whose `resumeFrom` names a conversation already live for the caller. Says what was replayed and whether anything was lost.",
   "x-kind": "ack",
   "x-type": "session.attached",
   "type": "object",
@@ -21,14 +21,14 @@
     },
     "gap": {
       "type": "boolean",
-      "description": "The requested sequence had already fallen out of the buffer. The client drops its local state and reloads over HTTP \u2014 it never stitches a partial hole."
+      "description": "The requested sequence had already fallen out of the buffer. The client drops its local state and reloads over HTTP — it never stitches a partial hole."
     },
-    "claudeSessionId": {
-      "type": "string",
-      "description": "The conversation of a live session of Claude \u2014 where a client reloads from after a `gap`, which is exactly when the buffer no longer holds the `session.started` that named it. Absent for a stream that is not a conversation, such as the diagnostic round trip."
+    "conversation": {
+      "$ref": "../definitions/conversation-ref.schema.json",
+      "description": "The conversation of a live session — where a client reloads from after a `gap`, which is exactly when the buffer no longer holds the `session.started` that named it. Absent for a stream that is not a conversation, such as the diagnostic round trip."
     },
     "resumedFrom": {
-      "type": "string",
+      "$ref": "../definitions/conversation-ref.schema.json",
       "description": "The conversation this session continues, when it is a resume. Present on the ack a `session.start` answers with when the conversation it asked to resume was already live for the caller: resuming what is live is an attach, never a second subprocess."
     }
   }

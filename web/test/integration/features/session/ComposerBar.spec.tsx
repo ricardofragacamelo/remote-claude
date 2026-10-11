@@ -1,19 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { EngineCapabilities } from '@remote-claude/contracts';
 
 import { forgetLiveSessions, SessionScreen } from '@/features/session';
 import { useEditAndResend } from '@/features/session/hooks/useEditAndResend';
 import { UNCHECKED } from '@/features/session/lib/context-set';
 import { mentionProviders } from '@/features/session/lib/mention-providers';
-import { claudePanelStore, forgetClaudePanel } from '@/features/session/store/claude-panel.store';
+import { agentPanelStore, forgetAgentPanel } from '@/features/session/store/agent-panel.store';
 import { forgetFolderTabs } from '@/features/workbench';
-import { aHistoryPage, claudeUnavailable } from '../../../support/history';
+import { aHistoryPage, agentUnavailable } from '../../../support/history';
 import { aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
 import { render, translator } from '../../../support/render';
 import { aCommandMenu, aRefusal, routeApi, SESSION } from '../../../support/session-tools';
 import { typeIn } from '../../../support/workbench';
+import { anEngineList, CAPABILITIES } from '../../../support/engines';
 
 const t = translator('en');
 const A = '/srv/projects/app';
@@ -38,7 +40,7 @@ beforeEach(() => {
 
 afterEach(() => {
   live.close();
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
   forgetFolderTabs();
   vi.restoreAllMocks();
 });
@@ -58,12 +60,20 @@ function served(extra: Record<string, readonly unknown[]> = {}) {
         totalTokens: 1_000,
         maxTokens: 200_000,
         percentage: 85,
-        categories: [{ id: 'messages', name: 'Messages', tokens: 800, kind: 'used' }],
+        categories: [
+          {
+            id: 'messages',
+            messageKey: 'sessions.context.messages',
+            name: 'Messages',
+            tokens: 800,
+            kind: 'used',
+          },
+        ],
       },
     ],
     [`/sessions/${SESSION}/mcp-servers`]: [{ servers: [] }],
     [`/sessions/${SESSION}/commands`]: [aCommandMenu()],
-    [`/transcripts/${CONVERSATION}/messages`]: [aHistoryPage([])],
+    [`/transcripts/claude/${CONVERSATION}/messages`]: [aHistoryPage([])],
     [`/files/tree?folder=${encodeURIComponent(A)}&path=`]: [
       { entries: [{ name: 'src', kind: 'directory' }], truncated: false },
     ],
@@ -76,17 +86,18 @@ function says(type: string, payload: Record<string, unknown>): void {
   live.receive(hubEvent(SESSION, type, seq, payload));
 }
 
-function opened(): ReturnType<typeof render> {
-  claudePanelStore(A).getState().show('session', SESSION);
+function opened(capabilities: EngineCapabilities = CAPABILITIES): ReturnType<typeof render> {
+  agentPanelStore(A).getState().show('session', SESSION);
   const mounted = render(<Hosted />);
   live.connect();
   live.receive(
     hubEvent(SESSION, 'session.started', 1, {
       sessionId: SESSION,
-      claudeSessionId: CONVERSATION,
+      conversation: { engine: 'claude', id: CONVERSATION },
       workspacePath: A,
       model: 'opus',
-      permissionMode: 'default',
+      permissionMode: 'ask',
+      capabilities,
     }),
   );
   return mounted;
@@ -118,7 +129,7 @@ describe('the bar of the box — plan 09, B-09', () => {
         t('composer.slash.open'),
         t('composer.chip.choice', {
           label: t('sessions.mode.label'),
-          value: t('sessions.mode.default'),
+          value: t('sessions.mode.ask'),
         }),
         t('composer.chip.choice', { label: t('sessions.model.label'), value: 'Opus' }),
         t('composer.chip.choice', {
@@ -151,7 +162,7 @@ describe('the bar of the box — plan 09, B-09', () => {
 
   it('leaves the plain box of an edited prompt with nothing to add to it — B-09', async () => {
     const user = userEvent.setup();
-    served({ [`/transcripts/${CONVERSATION}/messages`]: [aHistoryPage([])] });
+    served({ [`/transcripts/claude/${CONVERSATION}/messages`]: [aHistoryPage([])] });
     opened();
     says('message.completed', {
       messageId: 'u1',
@@ -205,14 +216,14 @@ describe('send and stop, in one place — plan 09, B-10, D-06', () => {
     opened();
     says('session.statusChanged', { status: 'running' });
 
-    await user.click(chip(t('sessions.mode.label'), t('sessions.mode.default')));
+    await user.click(chip(t('sessions.mode.label'), t('sessions.mode.ask')));
     expect(await screen.findByRole('menu')).toBeVisible();
     await user.keyboard('{Escape}');
     await waitFor(() => {
       expect(screen.queryByRole('menu')).toBeNull();
     });
     // The focus is back on the chip that opened it (S-36).
-    expect(chip(t('sessions.mode.label'), t('sessions.mode.default'))).toHaveFocus();
+    expect(chip(t('sessions.mode.label'), t('sessions.mode.ask'))).toHaveFocus();
     expect(sent('session.interrupt')).toHaveLength(0);
 
     box().focus();
@@ -240,15 +251,19 @@ describe('the mode, the model and the effort in the bar — plan 09, B-11', () =
     served();
     opened();
 
-    await user.click(chip(t('sessions.mode.label'), t('sessions.mode.default')));
-    await user.click(await screen.findByRole('menuitem', { name: /^Plan/ }));
-    expect(chip(t('sessions.mode.label'), t('sessions.mode.plan'))).toBeInTheDocument();
+    await user.click(chip(t('sessions.mode.label'), t('sessions.mode.ask')));
+    await user.click(
+      await screen.findByRole('menuitem', {
+        name: new RegExp(`^${t('sessions.mode.readOnly')}`),
+      }),
+    );
+    expect(chip(t('sessions.mode.label'), t('sessions.mode.readOnly'))).toBeInTheDocument();
 
     const command = String(live.lastSent('session.setPermissionMode')?.['id']);
     live.receive(aRefusal(command, 'INVALID_INPUT', 'common.error.invalidInput'));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(t('common.error.invalidInput'));
-    expect(chip(t('sessions.mode.label'), t('sessions.mode.default'))).toBeInTheDocument();
+    expect(chip(t('sessions.mode.label'), t('sessions.mode.ask'))).toBeInTheDocument();
 
     // The strip closes, and the box stays as it was.
     await user.click(screen.getByRole('button', { name: t('composer.refusal.close') }));
@@ -258,9 +273,9 @@ describe('the mode, the model and the effort in the bar — plan 09, B-11', () =
   it('shows the effort of a live session only, and says why — S-90', async () => {
     const user = userEvent.setup();
     served();
-    const panel = claudePanelStore(A).getState();
+    const panel = agentPanelStore(A).getState();
     const draft = panel.openDraft();
-    panel.setChoices(draft, { model: 'opus', mode: 'default', effort: 'high' });
+    panel.setChoices(draft, { model: 'opus', mode: 'ask', effort: 'high' });
     panel.promote(draft, SESSION);
     opened();
 
@@ -275,6 +290,99 @@ describe('the mode, the model and the effort in the bar — plan 09, B-11', () =
 
     await user.click(effort);
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+});
+
+describe('what the engine announces, in the bar — plan 28, B-27, B-28', () => {
+  const modeChip = (): HTMLElement | null =>
+    screen.queryByRole('button', {
+      name: new RegExp(
+        `^${t('composer.chip.choice', { label: t('sessions.mode.label'), value: '' })}`,
+      ),
+    });
+
+  it('offers exactly the modes the engine announces, in its order — S-81', async () => {
+    const user = userEvent.setup();
+    served();
+    opened({ ...CAPABILITIES, permissionModes: ['readOnly', 'ask'] });
+
+    await user.click(chip(t('sessions.mode.label'), t('sessions.mode.ask')));
+
+    expect((await screen.findAllByRole('menuitem')).map((item) => item.textContent ?? '')).toEqual([
+      expect.stringContaining(t('sessions.mode.readOnly')),
+      expect.stringContaining(t('sessions.mode.ask')),
+    ]);
+  });
+
+  it('has no mode chip for an engine with one mode — S-81', async () => {
+    served();
+    opened({ ...CAPABILITIES, permissionModes: ['ask'] });
+
+    await screen.findByRole('button', {
+      name: t('composer.chip.choice', { label: t('sessions.model.label'), value: 'Opus' }),
+    });
+    expect(modeChip()).toBeNull();
+  });
+
+  it('has no effort chip for an engine that announces no level — S-83', async () => {
+    served();
+    const panel = agentPanelStore(A).getState();
+    const draft = panel.openDraft();
+    panel.setChoices(draft, { model: 'opus', mode: 'ask', effort: 'high' });
+    panel.promote(draft, SESSION);
+    opened({ ...CAPABILITIES, effortLevels: [] });
+
+    await screen.findByRole('button', {
+      name: t('composer.chip.choice', { label: t('sessions.model.label'), value: 'Opus' }),
+    });
+    expect(
+      screen.queryByRole('button', {
+        name: t('composer.chip.choice', {
+          label: t('sessions.effort.label'),
+          value: t('sessions.effort.high'),
+        }),
+      }),
+    ).toBeNull();
+  });
+
+  it('names a level this build does not know as the engine named it', async () => {
+    served();
+    const panel = agentPanelStore(A).getState();
+    const draft = panel.openDraft();
+    panel.setChoices(draft, { model: 'opus', mode: 'ask', effort: 'turbo' });
+    panel.promote(draft, SESSION);
+    opened();
+
+    expect(
+      await screen.findByRole('button', {
+        name: t('composer.chip.choice', { label: t('sessions.effort.label'), value: 'turbo' }),
+      }),
+    ).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('takes the modes from the list of engines before the session says them', async () => {
+    served({ '/engines': [anEngineList()] });
+    agentPanelStore(A).getState().show('session', SESSION);
+    render(<Hosted />);
+    live.connect();
+    live.receive(
+      hubEvent(SESSION, 'session.started', 1, {
+        sessionId: SESSION,
+        conversation: { engine: 'claude', id: CONVERSATION },
+        workspacePath: A,
+        model: 'opus',
+        permissionMode: 'acceptEdits',
+      }),
+    );
+
+    expect(
+      await screen.findByRole('button', {
+        name: t('composer.chip.choice', {
+          label: t('sessions.mode.label'),
+          value: t('sessions.mode.acceptEdits'),
+        }),
+      }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -512,7 +620,7 @@ describe('the context window in the bar — plan 09, B-13', () => {
   });
 
   it('steps aside with the reason, and keeps its place in the bar — S-34', async () => {
-    served({ [`/sessions/${SESSION}/context`]: [{ ...claudeUnavailable }] });
+    served({ [`/sessions/${SESSION}/context`]: [{ ...agentUnavailable }] });
     opened();
 
     const away = await screen.findByRole('img', { name: t('sessions.context.unavailable') });
@@ -522,13 +630,211 @@ describe('the context window in the bar — plan 09, B-13', () => {
   });
 });
 
+/** A context of the given categories, as `GET /sessions/:id/context` answers it. */
+function aContext(categories: readonly Record<string, unknown>[]): Record<string, unknown> {
+  return { model: 'opus', totalTokens: 1_000, maxTokens: 200_000, percentage: 40, categories };
+}
+
+/** The menu of the meter, opened. */
+async function meterMenu(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+  await user.click(
+    await screen.findByRole('button', { name: t('sessions.context.label', { percentage: 40 }) }),
+  );
+  return screen.findByRole('menu');
+}
+
+describe('the canonical context — plan 28, B-24', () => {
+  it('names each canonical category by its key, and any other by the words of the engine — S-71', async () => {
+    const user = userEvent.setup();
+    const canonical = ['system', 'tools', 'messages', 'memory', 'free', 'reserved'].map((id) => ({
+      id,
+      messageKey: `sessions.context.${id}`,
+      name: `engine name of ${id}`,
+      tokens: 10,
+      kind: 'used',
+    }));
+    served({
+      [`/sessions/${SESSION}/context`]: [
+        aContext([
+          ...canonical,
+          { id: 'skills', text: 'Skills of the engine', name: 'Skills', tokens: 5, kind: 'used' },
+        ]),
+      ],
+    });
+    opened();
+
+    const menu = await meterMenu(user);
+    for (const key of [
+      'sessions.context.system',
+      'sessions.context.tools',
+      'sessions.context.messages',
+      'sessions.context.memory',
+      'sessions.context.free',
+      'sessions.context.reserved',
+    ]) {
+      expect(within(menu).getByText(t(key))).toBeVisible();
+    }
+    expect(within(menu).getByText('Skills of the engine')).toBeVisible();
+    expect(within(menu).queryByText(/engine name of/)).toBeNull();
+  });
+
+  it('shows the text, or the id, of a category whose key this build does not know — S-71', async () => {
+    const user = userEvent.setup();
+    served({
+      [`/sessions/${SESSION}/context`]: [
+        aContext([
+          {
+            id: 'a',
+            messageKey: 'sessions.context.later',
+            text: 'Later',
+            name: 'n',
+            tokens: 1,
+            kind: 'used',
+          },
+          {
+            id: 'deferredTools',
+            messageKey: 'sessions.context.x',
+            name: 'n',
+            tokens: 1,
+            kind: 'deferred',
+          },
+          { id: 'odd', name: 'n', tokens: 1, kind: 'used' },
+        ]),
+      ],
+    });
+    opened();
+
+    const menu = await meterMenu(user);
+    expect(within(menu).getByText('Later')).toBeVisible();
+    expect(within(menu).getByText('deferredTools')).toBeVisible();
+    expect(within(menu).getByText('odd')).toBeVisible();
+  });
+
+  it('has no meter for an engine that does not say how full its context is — S-72', async () => {
+    served();
+    opened({ ...CAPABILITIES, contextUse: false });
+
+    await screen.findByRole('button', { name: t('session.composer.send') });
+    await waitFor(() => {
+      expect(screen.queryByRole('meter')).toBeNull();
+    });
+    expect(
+      screen.queryByRole('button', { name: t('sessions.context.label', { percentage: 85 }) }),
+    ).toBeNull();
+    expect(screen.queryByRole('img', { name: t('sessions.context.unavailable') })).toBeNull();
+  });
+
+  it('says why when the server refuses the context of an engine without it — S-72', async () => {
+    served({
+      [`/sessions/${SESSION}/context`]: [
+        {
+          code: 'ENGINE_CAPABILITY_UNAVAILABLE',
+          messageKey: 'engine.error.capabilityUnavailable',
+          params: { engine: 'claude', capability: 'contextUse' },
+          traceId: 'trace-cap',
+        },
+      ],
+    });
+    opened();
+
+    const away = await screen.findByRole('img', { name: t('sessions.context.unavailable') });
+    expect(away).toBeInTheDocument();
+  });
+});
+
+describe('compacting the conversation — plan 28, B-23', () => {
+  it('sends session.compact for the session, never a prompt — S-69', async () => {
+    const user = userEvent.setup();
+    served({ [`/sessions/${SESSION}/context`]: [aContext([])] });
+    opened();
+
+    const menu = await meterMenu(user);
+    await user.click(within(menu).getByRole('menuitem', { name: t('sessions.context.compact') }));
+
+    expect(sent('session.compact')).toHaveLength(1);
+    expect(sent('session.compact')[0]?.['payload']).toEqual({ sessionId: SESSION });
+    expect(sent('session.prompt')).toHaveLength(0);
+  });
+
+  it('has no Compact for an engine that does not compact — S-70', async () => {
+    const user = userEvent.setup();
+    served({ [`/sessions/${SESSION}/context`]: [aContext([])] });
+    opened({ ...CAPABILITIES, compaction: false });
+
+    const menu = await meterMenu(user);
+    expect(
+      within(menu).queryByRole('menuitem', { name: t('sessions.context.compact') }),
+    ).toBeNull();
+  });
+
+  it('says the refusal of an engine without compaction above the box — S-70', async () => {
+    const user = userEvent.setup();
+    served({ [`/sessions/${SESSION}/context`]: [aContext([])] });
+    opened();
+
+    const menu = await meterMenu(user);
+    await user.click(within(menu).getByRole('menuitem', { name: t('sessions.context.compact') }));
+    live.receive(
+      aRefusal(
+        String(live.lastSent('session.compact')?.['id']),
+        'ENGINE_CAPABILITY_UNAVAILABLE',
+        'engine.error.capabilityUnavailable',
+        { engine: 'claude', capability: 'compaction' },
+      ),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      t('engine.error.capabilityUnavailable', { engine: 'claude', capability: 'compaction' }),
+    );
+  });
+
+  it('still sends a /compact typed in the box as a prompt — the engine reads it', async () => {
+    const user = userEvent.setup();
+    served();
+    opened();
+
+    await typeIn(user, box(), '/compact now');
+    await user.keyboard('{Enter}');
+
+    expect(live.lastSent('session.prompt')).toMatchObject({ payload: { text: '/compact now' } });
+    expect(sent('session.compact')).toHaveLength(0);
+  });
+});
+
+describe('the task list above the box — plan 28, B-22', () => {
+  const TASKS = [
+    { id: 't1', title: 'Write a.txt', activeTitle: 'Writing a.txt', status: 'inProgress' },
+    { id: 't2', title: 'Write b.txt', status: 'pending' },
+  ];
+
+  it('draws the list the session said, live — S-66', async () => {
+    served();
+    opened();
+    says('session.tasksChanged', { tasks: TASKS });
+
+    const region = await screen.findByRole('region', { name: t('sessions.tasks.label') });
+    expect(within(region).getByRole('button')).toHaveTextContent(
+      t('sessions.tasks.headline', { done: 0, total: 2, task: 'Writing a.txt' }),
+    );
+  });
+
+  it('has no strip for an engine that keeps no list — S-68', async () => {
+    served();
+    opened({ ...CAPABILITIES, taskList: false });
+    says('session.tasksChanged', { tasks: TASKS });
+
+    await screen.findByRole('button', { name: t('session.composer.send') });
+    expect(screen.queryByRole('region', { name: t('sessions.tasks.label') })).toBeNull();
+  });
+});
+
 describe('the keyboard of the bar — plan 09, B-15', () => {
   it('opens a chip with Enter and walks its menu with the arrows', async () => {
     const user = userEvent.setup();
     served();
     opened();
 
-    chip(t('sessions.mode.label'), t('sessions.mode.default')).focus();
+    chip(t('sessions.mode.label'), t('sessions.mode.ask')).focus();
     await user.keyboard('{Enter}');
     await screen.findByRole('menu');
     await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');

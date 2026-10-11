@@ -8,17 +8,17 @@ part of 'resume_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// The resume of one conversation, keyed by it.
+/// The resume of one conversation, keyed by it — by its engine and its id, never the id alone.
 
 @ProviderFor(ResumeController)
 final resumeControllerProvider = ResumeControllerFamily._();
 
-/// The resume of one conversation, keyed by it.
+/// The resume of one conversation, keyed by it — by its engine and its id, never the id alone.
 final class ResumeControllerProvider extends $NotifierProvider<ResumeController, ResumeState> {
-  /// The resume of one conversation, keyed by it.
+  /// The resume of one conversation, keyed by it — by its engine and its id, never the id alone.
   ResumeControllerProvider._({
     required ResumeControllerFamily super.from,
-    required String super.argument,
+    required ConversationKey super.argument,
   }) : super(
          retry: null,
          name: r'resumeControllerProvider',
@@ -60,12 +60,19 @@ final class ResumeControllerProvider extends $NotifierProvider<ResumeController,
   }
 }
 
-String _$resumeControllerHash() => r'e71e85aa5b5bd3e862492f92cfab0ef4be41b522';
+String _$resumeControllerHash() => r'59fb44fe4f43e3ce4c9ea85e874fb3cca0e69da4';
 
-/// The resume of one conversation, keyed by it.
+/// The resume of one conversation, keyed by it — by its engine and its id, never the id alone.
 
 final class ResumeControllerFamily extends $Family
-    with $ClassFamilyOverride<ResumeController, ResumeState, ResumeState, ResumeState, String> {
+    with
+        $ClassFamilyOverride<
+          ResumeController,
+          ResumeState,
+          ResumeState,
+          ResumeState,
+          ConversationKey
+        > {
   ResumeControllerFamily._()
     : super(
         retry: null,
@@ -75,22 +82,22 @@ final class ResumeControllerFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// The resume of one conversation, keyed by it.
+  /// The resume of one conversation, keyed by it — by its engine and its id, never the id alone.
 
-  ResumeControllerProvider call(String conversationId) =>
-      ResumeControllerProvider._(argument: conversationId, from: this);
+  ResumeControllerProvider call(ConversationKey conversation) =>
+      ResumeControllerProvider._(argument: conversation, from: this);
 
   @override
   String toString() => r'resumeControllerProvider';
 }
 
-/// The resume of one conversation, keyed by it.
+/// The resume of one conversation, keyed by it — by its engine and its id, never the id alone.
 
 abstract class _$ResumeController extends $Notifier<ResumeState> {
-  late final _$args = ref.$arg as String;
-  String get conversationId => _$args;
+  late final _$args = ref.$arg as ConversationKey;
+  ConversationKey get conversation => _$args;
 
-  ResumeState build(String conversationId);
+  ResumeState build(ConversationKey conversation);
   @$mustCallSuper
   @override
   WhenComplete runBuild() {

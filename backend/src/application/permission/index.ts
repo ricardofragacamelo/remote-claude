@@ -17,12 +17,8 @@ export type { ExtendPermissionCommand } from './extend-permission.use-case';
 export { EndSessionPermissionsUseCase } from './end-session-permissions.use-case';
 export { DescribePermissionUseCase } from './describe-permission.use-case';
 export { PermissionRuleBook } from './permission-rule-book';
-export type {
-  IgnoredRuleReporter,
-  RuleLookup,
-  RuleLookupFailureReporter,
-} from './permission-rule-book';
-export { answersPayload, interactionPayload } from './permission-payloads';
+export type { RuleLookup, RuleLookupFailureReporter } from './permission-rule-book';
+export { answersPayload } from './permission-payloads';
 export type { AnswerPayload } from './permission-payloads';
 export { GrantPermissionRuleUseCase } from './grant-permission-rule.use-case';
 export { RevokePermissionRuleUseCase } from './revoke-permission-rule.use-case';
@@ -51,3 +47,23 @@ export type {
 export { PERMISSION_RULE_REPOSITORY } from './ports/permission-rule.repository';
 export type { QuestionRecord, QuestionRecordSource } from './ports/question-record.source';
 export { QUESTION_RECORD_SOURCE } from './ports/question-record.source';
+export { RuleDialects, NO_DIALECT } from './rule-dialects';
+export type { RuleDialect, RuleTranslation } from './ports/rule-dialect.port';
+export { ENGINE_RULE_DIALECTS } from './ports/rule-dialect.port';
+export {
+  BACKFILL_BATCH,
+  INVALID_TRANSLATION,
+  MigrateRulesUseCase,
+  RuleMigrationCountError,
+  UNTRANSLATABLE,
+} from './migrate-rules.use-case';
+export type { DisabledRule, RuleMigrationReport } from './migrate-rules.use-case';
+export type { NativeRule, RuleMigrationStore } from './ports/rule-migration.store';
+export { RULE_MIGRATION_STORE } from './ports/rule-migration.store';
+export type {
+  InvocationKind,
+  InvocationTable,
+  ToolKindBackfillStore,
+  UntaggedInvocation,
+} from './ports/tool-kind-backfill.store';
+export { INVOCATION_TABLES, TOOL_KIND_BACKFILL_STORE } from './ports/tool-kind-backfill.store';

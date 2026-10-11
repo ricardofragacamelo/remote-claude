@@ -2,17 +2,24 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CommandCatalog,
+  EngineRegistry,
   ModelCatalog,
   ReadCatalogUseCase,
   SessionRegistry,
 } from '@application/session';
-import type { ClaudeSessionPort, ClaudeSessionStart, FolderLocator } from '@application/session';
+import type { AgentSessionStart, FolderLocator } from '@application/session';
 import { UserId } from '@domain/auth';
-import { ClaudeUnavailableError, SessionLimitReachedError } from '@domain/session';
+import { AgentUnavailableError } from '@domain/engine';
+import { SessionLimitReachedError } from '@domain/session';
 import { WorkspaceNotAllowedError, WorkspacePath } from '@domain/workspace';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
-import { SequentialUuids } from '../../../support/fakes/sequential-uuids';
-import { aClock, aCommand, RecordingHandle } from '../../../support/builders/session.builder';
+import { StubEngine } from '../../../support/fakes/stub-engine';
+import {
+  aClock,
+  aCommand,
+  RecordingHandle,
+  anEvent,
+} from '../../../support/builders/session.builder';
 
 const owner = UserId.create('auth|owner');
 const FOLDER = '/srv/projects/app';
@@ -25,13 +32,17 @@ const LIMITS = {
 };
 
 /** The port, opening a recording handle each time — and saying how many it opened. */
-class ProbePort implements ClaudeSessionPort {
-  readonly started: ClaudeSessionStart[] = [];
+class ProbePort extends StubEngine {
+  readonly started: AgentSessionStart[] = [];
   readonly handles: RecordingHandle[] = [];
   held: Promise<void> | null = null;
-  failWith: Error | null = null;
+  override failWith: Error | null = null;
 
-  start(input: ClaudeSessionStart): Promise<RecordingHandle> {
+  constructor() {
+    super('claude', '2.1.277');
+  }
+
+  override start(input: AgentSessionStart): Promise<RecordingHandle> {
     this.started.push(input);
     const handle = new RecordingHandle();
     handle.cliVersion = '2.1.277';
@@ -42,7 +53,6 @@ class ProbePort implements ClaudeSessionPort {
         resolvedModel: null,
         displayName: 'Default',
         description: '',
-        supportsEffort: false,
         supportedEffortLevels: [],
       },
     ];
@@ -69,12 +79,7 @@ function setup(limit = 10) {
     locator,
     registry,
     { commands, models },
-    {
-      claude: port,
-      sessionIds: new SequentialIds(),
-      conversationIds: new SequentialUuids(),
-      cliVersion: '2.1.277',
-    },
+    { engines: new EngineRegistry([port], 'claude'), sessionIds: new SequentialIds() },
     LIMITS,
   );
   return { registry, port, commands, models, useCase };
@@ -135,9 +140,9 @@ describe('ReadCatalogUseCase — plan 08, B-50, D-13', () => {
 
   it('gives the slot back and closes the query when the CLI fails — S-246', async () => {
     const { useCase, port, registry } = setup();
-    port.failWith = new ClaudeUnavailableError('down');
+    port.failWith = new AgentUnavailableError('claude', 'down');
 
-    await expect(useCase.execute(FOLDER, owner)).rejects.toBeInstanceOf(ClaudeUnavailableError);
+    await expect(useCase.execute(FOLDER, owner)).rejects.toBeInstanceOf(AgentUnavailableError);
     expect(port.handles[0]?.closes).toBe(1);
     expect(registry.size).toBe(0);
 
@@ -156,8 +161,8 @@ describe('ReadCatalogUseCase — plan 08, B-50, D-13', () => {
 describe('ReadCatalogUseCase — the edges of the query', () => {
   /** A port whose query says things and ends, as a real one might while it lives. */
   class ChattyPort extends ProbePort {
-    override start(input: ClaudeSessionStart): Promise<RecordingHandle> {
-      input.onEvent({ type: 'session.statusChanged', payload: {} });
+    override start(input: AgentSessionStart): Promise<RecordingHandle> {
+      input.onEvent(anEvent('session.statusChanged'));
       input.onClosed('completed');
       return super.start(input).then((handle) => {
         handle.cliVersion = null;
@@ -173,10 +178,8 @@ describe('ReadCatalogUseCase — the edges of the query', () => {
       registry,
       { commands: new CommandCatalog(), models: new ModelCatalog() },
       {
-        claude: new ChattyPort(),
+        engines: new EngineRegistry([new ChattyPort()], 'claude'),
         sessionIds: new SequentialIds(),
-        conversationIds: new SequentialUuids(),
-        cliVersion: '2.1.277',
       },
       LIMITS,
     );
@@ -186,17 +189,13 @@ describe('ReadCatalogUseCase — the edges of the query', () => {
 
   it('gives the slot back when the query cannot even be opened', async () => {
     const registry = new SessionRegistry(10, aClock());
-    const failing: ClaudeSessionPort = { start: () => Promise.reject(new Error('no binary')) };
+    const failing = new StubEngine('claude', null);
+    failing.failWith = new Error('no binary');
     const useCase = new ReadCatalogUseCase(
       locator,
       registry,
       { commands: new CommandCatalog(), models: new ModelCatalog() },
-      {
-        claude: failing,
-        sessionIds: new SequentialIds(),
-        conversationIds: new SequentialUuids(),
-        cliVersion: null,
-      },
+      { engines: new EngineRegistry([failing], 'claude'), sessionIds: new SequentialIds() },
       LIMITS,
     );
 

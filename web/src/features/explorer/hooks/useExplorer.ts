@@ -4,11 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { openDiff, openFile } from '@/features/editor';
 import { useCopy } from '@/shared/hooks/useCopy';
 import { useRegistry } from '@/shared/hooks/useRegistry';
-import {
-  addToClaudeContext,
-  claudeContextTargets,
-  filesDragPayload,
-} from '@/shared/lib/files-drag';
+import { addToAgentContext, agentContextTargets, filesDragPayload } from '@/shared/lib/files-drag';
 import type { DragCandidate } from '@/shared/lib/files-drag';
 import { duplicateName } from '../lib/duplicate-name';
 import { absoluteOf, nameOf, parentOf } from '../lib/paths';
@@ -52,8 +48,8 @@ export interface Explorer {
   readonly choosingTemplate: boolean;
   readonly helpOpen: boolean;
 
-  /** Whether somebody takes files into Claude's context — the panel of plan 08 (S-276). */
-  readonly claudeTakesFiles: boolean;
+  /** Whether somebody takes files into the agent's context — the panel of plan 08 (S-276). */
+  readonly agentTakesFiles: boolean;
 
   /** The folders the tree knows, for "Move to…" — the folder itself first. */
   knownFolders(): readonly string[];
@@ -160,7 +156,7 @@ export function useExplorer(folder: string): Explorer {
   const [choosingTemplate, chooseTemplate] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const copier = useCopy();
-  const claudeTakesFiles = useRegistry(claudeContextTargets).length > 0;
+  const agentTakesFiles = useRegistry(agentContextTargets).length > 0;
   const targets = useMemo(
     () => targetsOf(tree.rows, state.selection, state.focused),
     [state.focused, state.selection, tree.rows],
@@ -193,7 +189,7 @@ export function useExplorer(folder: string): Explorer {
     moving,
     choosingTemplate,
     helpOpen,
-    claudeTakesFiles,
+    agentTakesFiles,
     knownFolders: () => knownFoldersOf(tree),
     targetFolder,
     open: (row, options = {}) => {
@@ -347,13 +343,13 @@ function knownFoldersOf(tree: ExplorerTree): readonly string[] {
   return [...found];
 }
 
-/** "Add to Claude's context" — the same payload a drag carries, announced when it is taken (S-277). */
+/** "Add to the agent's context" — what a drag carries, announced when it is taken (S-277). */
 function addTargetsToContext(folder: string, targets: readonly EntryRow[]): void {
   const store = explorerStore(folder).getState();
   const candidates: DragCandidate[] = targets.map(candidateOf);
   const { payload, excluded } = filesDragPayload(folder, candidates);
 
-  if (payload !== null && addToClaudeContext(payload)) {
+  if (payload !== null && addToAgentContext(payload)) {
     store.announce('explorer.context.added', { count: payload.entries.length });
   }
 
@@ -362,7 +358,7 @@ function addTargetsToContext(folder: string, targets: readonly EntryRow[]): void
   }
 }
 
-/** A row as the drag and "Add to Claude's context" know it. */
+/** A row as the drag and "Add to the agent's context" know it. */
 export function candidateOf(row: EntryRow): DragCandidate {
   const inoperable = row.entry.unreadableName
     ? 'unreadableName'

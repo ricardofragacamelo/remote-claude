@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 
-import { InstallationVersionReader } from '@adapter/outbound/diag/installation-versions.reader';
-import type { VersionReaders } from '@adapter/outbound/diag/installation-versions.reader';
-import { readAgentSdkVersion, readBundledCliVersion } from '@adapter/outbound/claude/cli-version';
-import { INSTALLATION_VERSION_SOURCE } from '@application/diag';
+import {
+  readAgentSdkVersion,
+  readBundledCliVersion,
+} from '@adapter/outbound/engines/claude/cli-version';
+import { CLAUDE_INSTALLATION } from '@adapter/outbound/engines/claude/claude-installation';
+import type { ClaudeInstallation } from '@adapter/outbound/engines/claude/claude-installation';
 import { startPostgres } from '../../../../support/containers/postgres';
 import type { DisposablePostgres } from '../../../../support/containers/postgres';
 import { startIdentityServer } from '../../../../support/identity/identity-server';
@@ -15,48 +17,48 @@ import type { TestApp } from '../../../../support/app/test-app';
 /**
  * `GET /diag/versions`, against the real application (plan 06, B-12).
  *
- * The reader is the product's own; only whether the CLI can be read is changed, by handing it a
- * reader that finds none — the machine running the suite has one.
+ * The versions of the engine are what the default engine describes itself with (plan 28, B-34): one
+ * app reads the installation of the machine running the suite, as the product does; another is told
+ * the CLI cannot be read — the machine running the suite has one — and counts how often it is read.
  */
 describe('the versions route', () => {
   let database: DisposablePostgres;
   let identity: IdentityServer;
   let harness: TestApp;
+  let unreadable: TestApp;
   let token: string;
-  const reads = { claudeCli: 0 };
+  const reads = { installation: 0 };
 
   beforeAll(async () => {
     database = await startPostgres();
     identity = await startIdentityServer();
 
-    const readers: VersionReaders = {
-      backend: () => ({ version: '0.0.0', reason: null }),
-      agentSdk: () => readAgentSdkVersion(),
-      claudeCli: () => {
-        reads.claudeCli += 1;
-        return readBundledCliVersion(() => {
-          throw new Error('Cannot find module');
-        });
-      },
-      node: () => process.versions.node,
-    };
-
-    harness = await startTestApp(database.url, identity, (builder) =>
-      builder
-        .overrideProvider(INSTALLATION_VERSION_SOURCE)
-        .useValue(new InstallationVersionReader(readers)),
+    harness = await startTestApp(database.url, identity, (builder) => builder);
+    unreadable = await startTestApp(database.url, identity, (builder) =>
+      builder.overrideProvider(CLAUDE_INSTALLATION).useFactory({
+        factory: (): ClaudeInstallation => {
+          reads.installation += 1;
+          return {
+            cli: readBundledCliVersion(() => {
+              throw new Error('Cannot find module');
+            }),
+            sdk: readAgentSdkVersion(),
+          };
+        },
+      }),
     );
     token = await identity.accessToken({ subject: SUBJECT });
   });
 
   afterAll(async () => {
+    await unreadable.close();
     await harness.close();
     await identity.stop();
     await database.stop();
   });
 
-  const versions = () =>
-    request(harness.app.getHttpServer())
+  const versions = (app: TestApp = harness) =>
+    request(app.app.getHttpServer())
       .get('/diag/versions')
       .set({
         authorization: `Bearer ${token}`,
@@ -73,11 +75,21 @@ describe('the versions route', () => {
     });
   });
 
-  it('answers 200 with null and the reason for a CLI it cannot read — S-66', async () => {
+  it('answers the same versions as before, now from the engine’s own description — plan 28, S-100', async () => {
     const response = await versions();
 
     expect(response.status).toBe(200);
+    // What the route read straight from the files of the SDK until the engine described itself.
+    expect(response.body.agentSdk).toEqual(readAgentSdkVersion());
+    expect(response.body.claudeCli).toEqual(readBundledCliVersion());
+  });
+
+  it('answers 200 with null and the reason for a CLI it cannot read — S-66', async () => {
+    const response = await versions(unreadable);
+
+    expect(response.status).toBe(200);
     expect(response.body.claudeCli).toEqual({ version: null, reason: 'notInstalled' });
+    expect(response.body.agentSdk).toEqual(readAgentSdkVersion());
   });
 
   it('answers 401 without a credential — S-67', async () => {
@@ -88,13 +100,10 @@ describe('the versions route', () => {
   });
 
   it('reads the versions once, however often it is asked — S-68', async () => {
-    await versions();
-    const afterTheFirst = reads.claudeCli;
+    await versions(unreadable);
+    await versions(unreadable);
+    await versions(unreadable);
 
-    await versions();
-    await versions();
-
-    expect(afterTheFirst).toBe(1);
-    expect(reads.claudeCli).toBe(afterTheFirst);
+    expect(reads.installation).toBe(1);
   });
 });

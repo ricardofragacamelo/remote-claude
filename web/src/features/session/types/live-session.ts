@@ -1,4 +1,7 @@
+import type { TurnCompletedPayloadUsage } from '@remote-claude/contracts';
+
 import type { QuestionAnswer, QuestionInteraction } from '@/features/permission';
+import type { ToolCall } from '@/shared/lib/tool-call';
 
 /** Where a session is, as the contract's `session.statusChanged` reports it. */
 export type SessionStatus =
@@ -81,19 +84,18 @@ export interface StreamMessage {
 export type ToolStatus = 'running' | 'succeeded' | 'failed' | 'denied';
 
 /**
- * One tool, running on the user's own machine.
+ * One tool, running on the user's own machine, as the contract describes it — its kind, the label
+ * the server built, what it is about and the files it changes (plan 28, B-18).
  *
  * The **exact** input is kept, never a summary of it: somebody watching a command run on their
  * laptop is entitled to see the command.
  */
-export interface ToolExecution {
+export interface ToolExecution extends ToolCall {
   readonly toolUseId: string;
-  readonly toolName: string;
-  readonly input: Readonly<Record<string, unknown>>;
   readonly status: ToolStatus;
 
   /**
-   * How long it has been running, as `tool.progress` last said it. The SDK reports elapsed time
+   * How long it has been running, as `tool.progress` last said it. The engine reports elapsed time
    * while a tool runs, not its output — measured, plan 08 (B-18) — so this replaces, never appends.
    */
   readonly elapsed: string | null;
@@ -110,21 +112,41 @@ export interface ToolExecution {
    */
   readonly title?: string;
 
-  /** The task of the list a `TaskCreate` made or a `TaskUpdate` changed, once it ended (B-20). */
-  readonly taskId: string | null;
-
   /**
-   * The question of an `AskUserQuestion`, as `tool.completed` carried it: the questions and what
-   * this backend recorded of how they ended (plan 24, B-22). Absent from any other tool, and from
-   * an older server.
+   * The question of a call of kind `question`, as `tool.completed` carried it: the questions and
+   * what this backend recorded of how they ended (plan 24, B-22). Absent from any other tool, and
+   * from an older server.
    */
   readonly question?: ToolQuestion;
 }
 
-/** How a question of Claude ended, as the contract says it. */
+/** Where a task of the agent's list is, as `session.tasksChanged` says it (plan 28, B-22). */
+export type TaskStatus = 'pending' | 'inProgress' | 'completed';
+
+/** One task of the agent's list, as the server read it from the agent's own calls. */
+export interface AgentTask {
+  /** Opaque and stable for the life of the task — what two lists are compared by. */
+  readonly id: string;
+  readonly title: string;
+
+  /** What it is called while it runs ("Running the tests") — `null` when the agent gave none. */
+  readonly activeTitle: string | null;
+  readonly status: TaskStatus;
+}
+
+/**
+ * The agent's task list as the last `session.tasksChanged` left it — the whole list, never rebuilt
+ * here from the calls (plan 28, B-22) — and the list before it, which says what the last change moved.
+ */
+export interface TaskList {
+  readonly tasks: readonly AgentTask[];
+  readonly previous: readonly AgentTask[];
+}
+
+/** How a question of the agent ended, as the contract says it. */
 export type QuestionOutcome = 'answered' | 'declined' | 'expired';
 
-/** A question of Claude as the history carries it (plan 24, B-21). */
+/** A question of the agent as the history carries it (plan 24, B-21). */
 export interface ToolQuestion {
   readonly interaction: QuestionInteraction;
 
@@ -147,21 +169,21 @@ export interface QueuedPrompt {
   readonly preview: string;
 }
 
-/** The tokens a turn used, as the SDK reports them. */
-export interface TurnUsage {
-  readonly input: number;
-  readonly output: number;
-  readonly cacheRead: number;
-  readonly cacheWrite: number;
-}
+/**
+ * What a turn used, in our names (plan 28, B-29) — each count only when the engine reports it, and
+ * shown only then: the contract's own shape.
+ */
+export type TurnUsage = TurnCompletedPayloadUsage;
 
 /** What a finished turn cost. */
 export interface TurnSummary {
   readonly turnId: string;
-  readonly costUsd: string;
+
+  /** In US dollars, as text — `null` when the engine reports no cost (S-86); zero is zero (S-87). */
+  readonly costUsd: string | null;
   readonly durationMs: number;
 
-  /** `null` for a turn that ended with no usage — interrupted before the model answered. */
+  /** `null` for a turn that reported no count at all — interrupted, or an engine that counts none. */
   readonly usage: TurnUsage | null;
 }
 
@@ -217,6 +239,12 @@ export interface Conversation {
   readonly turns: readonly TurnSummary[];
   readonly lastTurn: TurnSummary | null;
   readonly ending: SessionEnding | null;
+
+  /**
+   * The agent's task list, as the last `session.tasksChanged` heard said it — `null` before any, and
+   * for an engine that keeps none.
+   */
+  readonly taskList: TaskList | null;
 
   /**
    * When the turn running began, by the server's clock — `null` with no turn running, and from the

@@ -10,6 +10,7 @@ import 'package:remote_claude/features/session/data/mappers/transcript_follow_ma
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
 
 FollowUpdate? read(String raw) => followUpdateFrom(decodeEnvelope(raw)!);
@@ -25,10 +26,10 @@ void main() {
   test('the ack names the subscription, the command it answers and the activity', () {
     expect(
       read(transcriptFollowing(correlationId: 'cmd-1')),
-      const FollowStarted(
+      FollowStarted(
         commandId: 'cmd-1',
         followId: 't-1',
-        conversationId: 'conv-1',
+        conversation: conversationOf('conv-1'),
         activity: ConversationActivity.activeElsewhere,
       ),
     );
@@ -58,7 +59,7 @@ void main() {
             as FollowAppended;
 
     expect(appended.followId, 't-1');
-    expect(appended.conversationId, 'conv-1');
+    expect(appended.conversation, conversationOf('conv-1'));
     expect(appended.seq, 2);
     expect(appended.events.map((SessionEvent event) => event.runtimeType), <Type>[
       MessageFinished,
@@ -101,9 +102,9 @@ void main() {
     () {
       expect(
         read(transcriptReset(seq: 3)),
-        const FollowReset(
+        FollowReset(
           followId: 't-1',
-          conversationId: 'conv-1',
+          conversation: conversationOf('conv-1'),
           seq: 3,
           reason: FollowResetReason.rewritten,
         ),
@@ -168,6 +169,16 @@ void main() {
       withPayload(transcriptAppended(seq: 1), (Map<String, Object?> p) => p['lastMessageId'] = 4),
       withPayload(transcriptAppended(seq: 1), (Map<String, Object?> p) => p.remove('activity')),
       withPayload(transcriptReset(seq: 1), (Map<String, Object?> p) => p.remove('reason')),
+      // The conversation is `{ engine, id }`; the previous protocol's bare id is not one.
+      withPayload(
+        transcriptFollowing(correlationId: 'c'),
+        (Map<String, Object?> p) => p['conversation'] = 'conv-1',
+      ),
+      withPayload(transcriptAppended(seq: 1), (Map<String, Object?> p) => p.remove('conversation')),
+      withPayload(
+        transcriptReset(seq: 1),
+        (Map<String, Object?> p) => p['conversation'] = <String, Object?>{'engine': 'e'},
+      ),
     ];
 
     for (final String raw in unreadable) {
@@ -199,7 +210,7 @@ void main() {
     expect(followLogFieldsOf(read(transcriptFollowing(correlationId: 'c'))!), <String, Object?>{
       'type': 'transcript.following',
       'followId': 't-1',
-      'conversationId': 'conv-1',
+      'conversation': '$anEngine:conv-1',
       'activity': 'activeElsewhere',
     });
     expect(followLogFieldsOf(read(transcriptReset(seq: 5))!), <String, Object?>{

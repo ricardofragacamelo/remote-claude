@@ -4,9 +4,9 @@ import type { AppError } from '@/shared/api/errors';
  * One item of the context of the next prompt — a chip above the composer (plan 08, B-47).
  *
  * A file, a folder or a range is a **reference**, by its path relative to the folder of the tab:
- * Claude reads it through `Read`, under the hook (D-01), and its content never leaves the browser.
- * An upload is a file dropped from the desktop, sent over HTTP and named by the id the upload
- * answered (D-22); a text is what a provider of the client holds — the terminal.
+ * The agent reads it through `Read`, under the hook (D-01), and its content never leaves the
+ * browser. An upload is a file dropped from the desktop, sent over HTTP and named by the id the
+ * upload answered (D-22); a text is what a provider of the client holds — the terminal.
  */
 export type ContextItem = FileItem | FolderItem | RangeItem | UploadItem | TextItem;
 
@@ -20,7 +20,7 @@ export interface FileFacts {
   /** In bytes, or `null` until it was checked. */
   readonly size: number | null;
 
-  /** Neither text nor an image: Claude will not read it (S-224). */
+  /** Neither text nor an image: the agent will not read it (S-224). */
   readonly binary: boolean;
 
   /** Gone since it was chosen: the send is refused with its path (S-223). */

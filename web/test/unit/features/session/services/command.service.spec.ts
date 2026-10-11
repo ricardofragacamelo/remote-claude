@@ -110,7 +110,7 @@ describe('fetchCommands — plan 04, B-15', () => {
   });
 
   it('lets the failure of the SDK reach the caller as it came — S-31', async () => {
-    const failure = aWireError('CLAUDE_UNAVAILABLE', 'session.error.claudeUnavailable');
+    const failure = aWireError('AGENT_UNAVAILABLE', 'session.error.agentUnavailable');
     vi.spyOn(api, 'get').mockRejectedValue(failure);
 
     await expect(fetchCommands(SESSION)).rejects.toBe(failure);

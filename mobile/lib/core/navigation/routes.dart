@@ -6,6 +6,8 @@
 /// The generator does not enjoy that cycle, and neither does anybody reading it.
 library;
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
+
 /// Where the app goes when nobody said otherwise: the folders home (plan 10, D-27).
 const String sessionRoute = '/';
 
@@ -84,7 +86,7 @@ const String requestParameter = 'request';
 String permissionRouteFor(String sessionId, String requestId) =>
     '${sessionRouteFor(sessionId)}/permissions/$requestId';
 
-/// The conversations of Claude's store, one workspace at a time — the second level of the
+/// The conversations of the engine's store, one workspace at a time — the second level of the
 /// history ([04 · D-03](../../../../docs/plans/04-transcript-and-resume/decisions.md#d-03--a-forma-da-lista)).
 const String historyRoute = '/history';
 
@@ -101,9 +103,12 @@ String historyRouteFor(String workspacePath) => Uri(
 ).toString();
 
 /// One conversation of the history, read-only, with the workspace it ran in — which is where a
-/// resume of it has to run too.
-String conversationRouteFor(String conversationId, String workspacePath) => Uri(
-  path: '$historyRoute/${Uri.encodeComponent(conversationId)}',
+/// resume of it has to run too. The engine is a segment of the address beside the id: an id alone is
+/// not a conversation (plan 28, B-13).
+String conversationRouteFor(ConversationKey conversation, String workspacePath) => Uri(
+  path:
+      '$historyRoute/${Uri.encodeComponent(conversation.engine)}/'
+      '${Uri.encodeComponent(conversation.id)}',
   queryParameters: <String, String>{workspacePathParameter: workspacePath},
 ).toString();
 

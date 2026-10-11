@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/history_page.dart';
@@ -18,19 +19,21 @@ import 'package:remote_claude/features/session/presentation/providers/live_sessi
 import 'package:remote_claude/features/session/presentation/providers/open_sessions.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
 import '../../../../../support/fakes/fake_history_repository.dart';
 import '../../../../../support/fakes/fake_session_repository.dart';
 
 const Failure unavailable = ServerFailure(
-  code: 'CLAUDE_UNAVAILABLE',
-  messageKey: 'transcript.error.claudeUnavailable',
+  code: 'AGENT_UNAVAILABLE',
+  messageKey: 'transcript.error.agentUnavailable',
+  params: <String, String>{'engine': anEngine},
   traceId: 'trace-9',
 );
 
 /// A page of history holding one question and its answer.
 HistoryPage pageOf(String conversationId) => HistoryPage(
-  conversationId: conversationId,
+  conversation: conversationOf(conversationId),
   workspacePath: '/home/someone/project',
   events: historyOf(<String>[
     messageCompleted(messageId: 'h1', text: 'what broke?', role: 'user', seq: 1),
@@ -259,9 +262,89 @@ void main() {
 
     expect(state.status, SessionStatus.idle);
     expect(state.messages.single.text, 'Hello');
-    expect(state.tools.single.input['command'], 'ls');
+    expect(state.tools.single.call.subject.command, 'ls');
     // A fresh session continues nothing, so there is no history to read.
     expect(history.reads, isEmpty);
+  });
+
+  test(
+    'S-39 · the session keeps its conversation, its engine and what the engine can do',
+    () async {
+      final ProviderContainer container = build();
+      hold(container, 'session-1');
+
+      repository.emit(
+        arrivalOf(
+          sessionStarted(
+            sessionId: 'session-1',
+            conversation: 'conv-2',
+            engine: anEngine,
+            capabilities: capabilitiesJson(),
+          ),
+        ),
+      );
+      await settle();
+
+      final SessionFacts facts = read(container).conversation.facts;
+      expect(facts.conversation, conversationOf('conv-2'));
+      expect(facts.engine, anEngine);
+      expect(facts.capabilities, someCapabilities);
+    },
+  );
+
+  test('a gap keeps what the engine of the session can do — the session is the same', () async {
+    final ProviderContainer container = build();
+    hold(container, 'session-1');
+
+    repository.emit(
+      arrivalOf(
+        sessionStarted(
+          sessionId: 'session-1',
+          engine: anEngine,
+          capabilities: capabilitiesJson(),
+          model: 'model-a',
+        ),
+      ),
+    );
+    await settle();
+    repository.emit(const StreamGap());
+    await settle();
+
+    final SessionFacts facts = read(container).conversation.facts;
+    expect(facts.engine, anEngine);
+    expect(facts.capabilities, someCapabilities);
+    // Everything else the opening said went with the buffer.
+    expect(facts.model, isNull);
+  });
+
+  test('S-66 · the task list is the last one the stream sent, replayed or not', () async {
+    final ProviderContainer container = build();
+    hold(container, 'session-1');
+
+    repository.emit(
+      arrivalOf(sessionTasksChanged(seq: 1, tasks: <Map<String, Object?>>[taskJson('1', 'Read')])),
+    );
+    repository.emit(
+      arrivalOf(
+        sessionTasksChanged(
+          seq: 2,
+          tasks: <Map<String, Object?>>[
+            taskJson('1', 'Read', status: 'completed'),
+            taskJson('2', 'Ship'),
+          ],
+        ),
+      ),
+    );
+    // The replay of the first, after a reconnection: below the resume point, and dropped.
+    repository.emit(
+      arrivalOf(sessionTasksChanged(seq: 1, tasks: <Map<String, Object?>>[taskJson('1', 'Read')])),
+    );
+    await settle();
+
+    expect(read(container).conversation.tasks, const <SessionTask>[
+      SessionTask(id: '1', title: 'Read', status: TaskStatus.completed),
+      SessionTask(id: '2', title: 'Ship', status: TaskStatus.pending),
+    ]);
   });
 
   group('B-11 · a session that continues a conversation', () {
@@ -272,12 +355,12 @@ void main() {
 
       repository.emit(
         arrivalOf(
-          sessionStarted(sessionId: 'session-1', claudeSessionId: 'conv-2', resumedFrom: 'conv-1'),
+          sessionStarted(sessionId: 'session-1', conversation: 'conv-2', resumedFrom: 'conv-1'),
         ),
       );
       await settle();
 
-      expect(history.reads, <(String, String?)>[('conv-1', null)]);
+      expect(history.reads, <(ConversationKey, String?)>[(conversationOf('conv-1'), null)]);
       expect(texts(container), <String>['what broke?', 'the build']);
     });
 
@@ -333,10 +416,10 @@ void main() {
 
       repository.emit(arrivalOf(messageDelta(messageId: 'm1', delta: 'stale', seq: 40)));
       await settle();
-      repository.emit(const StreamGap(claudeSessionId: 'conv-7'));
+      repository.emit(StreamGap(conversation: conversationOf('conv-7')));
       await settle();
 
-      expect(history.reads, <(String, String?)>[('conv-7', null)]);
+      expect(history.reads, <(ConversationKey, String?)>[(conversationOf('conv-7'), null)]);
       expect(texts(container), <String>['what broke?', 'the build']);
       expect(read(container).conversation.lastSeq, 0);
     });
@@ -348,7 +431,7 @@ void main() {
         ..answer(pageOf('conv-7'))
         ..gate = Completer<void>();
 
-      repository.emit(const StreamGap(claudeSessionId: 'conv-7'));
+      repository.emit(StreamGap(conversation: conversationOf('conv-7')));
       await settle();
       // What the buffer still had, replayed while the transcript is being read — and the
       // transcript holds the same answer, under the same id.
@@ -369,7 +452,7 @@ void main() {
         ..answer(pageOf('conv-7'))
         ..gate = Completer<void>();
 
-      repository.emit(const StreamGap(claudeSessionId: 'conv-7'));
+      repository.emit(StreamGap(conversation: conversationOf('conv-7')));
       await settle();
       repository.emit(const StreamGap());
       await settle();
@@ -390,7 +473,7 @@ void main() {
         ..answer(pageOf('conv-7'))
         ..failure = unavailable;
 
-      repository.emit(const StreamGap(claudeSessionId: 'conv-7'));
+      repository.emit(StreamGap(conversation: conversationOf('conv-7')));
       await settle();
 
       expect(read(container).historyFailure, unavailable);
@@ -409,7 +492,7 @@ void main() {
       hold(container, 'session-1');
       history.failure = StateError('not a failure');
 
-      repository.emit(const StreamGap(claudeSessionId: 'conv-7'));
+      repository.emit(StreamGap(conversation: conversationOf('conv-7')));
       await settle();
 
       expect(read(container).historyFailure, isA<UnexpectedFailure>());
@@ -432,7 +515,7 @@ void main() {
       );
       history.gate = Completer<void>();
 
-      repository.emit(const StreamGap(claudeSessionId: 'conv-7'));
+      repository.emit(StreamGap(conversation: conversationOf('conv-7')));
       await settle();
       subscription.close();
       container.invalidate(liveSessionControllerProvider('session-1'));
@@ -451,7 +534,7 @@ void main() {
     final LiveSession before = read(container);
 
     repository
-      ..emit(const SessionJoined(sessionId: 'session-9', claudeSessionId: 'conv-9'))
+      ..emit(SessionJoined(sessionId: 'session-9', conversation: conversationOf('conv-9')))
       ..emit(const CommandRefused(commandId: 'command-1', failure: unavailable))
       ..emit(const SessionFailed(unavailable));
     await settle();
@@ -603,13 +686,13 @@ void main() {
 
         repository.emit(
           arrivalOf(
-            sessionStarted(sessionId: 'session-1', model: 'sonnet', permissionMode: 'plan'),
+            sessionStarted(sessionId: 'session-1', model: 'sonnet', permissionMode: 'readOnly'),
           ),
         );
         await settle();
 
         expect(read(container).model, 'sonnet');
-        expect(read(container).permissionMode, 'plan');
+        expect(read(container).permissionMode, 'readOnly');
       },
     );
 
@@ -633,7 +716,7 @@ void main() {
     test('S-32 · a refusal puts the chip back, and says why', () async {
       final ProviderContainer container = build();
       hold(container, 'session-1');
-      repository.emit(arrivalOf(sessionStarted(sessionId: 'session-1', permissionMode: 'default')));
+      repository.emit(arrivalOf(sessionStarted(sessionId: 'session-1', permissionMode: 'ask')));
       await settle();
 
       controllerOf(container).setPermissionMode('acceptEdits');
@@ -642,7 +725,7 @@ void main() {
       repository.emit(const CommandRefused(commandId: 'command-1', failure: refused));
       await settle();
 
-      expect(read(container).permissionMode, 'default');
+      expect(read(container).permissionMode, 'ask');
       expect(read(container).choiceFailure, refused);
       expect(read(container).isChoosing, isFalse);
     });
@@ -652,9 +735,7 @@ void main() {
       () async {
         final ProviderContainer container = build();
         hold(container, 'session-1');
-        repository.emit(
-          arrivalOf(sessionStarted(sessionId: 'session-1', permissionMode: 'default')),
-        );
+        repository.emit(arrivalOf(sessionStarted(sessionId: 'session-1', permissionMode: 'ask')));
         await settle();
 
         controllerOf(container).setPermissionMode('allowAll');
@@ -667,10 +748,10 @@ void main() {
         await settle();
         expect(read(container).permissionMode, 'allowAll');
 
-        controllerOf(container).setPermissionMode('default');
+        controllerOf(container).setPermissionMode('ask');
         expect(repository.commands.last.$2, <String, Object?>{
           'sessionId': 'session-1',
-          'mode': 'default',
+          'mode': 'ask',
         });
       },
     );
@@ -693,7 +774,7 @@ void main() {
       controllerOf(container)
         ..setModel('opus')
         ..setModel('haiku')
-        ..setPermissionMode('plan');
+        ..setPermissionMode('readOnly');
 
       expect(repository.commands, hasLength(1));
       expect(read(container).model, 'opus');
@@ -804,36 +885,64 @@ void main() {
       },
     );
 
-    test('S-44 · compacting twice sends one /compact, and the compaction ends the wait', () async {
-      final ProviderContainer container = build();
-      hold(container, 'session-1');
+    test(
+      'S-44 · compacting twice sends one session.compact, and the compaction ends the wait',
+      () async {
+        final ProviderContainer container = build();
+        hold(container, 'session-1');
 
-      expect(controllerOf(container).compact(), isTrue);
-      expect(controllerOf(container).compact(), isTrue);
+        expect(controllerOf(container).compact(), isTrue);
+        expect(controllerOf(container).compact(), isTrue);
 
-      expect(repository.commands.single.$2['text'], '/compact');
-      expect(read(container).isCompacting, isTrue);
+        // A command of its own, never a prompt with the engine's words in it (plan 28, B-23).
+        expect(repository.commands.single.$1, 'session.compact');
+        expect(repository.commands.single.$2, <String, Object?>{'sessionId': 'session-1'});
+        expect(read(container).isCompacting, isTrue);
 
-      repository.emit(arrivalOf(sessionCompacted(seq: 4)));
-      await settle();
+        repository.emit(arrivalOf(sessionCompacted(seq: 4)));
+        await settle();
 
-      expect(read(container).isCompacting, isFalse);
-      expect(read(container).conversation.entries.single, isA<CompactionLine>());
-    });
+        expect(read(container).isCompacting, isFalse);
+        expect(read(container).conversation.entries.single, isA<CompactionLine>());
+      },
+    );
 
-    test('a /compact the server refused is said like any prompt, and can be asked again', () async {
+    test('S-70 · an engine that cannot compact refuses it: said, and askable again', () async {
+      const Failure unavailable = ServerFailure(
+        code: 'ENGINE_CAPABILITY_UNAVAILABLE',
+        messageKey: 'engine.error.capabilityUnavailable',
+        params: <String, String>{'engine': anEngine},
+        traceId: 'trace-409',
+      );
       final ProviderContainer container = build();
       hold(container, 'session-1');
 
       controllerOf(container).compact();
-      repository.emit(const CommandRefused(commandId: 'command-1', failure: refused));
+      repository.emit(const CommandRefused(commandId: 'command-1', failure: unavailable));
       await settle();
 
-      expect(read(container).promptFailure, refused);
+      expect(read(container).promptFailure, unavailable);
       expect(read(container).isCompacting, isFalse);
+      expect(controllerOf(container).compact(), isTrue);
+      expect(repository.commands, hasLength(2));
     });
 
-    test('a /compact that could not leave says so', () {
+    test(
+      'a compaction the server refused is said like any prompt, and can be asked again',
+      () async {
+        final ProviderContainer container = build();
+        hold(container, 'session-1');
+
+        controllerOf(container).compact();
+        repository.emit(const CommandRefused(commandId: 'command-1', failure: refused));
+        await settle();
+
+        expect(read(container).promptFailure, refused);
+        expect(read(container).isCompacting, isFalse);
+      },
+    );
+
+    test('a compaction that could not leave says so', () {
       final ProviderContainer container = build();
       hold(container, 'session-1');
       repository.accepts = false;

@@ -13,6 +13,7 @@ import { setDiagramLoader } from '@/shared/components/markdown/mermaid-loader';
 import { useTheme } from '@/shared/hooks/useTheme';
 import { fakeDiagrams } from '../../../support/diagram-fake';
 import { render, translator } from '../../../support/render';
+import { aToolCall } from '../../../support/canonical-tool';
 
 const t = translator('en');
 
@@ -236,12 +237,16 @@ describe('every Markdown of the product — plan 21, S-53, S-66', () => {
     fakeDiagrams();
     const request = {
       requestId: 'plan-1',
-      toolName: 'ExitPlanMode',
-      input: { plan: RICH },
+      ...aToolCall('ExitPlanMode', { plan: RICH }),
     } as unknown as PermissionRequest;
     render(
       <ul>
-        <PlanApprovalCard request={request} remainingMs={60_000} onAnswer={vi.fn()} />
+        <PlanApprovalCard
+          request={request}
+          plan={{ kind: 'plan', markdown: RICH, path: null }}
+          remainingMs={60_000}
+          onAnswer={vi.fn()}
+        />
       </ul>,
     );
     await rich(screen.getByRole('listitem', { name: t('permission.plan.label') }));

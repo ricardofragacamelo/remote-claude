@@ -22,7 +22,7 @@ export interface RestoreDialogProps {
 /**
  * The one question a restore asks — only when there is something to lose or to know first: the
  * unsaved changes of the file's buffer, which a restore discards (S-346), and a file that changes
- * what Claude may do (07 · D-15). The way out is the first button and takes the focus.
+ * what the agent may do (07 · D-15). The way out is the first button and takes the focus.
  */
 export function RestoreDialog({ folder, restorer }: RestoreDialogProps): React.JSX.Element {
   const { t, i18n } = useTranslation();

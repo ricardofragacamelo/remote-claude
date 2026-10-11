@@ -6,7 +6,7 @@ export interface HunkLine {
 
 /**
  * A run of changed lines with what surrounds them — as the backend computes it for what a session
- * of Claude changed (plan 08, F3), and as the card that asks previews an edit.
+ * of the agent changed (plan 08, F3), and as the card that asks previews an edit.
  */
 export interface Hunk {
   readonly id: string;

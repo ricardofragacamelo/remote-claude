@@ -9,6 +9,11 @@ import 'package:remote_claude/features/session/data/mappers/session_event_mapper
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 
+import 'package:remote_claude/core/conversation/tool_call.dart';
+
+import 'conversations.dart';
+import 'tools.dart';
+
 /// One envelope, as JSON text.
 String frame({
   required String kind,
@@ -56,7 +61,7 @@ String sessionAttached({
   bool gap = false,
   int replayed = 0,
   int oldestAvailableSeq = 0,
-  String? claudeSessionId,
+  String? conversation,
   String? resumedFrom,
   String? correlationId,
 }) => frame(
@@ -68,8 +73,8 @@ String sessionAttached({
     'replayed': replayed,
     'oldestAvailableSeq': oldestAvailableSeq,
     'gap': gap,
-    'claudeSessionId': ?claudeSessionId,
-    'resumedFrom': ?resumedFrom,
+    if (conversation != null) 'conversation': conversationJson(conversation),
+    if (resumedFrom != null) 'resumedFrom': conversationJson(resumedFrom),
   },
 );
 
@@ -96,11 +101,13 @@ String diagPong({
 String sessionStarted({
   required String sessionId,
   int seq = 1,
-  String? claudeSessionId,
+  String? conversation,
   String? resumedFrom,
   String? model,
   String? permissionMode,
   String? correlationId,
+  String? engine,
+  Map<String, Object?>? capabilities,
   String workspacePath = '/tmp/work',
 }) => frame(
   kind: 'event',
@@ -111,8 +118,10 @@ String sessionStarted({
   payload: <String, Object?>{
     'sessionId': sessionId,
     'workspacePath': workspacePath,
-    'claudeSessionId': ?claudeSessionId,
-    'resumedFrom': ?resumedFrom,
+    if (conversation != null) 'conversation': conversationJson(conversation),
+    if (resumedFrom != null) 'resumedFrom': conversationJson(resumedFrom),
+    'engine': ?engine,
+    'capabilities': ?capabilities,
     'model': ?model,
     'permissionMode': ?permissionMode,
   },
@@ -246,12 +255,12 @@ String messageCompleted({
   },
 );
 
-/// A tool starting.
+/// A tool starting, as the canonical contract carries it — a shell `ls` unless [call] says otherwise.
 String toolStarted({
   required String toolUseId,
   required int seq,
-  String toolName = 'Bash',
-  Map<String, Object?> input = const <String, Object?>{'command': 'ls'},
+  ToolCall? call,
+  String? title,
   String sessionId = 'session-1',
   String? parentToolUseId,
 }) => frame(
@@ -261,8 +270,8 @@ String toolStarted({
   seq: seq,
   payload: <String, Object?>{
     'toolUseId': toolUseId,
-    'toolName': toolName,
-    'input': input,
+    ...toolCallJson(call ?? shellLs),
+    'title': ?title,
     'parentToolUseId': ?parentToolUseId,
   },
 );
@@ -304,6 +313,28 @@ String toolCompleted({
   },
 );
 
+/// One task of `session.tasksChanged`, as the contract writes it.
+Map<String, Object?> taskJson(
+  String id,
+  String title, {
+  String status = 'pending',
+  String? activeTitle,
+}) => <String, Object?>{'id': id, 'title': title, 'activeTitle': ?activeTitle, 'status': status};
+
+/// The agent's task list, whole, as it is now (plan 28, B-22).
+String sessionTasksChanged({
+  required int seq,
+  List<Map<String, Object?>> tasks = const <Map<String, Object?>>[],
+  String? at,
+  String sessionId = 'session-1',
+}) => frame(
+  kind: 'event',
+  type: 'session.tasksChanged',
+  sessionId: sessionId,
+  seq: seq,
+  payload: <String, Object?>{'tasks': tasks, 'at': ?at},
+);
+
 /// Where the session is now.
 String sessionStatusChanged({
   required String status,
@@ -319,19 +350,26 @@ String sessionStatusChanged({
   payload: <String, Object?>{'status': status},
 );
 
-/// What a finished turn cost.
+/// What a finished turn cost — no `costUsd` with [costUsd] `null`, an engine that reports none
+/// (plan 28, B-29) — and what it used, in the canonical names.
 String turnCompleted({
   required int seq,
   String turnId = 'turn-1',
-  String costUsd = '0.0100',
+  String? costUsd = '0.0100',
   int durationMs = 1200,
   String sessionId = 'session-1',
+  Map<String, Object?> usage = const <String, Object?>{'inputTokens': 10, 'outputTokens': 20},
 }) => frame(
   kind: 'event',
   type: 'turn.completed',
   sessionId: sessionId,
   seq: seq,
-  payload: <String, Object?>{'turnId': turnId, 'costUsd': costUsd, 'durationMs': durationMs},
+  payload: <String, Object?>{
+    'turnId': turnId,
+    'usage': usage,
+    'costUsd': ?costUsd,
+    'durationMs': durationMs,
+  },
 );
 
 /// The session ending.
@@ -367,10 +405,9 @@ Map<String, Object?> permissionRequestedPayload([
   final Map<String, Object?> payload = <String, Object?>{
     'requestId': 'req-1',
     'toolUseId': 'tu-1',
-    'toolName': 'Bash',
-    'title': 'Run a command',
+    ...toolCallJson(shellCall('rm -rf build/')),
+    'title': 'permission.tool.shell',
     'description': 'rm -rf build/',
-    'input': <String, Object?>{'command': 'rm -rf build/'},
     'riskHint': 'destructive',
     'defaultToNo': true,
     'expiresAt': '2026-09-14T12:05:00.000Z',
@@ -429,7 +466,7 @@ Map<String, Object?> historyEntry(String raw) {
   return <String, Object?>{'type': envelope['type'], 'payload': envelope['payload']};
 }
 
-/// The body of `GET /transcripts/:sessionId/messages`.
+/// The body of `GET /transcripts/:engine/:id/messages`.
 Map<String, Object?> historyBody({
   String conversationId = 'conv-1',
   String origin = 'ours',
@@ -441,7 +478,7 @@ Map<String, Object?> historyBody({
   String? lastMessageId,
 }) => <String, Object?>{
   'session': <String, Object?>{
-    'sessionId': conversationId,
+    'conversation': conversationJson(conversationId),
     'summary': summary,
     'origin': origin,
     'cwd': cwd,
@@ -481,7 +518,7 @@ String transcriptFollowing({
   correlationId: correlationId,
   payload: <String, Object?>{
     'followId': followId,
-    'conversationId': conversationId,
+    'conversation': conversationJson(conversationId),
     'activity': activity,
   },
 );
@@ -503,7 +540,7 @@ String transcriptAppended({
   seq: seq,
   payload: <String, Object?>{
     'followId': followId,
-    'conversationId': conversationId,
+    'conversation': conversationJson(conversationId),
     'events': raws.map(historyEntry).toList(growable: false),
     'lastMessageId': ?lastMessageId,
     'activity': activity,
@@ -524,7 +561,7 @@ String transcriptReset({
   seq: seq,
   payload: <String, Object?>{
     'followId': followId,
-    'conversationId': conversationId,
+    'conversation': conversationJson(conversationId),
     'reason': reason,
   },
 );

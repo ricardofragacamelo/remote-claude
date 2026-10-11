@@ -34,7 +34,7 @@ resposta); `false` em qualquer outro caso ([D-12](decisions.md#f2--seguidor-no-b
 Em `application/transcript` (`FollowTranscriptUseCase`): o registro de assinaturas **por conversa**; o tick
 pelo `Scheduler` (porta que já existe), com o intervalo da [D-11](decisions.md#f2--seguidor-no-backend)
 conforme a `activity`; a cada tick, `getSessionInfo` e, só se o `lastModified` mudou, a releitura pelo
-`TranscriptCache` e pelo `ReadLimiter` ([transcript-reads.ts](../../../backend/src/adapter/outbound/claude/transcript-reads.ts));
+`TranscriptCache` e pelo `ReadLimiter` ([transcript-reads.ts](../../../backend/src/adapter/outbound/engines/claude/transcript-reads.ts));
 a cauda de cada assinante pela B-14, com o `working` da B-15; `seq` por `followId`.
 
 Regras: o primeiro envio é tudo depois do `afterMessageId` (sem lacuna); o mesmo cercado do

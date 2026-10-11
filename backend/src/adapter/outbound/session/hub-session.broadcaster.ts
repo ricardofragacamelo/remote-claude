@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { payloadRecord } from '@application/session';
 import type { SessionBroadcaster, SessionEvent } from '@application/session';
 import type { SessionId } from '@domain/session';
 import { SessionHub } from '@infra/websocket/session-hub';
@@ -18,7 +19,7 @@ export class HubSessionBroadcaster implements SessionBroadcaster {
   constructor(@Inject(SessionHub) private readonly hub: SessionHub) {}
 
   publish(sessionId: SessionId, event: SessionEvent): void {
-    this.hub.publish(sessionId.value, { type: event.type, payload: event.payload });
+    this.hub.publish(sessionId.value, { type: event.type, payload: payloadRecord(event) });
   }
 
   publishError(sessionId: SessionId, error: unknown): void {

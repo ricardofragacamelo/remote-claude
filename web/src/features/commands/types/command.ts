@@ -42,6 +42,13 @@ export interface Command {
   /** `<owner>.<what>` — `workspace.openFolder`. Two plans claiming one id is refused. */
   readonly id: string;
 
+  /**
+   * The ids it had before it was renamed. A binding, a link or a test that still names one reaches
+   * this command: the registry reads the old id as the new one wherever it is asked, and keeps only
+   * the new one (plan 28, B-39).
+   */
+  readonly formerIds?: readonly string[];
+
   /** A translation key, named in full where the command is declared. */
   readonly labelKey: string;
   readonly labelParams?: Readonly<Record<string, string | number>>;

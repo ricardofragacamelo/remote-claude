@@ -5,7 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import request from 'supertest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { loadInitialization } from '../../../../fakes/agent-sdk/fixture';
@@ -112,11 +112,11 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
       .send(body);
   const models = loadInitialization().initialization.models.map((model) => model.value);
 
-  it('opens as before with no default at all: the installation’s model and `default` — S-49', async () => {
+  it('opens as before with no default at all: the installation’s model and `ask` — S-49', async () => {
     const opened = await open();
 
     expect(opened.payload).toMatchObject({
-      permissionMode: 'default',
+      permissionMode: 'ask',
       defaultsFrom: 'installation',
     });
     expect(record.options).not.toHaveProperty('model');
@@ -124,14 +124,18 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
 
   it('opens with the folder’s default over the user’s, and says where it came from — S-50', async () => {
     const [first, second] = models;
-    await put('/claude/defaults', { model: first, permissionMode: 'plan', outputStyle: 'Concise' });
+    await put('/claude/defaults', {
+      model: first,
+      permissionMode: 'readOnly',
+      outputStyle: 'Concise',
+    });
     await put('/claude/defaults/folder', { folder: path.join(root, 'repo'), model: second });
 
     const opened = await open();
 
     expect(opened.payload).toMatchObject({
       model: second,
-      permissionMode: 'plan',
+      permissionMode: 'readOnly',
       defaultsFrom: 'folder',
       outputStyle: 'Concise',
     });
@@ -143,7 +147,7 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
   });
 
   it('lets what the client sent win over every default — S-48', async () => {
-    await put('/claude/defaults', { model: models[0], permissionMode: 'plan' });
+    await put('/claude/defaults', { model: models[0], permissionMode: 'readOnly' });
 
     const opened = await open({ model: models[1], permissionMode: 'acceptEdits' });
 

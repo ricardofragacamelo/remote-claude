@@ -8,6 +8,7 @@ import { FixedClock } from '../fakes/fixed-clock';
 import { aHistoryKeeper, InMemoryFileHistory } from '../fakes/in-memory-file-history';
 import { RecordingAuditEvents } from '../fakes/recording-audit-events';
 import { SequentialIds } from '../fakes/sequential-ids';
+import { PRODUCT_SENSITIVE_FILES } from './sensitive-files';
 
 /** The open folder every history scenario writes in. */
 export const HISTORY_FOLDER = WorkspacePath.create('/srv/app');
@@ -49,6 +50,7 @@ export function historyWriting(
       ),
       limits: { maxEditBytes: 65_536 },
       writes: new UserWrites(clock),
+      sensitive: PRODUCT_SENSITIVE_FILES,
     },
     events,
     store,

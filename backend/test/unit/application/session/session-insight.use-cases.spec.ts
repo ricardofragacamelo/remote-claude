@@ -1,3 +1,4 @@
+import { AgentUnavailableError, EngineCapabilityUnavailableError } from '@domain/engine';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -8,7 +9,6 @@ import {
 import type { SessionRegistry } from '@application/session';
 import { UserId } from '@domain/auth';
 import {
-  ClaudeUnavailableError,
   QueuedPromptNotFoundError,
   QueuedPromptStartedError,
   SessionForbiddenError,
@@ -30,7 +30,6 @@ const sonnet: InstallationModel = {
   resolvedModel: 'claude-sonnet-5',
   displayName: 'Sonnet',
   description: 'Sonnet 5',
-  supportsEffort: true,
   supportedEffortLevels: ['low', 'high'],
 };
 
@@ -84,9 +83,9 @@ describe('what the panel asks about a live session — plan 08, F4', () => {
   });
 
   it('fails as the CLI did, and keeps no failure — S-168', async () => {
-    handle().insightFailWith = new ClaudeUnavailableError(SESSION_ID);
+    handle().insightFailWith = new AgentUnavailableError('claude', SESSION_ID);
 
-    await expect(inspect.modelsOf(SESSION_ID, owner)).rejects.toThrow(ClaudeUnavailableError);
+    await expect(inspect.modelsOf(SESSION_ID, owner)).rejects.toThrow(AgentUnavailableError);
     handle().insightFailWith = null;
     await expect(inspect.modelsOf(SESSION_ID, owner)).resolves.toBeDefined();
   });
@@ -102,6 +101,19 @@ describe('what the panel asks about a live session — plan 08, F4', () => {
 
   it("refuses somebody else's session", async () => {
     await expect(inspect.contextOf(SESSION_ID, stranger)).rejects.toThrow(SessionForbiddenError);
+  });
+
+  it('refuses the context of an engine that does not measure it, asking it nothing — S-72', async () => {
+    handle().capabilities = { ...handle().capabilities, contextUse: false };
+    handle().insightFailWith = new AgentUnavailableError('claude', SESSION_ID);
+
+    await expect(inspect.contextOf(SESSION_ID, owner)).rejects.toThrow(
+      EngineCapabilityUnavailableError,
+    );
+    await expect(inspect.contextOf(SESSION_ID, owner)).rejects.toMatchObject({
+      code: 'ENGINE_CAPABILITY_UNAVAILABLE',
+      params: { capability: 'contextUse' },
+    });
   });
 
   describe('cancelling a queued prompt — B-34', () => {

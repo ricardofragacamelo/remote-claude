@@ -4,29 +4,28 @@ import { hunksBetween, snippetHunk } from './line-diff';
 import type { DiffHunk } from './line-diff';
 import { isAsLeft } from './file-state';
 import type { FileObservation } from './file-state';
+import type { CanonicalTool, FileChange as EngineFileChange, ToolKind } from '@domain/engine';
 
 /**
  * What the diffs of a session are made of — plan 08, F3.
  *
  * The diff is ours, out of what the undo already keeps ([D-03](../../../../../docs/plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)):
- * the input of the tool, the snapshot of the turn and how the session left each file. There is no
+ * the change the tool makes, the snapshot of the turn and how the session left each file. There is no
  * second store of "after" — and so there are cases where one side is not known, and the answer
  * **says** which side and why rather than inventing it.
  */
 
-/** The tools whose diff can be shown: they write one file, and their input says how. */
-export const DIFFABLE_TOOLS = ['Edit', 'MultiEdit', 'Write'] as const;
-
-export type DiffableTool = (typeof DIFFABLE_TOOLS)[number];
-
-export function isDiffableTool(toolName: string): toolName is DiffableTool {
-  return (DIFFABLE_TOOLS as readonly string[]).includes(toolName);
-}
-
-/** The file a diffable tool writes, from its input — `null` when the input names none, or a relative one. */
-export function diffablePathOf(input: Readonly<Record<string, unknown>>): string | null {
-  const path = input['file_path'];
-  return typeof path === 'string' && path.startsWith('/') ? path : null;
+/**
+ * The change of a tool call whose diff can be shown: it writes one file, and says how — a `write`
+ * with its content, or an `edit` with its replacements (plan 28, B-16). A cell of a notebook is an
+ * `edit` with no replacements, and has no diff; neither has a kind that changes no file.
+ */
+export function diffableChangeOf(tool: Pick<CanonicalTool, 'changes'>): EngineFileChange | null {
+  return (
+    tool.changes.find(
+      (change) => change.op === 'write' || (change.op === 'edit' && change.edits !== undefined),
+    ) ?? null
+  );
 }
 
 /** What is known of the file before the tool ran. */
@@ -43,20 +42,35 @@ export type DiffBefore =
     }
   | { readonly state: 'notRestorable'; readonly reason: 'tooLarge' | 'unreadable' };
 
-/** What is known of the file after the tool ran. */
+/** What is known of the file after the tool ran — or, on a pending call, after it would run. */
 export type DiffAfter =
   | { readonly state: 'content'; readonly content: string }
   | {
       readonly state: 'unavailable';
       /** `laterWrite` — the session wrote the file again since; `changedSince` — somebody else did. */
       readonly reason: 'laterWrite' | 'changedSince';
+    }
+  | {
+      readonly state: 'unavailable';
+      /**
+       * A pending edit that would not apply to the file as it is: `editMissing` — the text to replace
+       * is not there; `editAmbiguous` — it is there more than once, and the edit replaces one.
+       */
+      readonly reason: 'editMissing' | 'editAmbiguous';
+      /** Which replacement, from 0, in the order the call has them. */
+      readonly edit: number;
     };
 
 /** The diff of one tool invocation. */
 export interface ToolDiff {
   readonly path: string;
-  readonly toolName: DiffableTool;
-
+  /** The kind of the call — `file.edit` or `file.write`. */
+  readonly kind: ToolKind;
+  /**
+   * Whether the call is still waiting for an answer: the diff is then of what it **would** do, the
+   * disk now against the disk with the change applied (B-17).
+   */
+  readonly pending: boolean;
   /**
    * `file` — the hunks are of the whole file, before against after; `edit` — they are of the
    * strings the tool replaced, because one side of the file is not known.
@@ -81,13 +95,11 @@ export type DiskText =
 
 /** Everything the diff of a tool is decided from. */
 export interface ToolDiffFacts {
-  readonly toolName: DiffableTool;
-  readonly path: string;
-  readonly input: Readonly<Record<string, unknown>>;
-
+  readonly kind: ToolKind;
+  /** The change, from {@link diffableChangeOf}. */
+  readonly change: EngineFileChange;
   /** No earlier write of the same turn reached the file: the snapshot is its "before". */
   readonly firstTouchInTurn: boolean;
-
   /** No later write of the session reached the file: the disk may be its "after". */
   readonly lastWrite: boolean;
   readonly snapshot: SnapshotText;
@@ -98,39 +110,99 @@ export interface ToolDiffFacts {
  * The diff of a tool invocation (B-25).
  *
  * - **before** is the snapshot of the turn — but only for the first write of the turn to the file:
- *   a second `Edit` started from what the first left, which nobody kept (S-106);
- * - **after** is the `content` of a `Write`, or — for an edit — the disk, only while it is still
+ *   a second edit started from what the first left, which nobody kept (S-106);
+ * - **after** is the content of a `write`, or — for an edit — the disk, only while it is still
  *   what the session left **and** no later write of the session touched the file;
  * - **the hunks** are of the whole file when both sides are known; otherwise, of an edit, of the
- *   strings it replaced — one hunk per edit, in order (S-104); a `Write` with no "before" has none.
+ *   strings it replaced — one hunk per edit, in order (S-104); a `write` with no "before" has none.
  */
 export function toolDiffOf(facts: ToolDiffFacts): ToolDiff {
   const before = beforeOf(facts);
   const after = afterOf(facts);
   const known = textOf(before);
+  const head = { path: facts.change.path, kind: facts.kind, pending: false };
 
   if (known !== null && after.state === 'content') {
-    return {
-      path: facts.path,
-      toolName: facts.toolName,
-      scope: 'file',
-      before,
-      after,
-      hunks: hunksBetween(known, after.content),
-    };
+    return { ...head, scope: 'file', before, after, hunks: hunksBetween(known, after.content) };
+  }
+
+  return { ...head, scope: 'edit', before, after, hunks: snippetsOf(facts.change) };
+}
+
+/** The disk now, for the diff of a pending call. */
+export type PendingDisk =
+  | { readonly kind: 'text'; readonly content: string }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'notRestorable'; readonly reason: 'tooLarge' | 'unreadable' };
+
+/**
+ * The diff of a call still waiting for an answer: the file as it is now against the file with the
+ * change applied, the way the agent applies it — each replacement on the text the one before left, a
+ * text that is not there or is there twice (without "every occurrence") refused (plan 28, B-17).
+ *
+ * The preview a client used to compute from the raw input, moved to where the change is read — so
+ * every client gets the same, and none reads the input (D-04). A file that is not text, or a refused
+ * replacement, gives the hunks of the replaced strings, as an applied edit with no "before" does.
+ */
+export function pendingDiffOf(
+  kind: ToolKind,
+  change: EngineFileChange,
+  disk: PendingDisk,
+): ToolDiff {
+  const head = { path: change.path, kind, pending: true };
+  const before: DiffBefore =
+    disk.kind === 'text'
+      ? { state: 'content', content: disk.content }
+      : disk.kind === 'absent'
+        ? { state: 'absent' }
+        : { state: 'notRestorable', reason: disk.reason };
+  const now = textOf(before);
+  const after = now === null ? null : appliedTo(now, change);
+
+  if (now !== null && after !== null && after.state === 'content') {
+    return { ...head, scope: 'file', before, after, hunks: hunksBetween(now, after.content) };
   }
 
   return {
-    path: facts.path,
-    toolName: facts.toolName,
+    ...head,
     scope: 'edit',
     before,
-    after,
-    hunks: editsOf(facts.toolName, facts.input).flatMap(({ from, to }) => {
-      const hunk = snippetHunk(from, to);
-      return hunk === null ? [] : [hunk];
-    }),
+    after: after ?? { state: 'unavailable', reason: 'changedSince' },
+    hunks: snippetsOf(change),
   };
+}
+
+/** [text] with [change] applied — or why one of its replacements would not apply. */
+function appliedTo(text: string, change: EngineFileChange): DiffAfter {
+  if (change.op === 'write') {
+    return { state: 'content', content: change.content ?? '' };
+  }
+
+  let result = text;
+
+  for (const [index, edit] of (change.edits ?? []).entries()) {
+    const found = occurrences(result, edit.oldText);
+
+    if (found === 0) {
+      return { state: 'unavailable', reason: 'editMissing', edit: index };
+    }
+
+    if (found > 1 && edit.replaceAll !== true) {
+      return { state: 'unavailable', reason: 'editAmbiguous', edit: index };
+    }
+
+    result =
+      edit.replaceAll === true
+        ? result.split(edit.oldText).join(edit.newText)
+        : result.replace(edit.oldText, () => edit.newText);
+  }
+
+  return { state: 'content', content: result };
+}
+
+/** How many times [needle] is in [text], without overlaps; never for an empty needle. */
+function occurrences(text: string, needle: string): number {
+  return needle === '' ? 0 : text.split(needle).length - 1;
 }
 
 function beforeOf(facts: ToolDiffFacts): DiffBefore {
@@ -151,9 +223,8 @@ function beforeOf(facts: ToolDiffFacts): DiffBefore {
 }
 
 function afterOf(facts: ToolDiffFacts): DiffAfter {
-  if (facts.toolName === 'Write') {
-    const content = facts.input['content'];
-    return { state: 'content', content: typeof content === 'string' ? content : '' };
+  if (facts.change.op === 'write') {
+    return { state: 'content', content: facts.change.content ?? '' };
   }
 
   if (!facts.lastWrite) {
@@ -165,7 +236,7 @@ function afterOf(facts: ToolDiffFacts): DiffAfter {
     : { state: 'unavailable', reason: 'changedSince' };
 }
 
-/** The text of a "before" that is known — an absent file is the empty text. */
+/** The text of a side, when it is known: an absent file is empty. */
 function textOf(before: DiffBefore): string | null {
   if (before.state === 'content') {
     return before.content;
@@ -174,33 +245,12 @@ function textOf(before: DiffBefore): string | null {
   return before.state === 'absent' ? '' : null;
 }
 
-/** The replacements an edit asked for, in order. A `Write` asks for none. */
-function editsOf(
-  toolName: DiffableTool,
-  input: Readonly<Record<string, unknown>>,
-): { readonly from: string; readonly to: string }[] {
-  if (toolName === 'Edit') {
-    return [replacementOf(input)];
-  }
-
-  if (toolName === 'MultiEdit' && Array.isArray(input['edits'])) {
-    return (input['edits'] as unknown[]).flatMap((edit) =>
-      typeof edit === 'object' && edit !== null
-        ? [replacementOf(edit as Readonly<Record<string, unknown>>)]
-        : [],
-    );
-  }
-
-  return [];
-}
-
-function replacementOf(edit: Readonly<Record<string, unknown>>): {
-  readonly from: string;
-  readonly to: string;
-} {
-  const from = edit['old_string'];
-  const to = edit['new_string'];
-  return { from: typeof from === 'string' ? from : '', to: typeof to === 'string' ? to : '' };
+/** One hunk per replacement of an edit, of the strings alone; none for a `write`. */
+function snippetsOf(change: EngineFileChange): DiffHunk[] {
+  return (change.edits ?? []).flatMap(({ oldText, newText }) => {
+    const hunk = snippetHunk(oldText, newText);
+    return hunk === null ? [] : [hunk];
+  });
 }
 
 /** What a session did to one file, against before the session. */

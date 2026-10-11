@@ -112,12 +112,12 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Normas e catraca](F0-norms.md) | ADR, AGENTS, docs-alvo, `neutral:check` com baseline, lint dos três anéis, os planos ajustados conferidos | B-01…B-07 | 🔲 |
-| F1 | [Porta de motor e conversa](F1-engine-port.md) | `AgentEnginePort`, `EngineRegistry`, `ConversationRef`, erros neutros, `GET /engines`, contrato `v+1` | B-08…B-13 | 🔲 |
-| F2 | [Ferramentas canônicas](F2-canonical-tools.md) | o classificador no adapter, o `kind` no contrato e no domínio, o diff pelo backend, os clientes sem nome de ferramenta | B-14…B-19 | 🔲 |
-| F3 | [Interações e estado](F3-interactions.md) | plano, pergunta, subagent, tarefas, compactação, contexto e origem da mudança, todos canônicos | B-20…B-25 | 🔲 |
-| F4 | [Modos, esforço, uso e blocos](F4-modes-and-usage.md) | modos canônicos, esforço anunciado, `usage` canônico, blocos com nome nosso | B-26…B-30 | 🔲 |
-| F5 | [Permissão pelo dialeto](F5-permission-dialect.md) | a gramática canônica de regra, o `RuleDialect` tradutor, as regras migradas, `engine` e `tool_kind` no banco, ADR-011 reescrito | B-31…B-35 | 🔲 |
+| F0 | [Normas e catraca](F0-norms.md) | ADR, AGENTS, docs-alvo, `neutral:check` com baseline, lint dos três anéis, os planos ajustados conferidos | B-01…B-07 | ✅ |
+| F1 | [Porta de motor e conversa](F1-engine-port.md) | `AgentEnginePort`, `EngineRegistry`, `ConversationRef`, erros neutros, `GET /engines`, contrato `v+1` | B-08…B-13 | ✅ |
+| F2 | [Ferramentas canônicas](F2-canonical-tools.md) | o classificador no adapter, o `kind` no contrato e no domínio, o diff pelo backend, os clientes sem nome de ferramenta | B-14…B-19 | ✅ |
+| F3 | [Interações e estado](F3-interactions.md) | plano, pergunta, subagent, tarefas, compactação, contexto e origem da mudança, todos canônicos | B-20…B-25 | ✅ |
+| F4 | [Modos, esforço, uso e blocos](F4-modes-and-usage.md) | modos canônicos, esforço anunciado, `usage` canônico, blocos com nome nosso | B-26…B-30 | ✅ |
+| F5 | [Permissão pelo dialeto](F5-permission-dialect.md) | a gramática canônica de regra, o `RuleDialect` tradutor, as regras migradas, `engine` e `tool_kind` no banco, ADR-011 reescrito | B-31…B-35 | ✅ |
 | F6 | [Extensões isoladas](F6-engine-extensions.md) | o `claude-config` dividido, `engines/claude/` no backend e no web, nomes, kinds e i18n neutros nas três pontas, todo o REST no pacote | B-36…B-42, B-48 | 🔲 |
 | F7 | [E2E](F7-e2e.md) | o motor de teste, os e2e com ele e com o Claude, o baseline vazio | B-43…B-47 | 🔲 |
 
@@ -137,7 +137,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Nenhum acoplamento novo entra no núcleo, e o de hoje só encolhe (R3, R4) | B-04, B-05 | [09-code-quality](../../architecture/shared/09-code-quality.md), [11-validation-protocol](../../architecture/shared/11-validation-protocol.md) | S-05…S-16 |
 | O núcleo nunca importa uma extensão, nas três pontas (R2, R4) | B-06 | [09-code-quality](../../architecture/shared/09-code-quality.md#regras-de-arquitetura-como-lint) | S-17…S-22 |
 | As dependências e a ordem dos planos estão escritas onde cada plano é lido (R5) | B-07 | [plans/README](../README.md#ordem-de-execução) | S-23, S-24 |
-| A sessão fala com uma porta de motor, e a conversa é `{ engine, id }` em todo lugar (R1, R2) | B-08…B-13 | [backend/04](../../architecture/backend/04-claude-integration.md), [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md), [backend/05](../../architecture/backend/05-persistence.md) | S-25…S-40 |
+| A sessão fala com uma porta de motor, e a conversa é `{ engine, id }` em todo lugar (R1, R2) | B-08…B-13 | [backend/04](../../architecture/backend/04a-claude.md), [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md), [backend/05](../../architecture/backend/05-persistence.md) | S-25…S-40 |
 | Toda ferramenta chega canônica, e nenhum cliente lê nome nem input cru (R1, R3) | B-14…B-19 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md), [ADR-013](../../architecture/shared/00-decisions.md#adr-013--o-desfazer-não-usa-rewindfiles-o-store-de-checkpoint-é-nosso) | S-41…S-60 |
 | Plano, pergunta, subagent, tarefas, compactação, contexto e origem são canônicos (R1, R3) | B-20…B-25 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) | S-61…S-76 |
 | Modos, esforço, uso e blocos são nossos, e o motor anuncia o que tem (R1) | B-26…B-30 | [ADR-022](../../architecture/shared/00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk), [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) | S-77…S-90 |
@@ -154,7 +154,7 @@ Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 ```
 AGENTS.md                                    F0 — regra 12, roteador, gatilhos, anti-padrões
 docs/architecture/shared/12-engines.md       F0 — os três anéis, o kind, as capacidades, o portão
-docs/architecture/backend/04-engine-integration.md + 04a-claude.md     F1 (ex-04-claude-integration)
+docs/architecture/backend/04-engine-integration.md + 04a-claude.md     F1 (ex-04a-claude)
 scripts/
 ├── engine-neutrality.mjs                    F0 — pnpm neutral:check (portão 11)
 ├── engine-vocabulary.json                   F0 — o vocabulário proibido, com o motivo (o arquivo da 27 · B-07)

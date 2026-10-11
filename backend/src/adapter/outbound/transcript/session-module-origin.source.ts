@@ -4,7 +4,7 @@ import { SESSION_ORIGIN_REPOSITORY } from '@application/session';
 import type { SessionOriginRepository } from '@application/session';
 import type { TranscriptOriginSource } from '@application/transcript';
 import type { UserId } from '@domain/auth';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * `transcript` asking `session` which conversations it opened.
@@ -19,7 +19,7 @@ export class SessionModuleOriginSource implements TranscriptOriginSource {
     @Inject(SESSION_ORIGIN_REPOSITORY) private readonly origins: SessionOriginRepository,
   ) {}
 
-  openersOf(ids: readonly ClaudeSessionId[]): Promise<ReadonlyMap<string, UserId>> {
+  openersOf(ids: readonly ConversationRef[]): Promise<ReadonlyMap<string, UserId>> {
     return this.origins.openersOf(ids);
   }
 }

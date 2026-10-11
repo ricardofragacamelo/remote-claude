@@ -1,39 +1,60 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  diffablePathOf,
+  diffableChangeOf,
   fileChangeOf,
   firstCheckpoints,
   isAsLeft,
-  isDiffableTool,
+  pendingDiffOf,
   SessionFileState,
   SessionId,
   toolDiffOf,
   TurnFileCheckpoint,
 } from '@domain/session';
 import type { ToolDiffFacts, TurnFileCheckpointSnapshot } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
+import type { FileChange } from '@domain/engine';
 import { CONVERSATION_ID, SESSION_ID } from '../../../../support/builders/session.builder';
+import { claudeTool } from '../../../../support/builders/tool.builder';
 
 const FILE = '/srv/projects/app/app.js';
 
-function facts(overrides: Partial<ToolDiffFacts> = {}): ToolDiffFacts {
+/** The change a call of Claude Code makes, as its classifier reads it — the one a diff is made of. */
+function changeOf(toolName: string, input: Record<string, unknown>): FileChange {
+  const change = diffableChangeOf(claudeTool(toolName, input));
+  if (change === null) {
+    throw new Error(`${toolName} has no diffable change`);
+  }
+  return change;
+}
+
+/** The facts of a diff — of an edit of `app.js` unless [call] names another call. */
+function facts(
+  overrides: Partial<ToolDiffFacts> & {
+    readonly toolName?: string;
+    readonly input?: Record<string, unknown>;
+  } = {},
+): ToolDiffFacts {
+  const {
+    toolName = 'Edit',
+    input = { file_path: FILE, old_string: "'hello'", new_string: "'hi'" },
+    ...rest
+  } = overrides;
   return {
-    toolName: 'Edit',
-    path: FILE,
-    input: { file_path: FILE, old_string: "'hello'", new_string: "'hi'" },
+    kind: claudeTool(toolName, input).kind,
+    change: changeOf(toolName, input),
     firstTouchInTurn: true,
     lastWrite: true,
     snapshot: { kind: 'text', content: "const greeting = 'hello';\nlog(greeting);\n" },
     disk: { kind: 'text', content: "const greeting = 'hi';\nlog(greeting);\n", asLeft: true },
-    ...overrides,
+    ...rest,
   };
 }
 
 function checkpoint(overrides: Partial<TurnFileCheckpointSnapshot> = {}): TurnFileCheckpoint {
   return TurnFileCheckpoint.capture({
     sessionId: SessionId.create(SESSION_ID),
-    claudeSessionId: ClaudeSessionId.create(CONVERSATION_ID),
+    conversation: ConversationRef.create('claude', CONVERSATION_ID),
     promptId: 'p1',
     path: FILE,
     existedBefore: 'present',
@@ -50,7 +71,7 @@ function checkpoint(overrides: Partial<TurnFileCheckpointSnapshot> = {}): TurnFi
 function leftAs(hash: string | null): SessionFileState {
   return SessionFileState.record({
     sessionId: SessionId.create(SESSION_ID),
-    claudeSessionId: ClaudeSessionId.create(CONVERSATION_ID),
+    conversation: ConversationRef.create('claude', CONVERSATION_ID),
     path: FILE,
     hash,
     mtime: new Date(0),
@@ -60,13 +81,44 @@ function leftAs(hash: string | null): SessionFileState {
 }
 
 describe('the diff of a tool', () => {
-  it('knows the tools that write one file, and the file they write', () => {
-    expect(['Edit', 'MultiEdit', 'Write'].every(isDiffableTool)).toBe(true);
-    expect(isDiffableTool('Bash')).toBe(false);
-    expect(isDiffableTool('NotebookEdit')).toBe(false);
-    expect(diffablePathOf({ file_path: FILE })).toBe(FILE);
-    expect(diffablePathOf({ file_path: 'relative.js' })).toBeNull();
-    expect(diffablePathOf({})).toBeNull();
+  it('knows the calls that write one file, and the change they make — plan 28, B-16', () => {
+    // By the change, never by a name: a `write` with its content, an `edit` with its replacements.
+    expect(diffableChangeOf(claudeTool('Edit', { file_path: FILE }))).toMatchObject({
+      path: FILE,
+      op: 'edit',
+    });
+    expect(diffableChangeOf(claudeTool('MultiEdit', { file_path: FILE, edits: [] }))).toEqual({
+      path: FILE,
+      op: 'edit',
+      edits: [],
+    });
+    expect(diffableChangeOf(claudeTool('Write', { file_path: FILE }))).toEqual({
+      path: FILE,
+      op: 'write',
+      content: '',
+    });
+    // A cell of a notebook is an edit with no replacements; a shell, a relative path: no change.
+    expect(diffableChangeOf(claudeTool('NotebookEdit', { notebook_path: FILE }))).toBeNull();
+    expect(diffableChangeOf(claudeTool('Bash', { command: 'rm a.js' }))).toBeNull();
+    expect(diffableChangeOf(claudeTool('Edit', { file_path: 'relative.js' }))).toBeNull();
+  });
+
+  it('diffs the first change that can be, skipping a delete or a move before it', () => {
+    const write: FileChange = { path: '/b', op: 'write', content: 'x' };
+
+    expect(
+      diffableChangeOf({
+        changes: [{ path: '/a', op: 'delete' }, { path: '/c', op: 'move', to: '/d' }, write],
+      }),
+    ).toBe(write);
+    expect(diffableChangeOf({ changes: [{ path: '/a', op: 'delete' }] })).toBeNull();
+  });
+
+  it('names the kind of the call, and says it is not pending', () => {
+    expect(toolDiffOf(facts())).toMatchObject({ path: FILE, kind: 'file.edit', pending: false });
+    expect(
+      toolDiffOf(facts({ toolName: 'Write', input: { file_path: FILE, content: 'x' } })),
+    ).toMatchObject({ kind: 'file.write', pending: false });
   });
 
   it('of an edit, is the whole file when the snapshot and the disk are both known — S-103', () => {
@@ -179,6 +231,174 @@ describe('the diff of a tool', () => {
   it('reads an edit whose strings are missing as empty ones', () => {
     const diff = toolDiffOf(facts({ input: { file_path: FILE }, firstTouchInTurn: false }));
     expect(diff.hunks).toEqual([]);
+  });
+});
+
+describe('the diff of a call still waiting for an answer — plan 28, B-17 / S-53', () => {
+  const TEXT = "const greeting = 'hello';\nlog(greeting);\n";
+  const disk = (content: string) => ({ kind: 'text', content }) as const;
+  const edit = (input: Record<string, unknown>) =>
+    pendingDiffOf('file.edit', changeOf('Edit', { file_path: FILE, ...input }), disk(TEXT));
+
+  it('of an edit, is the disk now against the disk with the replacement applied', () => {
+    const diff = edit({ old_string: "'hello'", new_string: "'hi'" });
+
+    expect(diff).toMatchObject({
+      path: FILE,
+      kind: 'file.edit',
+      pending: true,
+      scope: 'file',
+      before: { state: 'content', content: TEXT },
+      after: { state: 'content', content: "const greeting = 'hi';\nlog(greeting);\n" },
+    });
+    expect(diff.hunks).toHaveLength(1);
+  });
+
+  it('applies the replacement as text, never as a pattern of `$` substitutions', () => {
+    const diff = edit({ old_string: "'hello'", new_string: "'$&$1'" });
+
+    expect(diff.after).toEqual({
+      state: 'content',
+      content: "const greeting = '$&$1';\nlog(greeting);\n",
+    });
+  });
+
+  it('of a write over a file, is its content against the disk; of an absent one, all added', () => {
+    const over = pendingDiffOf(
+      'file.write',
+      changeOf('Write', { file_path: FILE, content: 'new\n' }),
+      disk('old\n'),
+    );
+    expect(over).toMatchObject({
+      scope: 'file',
+      before: { state: 'content', content: 'old\n' },
+      after: { state: 'content', content: 'new\n' },
+    });
+
+    const created = pendingDiffOf(
+      'file.write',
+      changeOf('Write', { file_path: FILE, content: 'a\nb\n' }),
+      { kind: 'absent' },
+    );
+    expect(created.before).toEqual({ state: 'absent' });
+    expect(created.hunks[0]?.lines).toEqual([
+      { kind: 'added', text: 'a' },
+      { kind: 'added', text: 'b' },
+    ]);
+  });
+
+  it('of an edit of a file not there, applies to the empty text — and so is missing', () => {
+    expect(
+      pendingDiffOf('file.edit', changeOf('Edit', { file_path: FILE, old_string: 'a' }), {
+        kind: 'absent',
+      }).after,
+    ).toEqual({ state: 'unavailable', reason: 'editMissing', edit: 0 });
+  });
+
+  it('replaces every occurrence with `replace_all`, and refuses two without it', () => {
+    const twice = 'a a\n';
+    const all = pendingDiffOf(
+      'file.edit',
+      changeOf('Edit', { file_path: FILE, old_string: 'a', new_string: 'b', replace_all: true }),
+      disk(twice),
+    );
+    expect(all.after).toEqual({ state: 'content', content: 'b b\n' });
+
+    const one = pendingDiffOf(
+      'file.edit',
+      changeOf('Edit', { file_path: FILE, old_string: 'a', new_string: 'b' }),
+      disk(twice),
+    );
+    expect(one).toMatchObject({
+      scope: 'edit',
+      before: { state: 'content', content: twice },
+      after: { state: 'unavailable', reason: 'editAmbiguous', edit: 0 },
+    });
+    expect(one.hunks[0]?.lines).toEqual([
+      { kind: 'removed', text: 'a' },
+      { kind: 'added', text: 'b' },
+    ]);
+  });
+
+  it('applies the replacements of a multi-edit in order, each on what the one before left', () => {
+    const change = changeOf('MultiEdit', {
+      file_path: FILE,
+      edits: [
+        { old_string: 'hello', new_string: 'hey' },
+        { old_string: "'hey'", new_string: "'hey you'" },
+      ],
+    });
+
+    expect(pendingDiffOf('file.edit', change, disk(TEXT)).after).toEqual({
+      state: 'content',
+      content: "const greeting = 'hey you';\nlog(greeting);\n",
+    });
+  });
+
+  it('says which replacement of a multi-edit would not apply, by its index — missing', () => {
+    const change = changeOf('MultiEdit', {
+      file_path: FILE,
+      edits: [
+        { old_string: 'hello', new_string: 'hey' },
+        { old_string: 'nowhere', new_string: 'x' },
+        { old_string: 'log', new_string: 'print' },
+      ],
+    });
+
+    const diff = pendingDiffOf('file.edit', change, disk(TEXT));
+
+    expect(diff.after).toEqual({ state: 'unavailable', reason: 'editMissing', edit: 1 });
+    expect(diff.scope).toBe('edit');
+    expect(diff.hunks).toHaveLength(3);
+  });
+
+  it('refuses a replacement of the empty text, which is everywhere and nowhere', () => {
+    expect(edit({ old_string: '', new_string: 'x' }).after).toEqual({
+      state: 'unavailable',
+      reason: 'editMissing',
+      edit: 0,
+    });
+  });
+
+  it('of a file that is not text it can read, says why, and shows the replaced strings', () => {
+    const diff = pendingDiffOf(
+      'file.edit',
+      changeOf('Edit', { file_path: FILE, old_string: 'one', new_string: 'ONE' }),
+      { kind: 'notRestorable', reason: 'tooLarge' },
+    );
+
+    expect(diff).toMatchObject({
+      pending: true,
+      scope: 'edit',
+      before: { state: 'notRestorable', reason: 'tooLarge' },
+      after: { state: 'unavailable', reason: 'changedSince' },
+    });
+    expect(diff.hunks.map((hunk) => hunk.lines)).toEqual([
+      [
+        { kind: 'removed', text: 'one' },
+        { kind: 'added', text: 'ONE' },
+      ],
+    ]);
+
+    const write = pendingDiffOf(
+      'file.write',
+      changeOf('Write', { file_path: FILE, content: 'x' }),
+      { kind: 'notRestorable', reason: 'unreadable' },
+    );
+    expect(write).toMatchObject({
+      before: { state: 'notRestorable', reason: 'unreadable' },
+      hunks: [],
+    });
+  });
+
+  it('applies an edit with no replacements as no change at all', () => {
+    // Not one the classifier builds (a notebook cell has none, and is not diffable): the rule
+    // still answers it rather than throwing.
+    expect(pendingDiffOf('file.edit', { path: FILE, op: 'edit' }, disk('same\n'))).toMatchObject({
+      scope: 'file',
+      after: { state: 'content', content: 'same\n' },
+      hunks: [],
+    });
   });
 });
 

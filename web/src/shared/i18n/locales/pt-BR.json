@@ -31,7 +31,7 @@
     },
     "signIn": {
       "title": "Entre para continuar",
-      "description": "O remote-claude executa o Claude Code na sua própria máquina, por isso pergunta quem é você antes.",
+      "description": "O remote-claude executa o {{agent}} na sua própria máquina, por isso pergunta quem é você antes.",
       "action": "Entrar"
     },
     "signOut": {
@@ -58,11 +58,11 @@
     "error": {
       "notFound": "Essa sessão não existe mais.",
       "invalidSessionId": "{{sessionId}} não é um identificador de sessão.",
-      "claudeUnavailable": "O Claude parou de responder nesta máquina.",
+      "agentUnavailable": "O {{agent}} parou de responder nesta máquina.",
       "forbidden": "Essa sessão é de outra pessoa.",
       "limitReached": "Esta máquina já está rodando {{limit}} sessões, o máximo que ela permite. Encerre uma e tente de novo.",
       "unknownCommand": "Esta instalação não tem o comando /{{command}}. Veja na lista de comandos os que ela oferece.",
-      "claudeTimeout": "O Claude demorou demais para responder. Tente de novo.",
+      "agentTimeout": "O {{agent}} demorou demais para responder. Tente de novo.",
       "resumeTimeout": "O backend não respondeu à retomada. Confira a conexão e tente de novo.",
       "locked": "Um turno está em execução, ou outro desfazer desta sessão está em andamento. Espere terminar e tente de novo.",
       "rewindTargetUnknown": "Esse não é um ponto para o qual esta sessão pode voltar. Recarregue a lista e escolha de novo.",
@@ -71,9 +71,9 @@
       "attachmentNotFound": "Esse anexo não está mais disponível para esta sessão. Anexe de novo e envie.",
       "attachmentTypeUnsupported": "Anexos do tipo {{mediaType}} não podem ir com um prompt. Imagens precisam ser PNG, JPEG, GIF ou WebP, e arquivos precisam ser texto.",
       "toolUseNotFound": "Esta sessão não tem registro dessa chamada de ferramenta.",
-      "diffNotApplicable": "{{toolName}} não grava arquivos, então não há alteração para mostrar.",
+      "diffNotApplicable": "Esta chamada não altera arquivos, então não há alteração para mostrar.",
       "changeStale": "{{path}} mudou depois que as alterações foram listadas. Recarregue e escolha de novo.",
-      "forkRejected": "O Claude não conseguiu continuar a conversa a partir dessa mensagem. Retome a conversa e edite a partir dela.",
+      "forkRejected": "O {{agent}} não conseguiu continuar a conversa a partir dessa mensagem. Retome a conversa e edite a partir dela.",
       "queuedPromptNotFound": "Esse prompt não está mais na fila.",
       "queuedPromptStarted": "Esse prompt já começou. Interrompa o turno para pará-lo.",
       "forkPointUnknown": "Essa mensagem não é um prompt desta conversa. Recarregue a conversa e tente de novo.",
@@ -92,7 +92,7 @@
       "closed": "Encerrada"
     },
     "role": {
-      "assistant": "Claude",
+      "assistant": "{{agent}}",
       "user": "Você"
     },
     "toolStatus": {
@@ -104,7 +104,7 @@
     "closeReason": {
       "closedByUser": "você a encerrou",
       "completed": "ela terminou",
-      "failed": "o Claude parou de responder",
+      "failed": "o {{agent}} parou de responder",
       "auditUnavailable": "não foi possível gravar a trilha de auditoria",
       "shutdown": "o backend foi desligado",
       "idleTimeout": "ficou ociosa por tempo demais — retome-a pelo histórico"
@@ -118,11 +118,11 @@
       "ended": "Esta sessão terminou às {{at}} porque {{reason}}."
     },
     "ended": {
-      "resumes": "Mandar um prompt a retoma, num novo processo do Claude nesta máquina.",
+      "resumes": "Mandar um prompt a retoma, num novo processo do {{agent}} nesta máquina.",
       "resumeAndSend": "Retomar e enviar"
     },
     "composer": {
-      "placeholder": "Peça ao Claude algo nesta pasta…",
+      "placeholder": "Peça ao {{agent}} algo nesta pasta…",
       "send": "Enviar"
     },
     "controls": {
@@ -142,15 +142,15 @@
       "notADirectory": "{{path}} é um arquivo, não uma pasta.",
       "forbidden": "Essa pasta não é sua para abrir.",
       "directoryUnreadable": "{{path}} existe, mas esta máquina não deixa o remote-claude lê-la. Confira as permissões da pasta.",
-      "openFoldersLimitReached": "Você já tem {{limit}} pastas abertas, que é o máximo de uma janela. Feche uma antes — fechar uma pasta não encerra as sessões do Claude dela.",
+      "openFoldersLimitReached": "Você já tem {{limit}} pastas abertas, que é o máximo de uma janela. Feche uma antes — fechar uma pasta não encerra as sessões do {{agent}} dela.",
       "openFoldersOrderConflict": "Suas abas de pasta mudaram em outra janela. Elas aparecem como estão agora — tente de novo."
     },
     "welcome": {
       "title": "Boas-vindas",
       "startTitle": "Começar",
-      "startDescription": "Abra uma pasta desta máquina. O Claude roda dentro dela, e em nenhum outro lugar.",
+      "startDescription": "Abra uma pasta desta máquina. O {{agent}} roda dentro dela, e em nenhum outro lugar.",
       "openFolder": "Abrir pasta…",
-      "purpose": "Abra uma pasta desta máquina para trabalhar nela com o Claude.",
+      "purpose": "Abra uma pasta desta máquina para trabalhar nela com o {{agent}}.",
       "loading": "Procurando suas pastas abertas…"
     },
     "recent": {
@@ -218,8 +218,8 @@
       "notKept": "A pasta está aberta, mas não entrou nas suas abas nem nas recentes."
     },
     "welcomeHelp": {
-      "what": "A porta de entrada do workbench. Cada pasta que você abre vira uma aba própria, com os arquivos, o editor e o chat com o Claude lado a lado. Só abrem as pastas sob as raízes que esta instalação libera. Até cada um ganhar tela própria, a ida e volta da conexão e os seus aparelhos aprovados ficam aqui embaixo.",
-      "states": "As pastas recentes vêm primeiro, as fixadas no topo. Uma pasta marcada como indisponível saiu da allowlist ou do disco: ela continua listada para você saber por quê, e não pode ser aberta. Sem nenhuma recente ainda, a lista diz isso, e as raízes abaixo são o ponto de partida. As raízes são a allowlist — as únicas pastas em que esta instalação deixa o Claude trabalhar. Para liberar outra, rode o comando mostrado abaixo delas na máquina em que o backend roda: o web nunca muda a allowlist.",
+      "what": "A porta de entrada do workbench. Cada pasta que você abre vira uma aba própria, com os arquivos, o editor e o chat com o {{agent}} lado a lado. Só abrem as pastas sob as raízes que esta instalação libera. Até cada um ganhar tela própria, a ida e volta da conexão e os seus aparelhos aprovados ficam aqui embaixo.",
+      "states": "As pastas recentes vêm primeiro, as fixadas no topo. Uma pasta marcada como indisponível saiu da allowlist ou do disco: ela continua listada para você saber por quê, e não pode ser aberta. Sem nenhuma recente ainda, a lista diz isso, e as raízes abaixo são o ponto de partida. As raízes são a allowlist — as únicas pastas em que esta instalação deixa o {{agent}} trabalhar. Para liberar outra, rode o comando mostrado abaixo delas na máquina em que o backend roda: o web nunca muda a allowlist.",
       "notRecorded": "Abrir uma pasta a registra entre as suas recentes e as suas abas, no servidor, para que elas acompanhem você em outro aparelho. Nada dentro de uma pasta é lido para listá-la aqui, e as raízes não mudam por esta tela: isso é o comando pnpm allowlist, na máquina."
     },
     "recentMenu": {
@@ -239,7 +239,7 @@
       "notFound": "{{path}} não está mais na pasta.",
       "exists": "{{path}} já existe. Nada foi sobrescrito.",
       "directoryNotEmpty": "{{path}} tem {{entryCount}} itens. Apagar a pasta apaga todos eles.",
-      "changed": "{{path}} mudou no disco depois que você o abriu — o Claude pode ter escrito nele. Nada foi sobrescrito.",
+      "changed": "{{path}} mudou no disco depois que você o abriu — o {{agent}} pode ter escrito nele. Nada foi sobrescrito.",
       "preconditionRequired": "{{path}} precisa de uma confirmação antes de ser alterado.",
       "tooLarge": "{{path}} é maior do que este editor abre (no máximo {{limit}}).",
       "rangeNotSatisfiable": "Esse trecho de {{path}} fica depois do fim — o arquivo mudou, ou é menor.",
@@ -282,7 +282,7 @@
       "rejectedHunk": "Uma alteração em {{name}} voltou a como estava antes da sessão."
     },
     "permission": {
-      "waiting": "O Claude está esperando por você em {{folder}}."
+      "waiting": "O {{agent}} está esperando por você em {{folder}}."
     }
   },
   "permission": {
@@ -311,15 +311,22 @@
       "tool": "Qualquer uso desta tool"
     },
     "tool": {
-      "Bash": "Executar um comando de shell",
-      "Write": "Escrever um arquivo",
-      "Edit": "Editar um arquivo",
-      "MultiEdit": "Editar vários arquivos",
-      "NotebookEdit": "Editar um notebook",
-      "Read": "Ler um arquivo",
-      "WebFetch": "Buscar uma página",
-      "AskUserQuestion": "Responder à pergunta do Claude",
-      "unknown": "Usar {{tool}}"
+      "fileRead": "Ler um arquivo",
+      "fileEdit": "Editar um arquivo",
+      "fileWrite": "Escrever um arquivo",
+      "fileDelete": "Apagar um arquivo",
+      "fileMove": "Mover um arquivo",
+      "search": "Buscar nos arquivos",
+      "shell": "Executar um comando de shell",
+      "shellOutput": "Ler a saída de um comando",
+      "webFetch": "Buscar uma página",
+      "webSearch": "Pesquisar na web",
+      "mcp": "Usar uma ferramenta MCP",
+      "agent": "Iniciar um subagente",
+      "question": "Responder à pergunta do {{agent}}",
+      "plan": "Aprovar o plano",
+      "tasks": "Mudar a lista de tarefas",
+      "other": "Usar uma ferramenta"
     },
     "error": {
       "requestNotFound": "Esse pedido não está mais aberto.",
@@ -334,12 +341,12 @@
       "ruleNotOwned": "Essa regra é de outra pessoa.",
       "ruleExpiryInvalid": "Uma regra precisa expirar depois de ser criada.",
       "answersInvalid": "Essas respostas não servem para a pergunta. Confira cada uma e envie de novo.",
-      "ruleToolInteractive": "As perguntas e os planos do Claude sempre chegam a você: uma regra não pode permiti-los."
+      "ruleToolInteractive": "As perguntas e os planos do {{agent}} sempre chegam a você: nenhuma regra os responde, nem para permitir nem para recusar."
     },
     "persist": {
       "title": "Parar de perguntar sobre isto?",
-      "project": "O Claude vai executar o que casar com a regra abaixo neste projeto sem perguntar a você, por {{duration}}.",
-      "always": "O Claude vai executar o que casar com a regra abaixo em qualquer projeto seu sem perguntar a você, por {{duration}}.",
+      "project": "O {{agent}} vai executar o que casar com a regra abaixo neste projeto sem perguntar a você, por {{duration}}.",
+      "always": "O {{agent}} vai executar o que casar com a regra abaixo em qualquer projeto seu sem perguntar a você, por {{duration}}.",
       "days": "{{days}} dias",
       "hours": "{{hours}} horas",
       "revocable": "Você pode retirar isso a qualquer momento nas suas regras. A revogação vale no próximo pedido, em toda sessão aberta.",
@@ -348,7 +355,7 @@
       "openRules": "Ver suas regras"
     },
     "plan": {
-      "label": "O plano que o Claude propõe",
+      "label": "O plano que o {{agent}} propõe",
       "title": "Aprovar o plano?",
       "modeLegend": "Depois de aprovado, seguir",
       "approve": "Aprovar o plano",
@@ -356,18 +363,8 @@
       "keepPlanning": "Continuar planejando"
     },
     "planMode": {
-      "default": "perguntando antes de cada edição",
+      "ask": "perguntando antes de cada edição",
       "acceptEdits": "aceitando edições sem perguntar"
-    },
-    "preview": {
-      "ambiguous": "A edição {{edit}} cita um texto que aparece mais de uma vez no arquivo agora: a edição do Claude será recusada se não disser qual.",
-      "at": "Prévia contra o arquivo como estava às {{when}}. Ela é lida de novo quando esta janela volta ao foco.",
-      "label": "O que esta alteração faria no arquivo",
-      "loading": "Lendo o arquivo para prever a alteração…",
-      "noMatch": "A edição {{edit}} cita um texto que não está no arquivo agora: a edição não vai casar, e o Claude será avisado.",
-      "outside": "O arquivo está fora da pasta desta aba, por isso não há prévia. O input exato está acima.",
-      "unavailable": "Sem prévia: {{reason}} O input exato está acima.",
-      "unchanged": "O arquivo já tem exatamente isto: nada mudaria."
     },
     "verdict": {
       "allow": "Aprovado",
@@ -382,10 +379,11 @@
       "rule": "Aprovado por uma regra sua",
       "ruleDenied": "Recusado por uma regra sua",
       "somebody": "alguém",
-      "allowAll": "Aprovado automaticamente — Permitir tudo"
+      "allowAll": "Aprovado automaticamente — Permitir tudo",
+      "readOnly": "Recusado: a sessão é só leitura"
     },
     "question": {
-      "label": "Pergunta do Claude",
+      "label": "Pergunta do {{agent}}",
       "tabs": "As perguntas",
       "answered": "respondida",
       "progress": "Pergunta {{n}} de {{total}}",
@@ -397,16 +395,14 @@
       "noPreview": "Sem prévia para esta opção",
       "submit": "Enviar respostas",
       "decline": "Não responder",
-      "declineReason": "Por quê? O Claude lê isto (opcional)",
+      "declineReason": "Por quê? O {{agent}} lê isto (opcional)",
       "declineConfirm": "Enviar sem responder",
       "declineBack": "Voltar às perguntas",
       "expired": "Esta pergunta expirou. Nada foi enviado.",
-      "malformed": "Não foi possível ler a pergunta do Claude, então ela não pode ser respondida aqui. Recusar avisa o Claude disso.",
+      "malformed": "Não foi possível ler a pergunta do {{agent}}, então ela não pode ser respondida aqui. Recusar avisa o {{agent}} disso.",
       "waiting": "Aguardando sua resposta a uma pergunta",
-      "pill": "O Claude te perguntou algo ({{count}})",
-      "notice": "O Claude te fez uma pergunta em {{folder}}.",
-      "asked": "Perguntou: {{header}}",
-      "askedMany": "Fez {{count}} perguntas",
+      "pill": "O {{agent}} te perguntou algo ({{count}})",
+      "notice": "O {{agent}} te fez uma pergunta em {{folder}}.",
       "pending": "Aguardando resposta",
       "declined": "Não respondida: {{reason}}",
       "answeredElsewhere": "Respondida em outro lugar"
@@ -419,7 +415,7 @@
     },
     "list": {
       "title": "Trilha de auditoria",
-      "description": "Toda tool que o Claude usou nesta máquina, das mais novas para as mais antigas — inclusive as que ninguém foi perguntado.",
+      "description": "Toda tool que o {{agent}} usou nesta máquina, das mais novas para as mais antigas — inclusive as que ninguém foi perguntado.",
       "loading": "Carregando a trilha…",
       "emptyTitle": "Nada aqui",
       "emptyDescription": "Nenhuma tool que corresponda a estes filtros rodou. Limpe-os para ver a trilha inteira.",
@@ -472,7 +468,7 @@
       "forbidden": "Essa sessão é de outra pessoa, então a trilha dela não é sua para ler."
     },
     "help": {
-      "what": "A trilha de cada tool que o Claude pediu para rodar, e como cada uma foi decidida: por uma regra que você concedeu, por uma pessoa, ou por ninguém a tempo. Os filtros moram no endereço, então uma trilha filtrada é um link que você pode guardar ou compartilhar.",
+      "what": "A trilha de cada tool que o {{agent}} pediu para rodar, e como cada uma foi decidida: por uma regra que você concedeu, por uma pessoa, ou por ninguém a tempo. Os filtros moram no endereço, então uma trilha filtrada é um link que você pode guardar ou compartilhar.",
       "states": "Uma entrada decidida por regra abre essa regra, mesmo depois de revogada. Uma entrada que ninguém respondeu a tempo foi recusada. Carregar mais acrescenta a página seguinte; uma falha ali mantém o que já está na tela, com o motivo ao lado.",
       "notRecorded": "A trilha guarda o input exato de cada tool, nunca o conteúdo de um arquivo que uma tool leu: para uma leitura, guarda o caminho e o tamanho. Ela registra decisões, não a conversa."
     },
@@ -529,10 +525,10 @@
     },
     "screen": {
       "title": "Dispositivos",
-      "purpose": "Os celulares que podem responder às perguntas do Claude, e os que esperam a sua aprovação."
+      "purpose": "Os celulares que podem responder às perguntas do {{agent}}, e os que esperam a sua aprovação."
     },
     "help": {
-      "what": "Um celular com o app entra na sua conta e aparece aqui, esperando. Depois que você o aprova, ele recebe um push quando o Claude pede permissão, e pode responder — permitir ou recusar — de onde você estiver. Um celular nunca aprova a si mesmo: só um navegador em que você já entrou pode.",
+      "what": "Um celular com o app entra na sua conta e aparece aqui, esperando. Depois que você o aprova, ele recebe um push quando o {{agent}} pede permissão, e pode responder — permitir ou recusar — de onde você estiver. Um celular nunca aprova a si mesmo: só um navegador em que você já entrou pode.",
       "states": "Esperando aprovação: entrou na conta, ainda não pode responder. Aprovado: recebe as perguntas e pode respondê-las. Revogado: parou de responder na hora, e as conexões dele foram fechadas; para usá-lo de novo, entre nele de novo. “Sem token de push” quer dizer que o celular só ouve uma pergunta com o app aberto.",
       "notRecorded": "Aprovar e revogar ficam registrados na auditoria, com quem fez e quando. A tela não mostra o que um celular respondeu — isso está na trilha de auditoria, entrada por entrada."
     }
@@ -544,10 +540,10 @@
     },
     "list": {
       "title": "Regras que você concedeu",
-      "description": "O que o Claude pode fazer nesta máquina sem perguntar a você antes. A revogação vale no próximo pedido, em toda sessão aberta.",
+      "description": "O que o {{agent}} pode fazer nesta máquina sem perguntar a você antes. A revogação vale no próximo pedido, em toda sessão aberta.",
       "loading": "Carregando suas regras…",
       "emptyTitle": "Nenhuma regra ainda",
-      "emptyDescription": "Uma regra nasce quando você responde um pedido com “não perguntar de novo”. Até lá, o Claude pergunta toda vez."
+      "emptyDescription": "Uma regra nasce quando você responde um pedido com “não perguntar de novo”. Até lá, o {{agent}} pergunta toda vez."
     },
     "scope": {
       "project": "Em um projeto",
@@ -560,7 +556,8 @@
     "status": {
       "active": "Ativa",
       "expired": "Expirada",
-      "revoked": "Revogada"
+      "revoked": "Revogada",
+      "disabled": "Desligada"
     },
     "row": {
       "label": "Regra {{pattern}}",
@@ -568,9 +565,10 @@
       "project": "Projeto: {{path}}",
       "granted": "Concedida por {{who}} em {{at}}",
       "validUntil": "Válida até {{at}}",
-      "expiredOn": "Expirou em {{at}}. O Claude volta a perguntar.",
-      "expiringSoon": "Expira em breve: depois de {{at}}, o Claude volta a perguntar.",
-      "revokedOn": "Revogada em {{at}}. Ela não responde mais nada."
+      "expiredOn": "Expirou em {{at}}. O {{agent}} volta a perguntar.",
+      "expiringSoon": "Expira em breve: depois de {{at}}, o {{agent}} volta a perguntar.",
+      "revokedOn": "Revogada em {{at}}. Ela não responde mais nada.",
+      "disabled": "Escrita para o {{agent}} numa forma que esta versão não traduz: não vale mais. Crie de novo se ainda quiser."
     },
     "action": {
       "revoke": "Revogar",
@@ -579,7 +577,7 @@
     "detail": {
       "screenTitle": "Uma regra que você concedeu",
       "title": "A regra",
-      "description": "O que esta regra deixa o Claude fazer, e se ainda deixa.",
+      "description": "O que esta regra deixa o {{agent}} fazer, e se ainda deixa.",
       "loading": "Carregando a regra…",
       "emptyTitle": "Nenhuma regra",
       "emptyDescription": "Não há regra para mostrar.",
@@ -587,7 +585,7 @@
     },
     "help": {
       "what": "Cada regra que você concedeu a partir de um pedido de permissão: qual tool, qual padrão, onde vale e até quando. Revogar é um clique, e o próximo pedido que casar volta a perguntar.",
-      "states": "Uma regra ativa responde aos pedidos sem perguntar. Uma regra perto de expirar — menos de sete dias — fica marcada. Uma regra expirada continua na lista, marcada como tal; uma revogada sai da lista. Uma revogação que falha mantém a linha, com o motivo ao lado.",
+      "states": "Uma regra ativa responde aos pedidos sem perguntar. Uma regra perto de expirar — menos de sete dias — fica marcada. Uma regra expirada continua na lista, marcada como tal; uma revogada sai da lista. Uma revogação que falha mantém a linha, com o motivo ao lado. Uma regra escrita para um agente numa forma que esta versão não traduz aparece como desligada, com o padrão que tinha: ela não responde nada, e só oferece a revogação.",
       "notRecorded": "Regras que só valem para uma sessão não aparecem: elas acabam com ela. Esta tela não mostra quais pedidos uma regra respondeu — a trilha de auditoria mostra."
     },
     "detailHelp": {
@@ -600,8 +598,8 @@
     "error": {
       "notFound": "Essa conversa não existe, ou não é sua para ler.",
       "invalidSessionId": "{{sessionId}} não é um identificador de conversa.",
-      "claudeUnavailable": "O Claude não conseguiu ler o histórico nesta máquina.",
-      "claudeTimeout": "O Claude demorou demais para ler o histórico. Tente de novo.",
+      "agentUnavailable": "O {{agent}} não conseguiu ler o histórico nesta máquina.",
+      "agentTimeout": "O {{agent}} demorou demais para ler o histórico. Tente de novo.",
       "cursorStale": "Esta conversa mudou enquanto você a lia. Recarregue a partir das mensagens mais recentes.",
       "followLimit": "Há conversas demais sendo acompanhadas agora (no máximo {{limit}}). Esta continua legível, mas não vai se atualizar sozinha.",
       "followLiveHere": "Esta conversa está aberta numa sessão viva aqui. Abra essa sessão para vê-la enquanto anda.",
@@ -633,7 +631,7 @@
     },
     "follow": {
       "working": "Trabalhando em outro cliente…",
-      "workingHelp": "Isto é uma inferência, não algo que o Claude informou: a última entrada da conversa deixa o turno aberto — uma ferramenta sem resultado, um pensamento ou um prompt sem resposta — e algo escreveu nela há pouco. O histórico não grava o estado de um turno, e nada aqui diz qual é o outro cliente.",
+      "workingHelp": "Isto é uma inferência, não algo que o {{agent}} informou: a última entrada da conversa deixa o turno aberto — uma ferramenta sem resultado, um pensamento ou um prompt sem resposta — e algo escreveu nela há pouco. O histórico não grava o estado de um turno, e nada aqui diz qual é o outro cliente.",
       "workingHelpLabel": "O que “trabalhando” quer dizer aqui",
       "newerOne": "1 nova",
       "newer": "{{count}} novas",
@@ -744,15 +742,15 @@
     "editor": {
       "label": "Editor",
       "placeholderTitle": "Nenhum arquivo aberto",
-      "placeholderDescription": "Os arquivos que você abrir aparecem aqui, ao lado do chat com o Claude. Abrir e editar chegam com o Explorador."
+      "placeholderDescription": "Os arquivos que você abrir aparecem aqui, ao lado do chat com o {{agent}}. Abrir e editar chegam com o Explorador."
     },
     "panel": {
       "label": "Painel",
       "placeholderTitle": "Nada no painel ainda",
       "placeholderDescription": "O terminal e a saída de uma sessão ficarão aqui."
     },
-    "claude": {
-      "label": "Claude",
+    "agent": {
+      "label": "{{agent}}",
       "backToStart": "Voltar para uma nova conversa",
       "showChanges": "O que a sessão alterou"
     },
@@ -760,13 +758,13 @@
       "label": "Visões desta pasta",
       "explorer": "Explorador",
       "editor": "Editor",
-      "claude": "Claude",
+      "agent": "{{agent}}",
       "panel": "Painel"
     },
     "layout": {
       "sideBar": "Mostrar ou ocultar a barra lateral",
       "panel": "Mostrar ou ocultar o painel",
-      "secondary": "Mostrar ou esconder o Claude"
+      "secondary": "Mostrar ou esconder o {{agent}}"
     },
     "tabs": {
       "label": "Pastas abertas",
@@ -779,7 +777,7 @@
     "close": {
       "titleOne": "Fechar {{name}}?",
       "titleMany": "Fechar {{count}} pastas?",
-      "sessionsCarryOn": "As sessões do Claude destas pastas continuam rodando na máquina: fechar uma aba não as encerra.",
+      "sessionsCarryOn": "As sessões do {{agent}} destas pastas continuam rodando na máquina: fechar uma aba não as encerra.",
       "listLabel": "Pastas a fechar",
       "keep": "Manter abertas",
       "confirm": "Fechar",
@@ -796,7 +794,7 @@
       "placeholder": "Encontrar arquivos e texto nesta pasta ficará aqui, com a Busca."
     },
     "sessions": {
-      "label": "Sessões do Claude",
+      "label": "Sessões do {{agent}}",
       "placeholder": "As sessões e conversas desta pasta vão aparecer aqui."
     },
     "tabState": {
@@ -817,12 +815,12 @@
     },
     "screen": {
       "title": "Workbench",
-      "purpose": "Uma pasta desta máquina: os arquivos, o editor e o Claude, lado a lado."
+      "purpose": "Uma pasta desta máquina: os arquivos, o editor e o {{agent}}, lado a lado."
     },
     "help": {
-      "what": "Cada aba é uma pasta desta máquina, com tudo dela: os arquivos, o editor e o chat com o Claude ao lado. Uma sessão iniciada aqui roda dentro da pasta da aba, e em nenhum outro lugar. Abra outra pasta com “Abrir pasta…” ou o + da barra de abas; cada uma vira uma aba própria.",
-      "states": "Até 8 pastas podem ficar abertas ao mesmo tempo; para abrir outra, feche uma antes. Fechar uma aba nunca encerra as sessões do Claude dela — elas continuam rodando na máquina, e voltam quando você abre a pasta de novo. Uma aba cuja pasta saiu da allowlist, ou do disco, abre em erro, e as outras abas seguem. Um lugar ainda vazio diz o que vai morar ali.",
-      "notRecorded": "Quais pastas estão abertas, e a ordem delas, ficam no servidor, para seguirem você em outro dispositivo. O layout de cada aba — tamanhos, painéis abertos — fica só neste navegador. O que você diz ao Claude e o que ele responde é da sessão, não da aba; as decisões de permissão vão para a trilha de auditoria."
+      "what": "Cada aba é uma pasta desta máquina, com tudo dela: os arquivos, o editor e o chat com o {{agent}} ao lado. Uma sessão iniciada aqui roda dentro da pasta da aba, e em nenhum outro lugar. Abra outra pasta com “Abrir pasta…” ou o + da barra de abas; cada uma vira uma aba própria.",
+      "states": "Até 8 pastas podem ficar abertas ao mesmo tempo; para abrir outra, feche uma antes. Fechar uma aba nunca encerra as sessões do {{agent}} dela — elas continuam rodando na máquina, e voltam quando você abre a pasta de novo. Uma aba cuja pasta saiu da allowlist, ou do disco, abre em erro, e as outras abas seguem. Um lugar ainda vazio diz o que vai morar ali.",
+      "notRecorded": "Quais pastas estão abertas, e a ordem delas, ficam no servidor, para seguirem você em outro dispositivo. O layout de cada aba — tamanhos, painéis abertos — fica só neste navegador. O que você diz ao {{agent}} e o que ele responde é da sessão, não da aba; as decisões de permissão vão para a trilha de auditoria."
     }
   },
   "status": {
@@ -874,7 +872,7 @@
       "goToFolderTab": "Aba de pasta {{place}}",
       "toggleSideBar": "Mostrar ou esconder a barra lateral",
       "togglePanel": "Mostrar ou esconder o painel",
-      "toggleSecondarySideBar": "Exibir: Mostrar ou esconder o Claude"
+      "toggleSecondarySideBar": "Exibir: Mostrar ou esconder o {{agent}}"
     },
     "notifications": {
       "show": "Mostrar notificações",
@@ -913,7 +911,7 @@
       "convertIndentation": "Converter indentação",
       "reopenWithEncoding": "Reabrir com encoding…",
       "saveWithEncoding": "Salvar com encoding…",
-      "addToClaude": "Adicionar ao contexto do Claude",
+      "addToAgent": "Adicionar ao contexto do {{agent}}",
       "revealInExplorer": "Revelar o arquivo ativo no Explorer",
       "showHelp": "Ajuda do editor",
       "openPreview": "Abrir prévia",
@@ -925,26 +923,28 @@
       "pdfFind": "Buscar no PDF"
     },
     "sessions": {
-      "refresh": "Sessões do Claude: atualizar",
-      "toggleSubfolders": "Sessões do Claude: incluir ou deixar de fora as pastas abaixo",
-      "help": "Sessões do Claude: ajuda",
-      "openSelected": "Sessões do Claude: abrir a linha selecionada",
-      "continueSelected": "Sessões do Claude: continuar aqui a conversa selecionada",
-      "copySelectedId": "Sessões do Claude: copiar o id da conversa selecionada",
-      "endSelected": "Sessões do Claude: encerrar a sessão selecionada"
+      "refresh": "Sessões do {{agent}}: atualizar",
+      "toggleSubfolders": "Sessões do {{agent}}: incluir ou deixar de fora as pastas abaixo",
+      "help": "Sessões do {{agent}}: ajuda",
+      "openSelected": "Sessões do {{agent}}: abrir a linha selecionada",
+      "continueSelected": "Sessões do {{agent}}: continuar aqui a conversa selecionada",
+      "copySelectedId": "Sessões do {{agent}}: copiar o id da conversa selecionada",
+      "endSelected": "Sessões do {{agent}}: encerrar a sessão selecionada"
     },
     "session": {
-      "showChanges": "Claude: Mostrar as alterações da sessão"
+      "showChanges": "{{agent}}: Mostrar as alterações da sessão"
+    },
+    "agent": {
+      "newConversation": "{{agent}}: Nova conversa",
+      "focusComposer": "{{agent}}: Focar o prompt",
+      "interrupt": "{{agent}}: Interromper o turno",
+      "nextConversation": "{{agent}}: Próxima conversa",
+      "previousConversation": "{{agent}}: Conversa anterior",
+      "cycleMode": "{{agent}}: trocar o modo da conversa",
+      "goToRequest": "{{agent}}: Ir para a pergunta que espera você ({{count}})",
+      "goToRequestNone": "{{agent}}: Ir para a pergunta que espera você — nada espera"
     },
     "claude": {
-      "newConversation": "Claude: Nova conversa",
-      "focusComposer": "Claude: Focar o prompt",
-      "interrupt": "Claude: Interromper o turno",
-      "nextConversation": "Claude: Próxima conversa",
-      "previousConversation": "Claude: Conversa anterior",
-      "cycleMode": "Claude: trocar o modo da conversa",
-      "goToRequest": "Claude: Ir para a pergunta que espera você ({{count}})",
-      "goToRequestNone": "Claude: Ir para a pergunta que espera você — nada espera",
       "defaultModel": "Claude: trocar o modelo padrão",
       "testConnection": "Claude: testar a conexão com o modelo"
     }
@@ -1048,7 +1048,7 @@
       "purpose": "Como este app aparece neste dispositivo, e as pastas que ele pode abrir."
     },
     "help": {
-      "what": "As configurações do próprio app: a aparência — tema, idioma, densidade — e as pastas em que ele trabalha. As configurações do Claude — o modelo, o permission mode, os servidores MCP — não ficam aqui: elas têm uma tela própria.",
+      "what": "As configurações do próprio app: a aparência — tema, idioma, densidade — e as pastas em que ele trabalha. As configurações do {{agent}} — o modelo, o permission mode, os servidores MCP — não ficam aqui: elas têm uma tela própria.",
       "states": "Toda opção mostra o seu padrão, e “Restaurar padrão” quando está em outro valor. A aparência muda na hora e fica guardada só neste dispositivo, então o seu celular pode ter outra cara que o desktop. As pastas que esta instalação libera aqui são só leitura: liberar outra exige um comando na máquina em que o backend roda, que a seção mostra pronto para copiar.",
       "notRecorded": "A aparência fica só neste navegador, nunca no servidor. As pastas recentes ficam no servidor, para seguirem você em outro dispositivo; tirar uma daqui a tira de todos, e nunca mexe na pasta no disco."
     },
@@ -1095,7 +1095,7 @@
       "purpose": "As versões que esta instalação roda — prontas para colar num relato de defeito."
     },
     "help": {
-      "what": "A versão de cada parte desta instalação: este web, o backend, o Agent SDK, a ferramenta de linha de comando do Claude e o Node. Quando algo der errado, copie o bloco e cole no relato: é a primeira coisa que quem for ajudar vai perguntar.",
+      "what": "A versão de cada parte desta instalação: este web, o backend, o Agent SDK, a ferramenta de linha de comando do {{agent}} e o Node. Quando algo der errado, copie o bloco e cole no relato: é a primeira coisa que quem for ajudar vai perguntar.",
       "states": "Uma versão que o backend não conseguiu ler diz por quê: não instalado, ou instalado mas ilegível. Quando o backend não responde, só a versão deste web aparece, com o caminho para tentar de novo.",
       "notRecorded": "Ler as versões não registra nada. Copiar põe o bloco na sua área de transferência e em nenhum outro lugar."
     },
@@ -1131,7 +1131,7 @@
     },
     "help": {
       "what": "A árvore mostra a pasta que esta aba abriu, um nível por vez: uma pasta é lida quando você a abre. Clique num arquivo para vê-lo de relance no editor; dê dois cliques ou tecle Enter para mantê-lo aberto. Tudo o que você faz aqui — criar, renomear, mover, copiar, apagar — acontece no disco desta máquina, só nesta pasta, e entra na trilha de auditoria antes de acontecer. Uma entrada com o ícone de seta saindo da caixa é um link que leva para fora desta pasta: ela aparece para você saber que existe, e nunca abre. Uma entrada com ponto de interrogação tem um nome que não é texto válido: ela aparece, e nada pode ser feito com ela por aqui.",
-      "states": "Enquanto uma pasta é lida, as linhas dela mostram que está carregando. Uma pasta que não pôde ser lida diz por quê, e Enter nela tenta de novo. Uma pasta com mais entradas do que a árvore lista avisa: filtre pelo nome para achar o resto. Mudanças no disco — o Claude escrevendo, você em outro programa — aparecem sozinhas; quando esta máquina não consegue acompanhar a pasta, um aviso diz isso e um botão a lê de novo à mão. Ctrl+Z, com o foco na árvore, desfaz o último renomear, mover, arquivo ou pasta novos, ou cópia desta aba, desde que nada tenha mudado depois — se o Claude escreveu no arquivo depois, o desfazer é recusado e diz por quê. O desfazer vale só enquanto esta página está aberta.",
+      "states": "Enquanto uma pasta é lida, as linhas dela mostram que está carregando. Uma pasta que não pôde ser lida diz por quê, e Enter nela tenta de novo. Uma pasta com mais entradas do que a árvore lista avisa: filtre pelo nome para achar o resto. Mudanças no disco — o {{agent}} escrevendo, você em outro programa — aparecem sozinhas; quando esta máquina não consegue acompanhar a pasta, um aviso diz isso e um botão a lê de novo à mão. Ctrl+Z, com o foco na árvore, desfaz o último renomear, mover, arquivo ou pasta novos, ou cópia desta aba, desde que nada tenha mudado depois — se o {{agent}} escreveu no arquivo depois, o desfazer é recusado e diz por quê. O desfazer vale só enquanto esta página está aberta.",
       "notRecorded": "Entradas ocultas (.git, .svn, .hg, .DS_Store, Thumbs.db) ficam de fora até você mostrá-las; pastas como node_modules, dist, build, .venv e target aparecem mas não são acompanhadas, então uma mudança dentro delas aparece quando você as abre ou recarrega. Apagar guarda antes no histórico local o que leva e não pergunta: uma notificação diz o que foi, com Desfazer. O que o histórico não consegue guardar — grande demais, entradas demais, ou o histórico indisponível — só é apagado de vez, depois de perguntar, dizendo quanto vai embora e por que não há desfazer. O que você lê não entra na trilha de auditoria; o que você muda entra, com o caminho e nunca o conteúdo.",
       "transferHeading": "Enviar e baixar",
       "transfer": "Arraste arquivos ou pastas do seu desktop para uma pasta da árvore para enviá-los para lá — uma pasta mantém a estrutura. Sem mouse, use Enviar arquivos aqui… ou Enviar pasta aqui… (Alt+U, Alt+Shift+U). Os arquivos que já existem aparecem antes de qualquer coisa ser enviada: substituir, manter os dois ou pular cada um. Baixar (Alt+Shift+D) salva um arquivo, ou uma pasta ou tudo o que está selecionado num zip só.",
@@ -1183,7 +1183,7 @@
       "undo": "Desfazer a última operação de arquivo",
       "copyPath": "Copiar caminho",
       "copyRelativePath": "Copiar caminho relativo",
-      "addToContext": "Adicionar ao contexto do Claude",
+      "addToContext": "Adicionar ao contexto do {{agent}}",
       "refresh": "Recarregar a árvore",
       "collapseAll": "Recolher todas as pastas",
       "showHidden": "Mostrar entradas ocultas",
@@ -1225,7 +1225,7 @@
       "countLabel": "O que vai junto",
       "holds": "{{path}} contém {{count}} entradas, e todas vão junto.",
       "holdsAtLeast": "{{path}} contém pelo menos {{count}} entradas, e todas vão junto.",
-      "sensitive": "{{path}} muda o que o Claude pode fazer sem te perguntar.",
+      "sensitive": "{{path}} muda o que o {{agent}} pode fazer sem te perguntar.",
       "keep": "Manter",
       "confirm": "Apagar definitivamente",
       "pending": "Apagando…",
@@ -1253,12 +1253,12 @@
       "test": "Arquivo de teste",
       "gitignore": "Lista de ignorados do Git",
       "editorconfig": "Configurações do editor (.editorconfig)",
-      "claude": "Instruções para o Claude (CLAUDE.md)"
+      "agentInstructions": "Instruções para o {{agent}} ({{fileName}})"
     },
     "sensitive": {
-      "title": "Isto muda o que o Claude pode fazer",
-      "description": "Estes arquivos decidem o que o Claude pode fazer nesta máquina sem te perguntar. Mude-os só se for essa a intenção.",
-      "listLabel": "Arquivos que mudam o que o Claude pode fazer",
+      "title": "Isto muda o que o {{agent}} pode fazer",
+      "description": "Estes arquivos decidem o que o {{agent}} pode fazer nesta máquina sem te perguntar. Mude-os só se for essa a intenção.",
+      "listLabel": "Arquivos que mudam o que o {{agent}} pode fazer",
       "cancel": "Deixar como estão",
       "confirm": "Mudar"
     },
@@ -1281,7 +1281,7 @@
       "notKeptUnavailable": "Substituído. O histórico local estava indisponível, por isso a versão substituída não ficou nele."
     },
     "undo": {
-      "changed": "{{path}} mudou depois da operação — o Claude pode ter escrito nele —, então desfazer perderia isso. Nada foi desfeito.",
+      "changed": "{{path}} mudou depois da operação — o {{agent}} pode ter escrito nele —, então desfazer perderia isso. Nada foi desfeito.",
       "notEmpty": "{{path}} tem conteúdo agora, então desfazer apagaria mais do que foi criado. Nada foi desfeito.",
       "gone": "{{path}} não está mais lá, então não há o que desfazer.",
       "taken": "Outra coisa tem agora o nome que {{path}} tinha. Nada foi sobrescrito."
@@ -1310,7 +1310,7 @@
       "downloaded": "{{name}} baixado."
     },
     "context": {
-      "added": "Entradas adicionadas ao contexto do Claude: {{count}}.",
+      "added": "Entradas adicionadas ao contexto do {{agent}}: {{count}}.",
       "excluded": "Entradas deixadas de fora porque nada pode ser feito com elas: {{count}}."
     },
     "watch": {
@@ -1351,19 +1351,19 @@
   "editor": {
     "screen": {
       "title": "Editor",
-      "purpose": "Os arquivos desta pasta, abertos em abas, ao lado do chat com o Claude."
+      "purpose": "Os arquivos desta pasta, abertos em abas, ao lado do chat com o {{agent}}."
     },
     "help": {
       "open": "Ajuda do editor",
       "what": "O editor mostra os arquivos desta pasta em abas. Um clique simples no Explorer abre o arquivo em prévia — a aba em itálico, substituída pela próxima prévia até você editá-lo ou dar um duplo clique nela. Aba com alterações não salvas mostra um ponto no lugar do botão de fechar. Abra um arquivo ao lado para ver dois (ou três) grupos de uma vez; o mesmo arquivo em dois grupos é um buffer só, editado nos dois. Ctrl+S salva o arquivo ativo, Ctrl+K S salva todos e Ctrl+Shift+T reabre a última aba fechada. Localizar e substituir (Ctrl+F, Ctrl+H) e ir para a linha (Ctrl+G) são do próprio editor.",
-      "states": "O salvar diz qual versão do arquivo você abriu. Se o disco mudou desde então — provavelmente o Claude escreveu nele —, o salvar é recusado e você escolhe: comparar os dois, sobrescrever de propósito, ou recarregar e descartar suas alterações; nada é sobrescrito sozinho. Quando um arquivo muda no disco com a aba limpa, a aba recarrega e mantém sua posição; com alterações não salvas, um aviso diz quem mudou e oferece as mesmas três escolhas. Arquivo apagado no disco fica marcado, e salvá-lo oferece recriá-lo. Arquivos grandes abrem no modo leve — sem minimapa, sem dobrar trechos, sem realce —, arquivos binários abrem em visualização hexadecimal e arquivos acima do limite de edição em leitura paginada, os dois somente leitura; um arquivo que esta máquina não deixa o servidor ler abre uma página que diz o motivo no lugar do editor.",
+      "states": "O salvar diz qual versão do arquivo você abriu. Se o disco mudou desde então — provavelmente o {{agent}} escreveu nele —, o salvar é recusado e você escolhe: comparar os dois, sobrescrever de propósito, ou recarregar e descartar suas alterações; nada é sobrescrito sozinho. Quando um arquivo muda no disco com a aba limpa, a aba recarrega e mantém sua posição; com alterações não salvas, um aviso diz quem mudou e oferece as mesmas três escolhas. Arquivo apagado no disco fica marcado, e salvá-lo oferece recriá-lo. Arquivos grandes abrem no modo leve — sem minimapa, sem dobrar trechos, sem realce —, arquivos binários abrem em visualização hexadecimal e arquivos acima do limite de edição em leitura paginada, os dois somente leitura; um arquivo que esta máquina não deixa o servidor ler abre uma página que diz o motivo no lugar do editor.",
       "notRecorded": "Alterações não salvas vivem só nesta página: nunca ficam guardadas no navegador, por isso recarregar ou fechar a página pergunta antes. Seus salvamentos ficam na trilha de auditoria, sem o conteúdo; abrir e ler um arquivo não é registrado. Prévias, a visualização hexadecimal e a leitura paginada só leem o arquivo: também não são registradas.",
       "previewsHeading": "Prévias, arquivos binários e arquivos grandes",
       "previews": "Abrir prévia (Ctrl+Shift+V), ou abri-la ao lado (Ctrl+K V), mostra o arquivo renderizado: markdown, imagens, SVG e PDF; o botão de olho da aba alterna entre o arquivo e a prévia. A prévia de um markdown acompanha o que você digita, antes de salvar. Imagens e PDFs abrem já na prévia. Link para um arquivo desta pasta abre-o no editor; imagens da internet não são carregadas — viram links.",
       "previewsHtml": "HTML nunca roda numa prévia — nem no markdown, nem num arquivo .html, nem um script dentro de um SVG. Uma página mostrada aqui rodaria com a sua sessão, dentro deste app; por isso o markdown mantém o texto e descarta as tags, o arquivo .html é mostrado como código-fonte e o SVG é desenhado como imagem, que não roda nada.",
       "paged": "Um arquivo binário abre em visualização hexadecimal, e um texto acima do limite de edição abre como páginas de texto; os dois são somente leitura e leem uma página por vez. Se o arquivo mudar no disco enquanto você lê, a visualização avisa e recomeça na versão nova — nunca mistura páginas de duas versões.",
       "pdfReader": "Um PDF abre no leitor deste app, nunca no do navegador: todas as páginas numa rolagem só, ajustadas à largura. Digite o número de uma página e Enter para ir até ela; dê zoom pelos botões, pela lista ou por Ctrl+= e Ctrl+- (Ctrl+0 volta a ajustar à largura, e Ctrl com a roda do mouse também dá zoom); selecione e copie o texto. O painel lateral mostra o índice do PDF, quando ele tem um, e as miniaturas das páginas; Ctrl+F, com o foco no leitor, busca texto nele. Link para outro lugar do PDF leva até ele; link para a web abre em nova aba, e qualquer outro tipo não é seguido. Um PDF com senha a pede, e a senha fica só nesta página. Nada que um PDF carrega roda: nem script, nem campo de formulário preenchível. A página, o zoom e o painel de cada aba ficam guardados enquanto a página está aberta.",
-      "diagrams": "Tabela mais larga que a prévia rola na própria caixa. Um bloco de código cercado com o nome mermaid vira diagrama — aqui, nas respostas do Claude e nos planos para aprovar — assim que a cerca de fechamento chega; Ver o código mostra a fonte, e um erro diz em que linha está. O diagrama é desenhado com segurança: nada nele roda, os links seguem a regra de todo link daqui, e ele nunca carrega nada da internet."
+      "diagrams": "Tabela mais larga que a prévia rola na própria caixa. Um bloco de código cercado com o nome mermaid vira diagrama — aqui, nas respostas do {{agent}} e nos planos para aprovar — assim que a cerca de fechamento chega; Ver o código mostra a fonte, e um erro diz em que linha está. O diagrama é desenhado com segurança: nada nele roda, os links seguem a regra de todo link daqui, e ele nunca carrega nada da internet."
     },
     "load": {
       "failed": "Não foi possível carregar o editor. Verifique a conexão e tente de novo — o resto da aba continua funcionando."
@@ -1406,7 +1406,7 @@
       "openToSide": "Abrir ao lado",
       "compareWithSaved": "Comparar com o arquivo salvo",
       "reveal": "Revelar no Explorer",
-      "addToClaude": "Adicionar ao contexto do Claude"
+      "addToAgent": "Adicionar ao contexto do {{agent}}"
     },
     "breadcrumb": {
       "label": "Onde está o arquivo do grupo {{place}}",
@@ -1442,7 +1442,7 @@
       "notice": "{{path}} foi apagado no disco. Seu texto continua aqui; salvar oferece criar o arquivo de novo."
     },
     "external": {
-      "claude": "O Claude alterou {{path}} no disco, e você tem alterações não salvas aqui.",
+      "agent": "O {{agent}} alterou {{path}} no disco, e você tem alterações não salvas aqui.",
       "other": "{{path}} foi alterado fora do editor, e você tem alterações não salvas aqui.",
       "compare": "Comparar",
       "reload": "Recarregar do disco",
@@ -1450,7 +1450,7 @@
     },
     "conflict": {
       "title": "{{name}} mudou no disco",
-      "description": "Ele mudou desde que você o abriu — provavelmente o Claude escreveu nele. Salvar agora sobrescreveria esse trabalho, então nada foi salvo.",
+      "description": "Ele mudou desde que você o abriu — provavelmente o {{agent}} escreveu nele. Salvar agora sobrescreveria esse trabalho, então nada foi salvo.",
       "compare": "Comparar",
       "reload": "Recarregar e descartar minhas alterações",
       "overwrite": "Sobrescrever o arquivo no disco",
@@ -1461,10 +1461,10 @@
     },
     "sensitive": {
       "title": "Salvar {{path}}?",
-      "claudeSettings": "Este arquivo guarda as configurações do projeto para o Claude: os comandos que ele pode rodar sem perguntar e os hooks que rodam nas sessões dele.",
-      "claudeLocalSettings": "Este arquivo guarda as suas configurações do Claude neste projeto: os comandos que ele pode rodar sem perguntar e os hooks que rodam nas sessões dele.",
-      "mcpServers": "Este arquivo lista os servidores MCP que o Claude inicia neste projeto — programas que rodam nesta máquina.",
-      "warning": "Salvá-lo muda o que o Claude pode fazer sem perguntar a você.",
+      "projectSettings": "Este arquivo guarda as configurações do projeto para o {{agent}}: os comandos que ele pode rodar sem perguntar e os hooks que rodam nas sessões dele.",
+      "localSettings": "Este arquivo guarda as suas configurações do {{agent}} neste projeto: os comandos que ele pode rodar sem perguntar e os hooks que rodam nas sessões dele.",
+      "mcpServers": "Este arquivo lista os servidores MCP que o {{agent}} inicia neste projeto — programas que rodam nesta máquina.",
+      "warning": "Salvá-lo muda o que o {{agent}} pode fazer sem perguntar a você.",
       "confirm": "Salvar mesmo assim",
       "cancel": "Não salvar"
     },
@@ -1503,10 +1503,10 @@
     "encoding": {
       "dirty": "Salve ou reverta {{path}} antes de reabri-lo com outro encoding."
     },
-    "claude": {
+    "agent": {
       "addSelection": "Adicionar seleção ao chat",
-      "added": "{{path}} foi adicionado ao contexto do Claude.",
-      "unavailable": "Nada recebe arquivos no contexto do Claude agora."
+      "added": "{{path}} foi adicionado ao contexto do {{agent}}.",
+      "unavailable": "Nada recebe arquivos no contexto do {{agent}} agora."
     },
     "diff": {
       "disk": "{{name}} no disco",
@@ -1569,7 +1569,7 @@
       "minimap": "Minimapa",
       "minimapDescription": "Uma visão pequena do arquivo inteiro ao lado do editor. Arquivos grandes nunca o mostram.",
       "autoSave": "Salvar automaticamente",
-      "autoSaveDescription": "Salva sozinho. Nunca sobrescreve um arquivo que mudou no disco, e nunca salva um arquivo que muda o que o Claude pode fazer.",
+      "autoSaveDescription": "Salva sozinho. Nunca sobrescreve um arquivo que mudou no disco, e nunca salva um arquivo que muda o que o {{agent}} pode fazer.",
       "autoSaveOff": "Desligado",
       "autoSaveAfterDelay": "Um segundo depois de digitar",
       "autoSaveOnFocusChange": "Quando o editor perde o foco",
@@ -1669,8 +1669,8 @@
     },
     "help": {
       "what": "A Linha do tempo é o histórico local, nesta máquina, dos arquivos que você muda por aqui. Antes que salvar, apagar, restaurar ou enviar um arquivo por cima faça perder uma versão dele, essa versão é guardada — nesta máquina, fora da pasta. Compare uma versão com o arquivo como está agora, ou escolha uma e compare com outra; restaure uma para pô-la de volta. \"Apagados recentemente\" lista o que foi apagado desta pasta e não existe mais, e traz de volta onde estava. Apagar o que o histórico consegue guardar não pergunta antes: uma notificação diz o que foi, com Desfazer.",
-      "states": "Cada versão diz por que foi guardada, quem a escreveu — você, ou outra pessoa que alcança esta pasta — e quando, das mais novas para as mais antigas; filtre pelo motivo para ver só algumas. Um arquivo maior do que o histórico guarda aparece sem o conteúdo: ele diz isso, e não pode ser comparado nem restaurado. Um arquivo ainda sem versão não tem histórico: ele começa no primeiro salvar, apagar ou envio que faria perder algo. Restaurar só pergunta antes quando o arquivo tem mudanças não salvas, que são descartadas; a versão substituída é guardada antes. Se o arquivo mudou desde que você o abriu — o Claude pode ter escrito nele —, a restauração é recusada e diz isso.",
-      "notRecorded": "Isto não é o git, e não é o desfazer do Claude. Nada aqui é commit nem branch, e o que o Claude escreve não é guardado aqui: as mudanças do Claude são desfeitas pela sessão dele. O histórico segue um caminho, não um arquivo renomeado. O conteúdo de uma versão nunca vai para a trilha de auditoria; só o fato de um arquivo ter sido restaurado.",
+      "states": "Cada versão diz por que foi guardada, quem a escreveu — você, ou outra pessoa que alcança esta pasta — e quando, das mais novas para as mais antigas; filtre pelo motivo para ver só algumas. Um arquivo maior do que o histórico guarda aparece sem o conteúdo: ele diz isso, e não pode ser comparado nem restaurado. Um arquivo ainda sem versão não tem histórico: ele começa no primeiro salvar, apagar ou envio que faria perder algo. Restaurar só pergunta antes quando o arquivo tem mudanças não salvas, que são descartadas; a versão substituída é guardada antes. Se o arquivo mudou desde que você o abriu — o {{agent}} pode ter escrito nele —, a restauração é recusada e diz isso.",
+      "notRecorded": "Isto não é o git, e não é o desfazer do {{agent}}. Nada aqui é commit nem branch, e o que o {{agent}} escreve não é guardado aqui: as mudanças do {{agent}} são desfeitas pela sessão dele. O histórico segue um caminho, não um arquivo renomeado. O conteúdo de uma versão nunca vai para a trilha de auditoria; só o fato de um arquivo ter sido restaurado.",
       "size": "{{megabytes}} MB",
       "sizeUnknown": "o tamanho que esta instalação define",
       "limitsHeading": "O que guarda, e por quanto tempo",
@@ -1692,7 +1692,7 @@
     "empty": {
       "title": "Nenhuma versão guardada ainda",
       "filtered": "Nenhuma versão guardada por este motivo",
-      "description": "Uma versão é guardada no momento em que você a perderia por aqui: antes de salvar, apagar, restaurar ou enviar um arquivo por cima — o histórico deste arquivo começa no primeiro desses. O que o Claude escreve não é guardado aqui: é desfeito pela sessão dele."
+      "description": "Uma versão é guardada no momento em que você a perderia por aqui: antes de salvar, apagar, restaurar ou enviar um arquivo por cima — o histórico deste arquivo começa no primeiro desses. O que o {{agent}} escreve não é guardado aqui: é desfeito pela sessão dele."
     },
     "filter": {
       "label": "Mostrar as versões guardadas antes de",
@@ -1736,11 +1736,11 @@
       "title": "Restaurar {{path}} para a versão de {{when}}?",
       "discards": "{{path}} tem mudanças não salvas no editor, e restaurar as descarta. A versão do disco é guardada no histórico antes.",
       "replaces": "A versão de {{path}} que está lá agora é guardada no histórico antes, então dá para restaurá-la de volta.",
-      "sensitive": "{{path}} muda o que o Claude pode fazer sem perguntar a você.",
+      "sensitive": "{{path}} muda o que o {{agent}} pode fazer sem perguntar a você.",
       "cancel": "Deixar como está",
       "confirm": "Restaurar",
       "done": "{{path}} restaurado para a versão de {{when}}.",
-      "changed": "{{path}} mudou desde que você o abriu — o Claude pode ter escrito nele —, então nada foi restaurado. Veja o arquivo agora e tente de novo.",
+      "changed": "{{path}} mudou desde que você o abriu — o {{agent}} pode ter escrito nele —, então nada foi restaurado. Veja o arquivo agora e tente de novo.",
       "taken": "Algo agora ocupa o caminho {{path}}, então nada foi restaurado por cima.",
       "dismiss": "Dispensar"
     },
@@ -1771,8 +1771,8 @@
   },
   "sessions": {
     "screen": {
-      "title": "Sessões do Claude",
-      "purpose": "O que o Claude está fazendo nesta pasta: as sessões rodando aqui, as conversas que outro processo está escrevendo agora e o histórico da pasta."
+      "title": "Sessões do {{agent}}",
+      "purpose": "O que o {{agent}} está fazendo nesta pasta: as sessões rodando aqui, as conversas que outro processo está escrevendo agora e o histórico da pasta."
     },
     "filtered": {
       "title": "Nada corresponde ao filtro",
@@ -1784,7 +1784,7 @@
       "read": "Ler no painel",
       "continue": "Continuar aqui",
       "fork": "Continuar aqui, como cópia",
-      "copyId": "Copiar o id da conversa",
+      "copyId": "Copiar o id da conversa do {{agent}}",
       "end": "Encerrar a sessão"
     },
     "fork": {
@@ -1797,9 +1797,9 @@
       "note": "O teto de sessões é desta instalação, não seu: as sessões de todas as pessoas contam. Espere {{seconds}} s e tente de novo, ou encerre uma das suas sessões — as desta pasta estão em \"Em execução aqui\"; as outras, nas abas das pastas delas."
     },
     "help": {
-      "what": "Esta view lista o que o Claude faz na pasta da aba. \"Em execução aqui\" são as suas sessões abertas agora, nesta pasta ou abaixo dela. \"Ativas em outro lugar\" são conversas desta pasta que algo além deste app escreveu há pouco. \"Histórico\" é todo o resto dito nesta pasta.",
+      "what": "Esta view lista o que o {{agent}} faz na pasta da aba. \"Em execução aqui\" são as suas sessões abertas agora, nesta pasta ou abaixo dela. \"Ativas em outro lugar\" são conversas desta pasta que algo além deste app escreveu há pouco. \"Histórico\" é todo o resto dito nesta pasta.",
       "states": "Cada grupo carrega, falha e fica vazio por conta própria: quando o histórico não pode ser lido, o que roda aqui continua listado. As listas se atualizam a cada poucos segundos enquanto a view está na tela, e na hora quando uma sessão sua começa ou termina.",
-      "notRecorded": "Ler uma conversa não muda nada, e nada é apagado daqui: o histórico é do próprio Claude, compartilhado com o editor.",
+      "notRecorded": "Ler uma conversa não muda nada, e nada é apagado daqui: o histórico é do próprio {{agent}}, compartilhado com o editor.",
       "groupsHeading": "Os três grupos",
       "groups": "Clicar numa sessão em execução a mostra no painel ao lado do editor. Clicar numa conversa a abre no painel para leitura, com o botão que a continua.",
       "originHeading": "Aberta aqui, ou começada fora",
@@ -1809,7 +1809,7 @@
       "elsewhereHeading": "\"Ativa em outro lugar\" é uma estimativa",
       "elsewhere": "Nada avisa este app que um editor está com uma conversa aberta. O que ele sabe é quando a conversa foi escrita pela última vez: escrita nos últimos dois minutos, ela aparece como ativa. Uma tool longa pode deixá-la minutos sem escrita enquanto ainda roda.",
       "limitHeading": "O teto de sessões",
-      "limit": "Cada sessão é um processo do Claude nesta máquina, e a máquina comporta um número limitado. O teto é da instalação: quando é atingido, encerre uma sessão sua ou espere uma terminar."
+      "limit": "Cada sessão é um processo do {{agent}} nesta máquina, e a máquina comporta um número limitado. O teto é da instalação: quando é atingido, encerre uma sessão sua ou espere uma terminar."
     },
     "originOption": {
       "all": "Todas",
@@ -1826,7 +1826,7 @@
       "refresh": "Atualizar as listas",
       "subfoldersOn": "Mostrando também as conversas das pastas abaixo — mostrar só as desta pasta",
       "subfoldersOff": "Mostrando só as conversas desta pasta — incluir as pastas abaixo",
-      "help": "Ajuda sobre as sessões do Claude",
+      "help": "Ajuda sobre as sessões do {{agent}}",
       "origin": "Origem",
       "sort": "Ordem"
     },
@@ -1885,27 +1885,48 @@
       "outputCut": "[… o meio da saída foi deixado de fora aqui …]"
     },
     "tool": {
-      "read": "Ler {{path}}",
-      "edit": "Editar {{path}} (+{{added}} −{{removed}})",
-      "multiEdit": "Editar {{path}} (várias mudanças)",
-      "write": "Gravar {{path}} ({{lines}} linhas)",
-      "notebookEdit": "Editar o notebook {{path}}",
-      "bash": "Bash: {{command}}",
-      "grep": "Buscar “{{pattern}}”",
-      "grepIn": "Buscar “{{pattern}}” em {{path}}",
-      "glob": "Achar arquivos {{pattern}}",
+      "fileRead": "Ler {{path}}",
+      "fileEdit": "Editar {{path}} (+{{added}} −{{removed}})",
+      "fileEditMany": "Editar {{path}} (várias mudanças)",
+      "fileEditCell": "Editar o notebook {{path}}",
+      "fileWrite": "Gravar {{path}} ({{lines}} linhas)",
+      "shell": "Shell: {{command}}",
+      "shellOutput": "Ler a saída de um comando",
+      "search": "Buscar “{{pattern}}”",
+      "searchIn": "Buscar “{{pattern}}” em {{path}}",
+      "searchFiles": "Achar arquivos {{pattern}}",
       "webFetch": "Buscar {{host}}",
       "webSearch": "Pesquisar na web “{{query}}”",
-      "agent": "Subagent ({{type}}): {{description}}",
-      "exitPlan": "Apresentar o plano",
-      "other": "{{name}}",
-      "mcp": "{{server}} · {{tool}}",
-      "todoWrite": "Atualizou a lista de tarefas ({{count}} tarefas)",
+      "agent": "Subagente ({{type}}): {{description}}",
+      "question": "Perguntou: {{header}}",
+      "questions": "Fez {{count}} perguntas",
+      "plan": "Apresentar o plano",
+      "tasksWrite": "Atualizou a lista de tarefas ({{count}} tarefas)",
       "taskCreate": "Adicionou uma tarefa: {{subject}}",
       "taskUpdate": "Mudou a tarefa #{{id}}",
       "taskGet": "Leu a tarefa #{{id}}",
       "taskList": "Leu a lista de tarefas",
+      "mcp": "{{server}} · {{tool}}",
+      "other": "{{name}}",
       "titled": "{{name}} · {{title}}"
+    },
+    "kind": {
+      "fileRead": "Ler",
+      "fileEdit": "Editar",
+      "fileWrite": "Gravar",
+      "fileDelete": "Apagar",
+      "fileMove": "Mover",
+      "search": "Busca",
+      "shell": "Shell",
+      "shellOutput": "Saída",
+      "webFetch": "Página",
+      "webSearch": "Pesquisa na web",
+      "mcp": "MCP",
+      "agent": "Subagente",
+      "question": "Pergunta",
+      "plan": "Plano",
+      "tasks": "Tarefas",
+      "other": "Ferramenta"
     },
     "subagent": {
       "loading": "Carregando o que o subagent disse…",
@@ -1913,8 +1934,12 @@
       "label": "O que o subagent disse"
     },
     "turn": {
-      "summary": "Turno: {{cost}} · {{seconds}} s · {{input}} de entrada, {{output}} de saída, {{cache}} de cache",
-      "noUsage": "Turno encerrado: {{cost}} · {{seconds}} s · sem contagem de tokens, foi interrompido"
+      "summary": "Turno: {{details}}",
+      "seconds": "{{seconds}} s",
+      "inputTokens": "{{count}} de entrada",
+      "outputTokens": "{{count}} de saída",
+      "cacheTokens": "{{count}} de cache",
+      "noTokens": "sem contagem de tokens"
     },
     "compacted": {
       "label": "A conversa foi compactada",
@@ -1930,7 +1955,7 @@
       "forkFrom": "Bifurcar daqui — reenviar sem mudar, numa nova conversa",
       "actions": "O que fazer com este prompt",
       "undo": "Devolver os arquivos a antes deste prompt",
-      "undoBusy": "Devolver os arquivos a antes deste prompt — não enquanto o Claude trabalha"
+      "undoBusy": "Devolver os arquivos a antes deste prompt — não enquanto o {{agent}} trabalha"
     },
     "search": {
       "label": "Buscar na conversa",
@@ -1943,11 +1968,11 @@
     },
     "status": {
       "cost": "Esta sessão custou {{cost}} desde que abriu, em {{turns}} turno(s)",
-      "item": "Claude: {{status}} · {{model}} · {{cost}} — abrir o painel",
+      "item": "{{agent}}: {{status}} · {{model}} · {{cost}} — abrir o painel",
       "short": "{{status}} · {{cost}}"
     },
     "tasks": {
-      "label": "A lista de tarefas que o Claude mantém nesta conversa",
+      "label": "A lista de tarefas que o {{agent}} mantém nesta conversa",
       "was": "era {{state}}",
       "state": "{{state}}: ",
       "headline": "{{done}}/{{total}} · {{task}}",
@@ -1967,7 +1992,7 @@
       "accept": "Aceitar — marcar como revisado",
       "acceptAll": "Aceitar tudo",
       "counts": "+{{added}} −{{removed}}",
-      "emptyDescription": "Quando o Claude criar, editar ou apagar um arquivo nesta sessão, ele aparece aqui, para revisar, aceitar ou rejeitar.",
+      "emptyDescription": "Quando o {{agent}} criar, editar ou apagar um arquivo nesta sessão, ele aparece aqui, para revisar, aceitar ou rejeitar.",
       "emptyTitle": "Nenhuma alteração ainda",
       "filteredDescription": "Nenhum arquivo desta sessão casa com o filtro.",
       "filteredTitle": "Nada aqui",
@@ -1976,14 +2001,14 @@
       "keep": "Manter as alterações",
       "listLabel": "Arquivos que a sessão alterou",
       "loading": "Carregando o que a sessão alterou…",
-      "modifiedOutside": "Alterado depois do Claude. Rejeitar o mantém exatamente como está.",
+      "modifiedOutside": "Alterado depois do {{agent}}. Rejeitar o mantém exatamente como está.",
       "noHunks": "O arquivo voltou a como estava antes da sessão.",
       "openDiff": "Abrir o diff no editor",
       "openDiffOf": "{{path}} ({{kind}}) — abrir o diff no editor",
       "reject": "Rejeitar — devolver o arquivo a como estava antes da sessão",
       "rejectAll": "Rejeitar tudo…",
       "rejectAllConfirm": "Rejeitar tudo",
-      "rejectAllDescription": "Cada arquivo abaixo volta a como estava antes da sessão. Um arquivo alterado à mão depois do Claude fica como está.",
+      "rejectAllDescription": "Cada arquivo abaixo volta a como estava antes da sessão. Um arquivo alterado à mão depois do {{agent}} fica como está.",
       "rejectAllTitle": "Rejeitar as alterações em {{count}} arquivo(s)?",
       "rejectHunk": "Rejeitar este trecho",
       "reviewed": "Revisado",
@@ -2010,7 +2035,10 @@
       "loading": "Carregando o diff…",
       "now": "{{name}} agora",
       "open": "Abrir diff",
-      "sideUnknown": "Este lado do diff não é mais conhecido. Abra de novo pela conversa."
+      "sideUnknown": "Este lado do diff não é mais conhecido. Abra de novo pela conversa.",
+      "pendingLabel": "O que esta alteração faria no arquivo",
+      "pendingAt": "Prévia contra o arquivo como estava às {{when}}. Ela é lida de novo quando esta janela volta ao foco.",
+      "unchanged": "O arquivo já tem exatamente isto: nada mudaria."
     },
     "diffReason": {
       "changedSince": "O arquivo mudou depois desta tool, por isso só o trecho que ela trocou aparece.",
@@ -2019,45 +2047,45 @@
       "noSnapshot": "Nada foi guardado do arquivo antes desta tool, por isso só o trecho que ela trocou aparece.",
       "tooLarge": "O arquivo era grande demais para guardar antes desta tool, por isso só o trecho que ela trocou aparece.",
       "unknown": "Um lado deste diff não é conhecido.",
-      "unreadable": "O arquivo não pôde ser lido antes desta tool, por isso só o trecho que ela trocou aparece."
+      "unreadable": "O arquivo não pôde ser lido antes desta tool, por isso só o trecho que ela trocou aparece.",
+      "editMissing": "A edição {{edit}} cita um texto que não está no arquivo agora: a edição não vai casar, e o {{agent}} será avisado.",
+      "editAmbiguous": "A edição {{edit}} cita um texto que aparece mais de uma vez no arquivo agora: a edição do {{agent}} será recusada se não disser qual."
     },
     "badge": {
-      "announce": "O Claude está esperando por você em {{folder}}.",
+      "announce": "O {{agent}} está esperando por você em {{folder}}.",
       "label": "{{count}} pergunta(s) esperando por você",
       "open": "Mostrar"
     },
     "browserNotice": {
       "denied": "O navegador recusou notificações para esta página. Permita de novo nas configurações do site no navegador (o ícone ao lado do endereço); os badges continuam avisando enquanto isso.",
       "turnOff": "Parar de me notificar no navegador",
-      "turnOn": "Notificar no navegador quando o Claude terminar ou perguntar algo",
-      "permission": "O Claude está esperando por você em {{folder}}",
-      "turn": "O Claude terminou um turno em {{folder}}",
+      "turnOn": "Notificar no navegador quando o {{agent}} terminar ou perguntar algo",
+      "permission": "O {{agent}} está esperando por você em {{folder}}",
+      "turn": "O {{agent}} terminou um turno em {{folder}}",
       "unsupported": "Este navegador não tem notificações."
     },
     "context": {
-      "compact": "Compactar a conversa (/compact)",
+      "compact": "Compactar a conversa",
       "label": "Janela de contexto {{percentage}}% usada",
       "near": "A conversa está perto do limite do contexto. Compactá-la a mantém andando.",
       "percentage": "{{percentage}}%",
       "tokens": "{{tokens}} tokens",
       "unavailable": "O uso do contexto não pôde ser lido.",
       "window": "{{total}} de {{max}} tokens",
-      "systemPrompt": "Prompt de sistema",
-      "systemTools": "Tools do sistema",
-      "mcpTools": "Tools de MCP",
+      "system": "Prompt de sistema",
+      "tools": "Ferramentas",
       "messages": "Mensagens",
-      "memoryFiles": "Arquivos de memória",
-      "skills": "Skills",
-      "freeSpace": "Espaço livre",
-      "buffer": "Reservado para compactação"
+      "memory": "Arquivos de memória",
+      "free": "Espaço livre",
+      "reserved": "Reservado para compactação"
     },
     "draft": {
       "choices": "Como a conversa começa",
       "commands": "Digite / para os comandos e skills desta instalação.",
       "defaultModel": "Os modelos desta instalação aparecem depois que uma sessão desta pasta rodou; até lá, usa-se o padrão da instalação.",
-      "description": "Nada roda até você enviar o primeiro prompt: então uma sessão do Claude abre nesta pasta, com o que você escolheu abaixo. {{shortcut}} traz você de volta a esta caixa.",
+      "description": "Nada roda até você enviar o primeiro prompt: então uma sessão do {{agent}} abre nesta pasta, com o que você escolheu abaixo. {{shortcut}} traz você de volta a esta caixa.",
       "drag": "Arraste um arquivo do explorer ou do editor para a caixa para falar dele.",
-      "mention": "Digite @ para apontar um arquivo ou uma pasta ao Claude.",
+      "mention": "Digite @ para apontar um arquivo ou uma pasta ao {{agent}}.",
       "starting": "Abrindo a sessão…",
       "title": "Uma nova conversa"
     },
@@ -2078,7 +2106,7 @@
       "high": "Alto",
       "xhigh": "Muito alto",
       "max": "Máximo",
-      "readOnly": "O esforço se escolhe quando a conversa começa. Trocá-lo com ela rodando faria o Claude parar de perguntar antes de cada tool.",
+      "readOnly": "O esforço se escolhe quando a conversa começa. Trocá-lo com ela rodando faria o {{agent}} parar de perguntar antes de cada tool.",
       "unknown": "O do início"
     },
     "export": {
@@ -2111,17 +2139,17 @@
       "disabled": "Desligado"
     },
     "mode": {
-      "acceptEditsWarning": "O Claude vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.",
+      "acceptEditsWarning": "O {{agent}} vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.",
       "label": "Modo",
-      "default": "Perguntar",
-      "defaultDescription": "O Claude pergunta antes de cada tool que precisa da sua palavra.",
+      "ask": "Perguntar",
+      "askDescription": "O {{agent}} pergunta antes de cada tool que precisa da sua palavra.",
       "acceptEdits": "Aceitar edições",
-      "acceptEditsDescription": "O Claude edita e grava arquivos sem perguntar; ainda pergunta antes do resto.",
-      "plan": "Plan",
-      "planDescription": "O Claude planeja sem mudar nada, e pede que você aprove o plano.",
+      "acceptEditsDescription": "O {{agent}} edita e grava arquivos sem perguntar; ainda pergunta antes do resto.",
+      "readOnly": "Só leitura",
+      "readOnlyDescription": "O {{agent}} lê e planeja sem mudar nada: nada que grave arquivos ou rode comandos é permitido.",
       "allowAll": "Permitir tudo",
-      "allowAllDescription": "O Claude executa toda tool sem perguntar, menos o que uma regra sua recusa. As perguntas dele a você continuam chegando.",
-      "allowAllWarning": "O Claude vai executar qualquer comando nesta máquina sem perguntar a você, até você trocar o modo."
+      "allowAllDescription": "O {{agent}} executa toda tool sem perguntar, menos o que uma regra sua recusa. As perguntas dele a você continuam chegando.",
+      "allowAllWarning": "O {{agent}} vai executar qualquer comando nesta máquina sem perguntar a você, até você trocar o modo."
     },
     "model": {
       "default": "Padrão da instalação",
@@ -2151,7 +2179,7 @@
     "dot": {
       "connected": "Conectado — nada rodando",
       "reconnecting": "Reconectando…",
-      "running": "O Claude está trabalhando",
+      "running": "O {{agent}} está trabalhando",
       "ended": "A sessão terminou",
       "session": "Sessão {{sessionId}}"
     },
@@ -2160,12 +2188,14 @@
       "rules": "Regras de permissão",
       "undo": "Desfazer alterações de arquivo…",
       "copyId": "Copiar o id da sessão",
+      "copyConversationId": "Copiar o id da conversa do {{agent}}",
       "copied": "O id da sessão foi copiado.",
-      "copyFailed": "O navegador não deixou copiar o id. Selecione e copie à mão: {{sessionId}}"
+      "conversationIdCopied": "O id da conversa do {{agent}} foi copiado.",
+      "copyFailed": "O navegador não deixou copiar o id. Selecione e copie à mão: {{id}}"
     },
     "close": {
       "title": "Encerrar esta sessão?",
-      "description": "O Claude para nesta máquina. O que ele escreveu fica no disco, mas o desfazer das alterações de arquivo vai embora com a sessão, e as alterações que você não aceitou não podem mais ser rejeitadas daqui. A conversa fica no histórico e pode ser retomada.",
+      "description": "O {{agent}} para nesta máquina. O que ele escreveu fica no disco, mas o desfazer das alterações de arquivo vai embora com a sessão, e as alterações que você não aceitou não podem mais ser rejeitadas daqui. A conversa fica no histórico e pode ser retomada.",
       "keep": "Manter rodando",
       "confirm": "Encerrar a sessão"
     },
@@ -2201,7 +2231,7 @@
       "tail": "Perguntas esperando você"
     },
     "pending": {
-      "pill": "O Claude espera sua resposta ({{count}})"
+      "pill": "O {{agent}} espera sua resposta ({{count}})"
     },
     "rewound": {
       "summary": "Arquivos devolvidos: {{restored}} voltaram, {{kept}} ficaram como estavam",
@@ -2212,7 +2242,7 @@
       "attachedWith": "Imagem anexada ({{details}})",
       "open": "Abrir a imagem",
       "close": "Fechar",
-      "description": "A imagem que este prompt levou, como o Claude a recebeu.",
+      "description": "A imagem que este prompt levou, como o {{agent}} a recebeu.",
       "loading": "Carregando a imagem…",
       "alt": "A imagem anexada ao prompt"
     }
@@ -2248,63 +2278,63 @@
       "removed": "Removida: "
     }
   },
-  "claudePanel": {
+  "agentPanel": {
     "help": {
-      "open": "Ajuda sobre o painel do Claude",
+      "open": "Ajuda sobre o painel do {{agent}}",
       "what": "Cada aba do painel é uma conversa desta pasta: um rascunho que vira sessão no primeiro prompt, uma sessão em execução, ou uma conversa do histórico que você está lendo. Fechar a aba nunca encerra a sessão — ela continua no backend, e a view Sessões a lista.",
       "states": "Enquanto carrega, um esqueleto guarda o lugar; o que falha diz por quê, com o jeito de tentar de novo; uma conversa vazia ensina como começar.",
-      "notRecorded": "A trilha de auditoria guarda cada tool que o Claude rodou e o input exato. Ela nunca guarda o conteúdo de arquivo nem as mensagens da conversa — essas ficam no store do próprio Claude, nesta máquina.",
+      "notRecorded": "A trilha de auditoria guarda cada tool que o {{agent}} rodou e o input exato. Ela nunca guarda o conteúdo de arquivo nem as mensagens da conversa — essas ficam no store do próprio {{agent}}, nesta máquina.",
       "modesHeading": "Os modos",
-      "modes": "Padrão pergunta antes de cada tool que precisa da sua palavra. Aceitar edições deixa de perguntar antes de o Claude editar ou gravar arquivo — e a prévia da alteração no card vai junto. Plan faz o Claude planejar sem mudar nada, e pede que você aprove o plano. Pular todas as perguntas nunca é oferecido.",
+      "modes": "Padrão pergunta antes de cada tool que precisa da sua palavra. Aceitar edições deixa de perguntar antes de o {{agent}} editar ou gravar arquivo — e a prévia da alteração no card vai junto. Plan faz o {{agent}} planejar sem mudar nada, e pede que você aprove o plano. Pular todas as perguntas nunca é oferecido.",
       "queueHeading": "A fila",
-      "queue": "Um prompt enviado enquanto o Claude trabalha espera acima da caixa de prompt, na ordem em que chegou de qualquer dispositivo seu, e roda como um turno próprio quando o turno termina. Até lá, qualquer dispositivo pode tirá-lo.",
+      "queue": "Um prompt enviado enquanto o {{agent}} trabalha espera acima da caixa de prompt, na ordem em que chegou de qualquer dispositivo seu, e roda como um turno próprio quando o turno termina. Até lá, qualquer dispositivo pode tirá-lo.",
       "resendHeading": "Editar e reenviar",
       "resend": "Editar um prompt o envia de novo numa conversa nova que continua de antes dele; a original fica como estava no histórico. Os arquivos não voltam sozinhos: marque o desfazer daquele turno para devolvê-los também.",
       "reviewHeading": "Aceitar e rejeitar alterações",
-      "review": "Aceitar só marca o arquivo como revisado nesta aba — nada é gravado. Rejeitar devolve o arquivo, ou um trecho dele, a como estava antes da sessão, e oferece desfazer. Um arquivo que você alterou depois do Claude nunca é sobrescrito: rejeitá-lo o mantém como está.",
-      "contextHeading": "O contexto e o /compact",
-      "context": "O medidor mostra quão cheia está a janela de contexto da conversa, por categoria. Perto do limite, compactar resume a conversa até ali — o comando da instalação, enviado como prompt — e a conversa marca onde aconteceu.",
+      "review": "Aceitar só marca o arquivo como revisado nesta aba — nada é gravado. Rejeitar devolve o arquivo, ou um trecho dele, a como estava antes da sessão, e oferece desfazer. Um arquivo que você alterou depois do {{agent}} nunca é sobrescrito: rejeitá-lo o mantém como está.",
+      "contextHeading": "O contexto e a compactação",
+      "context": "O medidor mostra quão cheia está a janela de contexto da conversa, por categoria. Perto do limite, compactar resume a conversa até ali — espera um turno em andamento terminar, como um prompt — e a conversa marca onde aconteceu. Um agente que não diz quão cheio está o contexto, ou que não compacta, não mostra nenhum dos dois.",
       "noticesHeading": "Perguntas que podem passar despercebidas",
       "notices": "Uma pergunta feita numa aba de pasta que não está na tela, ou com o painel fechado, aparece como badge na aba e na activity bar, e como aviso com o caminho até ela. Com as notificações do navegador ligadas, a página escondida também é avisada — a pasta e o que aconteceu, nunca o comando.",
       "composerHeading": "A caixa de prompt",
-      "composer": "Enter envia e Shift+Enter quebra a linha; enquanto um método de entrada compõe um caractere, Enter não faz nenhum dos dois. Sem nada escrito e sem contexto, o botão de enviar fica desligado e diz por quê. Enquanto o Claude trabalha, o que você enviar espera na fila.",
+      "composer": "Enter envia e Shift+Enter quebra a linha; enquanto um método de entrada compõe um caractere, Enter não faz nenhum dos dois. Sem nada escrito e sem contexto, o botão de enviar fica desligado e diz por quê. Enquanto o {{agent}} trabalha, o que você enviar espera na fila.",
       "mentionHeading": "@ — arquivos, pastas e a seleção",
       "mention": "Digite @ para escolher um arquivo ou uma pasta desta pasta: os arquivos abertos e os recentes vêm primeiro, depois o que a pasta tem, nível a nível — digite / para entrar numa pasta. @selection acrescenta o que está selecionado no editor. Use as setas para andar, Enter ou Tab para escolher, e Esc para fechar a lista sem perder o que digitou.",
       "commandsHeading": "/ — comandos e skills",
       "commands": "Digite / no começo da caixa para os comandos e skills desta instalação, mesmo antes de a sessão existir. Escolher um o escreve com um espaço depois, e diz o que ele recebe. Se a lista não puder ser lida, o que você digitar continua indo como prompt.",
       "dragHeading": "Arrastar para o contexto",
-      "drag": "Arraste arquivos e pastas do explorer, ou uma aba do editor, para a caixa ou para a conversa: cada um vira um chip, e uma pasta é um chip, nunca tudo o que ela tem. Sem arrastar, use “Adicionar ao contexto do Claude” no menu do explorer, de uma aba ou de uma seleção no editor. Itens de outra aba de pasta ficam de fora: o contexto é desta pasta.",
+      "drag": "Arraste arquivos e pastas do explorer, ou uma aba do editor, para a caixa ou para a conversa: cada um vira um chip, e uma pasta é um chip, nunca tudo o que ela tem. Sem arrastar, use “Adicionar ao contexto do {{agent}}” no menu do explorer, de uma aba ou de uma seleção no editor. Itens de outra aba de pasta ficam de fora: o contexto é desta pasta.",
       "contextSetHeading": "O contexto do próximo prompt",
       "contextSet": "Os chips acima da caixa são o que vai com o próximo prompt; cada um sai pelo seu botão. A linha embaixo soma o tamanho deles e estima os tokens a cerca de quatro bytes cada — uma estimativa, não uma contagem. Passada uma parte do que resta da janela de contexto, avisa e ainda envia; passado o limite de um prompt, não envia, e diz por quê. O conjunto é desta conversa, e fica até você enviá-lo.",
-      "readsHeading": "O que o Claude lê",
-      "reads": "Um arquivo, uma pasta ou um trecho de linhas vai como referência, nunca como conteúdo: o Claude o lê com a tool Read, que a trilha de auditoria grava como qualquer outra. Ele lê o que está salvo no disco, não o que não foi salvo no editor — o chip avisa. Um @caminho digitado à mão não é lido pelo CLI por conta própria: só o Read do Claude o lê.",
+      "readsHeading": "O que o {{agent}} lê",
+      "reads": "Um arquivo, uma pasta ou um trecho de linhas vai como referência, nunca como conteúdo: o {{agent}} o lê com a tool Read, que a trilha de auditoria grava como qualquer outra. Ele lê o que está salvo no disco, não o que não foi salvo no editor — o chip avisa. Um @caminho digitado à mão não é lido pelo CLI por conta própria: só o Read do {{agent}} o lê.",
       "desktopHeading": "Arquivos do seu computador",
       "desktop": "Uma imagem ou um arquivo de texto arrastado do seu computador vai com o prompt como anexo: fica na memória só para esta sessão, nunca é gravado na pasta nem na trilha, e some quando a sessão termina. Para pô-lo na pasta, faça o upload pelo explorer.",
       "skillsHeading": "De onde vêm os comandos e as skills",
-      "skills": "Cada item do / diz a sua origem: Claude Code é o comando da própria instalação; Projeto vem da pasta .claude deste projeto; Usuário e Sistema são as skills do seu usuário e do sistema. Dois com o mesmo nome aparecem os dois, e o que o / roda é o do Claude Code — o outro diz que está encoberto.",
+      "skills": "Cada item do / diz a sua origem: {{agent}} é o comando da própria instalação; Projeto vem da configuração do {{agent}} deste projeto; Usuário e Sistema são as skills do seu usuário e do sistema. Dois com o mesmo nome aparecem os dois, e o que o / roda é o do {{agent}} — o outro diz que está encoberto.",
       "barHeading": "A barra sob a caixa",
-      "bar": "O que vale para o próximo prompt fica sob a caixa, nesta ordem: + adiciona um arquivo ou uma pasta, um arquivo do seu computador ou a seleção do editor; / lista os comandos e skills; depois o modo, o modelo e o esforço, a parte da janela de contexto em uso — com Compactar dentro dela — e enviar. Enquanto o Claude trabalha, enviar põe o que você escreveu na fila, e Parar ao lado encerra o turno; com a caixa vazia, o próprio botão é Parar. O esforço só se escolhe numa conversa nova. Num painel estreito, o modelo e o esforço vão para o … da barra.",
+      "bar": "O que vale para o próximo prompt fica sob a caixa, nesta ordem: + adiciona um arquivo ou uma pasta, um arquivo do seu computador ou a seleção do editor; / lista os comandos e skills; depois o modo, o modelo e o esforço, a parte da janela de contexto em uso — com Compactar dentro dela — e enviar. Enquanto o {{agent}} trabalha, enviar põe o que você escreveu na fila, e Parar ao lado encerra o turno; com a caixa vazia, o próprio botão é Parar. O esforço só se escolhe numa conversa nova. Num painel estreito, o modelo e o esforço vão para o … da barra.",
       "menuHeading": "O menu da sessão",
       "menu": "O … do cabeçalho reúne o que se faz com a sessão inteira, e raramente: encerrá-la — só o navegador que a abriu pode, e ele pergunta antes —, exportá-la em Markdown, desfazer as alterações de arquivo, copiar o id; e as notificações do navegador, as regras de permissão e esta ajuda. O ponto ao lado diz como a sessão está, com o id e o que ela custou desde que abriu; o relógio ao lado do + abre as conversas desta pasta.",
-      "workingHeading": "Enquanto o Claude trabalha",
-      "working": "Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o Claude está fazendo — a tool que executa, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina, recolhido — clique para ler. Quando o turno acaba, a linha dá lugar ao que o turno custou.",
+      "workingHeading": "Enquanto o {{agent}} trabalha",
+      "working": "Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o {{agent}} está fazendo — a tool que executa, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina, recolhido — clique para ler. Quando o turno acaba, a linha dá lugar ao que o turno custou.",
       "inlineHeading": "Perguntas na conversa",
-      "inline": "Quando o Claude pergunta antes de executar uma tool, a pergunta fica na conversa, no lugar dessa tool: o comando exato, o risco, o tempo que resta e até onde vai um sim. Respondida, a linha da tool diz como — por você, num celular e por quem, por uma regra sua, ou recusada porque ninguém respondeu a tempo. Uma pergunta nunca tira o foco da caixa enquanto você escreve: o Enter continua enviando o seu prompt.",
+      "inline": "Quando o {{agent}} pergunta antes de executar uma tool, a pergunta fica na conversa, no lugar dessa tool: o comando exato, o risco, o tempo que resta e até onde vai um sim. Respondida, a linha da tool diz como — por você, num celular e por quem, por uma regra sua, ou recusada porque ninguém respondeu a tempo. Uma pergunta nunca tira o foco da caixa enquanto você escreve: o Enter continua enviando o seu prompt.",
       "pillHeading": "Esperando sua resposta",
-      "pill": "Com uma pergunta fora de vista — a conversa rolada para cima, ou as alterações na tela —, uma pílula acima da caixa diz que o Claude espera, e quantas perguntas. Clicar nela, ou o comando Ir para a pergunta que espera você, leva à mais antiga.",
+      "pill": "Com uma pergunta fora de vista — a conversa rolada para cima, ou as alterações na tela —, uma pílula acima da caixa diz que o {{agent}} espera, e quantas perguntas. Clicar nela, ou o comando Ir para a pergunta que espera você, leva à mais antiga.",
       "actionsHeading": "A partir de um prompt",
-      "actions": "Apontar para um prompt seu, ou levar o foco a ele, mostra o que dá para fazer a partir dele: editar e reenviar, bifurcar de antes dele, e devolver os arquivos a antes do turno dele — com o alcance mostrado arquivo a arquivo antes. Enquanto o Claude trabalha, o desfazer espera o turno acabar; com a sessão encerrada não há desfazer, e o botão não aparece."
+      "actions": "Apontar para um prompt seu, ou levar o foco a ele, mostra o que dá para fazer a partir dele: editar e reenviar, bifurcar de antes dele, e devolver os arquivos a antes do turno dele — com o alcance mostrado arquivo a arquivo antes. Enquanto o {{agent}} trabalha, o desfazer espera o turno acabar; com a sessão encerrada não há desfazer, e o botão não aparece."
     },
     "screen": {
-      "title": "Claude",
-      "purpose": "Converse com o Claude sobre esta pasta: abra conversas, acompanhe e aprove o que ele faz e revise o que ele alterou."
+      "title": "{{agent}}",
+      "purpose": "Converse com o {{agent}} sobre esta pasta: abra conversas, acompanhe e aprove o que ele faz e revise o que ele alterou."
     }
   },
   "composer": {
     "set": {
       "label": "Contexto do próximo prompt",
       "totals": "{{count}} itens · {{size}} · ≈ {{tokens}} tokens (estimativa)",
-      "folders": "Pastas contam como itens: o Claude decide o que ler nelas.",
+      "folders": "Pastas contam como itens: o {{agent}} decide o que ler nelas.",
       "warn": "É uma parte grande do que resta da janela de contexto — ainda assim envia.",
       "overItems": "Um prompt leva no máximo 20 itens de contexto. Tire alguns para enviar.",
       "overBytes": "Os arquivos do contexto somam mais do que este prompt pode levar. Tire alguns para enviar.",
@@ -2313,8 +2343,8 @@
     "chip": {
       "remove": "Tirar {{name}} do contexto",
       "missing": "não está mais na pasta",
-      "binary": "não é texto — o Claude não vai lê-lo",
-      "dirty": "não salvo — o Claude lê o que está salvo",
+      "binary": "não é texto — o {{agent}} não vai lê-lo",
+      "dirty": "não salvo — o {{agent}} lê o que está salvo",
       "pending": "vai junto com o prompt",
       "choice": "{{label}}: {{value}}"
     },
@@ -2342,18 +2372,18 @@
       "loading": "Carregando os comandos desta instalação…",
       "unavailable": "Os comandos não estão disponíveis agora. O que você digitar continua indo como prompt.",
       "noMatch": "Nenhum comando ou skill corresponde ao que você digitou.",
-      "shadowed": "encoberto pelo comando do Claude Code de mesmo nome",
+      "shadowed": "encoberto pelo comando do {{agent}} de mesmo nome",
       "argumentHint": "Recebe: {{hint}}",
       "open": "Comandos e skills (/)"
     },
     "origin": {
-      "builtin": "Claude Code",
+      "builtin": "{{agent}}",
       "project": "Projeto",
       "user": "Usuário",
       "system": "Sistema"
     },
     "send": {
-      "queued": "O Claude está trabalhando: o que você enviar agora espera na fila e roda em seguida.",
+      "queued": "O {{agent}} está trabalhando: o que você enviar agora espera na fila e roda em seguida.",
       "queue": "Pôr na fila",
       "empty": "Escreva um prompt ou ponha contexto para enviar.",
       "missing": "{{path}} não está mais na pasta. Tire-o para enviar.",
@@ -2473,9 +2503,9 @@
       "thinking": "Thinking",
       "outputStyle": "Output style",
       "fallbackModel": "Modelo reserva",
-      "modeDefault": "Perguntar antes de toda tool que precise",
+      "modeAsk": "Perguntar antes de toda tool que precise",
       "modeAcceptEdits": "Editar arquivos sem perguntar",
-      "modePlan": "Só planejar, sem mudar nada",
+      "modeReadOnly": "Só ler e planejar, sem mudar nada",
       "modeAllowAll": "Permitir tudo que nenhuma regra recuse",
       "effortLow": "Baixo",
       "effortMedium": "Médio",
@@ -2517,6 +2547,15 @@
     "folder": {
       "label": "Pasta",
       "none": "Nenhuma — só os meus padrões"
+    }
+  },
+  "engine": {
+    "name": {
+      "fallback": "agente"
+    },
+    "error": {
+      "capabilityUnavailable": "O {{agent}} não consegue fazer isso.",
+      "notInstalled": "O {{agent}} não está instalado nesta máquina."
     }
   }
 }

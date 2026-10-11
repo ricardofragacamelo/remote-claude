@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/components/ui/button';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { useExportConversation } from '../../hooks/useExportConversation';
 import { ActionDialog } from './ActionDialog';
 
 export interface ExportDialogProps {
   readonly open: boolean;
   onClose(): void;
-  readonly conversationId: string | null;
-  readonly folder: string;
+  readonly conversation: ConversationRef | null;
 }
 
 /**
@@ -21,11 +21,10 @@ export interface ExportDialogProps {
 export function ExportDialog({
   open,
   onClose,
-  conversationId,
-  folder,
+  conversation,
 }: ExportDialogProps): React.JSX.Element {
   const { t } = useTranslation();
-  const exporting = useExportConversation(conversationId, folder);
+  const exporting = useExportConversation(conversation);
   const [outputs, setOutputs] = useState(false);
   const { state } = exporting;
 

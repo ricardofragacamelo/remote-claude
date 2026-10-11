@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/loaded_view.dart';
 import 'package:remote_claude/features/session/domain/entities/slash_command.dart';
@@ -87,16 +88,17 @@ class _CommandMenuSheetState extends ConsumerState<CommandMenuSheet> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final String agent = agentNameIn(context);
 
     return SessionSheet(
       title: l10n.sessionCommandsTitle,
-      description: l10n.sessionCommandsDescription,
+      description: l10n.sessionCommandsDescription(agent),
       child: LoadedView<CommandMenu>(
         value: _menu(),
         labels: LoadedLabels(
           loading: l10n.sessionCommandsLoading,
           emptyTitle: l10n.sessionCommandsEmptyTitle,
-          emptyDescription: l10n.sessionCommandsEmptyBody,
+          emptyDescription: l10n.sessionCommandsEmptyBody(agent),
         ),
         isEmpty: (CommandMenu loaded) => loaded.isEmpty,
         onRetry: _reload,

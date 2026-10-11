@@ -6,6 +6,8 @@ import type { UserId } from '@domain/auth';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import { listLiveSessionsSchema } from './live-sessions.dto';
+import { toModelDto } from './model.dto';
+import type { ModelDto } from './model.dto';
 import type { ListLiveSessionsQueryDto } from './live-sessions.dto';
 
 /**
@@ -32,10 +34,11 @@ export class CatalogController {
   constructor(@Inject(ReadCatalogUseCase) private readonly catalog: ReadCatalogUseCase) {}
 
   @Get()
-  read(
+  async read(
     @Query(new ZodPipe(listLiveSessionsSchema)) query: ListLiveSessionsQueryDto,
     @CurrentUser() userId: UserId,
-  ): Promise<InstallationCatalog> {
-    return this.catalog.execute(query.workspacePath, userId);
+  ): Promise<Omit<InstallationCatalog, 'models'> & { readonly models: readonly ModelDto[] }> {
+    const catalog = await this.catalog.execute(query.workspacePath, userId);
+    return { ...catalog, models: catalog.models.map(toModelDto) };
   }
 }

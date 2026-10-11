@@ -1,5 +1,6 @@
 import { Controller, Get, Inject, Param, Query, UseGuards } from '@nestjs/common';
 import { z } from 'zod';
+import type { ToolDiffPayload } from '@remote-claude/contracts';
 
 import {
   ListSessionChangesUseCase,
@@ -63,8 +64,8 @@ export class SessionChangesController {
     @Param('sessionId') sessionId: string,
     @Param('toolUseId') toolUseId: string,
     @CurrentUser() userId: UserId,
-  ): Promise<ToolDiff> {
-    const diff = await this.toolDiff.execute(sessionId, toolUseId, userId);
+  ): Promise<ToolDiffPayload> {
+    const diff: ToolDiff = await this.toolDiff.execute(sessionId, toolUseId, userId);
 
     this.logger.debug(
       {
@@ -73,6 +74,8 @@ export class SessionChangesController {
         sessionId,
         toolUseId,
         path: diff.path,
+        kind: diff.kind,
+        pending: diff.pending,
         scope: diff.scope,
         before: diff.before.state,
         beforeLength: lengthOf(diff.before),

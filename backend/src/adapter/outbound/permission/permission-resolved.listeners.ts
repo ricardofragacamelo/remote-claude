@@ -4,7 +4,8 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { RecordToolInvocationUseCase } from '@application/audit';
 import { answersPayload } from '@application/permission';
 import type { PermissionResolvedEvent } from '@application/permission';
-import { PermissionBridge } from '@adapter/outbound/claude/permission-bridge';
+import { AGENT_LOOP_RELEASE } from '@application/session';
+import type { AgentLoopRelease } from '@application/session';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { PERMISSION_RESOLVED } from './emitter-permission.events';
 
@@ -13,16 +14,17 @@ import { PERMISSION_RESOLVED } from './emitter-permission.events';
  *
  * It is registered first because it is the one that costs something when it is late: every other
  * consumer is bookkeeping, and this one is a session standing still. The listener is a class of
- * its own rather than a method on the bridge so that the bridge stays a plain adapter with no
- * framework decorator on the path the SDK calls.
+ * its own rather than a method on the engine's adapter so that the adapter stays plain, with no
+ * framework decorator on the path the engine calls — and it speaks to the loop through the
+ * {@link AgentLoopRelease} port, never to the adapter of an engine (plan 28, B-34).
  */
 @Injectable()
 export class ReleaseAgentLoopOnResolved {
-  constructor(@Inject(PermissionBridge) private readonly bridge: PermissionBridge) {}
+  constructor(@Inject(AGENT_LOOP_RELEASE) private readonly loop: AgentLoopRelease) {}
 
   @OnEvent(PERMISSION_RESOLVED)
   handle(event: PermissionResolvedEvent): void {
-    this.bridge.onResolved(event);
+    this.loop.onResolved(event);
   }
 }
 
@@ -68,6 +70,7 @@ export class RecordDecisionOnResolved {
         sessionId: request.sessionId,
         toolUseId: request.toolUseId,
         toolName: request.toolName,
+        toolKind: request.tool.kind,
         // A question's decision carries what was answered: "who answered, from where, and what" is
         // what the trail exists to say (plan 24, D-12). The hook's entry keeps the input as it was.
         input:

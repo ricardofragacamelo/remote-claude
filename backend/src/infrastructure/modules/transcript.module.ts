@@ -14,6 +14,7 @@ import {
   TranscriptAudience,
   TRANSCRIPT_ORIGIN_SOURCE,
   TRANSCRIPT_STORE,
+  TranscriptStoreRegistry,
 } from '@application/transcript';
 import type {
   LiveConversationSource,
@@ -27,17 +28,12 @@ import { LOGGER, type Logger } from '@shared/logging/logger';
 import { WORKSPACE_ALLOWLIST_SOURCE } from '@application/workspace';
 import type { WorkspaceAllowlistSource } from '@application/workspace';
 import { TranscriptController } from '@adapter/inbound/http/transcript/transcript.controller';
-import { AgentSdkTranscriptAdapter } from '@adapter/outbound/claude/transcript.adapter';
-import {
-  TRANSCRIPT_LIMITS,
-  TRANSCRIPT_READ_LIMITS,
-} from '@adapter/outbound/claude/transcript-reads';
-import { realTranscriptSdk, TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
 import { SessionModuleOriginSource } from '@adapter/outbound/transcript/session-module-origin.source';
 import { SessionModuleLiveConversations } from '@adapter/outbound/transcript/session-module-live-conversations';
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { AuthModule } from './auth.module';
+import { engineTranscriptProviders } from './engines';
 import { SessionOriginModule } from './session-origin.module';
 import { SessionRegistryModule } from './session-registry.module';
 import { WorkspaceModule } from './workspace.module';
@@ -56,9 +52,7 @@ import { WorkspaceModule } from './workspace.module';
   imports: [AuthModule, WorkspaceModule, SessionOriginModule, SessionRegistryModule],
   controllers: [TranscriptController],
   providers: [
-    { provide: TRANSCRIPT_SDK, useValue: realTranscriptSdk },
-    { provide: TRANSCRIPT_LIMITS, useValue: TRANSCRIPT_READ_LIMITS },
-    { provide: TRANSCRIPT_STORE, useClass: AgentSdkTranscriptAdapter },
+    ...engineTranscriptProviders,
     { provide: TRANSCRIPT_ORIGIN_SOURCE, useClass: SessionModuleOriginSource },
     { provide: LIVE_CONVERSATION_SOURCE, useClass: SessionModuleLiveConversations },
     {
@@ -168,6 +162,6 @@ import { WorkspaceModule } from './workspace.module';
   ],
   // The store, for `session`, which asks it where a conversation ran before continuing one; and the
   // follower, for the gateway, which hands it `transcript.follow`. The reads stay here.
-  exports: [TRANSCRIPT_STORE, FollowTranscriptUseCase],
+  exports: [TRANSCRIPT_STORE, TranscriptStoreRegistry, FollowTranscriptUseCase],
 })
 export class TranscriptModule {}

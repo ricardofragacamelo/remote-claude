@@ -18,10 +18,11 @@ import type { BytesResponse } from '@/shared/api/api';
 import { AppError } from '@/shared/api/errors';
 import { fakeObjectUrls } from '../../../support/raw-api';
 import { render, translator } from '../../../support/render';
+import { aToolCall } from '../../../support/canonical-tool';
 
 const t = translator('en');
 const T0 = '2026-10-07T12:00:00.000Z';
-const CONVERSATION = '3f2a6c1e-0000-4000-8000-000000000001';
+const CONVERSATION = { engine: 'claude', id: '3f2a6c1e-0000-4000-8000-000000000001' };
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -50,13 +51,13 @@ function answer(messageId: string, content: unknown[], extra: Record<string, unk
 }
 
 function bashStarted(extra: Record<string, unknown> = {}) {
-  return { toolUseId: 't1', toolName: 'Bash', input: { command: 'pnpm test --run' }, ...extra };
+  return { toolUseId: 't1', ...aToolCall('Bash', { command: 'pnpm test --run' }), ...extra };
 }
 
 /** The conversation as the reader and the live session both draw it — the same components. */
 function show(
   conversation: ConversationState,
-  conversationId: string | null = CONVERSATION,
+  reference: typeof CONVERSATION | null = CONVERSATION,
 ): ReturnType<typeof render> {
   return render(
     <Conversation
@@ -64,7 +65,7 @@ function show(
       isPartial={false}
       folder="/home/dev/project"
       sessionId={null}
-      conversationId={conversationId}
+      reference={reference}
     />,
   );
 }
@@ -114,7 +115,7 @@ describe('thinking, as the Claude Code shows it — plan 22, B-27', () => {
   });
 
   it('says a redacted one was hidden — S-103', () => {
-    show(fromHistory(event('message.completed', answer('m1', [{ type: 'redacted_thinking' }]))));
+    show(fromHistory(event('message.completed', answer('m1', [{ type: 'redactedThinking' }]))));
 
     expect(screen.getByText(t('sessions.thinking.hidden'))).toBeInTheDocument();
   });
@@ -159,7 +160,7 @@ describe('the author once per turn — plan 22, B-28', () => {
   const turn = [
     event('message.completed', prompt('p1', [{ type: 'text', text: 'Run the tests' }])),
     event('message.completed', answer('m1', [{ type: 'text', text: 'Running them.' }])),
-    event('message.completed', answer('m2', [{ type: 'tool_use', toolUseId: 't1' }])),
+    event('message.completed', answer('m2', [{ type: 'toolUse', toolUseId: 't1' }])),
     event('tool.started', bashStarted()),
     event('tool.completed', { toolUseId: 't1', status: 'succeeded', summary: 'ok' }),
     event('message.completed', answer('m3', [{ type: 'text', text: 'All green.' }])),
@@ -253,23 +254,23 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
     return screen.getByRole('button', { name });
   }
 
-  it('is "Bash · description" with a title, and the command is still in its name — S-111', () => {
+  it('is "Shell · description" with a title, and the command is still in its name — S-111', () => {
     show(finished({ title: 'Run the tests' }));
 
     const line = row(
       t('sessions.toolRow.labelTitled', {
-        tool: t('sessions.tool.titled', { name: 'Bash', title: 'Run the tests' }),
-        detail: t('sessions.tool.bash', { command: 'pnpm test --run' }),
+        tool: t('sessions.tool.titled', { name: t('sessions.kind.shell'), title: 'Run the tests' }),
+        detail: t('sessions.tool.shell', { command: 'pnpm test --run' }),
         status: t('session.toolStatus.succeeded'),
       }),
     );
-    expect(line).toHaveTextContent('Bash · Run the tests');
+    expect(line).toHaveTextContent('Shell · Run the tests');
   });
 
   it('is the line of today without one — S-111', () => {
     show(finished());
 
-    expect(row(/Bash: pnpm test --run/)).toHaveTextContent('Bash: pnpm test --run');
+    expect(row(/Shell: pnpm test --run/)).toHaveTextContent('Shell: pnpm test --run');
   });
 
   it('unfolds a shell call into IN, the command in mono, and OUT, its output — S-112', async () => {
@@ -277,7 +278,7 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
     vi.spyOn(api, 'get').mockReturnValue(new Promise(() => undefined));
     show(finished());
 
-    await user.click(row(/Bash: pnpm test --run/));
+    await user.click(row(/Shell: pnpm test --run/));
 
     const input = screen.getByRole('region', { name: t('sessions.toolRow.input') });
     expect(within(input).getByText('pnpm test --run')).toHaveClass('font-code');
@@ -295,7 +296,7 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
     vi.spyOn(api, 'get').mockResolvedValue(WHOLE);
     show(finished());
 
-    await user.click(row(/Bash: pnpm test --run/));
+    await user.click(row(/Shell: pnpm test --run/));
     await screen.findByText('line 1', { exact: false });
     const input = screen.getByRole('region', { name: t('sessions.toolRow.input') });
     const output = screen.getByRole('region', { name: t('sessions.toolRow.output') });
@@ -313,8 +314,7 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
       fromHistory(
         event('tool.started', {
           toolUseId: 't1',
-          toolName: 'Read',
-          input: { file_path: '/home/dev/project/a.ts' },
+          ...aToolCall('Read', { file_path: '/home/dev/project/a.ts' }, '/home/dev/project'),
         }),
         event('tool.completed', { toolUseId: 't1', status: 'succeeded', summary: 'export {}' }),
       ),
@@ -331,11 +331,49 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
     expect(screen.getByText('export {}')).toBeInTheDocument();
   });
 
+  it.each([
+    [
+      'a kind it does not know, by the name its label carries',
+      'vcs.commit',
+      'sessions.tool.vcsCommit',
+      'git_commit',
+    ],
+    ['a key it does not know, by its kind', 'shell', 'sessions.tool.remoteShell', 'shell'],
+  ])(
+    'draws %s as the generic line, with the exact input — plan 28 S-56',
+    async (_case, kind, messageKey, line) => {
+      const user = userEvent.setup();
+      vi.spyOn(api, 'get').mockReturnValue(new Promise(() => undefined));
+      show(
+        fromHistory(
+          event('tool.started', {
+            toolUseId: 't1',
+            kind,
+            label: { messageKey, params: kind === 'shell' ? {} : { name: 'git_commit' } },
+            subject: {},
+            changes: [{ path: '/home/dev/project/a.ts', op: 'delete' }],
+            origin: { engine: 'other-agent', native: 'commit' },
+            rawInput: { message: 'wip', amend: false },
+          }),
+          event('tool.completed', { toolUseId: 't1', status: 'succeeded', summary: 'done' }),
+        ),
+      );
+
+      await user.click(row(new RegExp(`^${line}`)));
+
+      expect(screen.getByLabelText(t('sessions.toolRow.input'))).toHaveTextContent(
+        '"message": "wip"',
+      );
+      expect(screen.queryByRole('region', { name: t('sessions.toolRow.output') })).toBeNull();
+      expect(screen.getByText('done')).toBeInTheDocument();
+    },
+  );
+
   it('asks for the whole output once, however often it is unfolded — S-113', async () => {
     const user = userEvent.setup();
     const get = vi.spyOn(api, 'get').mockResolvedValue(WHOLE);
     show(finished());
-    const line = row(/Bash: pnpm test --run/);
+    const line = row(/Shell: pnpm test --run/);
 
     await user.click(line);
     expect(await screen.findByText('line 1', { exact: false })).toBeInTheDocument();
@@ -346,7 +384,7 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
     expect(screen.getByText('line 1', { exact: false })).toBeInTheDocument();
     expect(get).toHaveBeenCalledTimes(1);
     expect(get).toHaveBeenCalledWith(
-      `/transcripts/${CONVERSATION}/tools/t1/result`,
+      `/transcripts/claude/${CONVERSATION.id}/tools/t1/result`,
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
@@ -361,7 +399,7 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
     });
     show(finished());
 
-    await user.click(row(/Bash: pnpm test --run/));
+    await user.click(row(/Shell: pnpm test --run/));
 
     expect(
       await screen.findByText(t('sessions.toolRow.outputTruncated', { size: '3 MB' })),
@@ -378,7 +416,7 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
       .mockResolvedValueOnce(WHOLE);
     show(finished({}, 'failed'));
 
-    await user.click(row(/Bash: pnpm test --run/));
+    await user.click(row(/Shell: pnpm test --run/));
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(t('sessions.toolRow.outputFailed'));
@@ -396,7 +434,7 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
     const get = vi.spyOn(api, 'get');
     show(fromHistory(event('tool.started', bashStarted())));
 
-    await user.click(row(/Bash: pnpm test --run/));
+    await user.click(row(/Shell: pnpm test --run/));
 
     expect(screen.getByRole('region', { name: t('sessions.toolRow.input') })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: t('sessions.toolRow.output') })).toBeNull();
@@ -411,21 +449,21 @@ describe('a tool by its title, with IN and OUT — plan 22, B-29', () => {
         fromHistory(
           event('tool.started', bashStarted({ parentToolUseId: 'agent-1' })),
           event('tool.completed', { toolUseId: 't1', status: 'succeeded', summary: 'ok' }),
-          event('tool.started', { toolUseId: 'agent-1', toolName: 'Agent', input: {} }),
+          event('tool.started', { toolUseId: 'agent-1', ...aToolCall('Agent', {}) }),
         ),
       CONVERSATION,
     ],
     ['a live session not yet in the store', () => finished(), null],
-  ])('asks for nothing for %s', async (_case, conversation, conversationId) => {
+  ])('asks for nothing for %s', async (_case, conversation, reference) => {
     const user = userEvent.setup();
     const get = vi.spyOn(api, 'get').mockResolvedValue({ events: [], nextCursor: null });
-    show(conversation(), conversationId);
+    show(conversation(), reference);
 
-    const lines = screen.getAllByRole('button', { name: /Bash|Agent|Subagent/ });
+    const lines = screen.getAllByRole('button', { name: /Shell|Subagent/ });
     for (const line of lines) {
       await user.click(line);
     }
-    for (const line of screen.getAllByRole('button', { name: /Bash: pnpm/ })) {
+    for (const line of screen.getAllByRole('button', { name: /Shell: pnpm/ })) {
       await user.click(line);
     }
 
@@ -477,7 +515,7 @@ describe('the image of a prompt — plan 22, B-30', () => {
     const image = await screen.findByRole('img', { name: t('sessions.image.alt') });
     expect(image).toHaveAttribute('src', 'blob:http://localhost/object-1');
     expect(read).toHaveBeenCalledWith(
-      `/transcripts/${CONVERSATION}/images/p1%3A1`,
+      `/transcripts/claude/${CONVERSATION.id}/images/p1%3A1`,
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
 
@@ -548,8 +586,8 @@ describe('the image of a prompt — plan 22, B-30', () => {
   it.each([
     ['no conversation of the store yet', withImage(), null],
     ['a block an older server did not name', withImage([{ type: 'image', size: 3 }]), CONVERSATION],
-  ])('is the marker alone for %s', (_case, conversation, conversationId) => {
-    show(conversation, conversationId);
+  ])('is the marker alone for %s', (_case, conversation, reference) => {
+    show(conversation, reference);
 
     expect(screen.queryByRole('button', { name: t('sessions.image.open') })).toBeNull();
     expect(screen.getByText(/Attached image/)).toBeInTheDocument();
@@ -558,11 +596,7 @@ describe('the image of a prompt — plan 22, B-30', () => {
   it('says it in Portuguese too', () => {
     const tPt = translator('pt-BR');
     render(
-      <Conversation
-        conversation={withImage([PNG])}
-        isPartial={false}
-        conversationId={CONVERSATION}
-      />,
+      <Conversation conversation={withImage([PNG])} isPartial={false} reference={CONVERSATION} />,
       'pt-BR',
     );
 

@@ -1,6 +1,6 @@
 import type { UserId } from '@domain/auth';
 import { TranscriptNotFoundError } from '@domain/transcript';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 import type { TranscriptStore } from './ports/transcript-store.port';
 import type { ListedTranscript, TranscriptAudience } from './transcript-audience';
 
@@ -18,14 +18,14 @@ import type { ListedTranscript, TranscriptAudience } from './transcript-audience
 export async function readableTranscript(
   store: TranscriptStore,
   audience: TranscriptAudience,
-  sessionId: ClaudeSessionId,
+  sessionId: ConversationRef,
   userId: UserId,
 ): Promise<ListedTranscript> {
   const session = await store.find(sessionId);
   const [shown] = session === null ? [] : await audience.shown([session], userId);
 
   if (shown === undefined) {
-    throw new TranscriptNotFoundError(sessionId.value);
+    throw new TranscriptNotFoundError(sessionId.id);
   }
 
   return shown;

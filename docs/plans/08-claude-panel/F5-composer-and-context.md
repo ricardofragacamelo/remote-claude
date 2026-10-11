@@ -52,7 +52,7 @@ qualquer coisa chegar ao Claude, e ela é tudo ou nada — um anexo inválido re
 A composição é **no backend**, para web e app verem o mesmo, no formato que a D-01 fixar (um que o CLI
 não expande). O `text` de provedor (`@terminal`) vai delimitado e rotulado pela origem, dentro do teto.
 O log de `claude.input` leva caminhos e tamanhos, nunca conteúdo
-([logging desta borda](../../architecture/backend/04-claude-integration.md#logging-desta-borda)). Prompt
+([logging desta borda](../../architecture/backend/04a-claude.md#logging-desta-borda)). Prompt
 com contexto durante um turno entra na fila da B-34 como qualquer outro.
 
 ### B-45 — Backend: anexos enviados (imagem e arquivo do desktop) ✅

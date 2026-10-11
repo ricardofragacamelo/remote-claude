@@ -28,7 +28,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "description": "Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result`, `image` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped."
+            "description": "Block kind, in our names (plan 28, B-30) — `text`, `thinking` (only from an engine with the `thinking` capability), `redactedThinking`, `toolUse`, `toolResult`, `image` — and whatever comes next. Not an enum on purpose: a published app has to survive a kind added after it shipped, and shows it as text it does not know rather than dropping it."
           },
           "text": {
             "type": "string",

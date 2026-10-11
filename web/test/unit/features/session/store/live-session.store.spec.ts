@@ -3,6 +3,8 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { createLiveSessionStore, forgetLiveSessions, liveSessionStoreOf } from '@/features/session';
 import type { LiveSessionStore } from '@/features/session';
+import { CAPABILITIES, FEWER_CAPABILITIES } from '../../../../support/engines';
+import { aToolCall } from '../../../../support/canonical-tool';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 const AT = '2026-09-19T12:00:00.000Z';
@@ -84,8 +86,8 @@ describe('the live session store', () => {
   });
 
   describe('the history under the stream — plan 04', () => {
-    const CONVERSATION = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
-    const SOURCE = '0f0e0d0c-0b0a-4908-8706-050403020100';
+    const CONVERSATION = { engine: 'claude', id: '6b41b192-a41b-46c2-b8d7-5098d8c825be' };
+    const SOURCE = { engine: 'claude', id: '0f0e0d0c-0b0a-4908-8706-050403020100' };
 
     const completed = (
       messageId: string,
@@ -97,10 +99,10 @@ describe('the live session store', () => {
 
     it('learns the conversation from `session.started`', () => {
       store().apply(
-        event('session.started', 1, { sessionId: SESSION, claudeSessionId: CONVERSATION }),
+        event('session.started', 1, { sessionId: SESSION, conversation: CONVERSATION }),
       );
 
-      expect(store().conversationId).toBe(CONVERSATION);
+      expect(store().conversation).toEqual(CONVERSATION);
       expect(store().historyFrom).toBeNull();
     });
 
@@ -110,19 +112,19 @@ describe('the live session store', () => {
       store().apply(
         event('session.started', 1, {
           sessionId: SESSION,
-          claudeSessionId: CONVERSATION,
+          conversation: CONVERSATION,
           resumedFrom: SOURCE,
           model: 'claude-sonnet-5',
-          permissionMode: 'default',
+          permissionMode: 'ask',
           workspacePath: '/srv/projects/app',
         }),
       );
 
       expect(store()).toMatchObject({
-        conversationId: CONVERSATION,
+        conversation: CONVERSATION,
         historyFrom: SOURCE,
         model: 'claude-sonnet-5',
-        permissionMode: 'default',
+        permissionMode: 'ask',
         workspacePath: '/srv/projects/app',
         lastSeq: 2,
       });
@@ -136,16 +138,16 @@ describe('the live session store', () => {
       store().apply(
         event('session.started', 1, {
           sessionId: SESSION,
-          claudeSessionId: CONVERSATION,
+          conversation: CONVERSATION,
           model: 'claude-sonnet-5',
-          permissionMode: 'default',
+          permissionMode: 'ask',
         }),
       );
-      store().apply(event('session.started', 2, { sessionId: SESSION, claudeSessionId: SOURCE }));
+      store().apply(event('session.started', 2, { sessionId: SESSION, conversation: SOURCE }));
 
       expect(store().permissionMode).toBe('plan');
       expect(store().model).toBe('claude-opus-5');
-      expect(store().conversationId).toBe(CONVERSATION);
+      expect(store().conversation).toEqual(CONVERSATION);
       expect(store().historyFrom).toBeNull();
     });
 
@@ -153,12 +155,12 @@ describe('the live session store', () => {
       store().apply(
         event('session.started', 1, {
           sessionId: SESSION,
-          claudeSessionId: CONVERSATION,
+          conversation: CONVERSATION,
           resumedFrom: SOURCE,
         }),
       );
 
-      expect(store().historyFrom).toBe(SOURCE);
+      expect(store().historyFrom).toEqual(SOURCE);
     });
 
     it('asks, after a gap, for the history of the conversation the ack named — S-14', () => {
@@ -167,8 +169,8 @@ describe('the live session store', () => {
       store().reset(CONVERSATION);
 
       expect(store().messages).toEqual([]);
-      expect(store().historyFrom).toBe(CONVERSATION);
-      expect(store().conversationId).toBe(CONVERSATION);
+      expect(store().historyFrom).toEqual(CONVERSATION);
+      expect(store().conversation).toEqual(CONVERSATION);
     });
 
     it('lays the history under what the stream brought meanwhile, without a duplicate — S-15', () => {
@@ -196,12 +198,59 @@ describe('the live session store', () => {
       expect(store().lastSeq).toBe(3);
     });
 
+    it('keeps what the engine of the session can do, read and hidden from nothing — plan 28, B-13', () => {
+      store().apply(
+        event('session.started', 1, {
+          sessionId: SESSION,
+          engine: 'claude',
+          conversation: CONVERSATION,
+          capabilities: CAPABILITIES,
+        }),
+      );
+
+      expect(store().capabilities).toEqual(CAPABILITIES);
+
+      // A gap drops what the session said, never what its engine can do: the start that said it
+      // is exactly what the buffer lost.
+      store().reset(CONVERSATION);
+      expect(store().capabilities).toEqual(CAPABILITIES);
+    });
+
+    it('takes what the engine can do from a late start, unless a start already said it', () => {
+      store().apply(event('message.delta', 2, { messageId: 'm1', delta: 'hi' }));
+      store().apply(
+        event('session.started', 1, {
+          sessionId: SESSION,
+          conversation: CONVERSATION,
+          capabilities: FEWER_CAPABILITIES,
+        }),
+      );
+
+      expect(store().capabilities).toEqual(FEWER_CAPABILITIES);
+    });
+
+    it('keeps what a start that says nothing of it left unknown', () => {
+      store().apply(
+        event('session.started', 1, { sessionId: SESSION, conversation: CONVERSATION }),
+      );
+
+      expect(store().capabilities).toBeNull();
+    });
+
+    it('drops a page of the same id on another engine — plan 28, B-13', () => {
+      store().reset(CONVERSATION);
+      store().hydrate({ engine: 'other', id: CONVERSATION.id }, [completed('m1', 'one')]);
+
+      expect(store().messages).toEqual([]);
+      expect(store().historyFrom).toEqual(CONVERSATION);
+    });
+
     it('drops a page of a conversation it is no longer waiting for', () => {
       store().reset(CONVERSATION);
       store().hydrate(SOURCE, [completed('m1', 'one')]);
 
       expect(store().messages).toEqual([]);
-      expect(store().historyFrom).toBe(CONVERSATION);
+      expect(store().historyFrom).toEqual(CONVERSATION);
     });
 
     it('stops calling what is on screen partial once the history is under it', () => {
@@ -209,7 +258,7 @@ describe('the live session store', () => {
       store().apply(
         event('session.started', 1, {
           sessionId: SESSION,
-          claudeSessionId: CONVERSATION,
+          conversation: CONVERSATION,
           resumedFrom: SOURCE,
         }),
       );
@@ -307,7 +356,7 @@ describe('the live session store', () => {
         event('message.completed', 1, {
           messageId: 'm1',
           role: 'assistant',
-          content: [{ type: 'text', text: 'a' }, { type: 'tool_use', toolUseId: 't1' }, 'junk'],
+          content: [{ type: 'text', text: 'a' }, { type: 'toolUse', toolUseId: 't1' }, 'junk'],
         }),
       );
 
@@ -336,7 +385,7 @@ describe('the live session store', () => {
   });
 
   describe('tools', () => {
-    const started = { toolUseId: 't1', toolName: 'Bash', input: { command: 'ls' } };
+    const started = { toolUseId: 't1', ...aToolCall('Bash', { command: 'ls' }) };
 
     it('shows a tool as soon as it starts, with the exact input', () => {
       store().apply(event('tool.started', 1, started));
@@ -344,13 +393,11 @@ describe('the live session store', () => {
       expect(store().tools).toEqual([
         {
           toolUseId: 't1',
-          toolName: 'Bash',
-          input: { command: 'ls' },
+          ...aToolCall('Bash', { command: 'ls' }),
           status: 'running',
           elapsed: null,
           summary: null,
           parentToolUseId: null,
-          taskId: null,
         },
       ]);
     });
@@ -372,15 +419,17 @@ describe('the live session store', () => {
     });
 
     it('keeps an input that is not an object out of the way', () => {
-      store().apply(event('tool.started', 1, { toolUseId: 't1', toolName: 'Bash', input: 'ls' }));
+      store().apply(
+        event('tool.started', 1, { toolUseId: 't1', ...aToolCall('Bash'), rawInput: 'ls' }),
+      );
 
-      expect(store().tools[0]?.input).toEqual({});
+      expect(store().tools[0]?.rawInput).toEqual({});
     });
 
     it('changes only the tool a frame names, and leaves its neighbours alone', () => {
       store().apply(event('tool.started', 1, started));
       store().apply(
-        event('tool.started', 2, { toolUseId: 't2', toolName: 'Read', input: { file_path: '/a' } }),
+        event('tool.started', 2, { toolUseId: 't2', ...aToolCall('Read', { file_path: '/a' }) }),
       );
       store().apply(event('tool.progress', 3, { toolUseId: 't2', chunk: 'contents' }));
 
@@ -426,12 +475,22 @@ describe('the live session store', () => {
 
   it.each([
     ['no id', { usage: {}, costUsd: '0.01', durationMs: 1 }],
-    ['no cost', { turnId: 'turn-1', usage: {}, durationMs: 1 }],
     ['a duration that is not a number', { turnId: 'turn-1', costUsd: '0.01', durationMs: 'fast' }],
   ])('ignores a finished turn with %s', (_case, payload) => {
     store().apply(event('turn.completed', 1, payload));
 
     expect(store().lastTurn).toBeNull();
+  });
+
+  it('records a finished turn with no cost, its cost unknown — plan 28, S-86', () => {
+    store().apply(event('turn.completed', 1, { turnId: 'turn-1', usage: {}, durationMs: 1 }));
+
+    expect(store().lastTurn).toEqual({
+      turnId: 'turn-1',
+      costUsd: null,
+      durationMs: 1,
+      usage: null,
+    });
   });
 
   it('records what the last turn cost', () => {

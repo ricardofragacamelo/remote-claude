@@ -93,7 +93,7 @@ Só o que é de outro plano ou o que a arquitetura proíbe:
 - **Linha do tempo da trilha**: [plano 14](../14-audit-explained/README.md) mostra os kinds `mcp.*` e
   `claude.*` que este plano grava.
 - **Login do CLI pela UI remota.** O backend herda o login da máquina e não conhece a credencial
-  ([backend/04](../../architecture/backend/04-claude-integration.md#autenticação--não-faça-nada)); a tela
+  ([backend/04](../../architecture/backend/04a-claude.md#autenticação--não-faça-nada)); a tela
   diz o estado e o que rodar na máquina.
 - **Autenticar servidor MCP por OAuth pelo cliente remoto** (`needs-auth`): exige navegador na máquina e
   o fluxo de elicitação do SDK carregado até o cliente — mostrado e explicado, não resolvido aqui.
@@ -145,22 +145,22 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Todo erro com código, chave de tradução e status com significado | B-06 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) | S-12, S-23, S-39…S-42, S-64…S-67, S-69, S-77, S-102 |
 | Toda ampliação do que roda na máquina entra na trilha antes do efeito | B-07, B-14, B-19, B-24, B-25, B-27, B-34 | [backend/03 · audit](../../architecture/backend/03-modules.md#audit), [backend/05-persistence](../../architecture/backend/05-persistence.md#os-fatos-de-conta) | S-13, S-43, S-44, S-79, S-108, S-114, S-127, S-164 |
 | A tela é própria, com link que reproduz a seção e a pasta | B-09, B-16 | [web/03-ui-system](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto) | S-15, S-54…S-56 |
-| Modelos, agents e conta vêm da instalação, nunca de lista no código, e sem sessão aberta | B-10, B-11, B-13 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-16…S-28, S-34…S-36 |
-| O diagnóstico diz por que o Claude não funciona aqui, e o teste de conexão diz o que custa | B-11, B-12 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#autenticação--não-faça-nada) | S-24…S-33 |
+| Modelos, agents e conta vêm da instalação, nunca de lista no código, e sem sessão aberta | B-10, B-11, B-13 | [backend/04a-claude](../../architecture/backend/04a-claude.md#slash-commands-init-gerar-readme-e-agentsmd) | S-16…S-28, S-34…S-36 |
+| O diagnóstico diz por que o Claude não funciona aqui, e o teste de conexão diz o que custa | B-11, B-12 | [backend/04a-claude](../../architecture/backend/04a-claude.md#autenticação--não-faça-nada) | S-24…S-33 |
 | Padrões por usuário e por pasta chegam à sessão nova, e nunca `bypassPermissions` | B-14, B-15 | [backend/03 · session](../../architecture/backend/03-modules.md#session) | S-37…S-53 |
 | Servidor MCP é validado, descrito por extenso e gravado com segredo que nunca volta | B-18, B-19 | [03-logging](../../architecture/shared/03-logging.md#redação-o-que-nunca-vai-para-o-log) | S-63…S-80 |
-| Servidor MCP não recebe os segredos do backend, e o segredo dele não passa pelo argv | B-20, B-21 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#options--o-que-amarramos) | S-81…S-87, S-03 |
+| Servidor MCP não recebe os segredos do backend, e o segredo dele não passa pelo argv | B-20, B-21 | [backend/04a-claude](../../architecture/backend/04a-claude.md#options--o-que-amarramos) | S-81…S-87, S-03 |
 | Status vivo, e controle de MCP dentro da sessão (no app, só o status); apertar vale já | B-22, B-23 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#comandos-cliente--servidor) | S-88…S-99, S-215 |
 | O `.mcp.json` do repositório só entra aprovado por nós, e volta a pendente quando muda | B-24 | [plano 03 · D-09](../03-rules-and-audit/decisions.md#d-09--a-regra-nossa-é-a-única-autoridade) | S-100…S-110 |
 | Testar um servidor é executar o comando: auditado e sob a capacidade | B-25 | [backend/03 · audit](../../architecture/backend/03-modules.md#audit) | S-111…S-115 |
-| Toda tool MCP passa pelo `canUseTool` e pelo `PreToolUse`; regra não sobrevive à troca do programa | B-26 | [backend/04 · a ponte de permissão](../../architecture/backend/04-claude-integration.md#a-ponte-de-permissão) | S-116…S-122, S-02 |
+| Toda tool MCP passa pelo `canUseTool` e pelo `PreToolUse`; regra não sobrevive à troca do programa | B-26 | [backend/04 · a ponte de permissão](../../architecture/backend/04a-claude.md#a-ponte-de-permissão) | S-116…S-122, S-02 |
 | Plugin local com o que traz à vista e sem MCP sozinho | B-27, B-29 | [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) | S-123…S-130, S-137 |
 | Plugin de marketplace só de fonte declarada, baixado pelo backend, fixado e atualizado só por decisão | B-47, B-29 | [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) | S-200…S-213 |
 | Telas de MCP e plugins completas, com segundo passo e segredo só escrita | B-28, B-29 | [web/03-ui-system](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto) | S-131…S-137 |
-| A configuração de projeto é lida pelo formato publicado, nunca por superfície não pública | B-31 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources) | S-141…S-147 |
-| Memória, comandos, subagents e estilos: visíveis, com o que vale aqui, e criáveis pelo editor | B-32, B-33, B-36, B-37 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-148…S-153, S-175…S-178 |
+| A configuração de projeto é lida pelo formato publicado, nunca por superfície não pública | B-31 | [backend/04a-claude](../../architecture/backend/04a-claude.md#a-armadilha-do-settingsources) | S-141…S-147 |
+| Memória, comandos, subagents e estilos: visíveis, com o que vale aqui, e criáveis pelo editor | B-32, B-33, B-36, B-37 | [backend/04a-claude](../../architecture/backend/04a-claude.md#slash-commands-init-gerar-readme-e-agentsmd) | S-148…S-153, S-175…S-178 |
 | Skills de projeto, usuário e sistema, com origem e preferências, sem ampliar `settingSources` | B-34, B-35 | [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) (emendada pela B-02) | S-154…S-174, S-194, S-197 |
-| Hooks, permissões e plugins do projeto: só leitura, explicados sem eufemismo | B-38 | [backend/04 · diretório confiado](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido) | S-179…S-181, S-198 |
+| Hooks, permissões e plugins do projeto: só leitura, explicados sem eufemismo | B-38 | [backend/04 · diretório confiado](../../architecture/backend/04a-claude.md#diretório-confiado-fura-o-canusetool--medido) | S-179…S-181, S-198 |
 | Telas de projeto e skills completas | B-39 | [web/01-architecture](../../architecture/web/01-architecture.md) | S-182 |
 | Toda tela com ajuda de verdade, tooltips, palette, teclado e axe, traduzida | B-17, B-30, B-40, B-45 | [02-i18n](../../architecture/shared/02-i18n.md), [web/03-ui-system](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-57…S-62, S-138…S-140, S-183, S-184, S-195 |
 | O que este plano põe na conversa chega ao app com o mesmo conteúdo e formato do web (D-31) | B-46 | [plano 26](../26-mobile-conversation-parity/README.md), [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-214 |

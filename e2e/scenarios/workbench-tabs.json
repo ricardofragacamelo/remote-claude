@@ -4,6 +4,6 @@
   "user": { "username": "dev", "password": "dev" },
   "expect": {
     "prompt": "Where are you working? [fixture:cwd-turn]",
-    "sessionsCarryOn": "The Claude sessions of these folders keep running on the machine: closing a tab does not end them."
+    "sessionsCarryOn": "The Claude Code sessions of these folders keep running on the machine: closing a tab does not end them."
   }
 }

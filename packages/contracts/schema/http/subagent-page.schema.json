@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/subagent-page.json",
+  "title": "SubagentPage",
+  "description": "What `GET /transcripts/:engine/:id/subagents/:toolUseId/messages` answers: a page of what a subagent said, from the tail (plan 28, B-12).",
+  "x-kind": "http",
+  "x-type": "transcripts.subagentPage",
+  "type": "object",
+  "required": ["events", "nextCursor"],
+  "properties": {
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "../definitions/transcript-event.schema.json"
+      },
+      "description": "What the subagent said in this page, oldest first — the same frames as a page of its parent."
+    },
+    "nextCursor": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The message the earlier page of the subagent starts from; `null` once its first message is in."
+    }
+  }
+}

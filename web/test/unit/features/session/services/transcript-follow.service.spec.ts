@@ -14,7 +14,7 @@ import type { ConnectionStatus } from '@/shared/api/ws-client';
 import { said } from '../../../../support/history';
 import { aLiveSocket } from '../../../../support/live-socket';
 
-const CONVERSATION = '0f0e0d0c-0b0a-4908-8706-050403020100';
+const CONVERSATION = { engine: 'claude', id: '0f0e0d0c-0b0a-4908-8706-050403020100' };
 const AT = '2026-10-07T12:00:00.000Z';
 
 /** A socket client a test drives: what it sent, and frames it is told arrived. */
@@ -72,7 +72,7 @@ class FakeTransport implements FollowTransport {
       kind: 'ack',
       type: 'transcript.following',
       correlationId: this.lastSent('transcript.follow')?.id,
-      payload: { followId, conversationId: CONVERSATION, activity },
+      payload: { followId, conversation: CONVERSATION, activity },
     });
   }
 
@@ -83,7 +83,7 @@ class FakeTransport implements FollowTransport {
       seq,
       payload: {
         followId,
-        conversationId: CONVERSATION,
+        conversation: CONVERSATION,
         events: [],
         activity: 'activeElsewhere',
         working: false,
@@ -119,7 +119,7 @@ describe('the follows of a socket client', () => {
     follows.follow(CONVERSATION, 'u-41', subscriber);
 
     expect(transport.lastSent('transcript.follow')?.payload).toEqual({
-      conversationId: CONVERSATION,
+      conversation: CONVERSATION,
       afterMessageId: 'u-41',
     });
 
@@ -144,7 +144,7 @@ describe('the follows of a socket client', () => {
     follows.follow(CONVERSATION, null, aSubscriber());
 
     expect(transport.lastSent('transcript.follow')?.payload).toEqual({
-      conversationId: CONVERSATION,
+      conversation: CONVERSATION,
     });
   });
 
@@ -199,13 +199,13 @@ describe('the follows of a socket client', () => {
       kind: 'event',
       type: 'transcript.reset',
       seq: 1,
-      payload: { followId: 't1', conversationId: CONVERSATION, reason: 'rewritten' },
+      payload: { followId: 't1', conversation: CONVERSATION, reason: 'rewritten' },
     });
     transport.receive({
       kind: 'event',
       type: 'transcript.reset',
       seq: 1,
-      payload: { followId: 't-other', conversationId: CONVERSATION, reason: 'gone' },
+      payload: { followId: 't-other', conversation: CONVERSATION, reason: 'gone' },
     });
     transport.receive({ kind: 'event', type: 'transcript.reset', payload: { followId: 't1' } });
 
@@ -258,7 +258,7 @@ describe('the follows of a socket client', () => {
 
     transport.move('ready');
     expect(transport.lastSent('transcript.follow')?.payload).toEqual({
-      conversationId: CONVERSATION,
+      conversation: CONVERSATION,
       afterMessageId: 'u-44',
     });
 
@@ -314,7 +314,7 @@ describe('the follows of a socket client', () => {
       kind: 'ack',
       type: 'transcript.following',
       correlationId: asked,
-      payload: { followId: 't1', conversationId: CONVERSATION, activity: 'idle' },
+      payload: { followId: 't1', conversation: CONVERSATION, activity: 'idle' },
     });
 
     expect(transport.lastSent('transcript.unfollow')?.payload).toEqual({ followId: 't1' });
@@ -346,13 +346,13 @@ describe('the follows of a socket client', () => {
       kind: 'ack',
       type: 'transcript.following',
       correlationId: 'cmd-99',
-      payload: { followId: 't9', conversationId: CONVERSATION, activity: 'idle' },
+      payload: { followId: 't9', conversation: CONVERSATION, activity: 'idle' },
     });
     transport.receive({
       kind: 'ack',
       type: 'transcript.following',
       correlationId: transport.lastSent('transcript.follow')?.id,
-      payload: { conversationId: CONVERSATION },
+      payload: { conversation: CONVERSATION },
     });
 
     expect(subscriber.onFollowing).not.toHaveBeenCalled();
@@ -369,7 +369,7 @@ describe('the follows of a socket client', () => {
       kind: 'ack',
       type: 'transcript.following',
       correlationId: asked,
-      payload: { followId: 't1', conversationId: CONVERSATION, activity: 'idle' },
+      payload: { followId: 't1', conversation: CONVERSATION, activity: 'idle' },
     });
 
     expect(transport.lastSent('transcript.unfollow')).toBeUndefined();
@@ -388,7 +388,7 @@ describe('followTranscript — the one socket client of the app', () => {
     const release = followTranscript(CONVERSATION, 'u-41', aSubscriber());
 
     expect(socket.lastSent('transcript.follow')?.['payload']).toEqual({
-      conversationId: CONVERSATION,
+      conversation: CONVERSATION,
       afterMessageId: 'u-41',
     });
     release();

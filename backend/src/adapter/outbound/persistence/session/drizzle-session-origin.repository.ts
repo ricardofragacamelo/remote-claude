@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { inArray } from 'drizzle-orm';
+import { and, eq, inArray, or } from 'drizzle-orm';
 
 import type { SessionOrigin, SessionOriginRepository } from '@application/session';
 import { UserId } from '@domain/auth';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { sessionOrigins } from '@infra/database/schema';
@@ -28,7 +28,10 @@ export class DrizzleSessionOriginRepository implements SessionOriginRepository {
       this.context.db
         .insert(sessionOrigins)
         .values({
-          claudeSessionId: origin.claudeSessionId.value,
+          // The old column, the primary key until the window of the previous protocol closes (F7).
+          claudeSessionId: origin.conversation.id,
+          engine: origin.conversation.engine.value,
+          conversationId: origin.conversation.id,
           sessionId: origin.sessionId.value,
           userId: origin.openedBy.value,
           workspacePath: origin.workspace.value,
@@ -38,7 +41,7 @@ export class DrizzleSessionOriginRepository implements SessionOriginRepository {
     );
   }
 
-  async openersOf(ids: readonly ClaudeSessionId[]): Promise<ReadonlyMap<string, UserId>> {
+  async openersOf(ids: readonly ConversationRef[]): Promise<ReadonlyMap<string, UserId>> {
     // An empty `IN ()` is not SQL, and asking the database about nothing is a round trip for
     // nothing: a workspace with no conversation is the common case of a fresh installation.
     if (ids.length === 0) {
@@ -49,16 +52,28 @@ export class DrizzleSessionOriginRepository implements SessionOriginRepository {
       this.context.logger,
       'sessionOrigin.openersOf',
       this.context.db
-        .select({ claudeSessionId: sessionOrigins.claudeSessionId, userId: sessionOrigins.userId })
+        .select({
+          engine: sessionOrigins.engine,
+          conversationId: sessionOrigins.conversationId,
+          userId: sessionOrigins.userId,
+        })
         .from(sessionOrigins)
-        .where(
-          inArray(
-            sessionOrigins.claudeSessionId,
-            ids.map((id) => id.value),
-          ),
-        ),
+        .where(or(...byEngine(ids))),
     );
 
-    return new Map(rows.map((row) => [row.claudeSessionId, UserId.create(row.userId)]));
+    return new Map(
+      rows.map((row) => [`${row.engine}:${row.conversationId}`, UserId.create(row.userId)]),
+    );
   }
+}
+
+/** One condition per engine: its conversations among [ids]. */
+function byEngine(ids: readonly ConversationRef[]) {
+  const grouped = new Map<string, string[]>();
+  for (const id of ids) {
+    grouped.set(id.engine.value, [...(grouped.get(id.engine.value) ?? []), id.id]);
+  }
+  return [...grouped].map(([engine, conversations]) =>
+    and(eq(sessionOrigins.engine, engine), inArray(sessionOrigins.conversationId, conversations)),
+  );
 }

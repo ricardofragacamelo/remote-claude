@@ -5,6 +5,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
+import '../../../../../support/builders/tools.dart';
 
 /// A thinking of the history, in a reply written at [writtenAt].
 MessageFinished thought(String messageId, String writtenAt, {String text = ''}) => MessageFinished(
@@ -24,13 +25,7 @@ void main() {
   group('how long a thinking of the history took, at most — S-104, S-106 (D-14)', () {
     test('S-104 · bounded by the entry before it: a tool that ended, and the reply after it', () {
       final List<ThinkingEntry> thinking = thinkingOf(<SessionEvent>[
-        const ToolInvoked(
-          0,
-          toolUseId: 't1',
-          toolName: 'Bash',
-          input: <String, Object?>{},
-          writtenAt: '2026-10-07T12:00:00.000Z',
-        ),
+        const ToolInvoked(0, toolUseId: 't1', call: shellLs, writtenAt: '2026-10-07T12:00:00.000Z'),
         const ToolFinished(
           0,
           toolUseId: 't1',
@@ -102,7 +97,7 @@ void main() {
           status: ToolStatus.succeeded,
           writtenAt: '2026-10-07T12:00:00.000Z',
         ),
-        const ToolInvoked(0, toolUseId: 't2', toolName: 'Read', input: <String, Object?>{}),
+        const ToolInvoked(0, toolUseId: 't2', call: readA),
         thought('m2', '2026-10-07T12:00:02.000Z'),
       ]);
 
@@ -142,15 +137,9 @@ void main() {
 
   group('the description the model gave a call — S-111', () {
     test('is kept on the tool, and a tool without one has none', () {
-      final Conversation shown = const Conversation().withHistory(const <SessionEvent>[
-        ToolInvoked(
-          0,
-          toolUseId: 't1',
-          toolName: 'Bash',
-          input: <String, Object?>{'command': 'pnpm test'},
-          title: 'Run the tests',
-        ),
-        ToolInvoked(0, toolUseId: 't2', toolName: 'Read', input: <String, Object?>{}),
+      final Conversation shown = const Conversation().withHistory(<SessionEvent>[
+        ToolInvoked(0, toolUseId: 't1', call: shellCall('pnpm test'), title: 'Run the tests'),
+        const ToolInvoked(0, toolUseId: 't2', call: readA),
       ]);
 
       expect(shown.tools.first.title, 'Run the tests');
@@ -159,15 +148,7 @@ void main() {
 
     test('survives the tool ending', () {
       final Conversation shown = const Conversation()
-          .apply(
-            const ToolInvoked(
-              1,
-              toolUseId: 't1',
-              toolName: 'Bash',
-              input: <String, Object?>{},
-              title: 'List the files',
-            ),
-          )
+          .apply(const ToolInvoked(1, toolUseId: 't1', call: shellLs, title: 'List the files'))
           .apply(const ToolFinished(2, toolUseId: 't1', status: ToolStatus.succeeded));
 
       expect(shown.tools.single.title, 'List the files');

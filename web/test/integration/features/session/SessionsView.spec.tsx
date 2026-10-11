@@ -9,10 +9,13 @@ import { RESUME_TIMEOUT_MS } from '@/features/session/hooks/useResumeSession';
 import { sessionsViewStore } from '@/features/session/store/sessions-view.store';
 import { folderTabStore } from '@/features/workbench/store/folder-tab.store';
 import { api } from '@/shared/api/api';
+import { anEngineList } from '../../../support/engines';
 import {
   aConversationDto,
-  claudeUnavailable,
+  agentUnavailable,
+  conversationRef,
   EDITOR,
+  ENGINE_NAME,
   OURS,
   WORKSPACE,
 } from '../../../support/history';
@@ -31,12 +34,12 @@ const ACTIVE = '1a1a1a1a-1a1a-4a1a-8a1a-1a1a1a1a1a1a';
 function aLiveDto(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     sessionId: LIVE,
-    claudeSessionId: OURS,
-    resumedFrom: null,
+    conversation: conversationRef(OURS),
+    resumedFromConversation: null,
     workspacePath: WORKSPACE,
     status: 'idle',
     model: 'claude-sonnet-5',
-    permissionMode: 'default',
+    permissionMode: 'ask',
     startedAt: new Date(Date.now() - 120_000).toISOString(),
     openedFrom: 'mobile',
     pendingPermissions: 1,
@@ -47,6 +50,7 @@ function aLiveDto(overrides: Record<string, unknown> = {}): Record<string, unkno
 /** The folder as a person sees it: one live session, one conversation active elsewhere, two idle. */
 function aFolder(): Record<string, readonly unknown[]> {
   return {
+    '/engines': [anEngineList()],
     [LIVE_PATH]: [{ sessions: [aLiveDto()] }],
     [HISTORY_PATH]: [
       {
@@ -144,7 +148,7 @@ describe('the view of Claude’s sessions of a folder — plan 08, B-09', () => 
   it('keeps what runs here on screen when the history fails, with a way to try again — S-35', async () => {
     const get = routeApi({
       [LIVE_PATH]: [{ sessions: [aLiveDto()] }],
-      [HISTORY_PATH]: [claudeUnavailable, { sessions: [aConversationDto()], nextCursor: null }],
+      [HISTORY_PATH]: [agentUnavailable, { sessions: [aConversationDto()], nextCursor: null }],
     });
     mount();
 
@@ -154,7 +158,7 @@ describe('the view of Claude’s sessions of a folder — plan 08, B-09', () => 
       }),
     ).toBeInTheDocument();
     const failure = await within(group('history')).findByText(
-      t('transcript.error.claudeUnavailable'),
+      t('transcript.error.agentUnavailable', agentUnavailable.params),
     );
     expect(failure).toBeInTheDocument();
 
@@ -216,7 +220,7 @@ describe('the view of Claude’s sessions of a folder — plan 08, B-09', () => 
       [LIVE_PATH]: [{ sessions: [] }],
       [HISTORY_PATH]: [{ sessions: [aConversationDto({ summary: 'Page one' })], nextCursor: 'c2' }],
       [`${HISTORY_PATH}&cursor=c2`]: [
-        claudeUnavailable,
+        agentUnavailable,
         {
           sessions: [aConversationDto({ sessionId: EDITOR, summary: 'Page two' })],
           nextCursor: null,
@@ -227,7 +231,9 @@ describe('the view of Claude’s sessions of a folder — plan 08, B-09', () => 
 
     const more = await screen.findByRole('button', { name: t('sessionsGroup.history.loadMore') });
     await user.click(more);
-    expect(await screen.findByText(t('transcript.error.claudeUnavailable'))).toBeInTheDocument();
+    expect(
+      await screen.findByText(t('transcript.error.agentUnavailable', agentUnavailable.params)),
+    ).toBeInTheDocument();
     expect(screen.getByText('Page one')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: t('sessionsGroup.history.loadMore') }));
@@ -281,7 +287,7 @@ describe('joining a session of the folder — plan 08, B-10', () => {
       }),
     );
 
-    expect(folderTabStore(WORKSPACE).getState().conversationId).toBe(EDITOR);
+    expect(folderTabStore(WORKSPACE).getState().conversation).toEqual(conversationRef(EDITOR));
   });
 
   it('continues one of ours in place, from the actions of its row — S-40', async () => {
@@ -295,7 +301,7 @@ describe('joining a session of the folder — plan 08, B-10', () => {
 
     expect(live.lastSent('session.start')?.['payload']).toEqual({
       workspacePath: `${WORKSPACE}/backend`,
-      resumeSessionId: '2b2b2b2b-2b2b-4b2b-8b2b-2b2b2b2b2b2b',
+      resumeFrom: conversationRef('2b2b2b2b-2b2b-4b2b-8b2b-2b2b2b2b2b2b'),
     });
   });
 
@@ -308,12 +314,14 @@ describe('joining a session of the folder — plan 08, B-10', () => {
     fireEvent.contextMenu(within(row).getByRole('button', { name: /Old editor talk/ }));
     await user.click(await screen.findByRole('menuitem', { name: t('sessions.action.fork') }));
 
-    expect(live.lastSent('session.start')?.['payload']).toMatchObject({ resumeSessionId: EDITOR });
+    expect(live.lastSent('session.start')?.['payload']).toMatchObject({
+      resumeFrom: conversationRef(EDITOR),
+    });
     live.receive(
       hubEvent('01J0FORK00000000000000000A', 'session.started', 1, {
         sessionId: '01J0FORK00000000000000000A',
-        claudeSessionId: 'new-id',
-        resumedFrom: EDITOR,
+        conversation: conversationRef('new-id'),
+        resumedFrom: conversationRef(EDITOR),
       }),
     );
     await waitFor(() => {
@@ -338,7 +346,9 @@ describe('joining a session of the folder — plan 08, B-10', () => {
     await user.click(within(row).getByRole('button', { name: t('sessions.row.actions') }));
     await user.click(await screen.findByRole('menuitem', { name: t('sessions.action.fork') }));
     await user.click(await screen.findByRole('button', { name: t('sessions.fork.confirm') }));
-    expect(live.lastSent('session.start')?.['payload']).toMatchObject({ resumeSessionId: ACTIVE });
+    expect(live.lastSent('session.start')?.['payload']).toMatchObject({
+      resumeFrom: conversationRef(ACTIVE),
+    });
   });
 
   it('says the ceiling is the installation’s when a continue is refused for it — S-43', async () => {
@@ -425,7 +435,7 @@ describe('joining a session of the folder — plan 08, B-10', () => {
     act(() => {
       void commandRegistry.command('sessions.openSelected')?.run();
     });
-    expect(folderTabStore(WORKSPACE).getState().conversationId).toBe(EDITOR);
+    expect(folderTabStore(WORKSPACE).getState().conversation).toEqual(conversationRef(EDITOR));
   });
 
   it('ends a live session of the caller from its row', async () => {
@@ -442,11 +452,15 @@ describe('joining a session of the folder — plan 08, B-10', () => {
 });
 
 describe('every action of the view — plan 08, B-12', () => {
-  async function actionOf(title: string, action: string): Promise<void> {
+  async function actionOf(
+    title: string,
+    action: string,
+    params: Record<string, string> = {},
+  ): Promise<void> {
     const user = userEvent.setup();
     const row = (await screen.findByText(title)).closest('li') as HTMLElement;
     await user.click(within(row).getByRole('button', { name: t('sessions.row.actions') }));
-    await user.click(await screen.findByRole('menuitem', { name: t(action) }));
+    await user.click(await screen.findByRole('menuitem', { name: t(action, params) }));
   }
 
   it('opens and copies a live session from its row, and says where below it runs', async () => {
@@ -470,7 +484,8 @@ describe('every action of the view — plan 08, B-12', () => {
     expect(within(row).getByText('api')).toBeInTheDocument();
     expect(within(row).getByText(t('sessions.openedFrom.web'))).toBeInTheDocument();
 
-    await actionOf('Live one', 'sessions.action.copyId');
+    // The id of the conversation the session is, named by its engine — plan 28, S-40.
+    await actionOf('Live one', 'sessions.action.copyId', { agent: ENGINE_NAME });
     expect(await navigator.clipboard.readText()).toBe(OURS);
 
     await actionOf('Live one', 'sessions.action.open');
@@ -481,16 +496,17 @@ describe('every action of the view — plan 08, B-12', () => {
     routeApi(aFolder());
     mount();
 
-    await actionOf('Old editor talk', 'sessions.action.copyId');
+    await actionOf('Old editor talk', 'sessions.action.copyId', { agent: ENGINE_NAME });
     expect(await navigator.clipboard.readText()).toBe(EDITOR);
 
     await actionOf('Old editor talk', 'sessions.action.read');
-    expect(folderTabStore(WORKSPACE).getState().conversationId).toBe(EDITOR);
+    expect(folderTabStore(WORKSPACE).getState().conversation).toEqual(conversationRef(EDITOR));
   });
 
   it('names a conversation with no title, and a live session with none', async () => {
     routeApi({
-      [LIVE_PATH]: [{ sessions: [aLiveDto({ claudeSessionId: 'no-title' })] }],
+      '/engines': [anEngineList()],
+      [LIVE_PATH]: [{ sessions: [aLiveDto({ conversation: conversationRef('no-title') })] }],
       [HISTORY_PATH]: [
         { sessions: [aConversationDto({ summary: '', activity: 'idle' })], nextCursor: null },
       ],
@@ -635,7 +651,7 @@ describe('every action of the view — plan 08, B-12', () => {
     run('sessions.endSelected');
     run('sessions.continueSelected');
     expect(live.lastSent('session.start')?.['payload']).toMatchObject({
-      resumeSessionId: '2b2b2b2b-2b2b-4b2b-8b2b-2b2b2b2b2b2b',
+      resumeFrom: conversationRef('2b2b2b2b-2b2b-4b2b-8b2b-2b2b2b2b2b2b'),
     });
   });
 });

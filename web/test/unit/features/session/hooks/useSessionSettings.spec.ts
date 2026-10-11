@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { forgetLiveSessions } from '@/features/session';
 import { useSessionSettings } from '@/features/session/hooks/useSessionSettings';
-import { claudePanelStore, forgetClaudePanel } from '@/features/session/store/claude-panel.store';
+import { agentPanelStore, forgetAgentPanel } from '@/features/session/store/agent-panel.store';
 import { liveSessionStoreOf } from '@/features/session/store/live-session.store';
 import { aLiveSocket } from '../../../../support/live-socket';
 import type { LiveSocket } from '../../../../support/live-socket';
@@ -24,7 +24,7 @@ beforeEach(() => {
 afterEach(() => {
   live.close();
   forgetLiveSessions();
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
   vi.restoreAllMocks();
 });
 
@@ -103,9 +103,9 @@ describe('the choices of a live session — plan 09, B-11', () => {
     const { result } = settings();
     expect(result.current.effort).toBeUndefined();
 
-    const panel = claudePanelStore(FOLDER).getState();
+    const panel = agentPanelStore(FOLDER).getState();
     const draft = panel.openDraft();
-    panel.setChoices(draft, { model: 'opus', mode: 'default', effort: 'high' });
+    panel.setChoices(draft, { model: 'opus', mode: 'ask', effort: 'high' });
     act(() => {
       panel.promote(draft, SESSION);
     });

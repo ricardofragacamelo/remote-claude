@@ -3,7 +3,7 @@ import { liveSessionsIn } from '@domain/session';
 import type { Session } from '@domain/session';
 import type { FolderLocator } from './ports/folder-locator.port';
 import type { PendingPermissions } from './ports/pending-permissions.port';
-import type { SessionConversation } from './ports/claude-session.port';
+import type { SessionConversation } from './ports/agent-engine.port';
 import type { SessionRegistry } from './session-registry';
 
 /** One live session of a folder, as the list of the workbench shows it. */

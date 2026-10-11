@@ -81,7 +81,7 @@ export class DeleteEntryUseCase {
       throw new FileOperationInvalidError(entry.relative, 'openFolder');
     }
 
-    const sensitive = confirmSensitive(command.confirmSensitive, entry);
+    const sensitive = confirmSensitive(this.writing.sensitive, command.confirmSensitive, entry);
     const realPath = await disk.locate(entry);
 
     return lock.run(realPath, async () => {

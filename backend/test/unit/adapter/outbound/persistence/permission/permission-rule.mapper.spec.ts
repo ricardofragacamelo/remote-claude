@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  UNMIGRATED,
   UnreadablePermissionRuleRowError,
   toEntity,
   toRow,
@@ -13,7 +14,11 @@ const row = {
   userId: 'auth|owner',
   scope: 'project',
   projectPath: '/srv/projects/app',
-  pattern: 'Bash(git status:*)',
+  pattern: 'shell(git status:*)',
+  engine: null,
+  grammar: 'canonical',
+  disabledReason: null,
+  nativePattern: 'Bash(git status:*)',
   decision: 'allow',
   grantedAt: new Date('2026-09-24T10:00:00.000Z'),
   expiresAt: new Date('2026-12-23T10:00:00.000Z'),
@@ -30,7 +35,7 @@ describe('the permission rule mapper', () => {
       id: 'rule-1',
       scope: 'project',
       projectPath: '/srv/projects/app',
-      pattern: 'Bash(git status:*)',
+      pattern: 'shell(git status:*)',
       decision: 'allow',
       sessionId: null,
       createdAt: row.grantedAt,
@@ -46,13 +51,44 @@ describe('the permission rule mapper', () => {
       userId: 'auth|owner',
       scope: 'project',
       projectPath: '/srv/projects/app',
-      pattern: 'Bash(git status:*)',
+      pattern: 'shell(git status:*)',
+      engine: null,
+      grammar: 'canonical',
+      disabledReason: null,
+      nativePattern: null,
       decision: 'allow',
       grantedAt: row.grantedAt,
       expiresAt: row.expiresAt,
       revokedAt: null,
       updatedAt: now,
     });
+  });
+
+  it('keeps the engine a rule is restricted to, both ways — S-94', () => {
+    const rule = toEntity({ ...row, engine: 'claude' });
+
+    expect(rule.engine).toBe('claude');
+    expect(toRow(rule, now).engine).toBe('claude');
+  });
+
+  it('reads a rule the migration switched off as disabled, with its old pattern — S-133', () => {
+    const rule = toEntity({
+      ...row,
+      pattern: 'Bash',
+      nativePattern: 'Bash',
+      disabledReason: 'untranslatable',
+    });
+
+    expect(rule.statusAt(now)).toBe('disabled');
+    expect(rule.ruleContent).toBe('Bash');
+    expect(toRow(rule, now)).toMatchObject({ disabledReason: 'untranslatable', pattern: 'Bash' });
+  });
+
+  it('reads a rule still in the engine grammar as not yet migrated: it answers nothing', () => {
+    const rule = toEntity({ ...row, pattern: 'Bash(ls)', grammar: 'native', nativePattern: null });
+
+    expect(rule.statusAt(now)).toBe('disabled');
+    expect(rule.disabledReason).toBe(UNMIGRATED);
   });
 
   it('keeps a revocation across the round trip', () => {

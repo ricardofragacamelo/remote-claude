@@ -131,7 +131,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Contrato `terminal.*` nas três pontas, com `seq` por terminal | B-04 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#versionamento-e-geração-de-tipos) | S-25…S-31, S-67, S-68 |
 | Nenhum byte de terminal no log — nem no do web | B-05 | [03-logging](../../architecture/shared/03-logging.md#redação-o-que-nunca-vai-para-o-log) | S-32…S-36, S-105 |
 | O shell nasce sem os segredos do backend, e com o ambiente do usuário | B-07 | [09-code-quality](../../architecture/shared/09-code-quality.md#segurança-estática) | S-41…S-48, S-172 |
-| O subprocesso do Claude deixa de herdar os segredos do backend | B-13 | [backend/04](../../architecture/backend/04-claude-integration.md#ciclo-de-vida-e-recursos) | S-108…S-110 |
+| O subprocesso do Claude deixa de herdar os segredos do backend | B-13 | [backend/04](../../architecture/backend/04a-claude.md#ciclo-de-vida-e-recursos) | S-108…S-110 |
 | O shell nasce na pasta aberta, e a allowlist decide só isso | B-08 | [backend/03 · workspace](../../architecture/backend/03-modules.md#workspace) | S-49…S-52, S-164, S-167 |
 | Os bytes chegam inteiros, e uma enxurrada não derruba a connection que também leva a sessão | B-08 | [backend/06](../../architecture/backend/06-realtime.md#fan-out) | S-53…S-57 |
 | `node-pty` confinado a um adapter, carregado só quando ligado | B-08 | [09-code-quality](../../architecture/shared/09-code-quality.md#backend--dependency-cruiser) | S-62…S-64 |
@@ -194,7 +194,7 @@ docs/architecture/
 ├── shared/07-repository-layout.md  configuração do terminal que falha fechada
 ├── shared/08-authentication.md     reautenticação recente
 ├── backend/03-modules.md           módulo `terminal`; kinds na trilha; seção do arquivo da allowlist
-├── backend/04-claude-integration.md o que o subprocesso do Claude herda
+├── backend/04a-claude.md o que o subprocesso do Claude herda
 └── backend/06-realtime.md          stream do terminal, fluxo, shutdown
 ```
 

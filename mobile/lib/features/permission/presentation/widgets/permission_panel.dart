@@ -18,6 +18,7 @@ import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/plan_interaction.dart';
 import 'package:remote_claude/features/permission/domain/entities/question.dart';
 import 'package:remote_claude/features/permission/presentation/providers/permission_lookup_controller.dart';
 import 'package:remote_claude/features/permission/presentation/providers/permission_queue_controller.dart';
@@ -33,12 +34,16 @@ class PermissionPanel extends ConsumerStatefulWidget {
     required this.card,
     required this.now,
     super.key,
+    this.modes = const <String>[],
     this.onPlanApproved,
   });
 
   final String sessionId;
   final PermissionCard card;
   final DateTime now;
+
+  /// The modes the session's engine announced — what an approved plan's next mode is chosen among.
+  final List<String> modes;
 
   /// A plan was approved and its answer left: the session goes on in [mode] — the screen changes the
   /// chip of the mode in the same gesture (plan 10, B-21).
@@ -70,28 +75,31 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
     );
 
     final AnswerBlock? block = _blockOf(mayDecide: mayDecide, online: online);
+    // What is asked beyond leave to run a tool is the request's interaction, by its kind — a
+    // question or a plan —, never the tool's name nor its input (plan 28, B-20, B-21).
+    final QuestionInteraction? interaction = widget.card.request.interaction;
+    final PlanInteraction? plan = widget.card.request.plan;
 
     final String? notice = switch (_last) {
       AnswerResult.lockRefused => l10n.permissionLockRefused,
       AnswerResult.notSent => l10n.permissionNotSent,
-      AnswerResult.noLock when widget.card.request.toolName == planTool =>
-        l10n.permissionNoLockTitle,
+      AnswerResult.noLock when plan != null => l10n.permissionNoLockTitle,
       _ => null,
     };
-
-    final QuestionInteraction? interaction = widget.card.request.interaction;
 
     if (interaction != null) {
       return _question(interaction, block, notice);
     }
 
-    if (widget.card.request.toolName == planTool) {
+    if (plan != null) {
       return PlanApprovalCard(
         card: widget.card,
+        plan: plan,
         now: widget.now,
         block: block,
         notice: notice,
-        onApprove: (String mode) => unawaited(_approvePlan(l10n, mode)),
+        modes: widget.modes,
+        onApprove: (String? mode) => unawaited(_approvePlan(l10n, mode)),
         onKeepPlanning: (String comment) => unawaited(
           _answer(l10n, PermissionDecision.deny, PermissionScope.once, reason: comment),
         ),
@@ -123,7 +131,7 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
       ? AnswerBlock.connecting
       : null;
 
-  /// A question of Claude: its card, its draft — kept by the queue — and its two answers. Neither asks
+  /// A question of the agent: its card, its draft — kept by the queue — and its two answers. Neither asks
   /// the lock: answering authorises nothing (D-11).
   Widget _question(QuestionInteraction interaction, AnswerBlock? block, String? notice) {
     final String requestId = widget.card.requestId;
@@ -158,10 +166,11 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
   }
 
   /// Approves the plan, and — once the yes left — goes on in [mode].
-  Future<void> _approvePlan(AppLocalizations l10n, String mode) async {
+  Future<void> _approvePlan(AppLocalizations l10n, String? mode) async {
     final AnswerResult result = await _answer(l10n, PermissionDecision.allow, PermissionScope.once);
 
-    if (result == AnswerResult.sent) {
+    // No mode announced to go on in: the plan is approved, and the mode stays.
+    if (result == AnswerResult.sent && mode != null) {
       widget.onPlanApproved?.call(mode);
     }
   }

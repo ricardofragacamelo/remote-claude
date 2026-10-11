@@ -7,6 +7,7 @@ import 'package:remote_claude/features/session/domain/entities/history_page.dart
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
 
 void main() {
@@ -21,7 +22,7 @@ void main() {
       ),
     )!;
 
-    expect(page.conversationId, 'conv-1');
+    expect(page.conversation, conversationOf('conv-1'));
     expect(page.workspacePath, '/home/someone/project');
     expect(page.summary, 'Fix the build');
     expect(page.beganElsewhere, isFalse);
@@ -125,7 +126,10 @@ void main() {
       'a page',
       <String, Object?>{'events': <Object?>[]},
       <String, Object?>{'session': 'conv-1'},
-      without('sessionId'),
+      without('conversation'),
+      // The previous protocol's bare id says no engine, so it is no conversation (plan 28, B-13).
+      without('conversation', 'conv-1'),
+      without('conversation', <String, Object?>{'id': 'conv-1'}),
       without('cwd'),
       without('origin'),
       // An origin this build does not know is not "ours" by default.

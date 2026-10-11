@@ -37,7 +37,7 @@ const QUESTIONS = {
 };
 
 /** The question of {@link QUESTIONS}, asked in a given mode. */
-const asking = (permissionMode: PermissionMode = 'default') =>
+const asking = (permissionMode: PermissionMode = 'ask') =>
   aPermissionQuestion({ toolName: 'AskUserQuestion', input: QUESTIONS, permissionMode });
 
 /** Every answer it needs. */
@@ -72,13 +72,15 @@ describe('a question of Claude — plan 24, B-06…B-08', () => {
 
       const payload = harness.broadcaster.last('permission.requested');
       expect(payload).toMatchObject({
-        toolName: 'AskUserQuestion',
-        title: 'permission.tool.AskUserQuestion',
+        kind: 'question',
+        origin: { engine: 'claude', native: 'AskUserQuestion' },
+        // The title by the kind (plan 28, B-15): the engine fills `{agent}` on the client.
+        title: 'permission.tool.question',
         riskHint: 'read',
         defaultToNo: false,
         suggestions: [],
         reaches: [],
-        input: QUESTIONS,
+        rawInput: QUESTIONS,
         interaction: {
           kind: 'question',
           malformed: false,
@@ -134,7 +136,7 @@ describe('a question of Claude — plan 24, B-06…B-08', () => {
     });
 
     it('is put to the person in plan mode — S-34', async () => {
-      const outcome = await harness.request.execute(asking('plan'));
+      const outcome = await harness.request.execute(asking('readOnly'));
 
       expect(outcome.kind).toBe('pending');
       expect(harness.broadcaster.last('permission.requested')).toHaveProperty('interaction');

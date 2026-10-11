@@ -2,22 +2,61 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/events/turn-completed.json",
   "title": "TurnCompleted",
-  "description": "A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost.",
+  "description": "A turn finished. It is what closes the turn in the UI and what carries what it used and, when the engine says, what it cost.",
   "x-kind": "event",
   "x-type": "turn.completed",
   "type": "object",
-  "required": ["turnId", "usage", "costUsd", "durationMs"],
+  "required": ["turnId", "usage", "durationMs"],
   "properties": {
-    "turnId": { "type": "string" },
-    "promptedBy": { "type": "string", "description": "Who sent the prompt this turn answered." },
+    "turnId": {
+      "type": "string"
+    },
+    "promptedBy": {
+      "type": "string",
+      "description": "Who sent the prompt this turn answered."
+    },
     "usage": {
       "type": "object",
-      "description": "Token counts as the SDK reports them. An open map on purpose — the SDK adds fields to it, and a closed shape here would drop them."
+      "description": "What the turn used, in our names (plan 28, B-29) — each count present only when the engine reports it; an empty object when it reports none.",
+      "properties": {
+        "inputTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Tokens read as new input."
+        },
+        "outputTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Tokens written."
+        },
+        "cacheReadTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Input tokens read from the cache."
+        },
+        "cacheWriteTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Input tokens written to the cache."
+        },
+        "reasoningTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Tokens spent reasoning, when the engine counts them apart (plan 28, D-17)."
+        },
+        "webSearches": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Web searches the turn made, when the engine counts them (D-17)."
+        }
+      }
     },
     "costUsd": {
       "type": "string",
-      "description": "Cost of the turn, as a decimal string. A string and not a number because money through a float is money that rounds where nobody looked."
+      "description": "Cost of the turn in US dollars, as a decimal string — absent when the engine reports no cost (`capabilities.cost: none`). Zero is `\"0.000000\"`, never absent. A string and not a number because money through a float is money that rounds where nobody looked."
     },
-    "durationMs": { "type": "integer" }
+    "durationMs": {
+      "type": "integer"
+    }
   }
 }

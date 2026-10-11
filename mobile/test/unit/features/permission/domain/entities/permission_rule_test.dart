@@ -11,8 +11,8 @@ PermissionRule aRule({required DateTime expiresAt, RuleStatus status = RuleStatu
     PermissionRule(
       id: 'rule_1',
       scope: PermissionScope.always,
-      toolName: 'Bash',
-      pattern: 'Bash(git status)',
+      kind: 'shell',
+      pattern: 'shell(git status)',
       decision: PermissionDecision.allow,
       grantedBy: 'user-1',
       grantedAt: now.subtract(const Duration(days: 1)),

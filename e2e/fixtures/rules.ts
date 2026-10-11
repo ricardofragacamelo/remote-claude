@@ -179,7 +179,7 @@ export function expectRanUnasked(turn: Turn): void {
   ]);
 
   const write = turn.started.find(
-    (frame) => (frame.payload as { toolName?: string }).toolName === 'Write',
+    (frame) => (frame.payload as { origin?: { native?: string } }).origin?.native === 'Write',
   );
   const writeId = (write?.payload as { toolUseId?: string } | undefined)?.toolUseId;
   expect(writeId).toBeDefined();

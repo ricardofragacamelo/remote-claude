@@ -9,7 +9,7 @@
     "fixture": "tool-turn",
     "tool": "Write",
     "reachTool": "Any use of this tool",
-    "pattern": "Write",
+    "pattern": "file.write",
     "session": "Allow for this session",
     "allowedByRule": "Allowed by one of your rules",
     "via": "rule"

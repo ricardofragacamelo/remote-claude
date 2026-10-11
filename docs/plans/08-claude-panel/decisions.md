@@ -158,7 +158,7 @@ da sessão. Se não valer, o esforço é escolhido no rascunho e vai no `session
 descartado tem algo que não é do turno.
 
 **Recomendação:** sempre bifurcar — nunca truncar in-place, nem a conversa nossa: a original continua
-legível e o fork é a mesma mecânica da retomada externa ([backend/04](../../architecture/backend/04-claude-integration.md#retomada--fork-fora-in-place-dentro)).
+legível e o fork é a mesma mecânica da retomada externa ([backend/04](../../architecture/backend/04a-claude.md#retomada--fork-fora-in-place-dentro)).
 O backend resolve o ponto pelo `getSessionMessages` (sem parser), e a recusa do CLI vira
 `SESSION_FORK_REJECTED` com a retomada simples oferecida, sem repetir o fork. Os arquivos não voltam
 sozinhos: a tela oferece também desfazer até antes daquele turno (o desfazer do plano 04), desligado

@@ -14,7 +14,7 @@ export interface Outcome {
   readonly context: 'operation' | 'undo';
 }
 
-/** An operation stopped by the second step of a path that changes what Claude may do (07 · D-15). */
+/** An operation stopped by the second step of a path changing what the agent may do (07 · D-15). */
 export interface SensitiveRequest {
   readonly paths: readonly string[];
 

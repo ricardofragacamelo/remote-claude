@@ -5,6 +5,8 @@ import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_stream.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 
+import '../../../../../support/builders/conversations.dart';
+
 Pong pong({int seq = 1, String sessionId = 'ses-1', String nonce = 'n-1', int count = 1}) => Pong(
   seq: seq,
   sessionId: sessionId,
@@ -94,10 +96,10 @@ void main() {
     expect(StreamGap().props, <Object?>[null, null]);
     expect(StreamGap(sessionId: 's-1'), isNot(StreamGap(sessionId: 's-2')));
     expect(EventReceived(arrival, sessionId: 's-1'), isNot(EventReceived(arrival)));
-    expect(StreamGap(claudeSessionId: 'c-1'), isNot(StreamGap()));
+    expect(StreamGap(conversation: conversationOf('c-1')), isNot(StreamGap()));
     expect(
-      SessionJoined(sessionId: 's-1', claudeSessionId: 'c-1'),
-      SessionJoined(sessionId: 's-1', claudeSessionId: 'c-1'),
+      SessionJoined(sessionId: 's-1', conversation: conversationOf('c-1')),
+      SessionJoined(sessionId: 's-1', conversation: conversationOf('c-1')),
     );
     expect(
       CommandRefused(

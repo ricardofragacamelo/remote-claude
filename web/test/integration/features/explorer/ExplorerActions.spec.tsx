@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { explorerStore } from '@/features/explorer';
 import { FileMenu } from '@/features/commands';
-import { claudeContextTargets, FILES_DRAG_TYPE } from '@/shared/lib/files-drag';
+import { agentContextTargets, FILES_DRAG_TYPE } from '@/shared/lib/files-drag';
 import type { FilesDragPayload } from '@/shared/lib/files-drag';
 import { editorFake, resetEditorFake, setActiveFile } from '../../../support/editor-fake';
 import { APP, renderExplorer, row, theTree } from '../../../support/explorer';
@@ -581,7 +581,7 @@ describe("Claude's context, from the tree — S-269, S-270, S-276, S-277, S-279"
   it('offers "Add to Claude\'s context" only with somebody to take it, and says what it did', async () => {
     const user = userEvent.setup();
     const add = vi.fn();
-    const unregister = claudeContextTargets.register({ id: 'panel', position: 1, add });
+    const unregister = agentContextTargets.register({ id: 'panel', position: 1, add });
     renderExplorer({ 'a.ts': 'a', escape: { kind: 'symlink', outside: true } });
 
     try {

@@ -165,7 +165,7 @@ describe('saving — plan 07, B-34', () => {
     const dialog = await screen.findByRole('dialog', {
       name: t('editor.sensitive.title', { path: '.claude/settings.json' }),
     });
-    expect(within(dialog).getByText(t('editor.sensitive.claudeSettings'))).toBeVisible();
+    expect(within(dialog).getByText(t('editor.sensitive.projectSettings'))).toBeVisible();
     expect(
       within(dialog).getByRole('button', { name: t('editor.sensitive.cancel') }),
     ).toHaveFocus();

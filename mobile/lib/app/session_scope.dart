@@ -35,6 +35,9 @@ void sessionScope(Ref ref) {
   ref.onDispose(() => rejections?.cancel());
 
   void connect() {
+    // The engines are read again for whoever signed in: a list that failed before — or another
+    // user's — is not what the new session names its engines by (plan 28, B-13).
+    ref.invalidate(engineCatalogueProvider);
     final WsClient client = ref.read(wsClientProvider)..connect();
     rejections ??= client.rejections.listen(
       (_) => unawaited(ref.read(deviceControllerProvider.notifier).recheck()),
@@ -113,5 +116,6 @@ void _signedOut(Ref ref) {
     ..invalidate(firstPromptsProvider)
     ..invalidate(liveSessionControllerProvider)
     ..invalidate(workspaceListControllerProvider)
-    ..invalidate(permissionQueueControllerProvider);
+    ..invalidate(permissionQueueControllerProvider)
+    ..invalidate(engineCatalogueProvider);
 }

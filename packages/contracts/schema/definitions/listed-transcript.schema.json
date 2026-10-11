@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/listed-transcript.json",
+  "title": "ListedTranscript",
+  "description": "One conversation of the history, as a listing shows it: the conversation, where it ran, and what it is doing now.",
+  "type": "object",
+  "required": [
+    "conversation",
+    "sessionId",
+    "summary",
+    "origin",
+    "cwd",
+    "gitBranch",
+    "createdAt",
+    "lastModified",
+    "activity",
+    "liveSessionId",
+    "writtenAgoSeconds"
+  ],
+  "properties": {
+    "conversation": {
+      "$ref": "./conversation-ref.schema.json",
+      "description": "The conversation — what `session.start` takes as `resumeFrom`."
+    },
+    "sessionId": {
+      "type": "string",
+      "description": "The id of the conversation alone, for the published app of the previous protocol — gone when its window closes (plan 28, D-08)."
+    },
+    "summary": {
+      "type": "string",
+      "description": "What the conversation is about, as the engine summarises it."
+    },
+    "origin": {
+      "type": "string",
+      "enum": ["ours", "external"],
+      "description": "`ours` — opened here, by the caller — or `external`: begun elsewhere on the machine."
+    },
+    "cwd": {
+      "type": "string",
+      "description": "The folder it ran in."
+    },
+    "gitBranch": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The branch it ran on, when the engine recorded one."
+    },
+    "createdAt": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "When it began, ISO 8601, when the engine recorded it."
+    },
+    "lastModified": {
+      "type": "string",
+      "description": "When it was last written, ISO 8601."
+    },
+    "activity": {
+      "type": "string",
+      "enum": ["liveHere", "activeElsewhere", "idle"],
+      "description": "`liveHere` · `activeElsewhere` · `idle` — the last an estimate, said to be one."
+    },
+    "liveSessionId": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The caller's live session that holds it, when it is `liveHere`."
+    },
+    "writtenAgoSeconds": {
+      "type": "integer",
+      "description": "How long ago it was last written, in whole seconds."
+    }
+  }
+}

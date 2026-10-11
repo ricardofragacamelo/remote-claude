@@ -16,7 +16,7 @@ describe('the state of a folder tab', () => {
       view: FIRST_VIEW,
       sideBarOpen: true,
       panelOpen: false,
-      mobileView: 'claude',
+      mobileView: 'agent',
       sessionId: null,
     });
   });
@@ -73,7 +73,7 @@ describe('the state of a folder tab', () => {
     const tab = folderTabStore(A);
 
     tab.getState().showSession('S1');
-    expect(tab.getState()).toMatchObject({ sessionId: 'S1', conversationId: null });
+    expect(tab.getState()).toMatchObject({ sessionId: 'S1', conversation: null });
 
     tab.getState().showSession(null);
     expect(tab.getState().sessionId).toBeNull();
@@ -83,11 +83,14 @@ describe('the state of a folder tab', () => {
     const tab = folderTabStore(A);
     tab.getState().showSession('S1');
 
-    tab.getState().showConversation('C1');
-    expect(tab.getState()).toMatchObject({ conversationId: 'C1', sessionId: null });
+    tab.getState().showConversation({ engine: 'claude', id: 'C1' });
+    expect(tab.getState()).toMatchObject({
+      conversation: { engine: 'claude', id: 'C1' },
+      sessionId: null,
+    });
 
     tab.getState().showSession('S2');
-    expect(tab.getState()).toMatchObject({ conversationId: null, sessionId: 'S2' });
+    expect(tab.getState()).toMatchObject({ conversation: null, sessionId: 'S2' });
   });
 
   it('takes a session from a link to be checked, and says so when it is not live — B-12', () => {

@@ -25,6 +25,10 @@ export const sessionFileStates = pgTable(
      * written before migration `0013`.
      */
     claudeSessionId: text('claude_session_id'),
+    /** The engine of the conversation (plan 28, B-11); null with it, on rows before `0013`. */
+    engine: text('engine'),
+    /** The id of the conversation in its engine's store; the old column is its copy until F7. */
+    conversationId: text('conversation_id'),
 
     /**
      * SHA-256 of the contents the session left behind, or `NULL` when what the session left is
@@ -40,6 +44,7 @@ export const sessionFileStates = pgTable(
     primaryKey({ name: 'session_file_states_pkey', columns: [table.sessionId, table.path] }),
     index('session_file_states_session_id_idx').on(table.sessionId),
     index('session_file_states_claude_session_id_idx').on(table.claudeSessionId),
+    index('session_file_states_conversation_idx').on(table.engine, table.conversationId),
   ],
 );
 
@@ -69,6 +74,10 @@ export const turnFileCheckpoints = pgTable(
      * sessions before it recorded are its points too. `NULL` on rows written before `0013`.
      */
     claudeSessionId: text('claude_session_id'),
+    /** The engine of the conversation (plan 28, B-11); null with it, on rows before `0013`. */
+    engine: text('engine'),
+    /** The id of the conversation in its engine's store; the old column is its copy until F7. */
+    conversationId: text('conversation_id'),
     promptId: text('prompt_id').notNull(),
     path: text('path').notNull(),
 
@@ -110,5 +119,6 @@ export const turnFileCheckpoints = pgTable(
     index('turn_file_checkpoints_captured_at_idx').on(table.capturedAt),
     index('turn_file_checkpoints_session_id_prompt_id_idx').on(table.sessionId, table.promptId),
     index('turn_file_checkpoints_claude_session_id_idx').on(table.claudeSessionId),
+    index('turn_file_checkpoints_conversation_idx').on(table.engine, table.conversationId),
   ],
 );

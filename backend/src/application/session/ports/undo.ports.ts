@@ -4,7 +4,7 @@ import type {
   SessionId,
   TurnFileCheckpoint,
 } from '@domain/session';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * What an undo reaches: the checkpoints of this live session, and of every earlier session that
@@ -15,7 +15,7 @@ import type { ClaudeSessionId } from '@domain/transcript';
  */
 export interface UndoReach {
   readonly sessionId: SessionId;
-  readonly claudeSessionId: ClaudeSessionId;
+  readonly conversation: ConversationRef;
 }
 
 /** How the file itself was measured, once the undo has put it back. */

@@ -2,8 +2,10 @@ import { useCallback, useEffect } from 'react';
 import { useStore } from 'zustand';
 
 import { folderTabStore, useFolderTab } from '@/features/workbench';
-import { claudePanelStore, tabKeyOf } from '../store/claude-panel.store';
-import type { PanelTab } from '../store/claude-panel.store';
+import { sameConversation } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
+import { agentPanelStore, tabKeyOf } from '../store/agent-panel.store';
+import type { PanelTab } from '../store/agent-panel.store';
 import { noteSessionFolder } from '../store/session-folders.store';
 
 /** The conversations of the panel of a folder tab, and what can be done with them (plan 08, B-32). */
@@ -22,12 +24,12 @@ export interface PanelTabs {
 }
 
 /** What the folder tab shows, as the panel's tab of it. */
-function shownBy(sessionId: string | null, conversationId: string | null) {
+function shownBy(sessionId: string | null, conversation: ConversationRef | null) {
   if (sessionId !== null) {
-    return { kind: 'session', id: sessionId } as const;
+    return { kind: 'session', sessionId } as const;
   }
 
-  return conversationId === null ? null : ({ kind: 'conversation', id: conversationId } as const);
+  return conversation === null ? null : ({ kind: 'conversation', conversation } as const);
 }
 
 /**
@@ -37,19 +39,24 @@ function shownBy(sessionId: string | null, conversationId: string | null) {
  * panel, and the tab picked in the panel is what the tab — and its address — shows.
  */
 export function usePanelTabs(folder: string): PanelTabs {
-  const panel = claudePanelStore(folder);
+  const panel = agentPanelStore(folder);
   const tabs = useStore(panel, (state) => state.tabs);
   const activeKey = useStore(panel, (state) => state.active);
-  const { sessionId, conversationId } = useFolderTab(folder);
+  const { sessionId, conversation } = useFolderTab(folder);
 
   // The tab's side into the panel: a session or a conversation arrives as its tab; nothing at all is
   // a draft — the one on screen, or a new one.
   useEffect(() => {
-    const shown = shownBy(sessionId, conversationId);
+    const shown = shownBy(sessionId, conversation);
     const state = panel.getState();
 
+    if (shown?.kind === 'session') {
+      state.show('session', shown.sessionId);
+      return;
+    }
+
     if (shown !== null) {
-      state.show(shown.kind, shown.id);
+      state.show('conversation', shown.conversation);
       return;
     }
 
@@ -62,7 +69,7 @@ export function usePanelTabs(folder: string): PanelTabs {
         state.activate(draft.key);
       }
     }
-  }, [conversationId, panel, sessionId]);
+  }, [conversation, panel, sessionId]);
 
   /** The panel's side into the tab: what it shows is what the tab shows. */
   const showOnTab = useCallback(
@@ -72,9 +79,9 @@ export function usePanelTabs(folder: string): PanelTabs {
       if (tab?.kind === 'session') {
         if (folderTab.sessionId !== tab.sessionId) folderTab.showSession(tab.sessionId);
       } else if (tab?.kind === 'conversation') {
-        if (folderTab.conversationId !== tab.conversationId)
-          folderTab.showConversation(tab.conversationId);
-      } else if (folderTab.sessionId !== null || folderTab.conversationId !== null) {
+        if (!sameConversation(folderTab.conversation, tab.conversation))
+          folderTab.showConversation(tab.conversation);
+      } else if (folderTab.sessionId !== null || folderTab.conversation !== null) {
         folderTab.showSession(null);
       }
     },
@@ -125,7 +132,7 @@ export function usePanelTabs(folder: string): PanelTabs {
 
 /** The sessions open in the panel of a folder tab — what keeps them attached while not on screen. */
 export function usePanelSessions(folder: string): readonly string[] {
-  const tabs = useStore(claudePanelStore(folder), (state) => state.tabs);
+  const tabs = useStore(agentPanelStore(folder), (state) => state.tabs);
   const { sessionId } = useFolderTab(folder);
   const ids = tabs.flatMap((tab) => (tab.kind === 'session' ? [tab.sessionId] : []));
   const all = sessionId === null || ids.includes(sessionId) ? ids : [...ids, sessionId];
@@ -149,7 +156,7 @@ export function usePanelDraft(
   folder: string,
   key: string,
 ): { readonly text: string; setText(text: string): void } {
-  const panel = claudePanelStore(folder);
+  const panel = agentPanelStore(folder);
   const text = useStore(panel, (state) => state.drafts[key] ?? '');
 
   return {

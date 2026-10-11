@@ -14,6 +14,19 @@ import {
   conditionPhrase,
   docComment as comment,
 } from './contracts-emit.mjs';
+
+/**
+ * The type of a readonly array of [items].
+ *
+ * @param {import('./contracts-model.mjs').TypeRef} items
+ * @returns {string}
+ */
+function arrayExpression(items) {
+  // A union of items is parenthesised: `'a' | 'b'[]` would be a string or an array of `'b'`.
+  const item = typeExpression(items);
+  return `readonly ${items.kind === 'enum' ? `(${item})` : item}[]`;
+}
+
 /**
  * @param {import('./contracts-model.mjs').TypeRef} type
  * @returns {string}
@@ -33,7 +46,7 @@ function typeExpression(type) {
     case 'enum':
       return type.values.map((value) => `'${value}'`).join(' | ');
     case 'array':
-      return `readonly ${typeExpression(type.items)}[]`;
+      return arrayExpression(type.items);
     case 'object':
       return type.name;
   }
@@ -52,7 +65,7 @@ function emitInterface(declaration) {
   for (const field of declaration.fields) {
     lines.push(...comment(field.description, '  ', 'block'));
     lines.push(
-      `  readonly ${field.name}${field.required ? '' : '?'}: ${typeExpression(field.type)};`,
+      `  readonly ${field.name}${field.required ? '' : '?'}: ${typeExpression(field.type)}${field.nullable ? ' | null' : ''};`,
     );
   }
 
@@ -70,6 +83,15 @@ function emitInterface(declaration) {
  * checks.
  */
 const GUARD_HELPERS = [
+  {
+    name: 'nullOr',
+    source: [
+      '/** Whether a field that may be `null` is, or passed its own check. */',
+      'function nullOr(value: unknown, passed: boolean): boolean {',
+      '  return value === null || passed;',
+      '}',
+    ],
+  },
   {
     name: 'isNonNullObject',
     source: [
@@ -153,6 +175,17 @@ function fieldCheck(field) {
     case 'object':
       return `is${field.type.name}(${access})`;
   }
+}
+
+/**
+ * The check of a field that may be `null`: `null`, or what the field's own check accepts.
+ *
+ * @param {import('./contracts-model.mjs').Field} field
+ * @param {string | null} check
+ * @returns {string | null}
+ */
+function nullableCheck(field, check) {
+  return field.nullable && check !== null ? `nullOr(record['${field.name}'], ${check})` : check;
 }
 
 /**
@@ -255,7 +288,7 @@ function emitGuard(declaration) {
   const checks = [
     ...declaration.fields
       .filter((field) => field.required)
-      .map((field) => fieldCheck(field))
+      .map((field) => nullableCheck(field, fieldCheck(field)))
       .filter((check) => check !== null),
     ...declaration.conditionals.map((conditional) => conditionalCheck(declaration, conditional)),
     ...declaration.fields.flatMap(limitChecks),
@@ -316,6 +349,24 @@ function emitFrame(message) {
 }
 
 /**
+ * The payload of every event, by its `type` — what lets a producer be told by the compiler that an
+ * event it emits is one of the contract, with the payload the contract declares (plan 28, S-29).
+ *
+ * @param {readonly import('./contracts-model.mjs').Message[]} frames
+ * @returns {string[]}
+ */
+function emitEventPayloads(frames) {
+  const events = frames.filter((message) => message.frameKind === 'event');
+  return [
+    '/** The payload of every event of the contract, by its `type`. */',
+    'export interface EventPayloads {',
+    ...events.map((message) => `  '${message.frameType}': ${message.payload};`),
+    '}',
+    '',
+  ];
+}
+
+/**
  * The whole generated TypeScript file.
  *
  * @param {import('./contracts-model.mjs').Model} model
@@ -331,7 +382,7 @@ export function emitTypeScript(model) {
     BANNER,
     '',
     `/** The protocol version this build speaks. */`,
-    `export const PROTOCOL_VERSION = 1;`,
+    `export const PROTOCOL_VERSION = ${String(model.protocolVersion)};`,
     '',
     `/** Every \`type\` the generated frames cover, for exhaustiveness at the call site. */`,
     `export const FRAME_TYPES = [`,
@@ -345,6 +396,7 @@ export function emitTypeScript(model) {
     ).flatMap((helper) => [...helper.source, '']),
     ...guards.flatMap((guard) => [guard, '']),
     ...frames.flatMap((message) => [emitFrame(message), '']),
+    ...emitEventPayloads(frames),
   ];
 
   return `${blocks.join('\n').trimEnd()}\n`;

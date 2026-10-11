@@ -105,7 +105,7 @@ function NotKeptList({ notKept }: { readonly notKept: readonly NotKept[] }): Rea
   );
 }
 
-/** The second step: what each folder holds, and what changes what Claude may do. */
+/** The second step: what each folder holds, and what changes what the agent may do. */
 function CountStep({
   counted,
   sensitive,

@@ -24,6 +24,7 @@ import { completedTurn, endSession, startConversation } from '../fixtures/histor
 import { attachFrom, closeSession, connected, prompt } from '../fixtures/live-session';
 import { sessionInTab, tabOf, workbenchAddress } from '../fixtures/workbench';
 import { scenario } from '../scenarios';
+import type { ConversationRef } from '../fixtures/conversation';
 
 /**
  * The sessions of a folder, its tabs and its queue, through the door a person uses — plan 08, F6,
@@ -78,7 +79,7 @@ function group(page: Page, title: string): Locator {
 
 /** Shows the Sessions view in the side bar — its button toggles it, so only when it is not shown. */
 async function showSessions(page: Page): Promise<void> {
-  const button = page.getByRole('button', { name: 'Claude sessions', exact: true });
+  const button = page.getByRole('button', { name: 'Claude Code sessions', exact: true });
 
   if ((await button.getAttribute('aria-pressed')) !== 'true') {
     await button.click();
@@ -127,7 +128,7 @@ async function fromRow(row: Locator, action: string): Promise<void> {
 }
 
 /** The conversation a session writes to. */
-function conversationOf(sessionId: string): Promise<string> {
+function conversationOf(sessionId: string): Promise<ConversationRef> {
   return conversationOfSession(suite.user(), sessionId);
 }
 
@@ -185,7 +186,7 @@ test(`${sessions.id} — the Sessions view lists a live session, one active else
   await expect.poll(() => openedSessionOf(page)).not.toBe(running.sessionId);
   const continued = await openedSessionOf(page);
   opened(continued);
-  expect(await conversationOf(continued)).toBe(ended.conversationId);
+  expect(await conversationOf(continued)).toEqual(ended.conversation);
 
   // Forked from its row: a conversation being written elsewhere is continued as a copy, after asking.
   await showSessions(page);

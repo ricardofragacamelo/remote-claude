@@ -1,3 +1,5 @@
+import type { ConversationRef } from '@/shared/lib/conversation';
+
 /**
  * Where a conversation came from, as far as this product can prove.
  *
@@ -14,10 +16,10 @@ export type ConversationOrigin = 'ours' | 'external';
  */
 export type ConversationActivity = 'liveHere' | 'activeElsewhere' | 'idle';
 
-/** One conversation of Claude's store, as the history lists it. */
+/** One conversation of an engine's store, as the history lists it. */
 export interface ConversationSummary {
-  /** The id in Claude's store — what a page of it is read by, and what a resume takes. */
-  readonly conversationId: string;
+  /** The engine and the id in its store — what a page of it is read by, and what a resume takes. */
+  readonly conversation: ConversationRef;
   readonly summary: string;
   readonly origin: ConversationOrigin;
 

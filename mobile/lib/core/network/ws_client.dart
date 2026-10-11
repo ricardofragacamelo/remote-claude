@@ -17,11 +17,13 @@ library;
 import 'dart:async';
 import 'dart:math';
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/device/install_id.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_operations.dart';
 import 'package:remote_claude/core/network/contracts/frame_codec.dart';
 import 'package:remote_claude/core/network/contracts/protocol.g.dart';
+import 'package:remote_claude/core/network/conversation_wire.dart';
 import 'package:remote_claude/core/network/credentials.dart';
 import 'package:remote_claude/core/network/frame_socket.dart';
 import 'package:remote_claude/core/network/trace.dart';
@@ -62,10 +64,10 @@ abstract interface class SessionSubscriber {
 
   /// The buffer no longer holds what this subscriber missed: drop local state and reload.
   ///
-  /// [claudeSessionId] is the conversation to reload the history from, as the ack named it — the
-  /// only place left that says so once the buffer has lost the `session.started` that did. `null`
-  /// for a stream that is not a conversation, such as the diagnostic round trip.
-  void onGap(String? claudeSessionId);
+  /// [conversation] is the conversation to reload the history from, as the ack named it — the only
+  /// place left that says so once the buffer has lost the `session.started` that did. `null` for a
+  /// stream that is not a conversation, such as the diagnostic round trip.
+  void onGap(ConversationKey? conversation);
 
   /// The highest `seq` already applied, so a reconnect can resume from it.
   int get lastSeq;
@@ -540,7 +542,7 @@ class WsClient {
     }
 
     if (frame.payload?['gap'] == true) {
-      final Object? conversation = frame.payload?['claudeSessionId'];
+      final ConversationKey? conversation = conversationKeyFrom(frame.payload?['conversation']);
 
       _logger.warn(
         'replay gap — reloading the transcript',
@@ -549,7 +551,7 @@ class WsClient {
       );
 
       for (final SessionSubscriber subscriber in watching.toList(growable: false)) {
-        subscriber.onGap(conversation is String ? conversation : null);
+        subscriber.onGap(conversation);
       }
     }
   }

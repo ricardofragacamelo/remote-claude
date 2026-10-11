@@ -1,6 +1,7 @@
 import { createStore } from 'zustand/vanilla';
 import type { StoreApi } from 'zustand/vanilla';
 
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { createRegistry } from '@/shared/lib/registry';
 import { INITIAL_LAYOUT, layoutFrom } from '../hooks/workbench-layout';
 import type { WorkbenchLayout } from '../hooks/workbench-layout';
@@ -19,16 +20,16 @@ export interface FolderTabUiState {
   readonly sideBarOpen: boolean;
   readonly panelOpen: boolean;
 
-  /** Whether the chat with Claude is on screen beside the editor (plan 08, B-32). */
+  /** Whether the chat with the agent is on screen beside the editor (plan 08, B-32). */
   readonly secondaryOpen: boolean;
 
-  /** Under `md`, the one view on screen — Claude's until somebody picks another. */
+  /** Under `md`, the one view on screen — the agent's until somebody picks another. */
   readonly mobileView: MobileView;
 
   /** The sizes of the parts, in percent (plan 06, S-113). */
   readonly sizes: WorkbenchLayout;
 
-  /** The session the Claude side bar shows, or `null` for "start one". */
+  /** The session the agent's side bar shows, or `null` for "start one". */
   readonly sessionId: string | null;
 
   /**
@@ -36,7 +37,7 @@ export interface FolderTabUiState {
    * `null`. Never beside a session: the panel shows one thing, and `showSession` and
    * `showConversation` each clear the other (plan 08, B-10).
    */
-  readonly conversationId: string | null;
+  readonly conversation: ConversationRef | null;
 
   /** The session on the panel came from a link, and is still to be found among the caller's. */
   readonly sessionFromLink: boolean;
@@ -56,14 +57,14 @@ export interface FolderTabUiState {
   togglePanel(): void;
   toggleSecondary(): void;
 
-  /** Puts the chat with Claude on screen — beside the editor, or as the one view under `md`. */
+  /** Puts the chat with the agent on screen — beside the editor, or as the one view under `md`. */
   showSecondary(): void;
   showMobile(view: MobileView): void;
 
   /** Keeps new sizes — each brought back inside its limits. */
   resize(sizes: Partial<WorkbenchLayout>): void;
   showSession(sessionId: string | null): void;
-  showConversation(conversationId: string | null): void;
+  showConversation(conversation: ConversationRef | null): void;
 
   /** Puts on the panel a session a link named — to be checked before it is trusted. */
   openLinkedSession(sessionId: string): void;
@@ -80,10 +81,10 @@ function createFolderTabStore(): FolderTabStore {
     sideBarOpen: true,
     panelOpen: false,
     secondaryOpen: true,
-    mobileView: 'claude',
+    mobileView: 'agent',
     sizes: INITIAL_LAYOUT,
     sessionId: null,
-    conversationId: null,
+    conversation: null,
     sessionFromLink: false,
     linkRefused: false,
 
@@ -107,7 +108,7 @@ function createFolderTabStore(): FolderTabStore {
       set((state) => ({ secondaryOpen: !state.secondaryOpen }));
     },
     showSecondary: () => {
-      set({ secondaryOpen: true, mobileView: 'claude' });
+      set({ secondaryOpen: true, mobileView: 'agent' });
     },
     showMobile: (mobileView) => {
       set({ mobileView });
@@ -118,18 +119,18 @@ function createFolderTabStore(): FolderTabStore {
     showSession: (sessionId) => {
       set({
         sessionId,
-        conversationId: null,
+        conversation: null,
         sessionFromLink: false,
         linkRefused: false,
       });
     },
-    showConversation: (conversationId) => {
-      set({ conversationId, sessionId: null, sessionFromLink: false, linkRefused: false });
+    showConversation: (conversation) => {
+      set({ conversation, sessionId: null, sessionFromLink: false, linkRefused: false });
     },
     openLinkedSession: (sessionId) => {
       set({
         sessionId,
-        conversationId: null,
+        conversation: null,
         sessionFromLink: true,
         linkRefused: false,
       });
@@ -151,6 +152,16 @@ function isMobileView(value: unknown): value is MobileView {
 }
 
 /**
+ * A kept view of the one-view layout, as far as it can be trusted — the agent's when it is none. A
+ * layout kept by an older build names the agent's view by the name it had before it was neutral
+ * (plan 28, B-39): it reads as the agent's, as any other view this build does not know, and is kept
+ * under the new name from then on.
+ */
+function keptMobileView(value: unknown): MobileView {
+  return isMobileView(value) ? value : 'agent';
+}
+
+/**
  * A kept layout, as far as it can be trusted: a part that does not read as one of its values is its
  * default; a view nobody registers any more is resolved by the activity bar, as any other.
  */
@@ -166,7 +177,7 @@ export function keptLayoutFrom(saved: unknown): KeptLayout | undefined {
     sideBarOpen: typeof record['sideBarOpen'] === 'boolean' ? record['sideBarOpen'] : true,
     panelOpen: typeof record['panelOpen'] === 'boolean' ? record['panelOpen'] : false,
     secondaryOpen: typeof record['secondaryOpen'] === 'boolean' ? record['secondaryOpen'] : true,
-    mobileView: isMobileView(record['mobileView']) ? record['mobileView'] : 'claude',
+    mobileView: keptMobileView(record['mobileView']),
     sizes: layoutFrom(record['sizes']),
   };
 }

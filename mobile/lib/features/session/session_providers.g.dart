@@ -1085,3 +1085,140 @@ final class ListLiveSessionsProvider
 }
 
 String _$listLiveSessionsHash() => r'96c01cab79f2f50d849f5a8dba363b19c4286d88';
+
+/// The engines endpoint (plan 28, B-13).
+
+@ProviderFor(engineApiDataSource)
+final engineApiDataSourceProvider = EngineApiDataSourceProvider._();
+
+/// The engines endpoint (plan 28, B-13).
+
+final class EngineApiDataSourceProvider
+    extends $FunctionalProvider<EngineApiDataSource, EngineApiDataSource, EngineApiDataSource>
+    with $Provider<EngineApiDataSource> {
+  /// The engines endpoint (plan 28, B-13).
+  EngineApiDataSourceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'engineApiDataSourceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$engineApiDataSourceHash();
+
+  @$internal
+  @override
+  $ProviderElement<EngineApiDataSource> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  EngineApiDataSource create(Ref ref) {
+    return engineApiDataSource(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(EngineApiDataSource value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<EngineApiDataSource>(value),
+    );
+  }
+}
+
+String _$engineApiDataSourceHash() => r'4bff2fec3f476f60845051b6a8dad7850deb1533';
+
+/// The engines of the installation.
+
+@ProviderFor(engineRepository)
+final engineRepositoryProvider = EngineRepositoryProvider._();
+
+/// The engines of the installation.
+
+final class EngineRepositoryProvider
+    extends $FunctionalProvider<EngineRepository, EngineRepository, EngineRepository>
+    with $Provider<EngineRepository> {
+  /// The engines of the installation.
+  EngineRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'engineRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$engineRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<EngineRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  EngineRepository create(Ref ref) {
+    return engineRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(EngineRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<EngineRepository>(value),
+    );
+  }
+}
+
+String _$engineRepositoryHash() => r'34542be2d17bc1bc58a33adb2ca512debf420830';
+
+/// Lists the engines, and what each can do.
+
+@ProviderFor(listEngines)
+final listEnginesProvider = ListEnginesProvider._();
+
+/// Lists the engines, and what each can do.
+
+final class ListEnginesProvider extends $FunctionalProvider<ListEngines, ListEngines, ListEngines>
+    with $Provider<ListEngines> {
+  /// Lists the engines, and what each can do.
+  ListEnginesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'listEnginesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$listEnginesHash();
+
+  @$internal
+  @override
+  $ProviderElement<ListEngines> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ListEngines create(Ref ref) {
+    return listEngines(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ListEngines value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ListEngines>(value),
+    );
+  }
+}
+
+String _$listEnginesHash() => r'2c7be9b72ddad329d1c83912b59e6dfe5b9ab794';

@@ -88,7 +88,7 @@ export interface RestoreOptions {
    */
   readonly ifMatch?: string | null;
 
-  /** The second step of a file that changes what Claude may do (07 · D-15). */
+  /** The second step of a file that changes what the agent may do (07 · D-15). */
   readonly confirmSensitive?: boolean;
 }
 

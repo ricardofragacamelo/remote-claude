@@ -13,11 +13,13 @@ import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/features/session/presentation/providers/owned_sessions.dart';
 import 'package:remote_claude/features/session/presentation/widgets/session_help.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/builders/frames.dart';
 import '../../../support/fakes/recording_writer.dart';
 import '../../../support/pump_app.dart';
@@ -150,6 +152,37 @@ void main() {
       expect(find.text(l10n.sessionStatusCost(r'$0.30', '2')), findsOneWidget);
     });
 
+    testWidgets('plan 28 · S-86 · an engine that reports no cost: the sheet says so, never "\$0"', (
+      WidgetTester tester,
+    ) async {
+      await screen.pump(
+        tester,
+        agents: const AgentNames(names: <String, String>{anEngine: anEngineName}),
+      );
+      await emit(
+        tester,
+        turnCompleted(seq: 2, turnId: 't1', costUsd: null, usage: const <String, Object?>{}),
+      );
+
+      await tester.tap(find.text(l10n.sessionStandingConnected));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.sessionStatusCostNotReported(anEngineName)), findsOneWidget);
+      expect(find.textContaining(r'$0'), findsNothing);
+      expect(find.text(l10n.sessionTurnLineNoCost('1.2')), findsOneWidget);
+    });
+
+    testWidgets('plan 28 · S-87 · a turn that cost zero costs zero', (WidgetTester tester) async {
+      await screen.pump(tester);
+      await emit(tester, turnCompleted(seq: 2, turnId: 't1', costUsd: '0.000000'));
+
+      expect(find.text(l10n.sessionTurnLine('0.000000', '1.2')), findsOneWidget);
+      await tester.tap(find.text(l10n.sessionStandingConnected));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.sessionStatusCost(r'$0.00', '1')), findsOneWidget);
+    });
+
     testWidgets('the id the clipboard refused is said, so it can be copied by hand', (
       WidgetTester tester,
     ) async {
@@ -231,7 +264,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.sessionCloseTitle), findsOneWidget);
-      expect(find.text(l10n.sessionCloseDescription), findsOneWidget);
+      expect(find.text(l10n.sessionCloseDescription(anEngine)), findsOneWidget);
       // The way out first: the focus starts on keeping it running.
       expect(Focus.of(tester.element(find.text(l10n.sessionCloseKeep))).hasFocus, isTrue);
 
@@ -314,6 +347,65 @@ void main() {
       expect(find.text('at $rulesRoute'), findsOneWidget);
     });
 
+    testWidgets('S-40 · "copy the id" copies the id of the conversation, naming its engine', (
+      WidgetTester tester,
+    ) async {
+      final List<String> copied = clipboard(tester);
+      await screen.pump(
+        tester,
+        opened: false,
+        agents: const AgentNames(names: <String, String>{anEngine: anEngineName}),
+      );
+      await emit(tester, sessionStarted(sessionId: 'session-1', conversation: 'conv-1'));
+      await openMenu(tester);
+
+      expect(find.text(l10n.sessionMenuCopyId), findsNothing);
+      await tester.tap(find.text(l10n.sessionMenuCopyConversationId(anEngineName)));
+      await tester.pumpAndSettle();
+
+      expect(copied, <String>['conv-1']);
+      expect(find.text(l10n.sessionMenuConversationIdCopied(anEngineName)), findsOneWidget);
+    });
+
+    testWidgets('S-40 · an engine the app has no name for yet is named by its id', (
+      WidgetTester tester,
+    ) async {
+      await screen.pump(tester, opened: false);
+      await emit(tester, sessionStarted(sessionId: 'session-1', conversation: 'conv-1'));
+      await openMenu(tester);
+
+      expect(find.text(l10n.sessionMenuCopyConversationId(anEngine)), findsOneWidget);
+    });
+
+    testWidgets('S-40 · the conversation id the clipboard refused is said, to copy by hand', (
+      WidgetTester tester,
+    ) async {
+      final RecordingWriter writer = RecordingWriter();
+      clipboard(tester, refuses: true);
+      await screen.pump(
+        tester,
+        opened: false,
+        extra: <Override>[
+          appLoggerProvider.overrideWithValue(
+            AppLogger(
+              context: const LogContext(appVersion: '1.0.0', platform: 'android'),
+              writer: writer.writer,
+            ),
+          ),
+        ],
+      );
+      await emit(tester, sessionStarted(sessionId: 'session-1', conversation: 'conv-1'));
+      await openMenu(tester);
+
+      await tester.tap(find.text(l10n.sessionMenuCopyConversationId(anEngine)));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.sessionMenuCopyFailed('conv-1')), findsOneWidget);
+      final Map<String, Object?> line = writer.withOp('session.copyId').single;
+      expect(line['platformError'], 'denied');
+      expect(line['conversation'], '$anEngine:conv-1');
+    });
+
     testWidgets('S-51 · the undo opens the undo sheet', (WidgetTester tester) async {
       await screen.pump(tester);
       await openMenu(tester);
@@ -341,7 +433,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(SessionPage), findsOneWidget);
-      expect(find.textContaining(l10n.sessionEndedResumes), findsOneWidget);
+      expect(find.textContaining(l10n.sessionEndedResumes(anEngine)), findsOneWidget);
     });
 
     testWidgets('S-52 · ended elsewhere with the question up: it closes, and nothing is sent', (
@@ -356,7 +448,7 @@ void main() {
       await emit(tester, sessionClosed(seq: 2, reason: 'closedByUser'));
 
       expect(find.text(l10n.sessionCloseTitle), findsNothing);
-      expect(find.textContaining(l10n.sessionEndedResumes), findsOneWidget);
+      expect(find.textContaining(l10n.sessionEndedResumes(anEngine)), findsOneWidget);
       expect(screen.sessions.commands, isEmpty);
     });
   });
@@ -377,14 +469,14 @@ void main() {
 
       expect(find.text(l10n.sessionHelpTitle), findsOneWidget);
       for (final String text in <String>[
-        l10n.sessionHelpBar,
+        l10n.sessionHelpBar(l10n.engineNameFallback),
         l10n.sessionHelpMenu,
         l10n.sessionHelpStatus,
-        l10n.sessionHelpWorking,
-        l10n.sessionHelpInline,
-        l10n.sessionHelpPill,
-        l10n.sessionHelpTasks,
-        l10n.sessionHelpActions,
+        l10n.sessionHelpWorking(l10n.engineNameFallback),
+        l10n.sessionHelpInline(l10n.engineNameFallback),
+        l10n.sessionHelpPill(l10n.engineNameFallback),
+        l10n.sessionHelpTasks(l10n.engineNameFallback),
+        l10n.sessionHelpActions(l10n.engineNameFallback),
       ]) {
         expect(find.text(text), findsOneWidget);
       }
@@ -401,7 +493,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(pt.sessionHelpTitle), findsOneWidget);
-      expect(find.text(pt.sessionHelpActions), findsOneWidget);
+      expect(find.text(pt.sessionHelpActions(pt.engineNameFallback)), findsOneWidget);
     });
   });
 }

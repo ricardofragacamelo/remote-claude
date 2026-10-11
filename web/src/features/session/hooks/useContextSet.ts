@@ -9,7 +9,7 @@ import { asAppError } from '../lib/app-errors';
 import { holdUpload, releaseUpload } from '../lib/pending-uploads';
 import { DEFAULT_LIMITS, probeFile, uploadAttachment } from '../services/composer.service';
 import { fetchContext } from '../services/insight.service';
-import { claudePanelStore } from '../store/claude-panel.store';
+import { agentPanelStore } from '../store/agent-panel.store';
 import type {
   ComposerLimits,
   ContextItem,
@@ -94,7 +94,7 @@ export function useContextSet(
   tabKey: string,
   sessionId: string | null,
 ): ContextSet {
-  const panel = claudePanelStore(folder);
+  const panel = agentPanelStore(folder);
   const items = useStore(panel, (state) => state.contexts[tabKey]) ?? NO_ITEMS;
   const limits = useCatalog(folder, false).data?.limits ?? DEFAULT_LIMITS;
   const free = useFreeTokens(sessionId, limits.draftWindowTokens);
@@ -227,10 +227,11 @@ export function useContextSet(
 
 /**
  * Adds to the set of one tab of a panel, and answers what to say of it: past the ceiling, how many
- * were left out (S-235). The one door both the composer and "Add to Claude's context" go through.
+ * were left out (S-235). The one door both the composer and "Add to the agent's context" go
+ * through.
  */
 export function addToSet(
-  panel: ReturnType<typeof claudePanelStore>,
+  panel: ReturnType<typeof agentPanelStore>,
   tabKey: string,
   incoming: readonly ContextItem[],
 ): ContextNotice | null {

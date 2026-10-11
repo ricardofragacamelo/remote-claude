@@ -10,8 +10,10 @@
 library;
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation_entry.dart';
+import 'package:remote_claude/features/session/domain/entities/engine.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
 export 'package:remote_claude/features/session/domain/entities/conversation_entry.dart';
@@ -96,33 +98,73 @@ class SessionEnding extends Equatable {
 class SessionFacts extends Equatable {
   const SessionFacts({
     this.workspacePath,
-    this.conversationId,
+    this.conversation,
     this.model,
     this.permissionMode,
     this.resumedFrom,
+    this.engine,
+    this.capabilities,
   });
 
   /// The folder it runs in — where resuming it has to run too.
   final String? workspacePath;
 
-  /// The conversation in Claude's store it writes to — what a resume of it continues.
-  final String? conversationId;
+  /// The conversation it writes to, in its engine's store — what a resume of it continues.
+  final ConversationKey? conversation;
 
   final String? model;
   final String? permissionMode;
 
   /// The conversation it continues, when it is a resume or a fork — what "resume instead" resumes
-  /// when the CLI refused the point of a fork.
-  final String? resumedFrom;
+  /// when the engine refused the point of a fork.
+  final ConversationKey? resumedFrom;
+
+  /// The engine it runs on — an `id` of `GET /engines`, named on screen by its display name.
+  final String? engine;
+
+  /// What its engine can do, as `session.started` declared it — kept, not acted on yet (plan 28, B-13).
+  final EngineCapabilities? capabilities;
 
   @override
   List<Object?> get props => <Object?>[
     workspacePath,
-    conversationId,
+    conversation,
     model,
     permissionMode,
     resumedFrom,
+    engine,
+    capabilities,
   ];
+}
+
+/// Where a task of the agent's list is — the contract's three states.
+enum TaskStatus { pending, inProgress, completed }
+
+/// One task of the agent's list, as `session.tasksChanged` carries it (plan 28, B-22).
+class SessionTask extends Equatable {
+  const SessionTask({
+    required this.id,
+    required this.title,
+    required this.status,
+    this.activeTitle,
+  });
+
+  /// Opaque, and stable for the life of the task — what two lists are compared by.
+  final String id;
+
+  /// What the task is.
+  final String title;
+
+  /// What it is called while it runs — "Running the tests" —, when the agent gave one.
+  final String? activeTitle;
+
+  final TaskStatus status;
+
+  /// What is said of it: its active title while it runs, when it has one; its title otherwise.
+  String get shownTitle => status == TaskStatus.inProgress ? activeTitle ?? title : title;
+
+  @override
+  List<Object?> get props => <Object?>[id, title, activeTitle, status];
 }
 
 /// Everything a frame can change about a session.
@@ -136,6 +178,7 @@ class Conversation extends Equatable {
     this.lastTurn,
     this.ending,
     this.turnStartedAt,
+    this.tasks,
   });
 
   /// What is on screen after a gap the history could not fill: the line that says so, first.
@@ -165,6 +208,10 @@ class Conversation extends Equatable {
   /// the stream did not say.
   final String? turnStartedAt;
 
+  /// The agent's task list as the last `session.tasksChanged` left it — `null` while none arrived.
+  /// The whole list every time, so the latest is all there is to keep (plan 28, B-22).
+  final List<SessionTask>? tasks;
+
   /// Whether anything at all has arrived.
   bool get isEmpty => entries.isEmpty;
 
@@ -180,9 +227,20 @@ class Conversation extends Equatable {
   /// The turns that ended, in order.
   List<TurnSummary> get turns => entries.whereType<TurnSummary>().toList(growable: false);
 
-  /// What the session has cost since it opened: each turn once, added as decimals — money added as
-  /// binary floats stops adding up.
-  String get costUsd => addUsd(turns.map((TurnSummary turn) => turn.costUsd));
+  /// The turns that said what they cost — none, on an engine that reports no cost (plan 28, B-29).
+  List<TurnSummary> get costedTurns =>
+      turns.where((TurnSummary turn) => turn.costUsd != null).toList(growable: false);
+
+  /// What the session has cost since it opened: each turn that said once, added as decimals — money
+  /// added as binary floats stops adding up. `null` when no turn said: a cost nobody reported is not
+  /// zero.
+  String? get costUsd {
+    final List<TurnSummary> costed = costedTurns;
+
+    return costed.isEmpty
+        ? null
+        : addUsd(<String>[for (final TurnSummary turn in costed) ?turn.costUsd]);
+  }
 
   /// The states in which a turn is running.
   static const Set<SessionStatus> _running = <SessionStatus>{
@@ -209,6 +267,7 @@ class Conversation extends Equatable {
     SessionFacts? facts,
     TurnSummary? lastTurn,
     SessionEnding? ending,
+    List<SessionTask>? tasks,
   }) => Conversation(
     status: status ?? this.status,
     lastSeq: lastSeq ?? this.lastSeq,
@@ -218,6 +277,7 @@ class Conversation extends Equatable {
     lastTurn: lastTurn ?? this.lastTurn,
     ending: ending ?? this.ending,
     turnStartedAt: turnStartedAt,
+    tasks: tasks ?? this.tasks,
   );
 
   /// This conversation with [event] applied.
@@ -248,7 +308,9 @@ class Conversation extends Equatable {
   /// - everything live the history does not know comes after it, in the order it arrived;
   /// - [status], [lastSeq], [queue], [facts], [lastTurn] and [ending] stay the live ones. History
   ///   has no `seq`, and letting it move the resume point would mix two numberings: a resumed
-  ///   session starts its `seq` again from one, and the history is not part of it (S-21).
+  ///   session starts its `seq` again from one, and the history is not part of it (S-21);
+  /// - [tasks] are the live ones once the stream sent a list, and the last list of the history until
+  ///   then — the history is older than anything live (plan 28, B-22).
   Conversation withHistory(List<SessionEvent> history) {
     if (history.isEmpty) {
       return this;
@@ -264,7 +326,7 @@ class Conversation extends Equatable {
       since = event.writtenAt.isEmpty ? since : event.writtenAt;
     }
 
-    return copyWith(entries: _overlay(past.entries, entries));
+    return copyWith(entries: _overlay(past.entries, entries), tasks: tasks ?? past.tasks);
   }
 
   /// How long, at most, from [since] to [until] — the instants two entries of the history were
@@ -319,13 +381,10 @@ class Conversation extends Equatable {
     ),
     ToolFinished() => _changeTool(
       event.toolUseId,
-      (ToolExecution tool) => tool.copyWith(
-        status: event.status,
-        summary: event.summary,
-        taskId: event.taskId,
-        question: event.question,
-      ),
+      (ToolExecution tool) =>
+          tool.copyWith(status: event.status, summary: event.summary, question: event.question),
     ),
+    TasksChanged(:final List<SessionTask> tasks) => copyWith(tasks: tasks),
     TurnFinished(:final TurnSummary turn) => _turn(turn),
     PromptQueued(:final QueuedPrompt prompt) => copyWith(
       queue: <QueuedPrompt>[..._without(prompt.queueId), prompt],
@@ -357,10 +416,12 @@ class Conversation extends Equatable {
 
   SessionFacts _factsOf(SessionOpened opened) => SessionFacts(
     workspacePath: opened.workspacePath ?? facts.workspacePath,
-    conversationId: opened.claudeSessionId ?? facts.conversationId,
+    conversation: opened.conversation ?? facts.conversation,
     model: opened.model ?? facts.model,
     permissionMode: opened.permissionMode ?? facts.permissionMode,
     resumedFrom: opened.resumedFrom ?? facts.resumedFrom,
+    engine: opened.engine ?? facts.engine,
+    capabilities: opened.capabilities ?? facts.capabilities,
   );
 
   /// The session moved. A turn that starts here is timed from this instant, and one that stops
@@ -382,6 +443,7 @@ class Conversation extends Equatable {
       lastTurn: lastTurn,
       ending: ending,
       turnStartedAt: since,
+      tasks: tasks,
     );
   }
 
@@ -588,8 +650,7 @@ class Conversation extends Equatable {
   Conversation _invoked(ToolInvoked event) => _withEntry(
     ToolExecution(
       toolUseId: event.toolUseId,
-      toolName: event.toolName,
-      input: event.input,
+      call: event.call,
       isSubagent: event.isSubagent,
       title: event.title,
     ),
@@ -611,5 +672,6 @@ class Conversation extends Equatable {
     lastTurn,
     ending,
     turnStartedAt,
+    tasks,
   ];
 }

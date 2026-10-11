@@ -57,7 +57,7 @@ describe('NodeUndoDisk', () => {
 
     return TurnFileCheckpoint.capture({
       sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
-      claudeSessionId: null,
+      conversation: null,
       promptId: 'p1',
       path: target,
       existedBefore: 'present',

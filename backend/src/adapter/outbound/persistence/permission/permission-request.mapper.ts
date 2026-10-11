@@ -35,7 +35,7 @@ const UNSETTLED: SettlementColumns = {
  * The row a request should be written as, in whichever of its two states it is in.
  *
  * One function and not two, because the two writes differ by exactly the settlement: restating the
- * other eleven columns for the update is how an `open` row and a `settle` row come to disagree
+ * other twelve columns for the update is how an `open` row and a `settle` row come to disagree
  * about the same request.
  */
 export function toRow(request: PermissionRequest, now: Date): PermissionRequestInsert {
@@ -45,6 +45,8 @@ export function toRow(request: PermissionRequest, now: Date): PermissionRequestI
     sessionId: request.sessionId.value,
     toolUseId: request.toolUseId,
     toolName: request.toolName,
+    // The kind the engine's adapter read the call as, beside the engine's name (plan 28, B-33).
+    toolKind: request.tool.kind,
     // The exact input, whole. Truncation belongs to the log, never to the record.
     input: request.input,
     riskHint: request.riskHint,

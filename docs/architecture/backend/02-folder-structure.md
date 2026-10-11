@@ -226,3 +226,22 @@ domínio, usa alias — o alias deixa a violação da Dependency Rule visível n
 | Wiring de DI | `src/infrastructure/modules/<domínio>.module.ts` |
 | Tabela / migration | `src/infrastructure/database/` |
 | Interceptor, filter, pipe | `src/shared/` |
+
+---
+
+## Alvo do plano 28 — `engines/<motor>/` em cada camada
+
+> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)). As regras de lint já valem desde a F0; as pastas chegam na
+> fase indicada.
+
+```
+backend/src/
+├── domain/engine/                      F1 — EngineId, ConversationRef, capacidades, ToolKind
+├── domain/engines/claude/              F6 — o que só o Claude tem como regra
+├── application/engines/claude/         F6 — os use cases da extensão
+├── adapter/inbound/http/engines/       F1, F6 — /engines, /engines/:engine/*, /engines/claude/*
+├── adapter/outbound/engines/claude/    F1 — ex-adapter/outbound/claude/
+└── infrastructure/modules/engines/     F1 — a composição, o único que importa a extensão
+```
+
+O núcleo nunca importa `*/engines/<motor>/`, e uma extensão nunca importa outra ([12-engines](../shared/12-engines.md)).

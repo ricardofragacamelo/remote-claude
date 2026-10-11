@@ -267,3 +267,63 @@ describe('the visual system, as the build enforces it', () => {
     expect(fired).not.toContain('no-restricted-imports');
   });
 });
+
+describe('the three rings of ADR-025, as the build enforces them', () => {
+  const IMPORT_ENGINE =
+    "import { register } from '@/engines/claude';\nexport const a = register;\n";
+
+  it.each([
+    ['a component', COMPONENT],
+    ['a service', SERVICE],
+    ['a hook', HOOK],
+    ['a feature’s lib', 'web/src/features/session/lib/probe.ts'],
+    ['shared', SHARED],
+    ['the app', 'web/src/app/Probe.tsx'],
+  ])('refuses %s importing an engine extension — plan 28, S-20', async (_case, file) => {
+    const fired = await rulesFiredOn(file, IMPORT_ENGINE);
+
+    expect(fired).toContain('no-restricted-imports');
+  });
+
+  it('refuses a relative path into an engine extension, too — plan 28, S-20', async () => {
+    const fired = await rulesFiredOn(
+      'web/src/features/session/lib/probe.ts',
+      "import { register } from '../../../engines/claude';\nexport const a = register;\n",
+    );
+
+    expect(fired).toContain('no-restricted-imports');
+  });
+
+  it('lets the composition import the extensions — plan 28, S-20', async () => {
+    const fired = await rulesFiredOn('web/src/app/engines.ts', IMPORT_ENGINE);
+
+    expect(fired).not.toContain('no-restricted-imports');
+  });
+
+  it('refuses one engine extension importing another — plan 28, S-19', async () => {
+    const fired = await rulesFiredOn(
+      'web/src/engines/claude/settings/probe.ts',
+      "import { x } from '@/engines/other';\nexport const a = x;\n",
+    );
+
+    expect(fired).toContain('no-restricted-imports');
+  });
+
+  it('lets an engine extension import its own files and the barrel of a feature — plan 28, S-19', async () => {
+    const fired = await rulesFiredOn(
+      'web/src/engines/claude/settings/probe.ts',
+      "import { x } from '@/engines/claude/lib';\nimport { y } from '@/features/session';\nexport const a = [x, y];\n",
+    );
+
+    expect(fired).not.toContain('no-restricted-imports');
+  });
+
+  it('refuses an engine extension reaching into the inside of a feature — plan 28, S-19', async () => {
+    const fired = await rulesFiredOn(
+      'web/src/engines/claude/settings/probe.ts',
+      "import { y } from '@/features/session/lib/tool-labels';\nexport const a = y;\n",
+    );
+
+    expect(fired).toContain('no-restricted-imports');
+  });
+});

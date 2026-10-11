@@ -9,6 +9,7 @@ import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/error/failure_messages.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/core/widgets/message_strip.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
@@ -58,7 +59,7 @@ class HistoryStrip extends StatelessWidget {
       return TextStrip(
         icon: Icons.error_outline,
         emphasis: true,
-        text: translateFailure(l10n, failed),
+        text: failureText(context, failed),
         action: TextButton(onPressed: onRetry, child: Text(l10n.commonActionRetry)),
       );
     }
@@ -84,22 +85,22 @@ class HistoryStrip extends StatelessWidget {
 /// Why the session ended, and that sending resumes it — above the box, which stays active
 /// (09 · D-05).
 class EndedStrip extends StatelessWidget {
-  const EndedStrip({required this.ending, super.key});
+  const EndedStrip({required this.ending, super.key, this.engine});
 
   final SessionEnding ending;
+
+  /// The engine of the session, which a resume starts again — the default engine's when `null`.
+  final String? engine;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String reason = endingReason(l10n, ending.reason);
+    final String resumes = l10n.sessionEndedResumes(agentNameIn(context, engine));
 
     return MessageStrip(
-      line: '$reason ${l10n.sessionEndedResumes}',
-      message: BannerMessage(
-        icon: Icons.stop_circle_outlined,
-        title: reason,
-        body: l10n.sessionEndedResumes,
-      ),
+      line: '$reason $resumes',
+      message: BannerMessage(icon: Icons.stop_circle_outlined, title: reason, body: resumes),
     );
   }
 }
@@ -132,7 +133,7 @@ class RefusalStrip extends StatelessWidget {
     return TextStrip(
       icon: Icons.error_outline,
       emphasis: true,
-      text: translateFailure(l10n, failure),
+      text: failureText(context, failure),
       action:
           action ??
           IconButton(

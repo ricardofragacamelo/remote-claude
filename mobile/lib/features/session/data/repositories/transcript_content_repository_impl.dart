@@ -1,6 +1,7 @@
 /// The content repository: the routes of a conversation's content, read into entities.
 library;
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/network/api_client.dart';
 import 'package:remote_claude/features/session/data/datasources/transcript_content_api_data_source.dart';
 import 'package:remote_claude/features/session/data/mappers/transcript_content_mapper.dart';
@@ -14,12 +15,12 @@ class TranscriptContentRepositoryImpl implements TranscriptContentRepository {
   final TranscriptContentApiDataSource _api;
 
   @override
-  Future<ToolOutput> toolResult(String conversationId, String toolUseId) async =>
-      toolOutputFrom(await _api.toolResult(conversationId, toolUseId));
+  Future<ToolOutput> toolResult(ConversationKey conversation, String toolUseId) async =>
+      toolOutputFrom(await _api.toolResult(conversation, toolUseId));
 
   @override
-  Future<PromptImageBytes> promptImage(String conversationId, String blockId) async {
-    final ByteAnswer answer = await _api.promptImage(conversationId, blockId);
+  Future<PromptImageBytes> promptImage(ConversationKey conversation, String blockId) async {
+    final ByteAnswer answer = await _api.promptImage(conversation, blockId);
 
     return PromptImageBytes(bytes: answer.bytes, mediaType: answer.contentType);
   }

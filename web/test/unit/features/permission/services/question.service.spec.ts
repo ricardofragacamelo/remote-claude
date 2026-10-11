@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Envelope } from '@remote-claude/contracts';
 
 import {
+  asksQuestion,
   readAnswers,
   readInteraction,
   sendAnswer,
@@ -34,6 +35,7 @@ describe('the questions of a request — plan 24, B-13', () => {
     const request = toRequest(asked());
 
     expect(request?.interaction).toEqual({
+      kind: 'question',
       malformed: false,
       questions: [
         {
@@ -62,8 +64,34 @@ describe('the questions of a request — plan 24, B-13', () => {
 
   it('leaves every other request without one, on the card of before — S-60', () => {
     expect(toRequest(asked({ interaction: undefined }))?.interaction).toBeNull();
-    expect(readInteraction({ kind: 'plan' })).toBeNull();
     expect(readInteraction('question')).toBeNull();
+  });
+
+  it('reads a kind this build does not know as none — the generic card (plan 28, B-20)', () => {
+    expect(readInteraction({ kind: 'survey', markdown: '# x' })).toBeNull();
+  });
+
+  it('reads a plan by its kind: the markdown and the file it was saved to — plan 28, S-61', () => {
+    const request = toRequest(
+      asked({ interaction: { kind: 'plan', markdown: '# Plan', path: '/tmp/plan.md' } }),
+    );
+
+    expect(request?.interaction).toEqual({
+      kind: 'plan',
+      markdown: '# Plan',
+      path: '/tmp/plan.md',
+    });
+  });
+
+  it('reads a plan with no markdown as an empty one, and no path as none — S-61', () => {
+    expect(readInteraction({ kind: 'plan' })).toEqual({ kind: 'plan', markdown: '', path: null });
+  });
+
+  it('says a request asks a question only for a question — never for a plan, nor leave', () => {
+    expect(asksQuestion(aQuestionPayload())).toBe(true);
+    expect(asksQuestion({ interaction: { kind: 'plan', markdown: '# Plan' } })).toBe(false);
+    expect(asksQuestion({})).toBe(false);
+    expect(asksQuestion(undefined)).toBe(false);
   });
 
   it.each([
@@ -82,7 +110,11 @@ describe('the questions of a request — plan 24, B-13', () => {
     ['with a question that is not an object', anInteraction(['Which?'])],
     ['with questions that are not a list', { kind: 'question', questions: 'many' }],
   ])('reads a question %s as one that can only be refused — fail closed', (_case, interaction) => {
-    expect(readInteraction(interaction)).toEqual({ malformed: true, questions: [] });
+    expect(readInteraction(interaction)).toEqual({
+      kind: 'question',
+      malformed: true,
+      questions: [],
+    });
   });
 
   it('reads a missing header and description as empty, and a missing multiSelect as single', () => {
@@ -96,7 +128,7 @@ describe('the questions of a request — plan 24, B-13', () => {
       ]),
     );
 
-    expect(read?.questions[0]).toEqual({
+    expect(read).toHaveProperty(['questions', 0], {
       id: 'q1',
       header: '',
       prompt: 'Q?',

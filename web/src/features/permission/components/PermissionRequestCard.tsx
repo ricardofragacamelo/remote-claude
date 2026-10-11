@@ -10,7 +10,10 @@ export interface PermissionRequestCardProps extends PermissionCardProps {
   /** A plan was approved, to go on in this mode (plan 08, B-22). */
   onPlanApproved?: ((mode: PlanMode) => void) | undefined;
 
-  /** What answering a question of Claude takes — the drafts and the two answers (plan 24, B-14). */
+  /** The modes the session's engine announces — what a plan can go on in (plan 28, B-27). */
+  readonly planModes?: readonly PlanMode[] | null | undefined;
+
+  /** What answering a question of the agent takes — the drafts and the two answers (plan 24, B-14). */
   readonly question?: QuestionHandlers | undefined;
 }
 
@@ -23,18 +26,20 @@ export interface QuestionHandlers extends Pick<
 }
 
 /**
- * One request waiting, whole: the plan to approve, or the tool to allow — the card of plan 03 and
- * plan 08 (B-22, B-29), unchanged. Where it stands is the conversation's: in the place of the tool it
- * asks about (plan 09, B-23, B-24).
+ * One request waiting, whole: the questions to answer, the plan to approve, or the tool to allow —
+ * the card of plan 03 and plan 08 (B-22, B-29). Which one is by the `kind` of the request's
+ * interaction, never by the tool (plan 28, B-20). Where it stands is the conversation's: in the place
+ * of the tool it asks about (plan 09, B-23, B-24).
  */
 export function PermissionRequestCard({
   onPlanApproved,
+  planModes,
   question,
   ...card
 }: PermissionRequestCardProps): React.JSX.Element {
   const { interaction } = card.request;
 
-  if (interaction !== null && question !== undefined) {
+  if (interaction?.kind === 'question' && question !== undefined) {
     return (
       <QuestionCard
         request={card.request}
@@ -49,10 +54,12 @@ export function PermissionRequestCard({
     );
   }
 
-  return card.request.toolName === 'ExitPlanMode' ? (
+  return interaction?.kind === 'plan' ? (
     <PlanApprovalCard
       request={card.request}
+      plan={interaction}
       remainingMs={card.remainingMs}
+      modes={planModes}
       onAnswer={card.onAnswer}
       onApproved={onPlanApproved}
     />

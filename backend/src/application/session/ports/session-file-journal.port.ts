@@ -1,5 +1,5 @@
 import type { SessionId } from '@domain/session';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * Which session wrote, and which conversation it was.
@@ -10,7 +10,7 @@ import type { ClaudeSessionId } from '@domain/transcript';
  */
 export interface JournalScope {
   readonly sessionId: SessionId;
-  readonly claudeSessionId: ClaudeSessionId;
+  readonly conversation: ConversationRef;
 }
 
 /**
@@ -18,7 +18,7 @@ export interface JournalScope {
  *
  * One port for both halves because they are one mechanism: a hook writes the *before*, another
  * writes the *after*, and undo needs both to tell "the session left it like this" from "somebody
- * edited it afterwards". See docs/architecture/backend/04-claude-integration.md#desfazer-arquivos.
+ * edited it afterwards". See docs/architecture/backend/04a-claude.md#desfazer-arquivos.
  *
  * **Nothing here may block a tool.** That is the difference from the audit trail, and it is a
  * deliberate asymmetry: without a trail there is no authorisation, but without a baseline undo is

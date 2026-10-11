@@ -4,9 +4,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { BUNDLED_CLI_VERSION } from '@adapter/outbound/claude/cli-version';
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
+import { BUNDLED_CLI_VERSION } from '@adapter/outbound/engines/claude/cli-version';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
 import { loadCommands } from '../../../../fakes/agent-sdk/fixture';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
 import type { ScriptOptions, ScriptRecord } from '../../../../fakes/agent-sdk/scripted-query';
@@ -204,7 +204,7 @@ describe('the slash commands of a session', () => {
 
     expect(response.status).toBe(502);
     expect(response.body).toMatchObject({
-      error: { code: 'CLAUDE_UNAVAILABLE', messageKey: 'session.error.claudeUnavailable' },
+      error: { code: 'AGENT_UNAVAILABLE', messageKey: 'session.error.agentUnavailable' },
     });
 
     // The menu is discovery, not a boundary: without a list nothing is refused, not even a
@@ -322,7 +322,8 @@ describe('the slash commands of a session', () => {
       }
 
       if (frame.type === 'permission.requested') {
-        asked.push(String(frame.payload?.['toolName']));
+        // The engine's name of the call, opaque to a client; this suite is the engine's.
+        asked.push(String((frame.payload?.['origin'] as { native?: string } | undefined)?.native));
         socket.send(
           commandFrame(
             'permission.resolve',

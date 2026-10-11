@@ -52,7 +52,7 @@ describe('revoking a stored rule', () => {
         userId: owner,
         sessionId: null,
         projectPath: null,
-        pattern: 'Write(/workspace/summary.md)',
+        pattern: 'file.write(/workspace/summary.md)',
         decision: 'allow',
         scope: 'always',
         createdAt: grantedAt,

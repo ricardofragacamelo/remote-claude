@@ -15,7 +15,7 @@ WebSocket ([ADR-005](../../architecture/shared/00-decisions.md#adr-005--websocke
 e é a fronteira de segurança do sistema.
 
 Leia [o fluxo no contrato](../../architecture/shared/05-websocket-protocol.md#o-fluxo-de-permissão)
-e [a ponte](../../architecture/backend/04-claude-integration.md#a-ponte-de-permissão) antes de
+e [a ponte](../../architecture/backend/04a-claude.md#a-ponte-de-permissão) antes de
 começar.
 
 ---

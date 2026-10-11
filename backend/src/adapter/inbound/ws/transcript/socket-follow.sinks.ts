@@ -2,6 +2,8 @@ import type { FollowResetReason, FollowSink, FollowUpdate } from '@application/t
 import type { Logger } from '@shared/logging/logger';
 import { NumberedStream } from '../numbered-stream';
 import type { StreamTransport } from '../numbered-stream';
+import type { ConversationRef } from '@domain/engine';
+import { conversationRefPayload } from '../../conversation-ref.payload';
 
 /** What the sinks of every connection share. */
 export interface FollowTransport extends StreamTransport {
@@ -26,10 +28,10 @@ export class SocketFollowSink extends NumberedStream implements FollowSink {
     super(connectionId, followTransport);
   }
 
-  appended(followId: string, conversationId: string, update: FollowUpdate): void {
+  appended(followId: string, conversation: ConversationRef, update: FollowUpdate): void {
     const seq = this.send('transcript.appended', {
       followId,
-      conversationId,
+      conversation: conversationRefPayload(conversation),
       events: update.events,
       ...(update.lastMessageId === null ? {} : { lastMessageId: update.lastMessageId }),
       activity: update.activity,
@@ -42,7 +44,7 @@ export class SocketFollowSink extends NumberedStream implements FollowSink {
         layer: 'adapter',
         connectionId: this.connectionId,
         followId,
-        conversationId,
+        conversation: conversation.key,
         seq,
         events: update.events.length,
         activity: update.activity,
@@ -52,8 +54,12 @@ export class SocketFollowSink extends NumberedStream implements FollowSink {
     );
   }
 
-  reset(followId: string, conversationId: string, reason: FollowResetReason): void {
-    const seq = this.send('transcript.reset', { followId, conversationId, reason });
+  reset(followId: string, conversation: ConversationRef, reason: FollowResetReason): void {
+    const seq = this.send('transcript.reset', {
+      followId,
+      conversation: conversationRefPayload(conversation),
+      reason,
+    });
 
     this.followTransport.logger.info(
       {
@@ -61,7 +67,7 @@ export class SocketFollowSink extends NumberedStream implements FollowSink {
         layer: 'adapter',
         connectionId: this.connectionId,
         followId,
-        conversationId,
+        conversation: conversation.key,
         seq,
         reason,
       },

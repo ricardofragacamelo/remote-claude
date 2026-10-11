@@ -72,7 +72,7 @@ void main() {
 
       drafts(container)
         ..chooseModel('opus')
-        ..chooseMode('plan')
+        ..chooseMode('readOnly')
         ..chooseEffort('high');
 
       expect(drafts(container).send('fix the build'), isTrue);
@@ -81,7 +81,7 @@ void main() {
       expect(sessions.commands.single.$2, <String, Object?>{
         'workspacePath': '/w',
         'model': 'opus',
-        'permissionMode': 'plan',
+        'permissionMode': 'readOnly',
         'effort': 'high',
       });
 
@@ -155,7 +155,7 @@ void main() {
     () async {
       final ProviderContainer container = build();
       hold(container);
-      drafts(container).chooseMode('plan');
+      drafts(container).chooseMode('readOnly');
 
       drafts(container).send('mine');
       sessions.emit(const CommandRefused(commandId: 'command-1', failure: full));
@@ -163,11 +163,11 @@ void main() {
 
       expect(read(container).failure, full);
       expect(read(container).isStarting, isFalse);
-      expect(read(container).choices.permissionMode, 'plan');
+      expect(read(container).choices.permissionMode, 'readOnly');
 
       drafts(container).dismiss();
       expect(read(container).failure, isNull);
-      expect(read(container).choices.permissionMode, 'plan');
+      expect(read(container).choices.permissionMode, 'readOnly');
 
       // And a second send is a second start.
       drafts(container).send('mine');

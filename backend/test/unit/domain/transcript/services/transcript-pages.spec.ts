@@ -7,8 +7,8 @@ import {
   someMessages,
 } from '../../../../support/builders/transcript.builder';
 
-const ids = (page: { items: readonly { id: { value: string } }[] }): string[] =>
-  page.items.map((session) => session.id.value);
+const ids = (page: { items: readonly { id: { id: string } }[] }): string[] =>
+  page.items.map((session) => session.id.id);
 
 describe('pageOfSessions', () => {
   const sessions = [
@@ -32,7 +32,7 @@ describe('pageOfSessions', () => {
   it('hands out the last session of a full page as the cursor, and continues after it', () => {
     const first = pageOfSessions(sessions, null, 2);
 
-    expect(first.next).toEqual({ lastModified: 200, id: conversationId(3) });
+    expect(first.next).toEqual({ lastModified: 200, id: `claude:${conversationId(3)}` });
     expect(ids(pageOfSessions(sessions, first.next, 2))).toEqual([conversationId(1)]);
   });
 

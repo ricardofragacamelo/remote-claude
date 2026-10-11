@@ -3,18 +3,18 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
-import { forgetLiveSessions, registerClaudeContext, SessionScreen } from '@/features/session';
+import { forgetLiveSessions, registerAgentContext, SessionScreen } from '@/features/session';
 import { DraftView } from '@/features/session/components/panel/DraftView';
 import { PanelHelp } from '@/features/session/components/panel/PanelHelp';
 import { mentionProviders } from '@/features/session/lib/mention-providers';
-import { claudePanelStore, forgetClaudePanel } from '@/features/session/store/claude-panel.store';
+import { agentPanelStore, forgetAgentPanel } from '@/features/session/store/agent-panel.store';
 import { editorStoreOf, forgetEditor } from '@/features/editor/store/editor.store';
 import { forgetFolderTabs } from '@/features/workbench';
 import { useKnownModels } from '@/features/session/store/known-models.store';
 import { api } from '@/shared/api/api';
 import { wsClient } from '@/shared/api/ws';
 import { AppError } from '@/shared/api/errors';
-import { addToClaudeContext, FILES_DRAG_TYPE } from '@/shared/lib/files-drag';
+import { addToAgentContext, FILES_DRAG_TYPE } from '@/shared/lib/files-drag';
 import { aHistoryPage } from '../../../support/history';
 import { aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
@@ -85,7 +85,7 @@ function served(extra: Record<string, readonly unknown[]> = {}) {
     [`/sessions/${SESSION}/mcp-servers`]: [{ servers: [] }],
     [`/sessions/${SESSION}/checkpoints`]: [{ checkpoints: [] }],
     [`/sessions/${SESSION}/commands`]: [COMMANDS],
-    [`/transcripts/${CONVERSATION}/messages`]: [aHistoryPage([])],
+    [`/transcripts/claude/${CONVERSATION}/messages`]: [aHistoryPage([])],
     [`/files/tree?folder=${encodeURIComponent(A)}&path=`]: [TREE['']],
     [`/files/tree?folder=${encodeURIComponent(A)}&path=src`]: [TREE['src']],
     ...extra,
@@ -119,13 +119,13 @@ beforeEach(() => {
   forgetLiveSessions();
   live = aLiveSocket();
   seq = 1;
-  unregister = registerClaudeContext();
+  unregister = registerAgentContext();
 });
 
 afterEach(() => {
   unregister();
   live.close();
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
   forgetFolderTabs();
   forgetEditor(A);
   vi.restoreAllMocks();
@@ -138,16 +138,16 @@ function says(type: string, payload: Record<string, unknown>): void {
 
 /** The screen of a session of the panel, connected, on its conversation. */
 function opened(): ReturnType<typeof render> {
-  claudePanelStore(A).getState().show('session', SESSION);
+  agentPanelStore(A).getState().show('session', SESSION);
   const mounted = render(<SessionScreen sessionId={SESSION} folder={A} />);
   live.connect();
   live.receive(
     hubEvent(SESSION, 'session.started', 1, {
       sessionId: SESSION,
-      claudeSessionId: CONVERSATION,
+      conversation: { engine: 'claude', id: CONVERSATION },
       workspacePath: A,
       model: 'opus',
-      permissionMode: 'default',
+      permissionMode: 'ask',
     }),
   );
   return mounted;
@@ -194,7 +194,7 @@ describe('the composer — plan 08, B-46', () => {
     expect(send()).toHaveAccessibleDescription(t('composer.send.empty'));
 
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
     });
     await waitFor(() => {
       expect(send()).toBeEnabled();
@@ -214,7 +214,7 @@ describe('the composer — plan 08, B-46', () => {
     const user = userEvent.setup();
     opened();
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
     });
 
     await typeIn(user, box(), 'explain it');
@@ -289,7 +289,7 @@ describe('the set of context — plan 08, B-47', () => {
     opened();
 
     act(() => {
-      addToClaudeContext({
+      addToAgentContext({
         folder: A,
         entries: [
           { path: 'README.md', kind: 'file' },
@@ -300,10 +300,10 @@ describe('the set of context — plan 08, B-47', () => {
           range: { startLine: 3, startColumn: 1, endLine: 9, endColumn: 2 },
         },
       });
-      claudePanelStore(A)
+      agentPanelStore(A)
         .getState()
         .setContext(KEY, [
-          ...(claudePanelStore(A).getState().contexts[KEY] ?? []),
+          ...(agentPanelStore(A).getState().contexts[KEY] ?? []),
           {
             id: 'u',
             kind: 'upload',
@@ -341,20 +341,20 @@ describe('the set of context — plan 08, B-47', () => {
     opened();
 
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
     });
     expect(await screen.findByText(/≈ 10,000 tokens/)).toBeInTheDocument();
     expect(screen.queryByText(new RegExp(t('composer.set.warn')))).not.toBeInTheDocument();
 
     // Past a quarter of the 200,000 tokens left: it warns, and still sends.
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'notes.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'notes.md', kind: 'file' }] });
     });
     expect(await screen.findByText(new RegExp(t('composer.set.warn')))).toBeInTheDocument();
     expect(send()).toBeEnabled();
 
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'big.log', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'big.log', kind: 'file' }] });
     });
     await waitFor(() => {
       expect(send()).toBeDisabled();
@@ -368,9 +368,9 @@ describe('the set of context — plan 08, B-47', () => {
     opened();
 
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
-      addToClaudeContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
-      addToClaudeContext({
+      addToAgentContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
+      addToAgentContext({
         folder: A,
         entries: [],
         selection: {
@@ -388,7 +388,7 @@ describe('the set of context — plan 08, B-47', () => {
     files();
     const mounted = opened();
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
     });
 
     mounted.unmount();
@@ -397,7 +397,7 @@ describe('the set of context — plan 08, B-47', () => {
     expect(chipNames()).toEqual(['README.md']);
     // The draft of the same folder tab has a set of its own.
     expect(
-      claudePanelStore(A).getState().contexts[claudePanelStore(A).getState().openDraft()],
+      agentPanelStore(A).getState().contexts[agentPanelStore(A).getState().openDraft()],
     ).toBeUndefined();
   });
 
@@ -407,7 +407,7 @@ describe('the set of context — plan 08, B-47', () => {
     const user = userEvent.setup();
     opened();
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
     });
     await waitFor(() => {
       expect(probe).toHaveBeenCalled();
@@ -433,7 +433,7 @@ describe('the set of context — plan 08, B-47', () => {
     const user = userEvent.setup();
     opened();
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
     });
 
     expect(chipNames()).toEqual(['README.md']);
@@ -458,7 +458,7 @@ describe('the set of context — plan 08, B-47', () => {
       type === 'session.prompt' ? null : issue(type, payload),
     );
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'README.md', kind: 'file' }] });
     });
 
     await typeIn(user, box(), 'later');
@@ -476,7 +476,7 @@ describe('the set of context — plan 08, B-47', () => {
     opened();
 
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'logo.bin', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'logo.bin', kind: 'file' }] });
     });
 
     expect(await screen.findByText(t('composer.chip.binary'))).toBeInTheDocument();
@@ -894,8 +894,8 @@ describe('`/` — plan 08, B-50', () => {
     served({
       [`/sessions/${SESSION}/commands`]: [
         {
-          code: 'CLAUDE_UNAVAILABLE',
-          messageKey: 'session.error.claudeUnavailable',
+          code: 'AGENT_UNAVAILABLE',
+          messageKey: 'session.error.agentUnavailable',
           params: {},
           traceId: 't',
         },
@@ -917,7 +917,7 @@ describe('`/` — plan 08, B-50', () => {
 describe('a draft — plan 08, B-45, B-50, D-13', () => {
   /** A draft of the panel, on screen. */
   function aDraft(): string {
-    const key = claudePanelStore(A).getState().openDraft();
+    const key = agentPanelStore(A).getState().openDraft();
     render(<DraftView folder={A} tabKey={key} />);
     live.connect();
     return key;
@@ -930,8 +930,8 @@ describe('a draft — plan 08, B-45, B-50, D-13', () => {
       ],
     });
     const user = userEvent.setup();
-    const first = claudePanelStore(A).getState().openDraft();
-    const second = claudePanelStore(A).getState().openDraft();
+    const first = agentPanelStore(A).getState().openDraft();
+    const second = agentPanelStore(A).getState().openDraft();
     render(
       <>
         <DraftView folder={A} tabKey={first} />
@@ -1048,9 +1048,9 @@ describe('a draft — plan 08, B-45, B-50, D-13', () => {
     started();
 
     await waitFor(() => {
-      expect(claudePanelStore(A).getState().drafts[KEY]).toBe('read it');
+      expect(agentPanelStore(A).getState().drafts[KEY]).toBe('read it');
     });
-    expect(claudePanelStore(A).getState().contexts[KEY]?.[0]).toMatchObject({
+    expect(agentPanelStore(A).getState().contexts[KEY]?.[0]).toMatchObject({
       name: 'notes.txt',
       error: { code: 'PAYLOAD_TOO_LARGE' },
     });
@@ -1075,7 +1075,7 @@ describe('a draft — plan 08, B-45, B-50, D-13', () => {
     started();
 
     await waitFor(() => {
-      expect(claudePanelStore(A).getState().drafts[KEY]).toBe('first');
+      expect(agentPanelStore(A).getState().drafts[KEY]).toBe('first');
     });
   });
 
@@ -1085,7 +1085,7 @@ describe('a draft — plan 08, B-45, B-50, D-13', () => {
     const user = userEvent.setup();
     aDraft();
     act(() => {
-      addToClaudeContext({ folder: A, entries: [{ path: 'gone.md', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [{ path: 'gone.md', kind: 'file' }] });
     });
     await waitFor(() => {
       expect(probe).toHaveBeenCalled();
@@ -1119,7 +1119,7 @@ describe('from the editor — plan 08, B-51', () => {
     });
 
     act(() => {
-      addToClaudeContext({
+      addToAgentContext({
         folder: A,
         entries: [],
         selection: {
@@ -1145,9 +1145,9 @@ describe('from the editor — plan 08, B-51', () => {
     });
 
     act(() => {
-      addToClaudeContext({ folder: A, entries: [], selection: { path: 'a.ts', range: range(1) } });
-      addToClaudeContext({ folder: A, entries: [], selection: { path: 'a.ts', range: range(5) } });
-      addToClaudeContext({ folder: A, entries: [{ path: 'b.ts', kind: 'file' }] });
+      addToAgentContext({ folder: A, entries: [], selection: { path: 'a.ts', range: range(1) } });
+      addToAgentContext({ folder: A, entries: [], selection: { path: 'a.ts', range: range(5) } });
+      addToAgentContext({ folder: A, entries: [{ path: 'b.ts', kind: 'file' }] });
     });
 
     expect(chipNames()).toEqual(['a.ts:1-1', 'a.ts:5-5', 'b.ts']);
@@ -1170,8 +1170,8 @@ describe('help and keyboard — plan 08, B-52', () => {
         'desktop',
         'skills',
       ]) {
-        expect(screen.getByText(say(`claudePanel.help.${topic}Heading`))).toBeInTheDocument();
-        expect(screen.getByText(say(`claudePanel.help.${topic}`))).toBeInTheDocument();
+        expect(screen.getByText(say(`agentPanel.help.${topic}Heading`))).toBeInTheDocument();
+        expect(screen.getByText(say(`agentPanel.help.${topic}`))).toBeInTheDocument();
       }
     },
   );

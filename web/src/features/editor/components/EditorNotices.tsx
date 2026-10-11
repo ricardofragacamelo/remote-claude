@@ -7,8 +7,8 @@ import { useEditorState } from '../hooks/useEditor';
 
 /**
  * What the editor says that has no other place: how "save all" went, file by file (S-234), and the
- * outcome of an action done from the keyboard — "added to Claude's context" — announced to a screen
- * reader as well (S-277).
+ * outcome of an action done from the keyboard — "added to the agent's context" — announced to a
+ * screen reader as well (S-277).
  */
 export function EditorNotices({ folder }: { readonly folder: string }): React.JSX.Element {
   const { t } = useTranslation();

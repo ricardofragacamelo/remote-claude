@@ -1,7 +1,7 @@
 /**
- * What the indicator of a turn says Claude is doing while nothing more precise is known (plan 09,
- * D-16): one verb per turn, drawn from this list — each a key of `sessions.workingVerb`, in every
- * language of the catalogue.
+ * What the indicator of a turn says the agent is doing while nothing more precise is known (plan
+ * 09, D-16): one verb per turn, drawn from this list — each a key of `sessions.workingVerb`, in
+ * every language of the catalogue.
  */
 export const WORKING_VERBS = [
   'pondering',

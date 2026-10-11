@@ -18,18 +18,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/navigation/page_observer.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/notifications/push_gateway.dart';
 import 'package:remote_claude/core/notifications/push_providers.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/files/files.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
+import 'package:remote_claude/features/session/presentation/providers/engine_catalogue.dart';
 import 'package:remote_claude/features/session/presentation/providers/first_prompts.dart';
 import 'package:remote_claude/features/session/presentation/providers/fork_controller.dart';
 import 'package:remote_claude/features/session/presentation/providers/live_session_controller.dart';
@@ -47,6 +50,7 @@ import 'package:remote_claude/features/session/presentation/widgets/session_fram
 import 'package:remote_claude/features/session/presentation/widgets/session_menu.dart';
 import 'package:remote_claude/features/session/presentation/widgets/session_strips.dart';
 import 'package:remote_claude/features/session/presentation/widgets/status_chip.dart';
+import 'package:remote_claude/features/session/presentation/widgets/tool_label.dart';
 import 'package:remote_claude/features/session/presentation/widgets/working_indicator.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
@@ -177,6 +181,7 @@ class _SessionPageState extends ConsumerState<SessionPage>
             sessionId: _sessionId,
             queue: questions,
             inView: _questions,
+            modes: modesOf(sessionCapabilities(ref, session.conversation.facts)),
             onPlanApproved: _live.setPermissionMode,
           ),
           working: _working(l10n, session.conversation, questions),
@@ -215,16 +220,16 @@ class _SessionPageState extends ConsumerState<SessionPage>
   }
 
   /// What the screen follows to move elsewhere: the resume of this session, the fork of one of its
-  /// prompts, and the plain resume offered when the CLI refused a fork.
+  /// prompts, and the plain resume offered when the engine refused a fork.
   void _listen(SessionFacts facts) {
-    final String? conversationId = facts.conversationId;
-    final String? resumedFrom = facts.resumedFrom;
+    final ConversationKey? conversation = facts.conversation;
+    final ConversationKey? resumedFrom = facts.resumedFrom;
 
-    if (conversationId != null) {
-      ref.listen<ResumeState>(resumeControllerProvider(conversationId), _onResume);
+    if (conversation != null) {
+      ref.listen<ResumeState>(resumeControllerProvider(conversation), _onResume);
     }
 
-    if (resumedFrom != null && resumedFrom != conversationId) {
+    if (resumedFrom != null && resumedFrom != conversation) {
       ref.listen<ResumeState>(resumeControllerProvider(resumedFrom), _onResumedInstead);
     }
 
@@ -232,7 +237,7 @@ class _SessionPageState extends ConsumerState<SessionPage>
   }
 
   SessionDock _dock(LiveSession session, ConnectionStatus connection) {
-    final String? conversationId = session.conversation.facts.conversationId;
+    final ConversationKey? conversation = session.conversation.facts.conversation;
 
     return SessionDock(
       context: context,
@@ -241,7 +246,7 @@ class _SessionPageState extends ConsumerState<SessionPage>
       box: box,
       session: session,
       connection: connection,
-      resume: conversationId == null ? null : ref.watch(resumeControllerProvider(conversationId)),
+      resume: conversation == null ? null : ref.watch(resumeControllerProvider(conversation)),
       fork: ref.watch(forkControllerProvider(_sessionId)),
       questions: _questions,
       onResumeAndSend: _resumeAndSend,
@@ -260,6 +265,7 @@ class _SessionPageState extends ConsumerState<SessionPage>
 
     final String turn = turnKeyOf(_sessionId, conversation);
     final String? oldest = questions.pending.firstOrNull?.requestId;
+    final ToolExecution? running = conversation.runningTool;
 
     return WorkingIndicator(
       // A new turn is a new line, with its own clock.
@@ -268,7 +274,8 @@ class _SessionPageState extends ConsumerState<SessionPage>
         l10n,
         status: conversation.status,
         turn: turn,
-        tool: conversation.runningTool?.toolName,
+        // The label of the call, as its row says it — never the engine's name for the tool (S-60).
+        tool: running == null ? null : toolCallText(l10n, running.call),
         waiting: questions.pending.length,
         questionsOnly: onlyQuestions(questions),
       ),
@@ -279,7 +286,7 @@ class _SessionPageState extends ConsumerState<SessionPage>
 
   /// What a prompt offers (B-24) — nothing until the conversation is known: a fork needs it.
   PromptActions? _prompts(AppLocalizations l10n, Conversation conversation) {
-    if (conversation.facts.conversationId == null) {
+    if (conversation.facts.conversation == null) {
       return null;
     }
 
@@ -296,33 +303,41 @@ class _SessionPageState extends ConsumerState<SessionPage>
           ? null
           : (StreamMessage prompt) =>
                 unawaited(showRewindSheet(context, _sessionId, label: prompt.text)),
-      undoBlocked: conversation.isTurnRunning ? l10n.sessionMessageUndoBusy : null,
+      undoBlocked: conversation.isTurnRunning
+          ? l10n.sessionMessageUndoBusy(agentNameIn(context, conversation.facts.engine))
+          : null,
     );
   }
 
-  /// Opens the fork from before [prompt], to send [text] there.
-  SendOutcome _fork(StreamMessage prompt, String text) {
+  /// Calls [send] with what the stream said of this session and its conversation — or says nothing
+  /// was sent, while the conversation is not known yet.
+  SendOutcome _inConversation(
+    SendOutcome Function(String workspacePath, ConversationKey conversation) send,
+  ) {
     final SessionFacts facts = ref
         .read(liveSessionControllerProvider(_sessionId))
         .conversation
         .facts;
-    final String? conversationId = facts.conversationId;
+    final ConversationKey? conversation = facts.conversation;
+    return conversation == null
+        ? SendOutcome.notSent
+        : send(facts.workspacePath ?? '', conversation);
+  }
 
-    if (conversationId == null) {
-      return SendOutcome.notSent;
-    }
-
-    return ref
+  /// Opens the fork from before [prompt], to send [text] there.
+  SendOutcome _fork(StreamMessage prompt, String text) => _inConversation(
+    (String workspacePath, ConversationKey conversation) =>
+        ref
             .read(forkControllerProvider(_sessionId).notifier)
             .fork(
-              workspacePath: facts.workspacePath ?? '',
-              conversationId: conversationId,
+              workspacePath: workspacePath,
+              conversation: conversation,
               messageId: prompt.messageId,
               text: text,
             )
         ? SendOutcome.pending
-        : SendOutcome.notSent;
-  }
+        : SendOutcome.notSent,
+  );
 
   /// Sends the box as the prompt being edited: a new conversation from before it (S-81).
   SendOutcome _sendEdit(String text) {
@@ -343,9 +358,9 @@ class _SessionPageState extends ConsumerState<SessionPage>
     context.go(sessionRouteFor(landed));
   }
 
-  /// The plain resume of the conversation this session forked, when the CLI refused the point.
+  /// The plain resume of the conversation this session forked, when the engine refused the point.
   VoidCallback? _resumeInstead(SessionFacts facts) {
-    final String? resumedFrom = facts.resumedFrom;
+    final ConversationKey? resumedFrom = facts.resumedFrom;
 
     if (resumedFrom == null) {
       return null;
@@ -360,7 +375,7 @@ class _SessionPageState extends ConsumerState<SessionPage>
   /// The plain resume landed: the screen moves to it.
   void _onResumedInstead(ResumeState? previous, ResumeState next) {
     final String? landed = next.sessionId;
-    final String? resumedFrom = ref
+    final ConversationKey? resumedFrom = ref
         .read(liveSessionControllerProvider(_sessionId))
         .conversation
         .facts
@@ -378,56 +393,46 @@ class _SessionPageState extends ConsumerState<SessionPage>
   void _forgetResume() {
     ref.read(forkControllerProvider(_sessionId).notifier).acknowledge();
 
-    final String? conversationId = ref
+    final ConversationKey? conversation = ref
         .read(liveSessionControllerProvider(_sessionId))
         .conversation
         .facts
-        .conversationId;
+        .conversation;
 
-    if (conversationId != null) {
-      ref.read(resumeControllerProvider(conversationId).notifier).acknowledge();
+    if (conversation != null) {
+      ref.read(resumeControllerProvider(conversation).notifier).acknowledge();
     }
   }
 
   /// Sends in a session that ended: the conversation resumes in a new process — which counts
   /// against the ceiling, as the strip above the box says — and the prompt goes there (B-07).
-  SendOutcome _resumeAndSend(String text) {
-    final Conversation conversation = ref
-        .read(liveSessionControllerProvider(_sessionId))
-        .conversation;
-    final String? conversationId = conversation.facts.conversationId;
+  SendOutcome _resumeAndSend(String text) =>
+      _inConversation((String workspacePath, ConversationKey conversation) {
+        _resumeText = text;
+        ref.read(resumeControllerProvider(conversation).notifier).resume(workspacePath);
 
-    if (conversationId == null) {
-      return SendOutcome.notSent;
-    }
-
-    _resumeText = text;
-    ref
-        .read(resumeControllerProvider(conversationId).notifier)
-        .resume(conversation.facts.workspacePath ?? '');
-
-    return ref.read(resumeControllerProvider(conversationId)).wasNotSent
-        ? SendOutcome.notSent
-        : SendOutcome.pending;
-  }
+        return ref.read(resumeControllerProvider(conversation)).wasNotSent
+            ? SendOutcome.notSent
+            : SendOutcome.pending;
+      });
 
   /// The resume landed: the prompt goes to the session that continues the conversation, and the
   /// screen moves there. A refusal leaves the text in the box, said above it (S-18).
   void _onResume(ResumeState? previous, ResumeState next) {
     final String? landed = next.sessionId;
     final String? text = _resumeText;
-    final String? conversationId = ref
+    final ConversationKey? conversation = ref
         .read(liveSessionControllerProvider(_sessionId))
         .conversation
         .facts
-        .conversationId;
+        .conversation;
 
-    if (landed == null || text == null || conversationId == null) {
+    if (landed == null || text == null || conversation == null) {
       return;
     }
 
     _resumeText = null;
-    ref.read(resumeControllerProvider(conversationId).notifier).acknowledge();
+    ref.read(resumeControllerProvider(conversation).notifier).acknowledge();
     ref.read(firstPromptsProvider.notifier).send(landed, text, remembersEffort: false);
     context.go(sessionRouteFor(landed));
   }

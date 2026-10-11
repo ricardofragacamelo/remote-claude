@@ -22,10 +22,13 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/note_line.dart';
+import 'package:remote_claude/core/widgets/tool_label_words.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/presentation/widgets/permission_title.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/verbatim_box.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
@@ -103,7 +106,9 @@ class _PermissionCardViewState extends State<PermissionCardView> {
     return Semantics(
       container: true,
       liveRegion: true,
-      label: l10n.permissionCardLabel(request.toolName),
+      label: l10n.permissionCardLabel(
+        toolLabelWords(l10n, kind: request.call.kind, label: request.call.label),
+      ),
       child: Card(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Tokens.radius),
@@ -123,6 +128,7 @@ class _PermissionCardViewState extends State<PermissionCardView> {
             const SizedBox(height: Tokens.spaceMd),
             if (card.phase == CardPhase.confirming)
               _Confirmation(
+                engine: request.engine,
                 destructive: destructive,
                 reach: _armed.isPersisted ? request.rule : null,
                 patterns: _reach?.patterns ?? <String>[?request.rule?.pattern],
@@ -220,7 +226,7 @@ class _Heading extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(toolLabel(l10n, request.toolName), style: theme.textTheme.titleSmall),
+              Text(permissionTitleOf(context, request), style: theme.textTheme.titleSmall),
               Text(risk, style: theme.textTheme.labelMedium?.copyWith(color: colour)),
             ],
           ),
@@ -229,22 +235,6 @@ class _Heading extends StatelessWidget {
     );
   }
 }
-
-/// The words this build has for a tool, and a fallback for the ones it has none for.
-///
-/// A switch rather than a key built at runtime: a generated catalogue is what makes a missing key a
-/// compile error, and a key assembled from a string is a key nobody can check.
-String toolLabel(AppLocalizations l10n, String toolName) => switch (toolName) {
-  'AskUserQuestion' => l10n.permissionToolAskUserQuestion,
-  'Bash' => l10n.permissionToolBash,
-  'Write' => l10n.permissionToolWrite,
-  'Edit' => l10n.permissionToolEdit,
-  'MultiEdit' => l10n.permissionToolMultiEdit,
-  'NotebookEdit' => l10n.permissionToolNotebookEdit,
-  'Read' => l10n.permissionToolRead,
-  'WebFetch' => l10n.permissionToolWebFetch,
-  _ => l10n.permissionToolUnknown(toolName),
-};
 
 /// Exactly what will run: monospaced, scrollable both ways, never cut.
 class _Command extends StatelessWidget {
@@ -447,6 +437,7 @@ String reachName(AppLocalizations l10n, RuleReachKind kind) => switch (kind) {
 /// it back. A destructive yes that also persists says both.
 class _Confirmation extends StatelessWidget {
   const _Confirmation({
+    required this.engine,
     required this.destructive,
     required this.reach,
     required this.patterns,
@@ -456,6 +447,9 @@ class _Confirmation extends StatelessWidget {
     required this.onCancel,
     required this.onOpenRules,
   });
+
+  /// The engine that asks, which the reach of the rule names.
+  final String? engine;
 
   final bool destructive;
 
@@ -491,8 +485,14 @@ class _Confirmation extends StatelessWidget {
           const SizedBox(height: Tokens.spaceSm),
           Text(
             scope == PermissionScope.always
-                ? l10n.permissionPersistAlways(ruleLifetime(l10n, rule))
-                : l10n.permissionPersistProject(ruleLifetime(l10n, rule)),
+                ? l10n.permissionPersistAlways(
+                    agentNameIn(context, engine),
+                    ruleLifetime(l10n, rule),
+                  )
+                : l10n.permissionPersistProject(
+                    agentNameIn(context, engine),
+                    ruleLifetime(l10n, rule),
+                  ),
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: Tokens.spaceSm),

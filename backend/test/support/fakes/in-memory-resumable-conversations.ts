@@ -1,7 +1,7 @@
 import type { ResumableConversation, ResumableConversationSource } from '@application/session';
 import type { ChainEntry } from '@domain/session';
 import { UserId } from '@domain/auth';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 
 /** What a test says about a conversation in Claude's store. */
 export interface ConversationSeed {
@@ -29,7 +29,7 @@ export class InMemoryResumableConversations implements ResumableConversationSour
 
   add(seed: ConversationSeed): this {
     this.conversations.set(seed.id, {
-      id: ClaudeSessionId.create(seed.id),
+      id: ConversationRef.create('claude', seed.id),
       cwd: seed.cwd === undefined ? '/srv/projects/app' : seed.cwd,
       openedBy: seed.openedBy === undefined ? undefined : UserId.create(seed.openedBy),
     });
@@ -38,19 +38,19 @@ export class InMemoryResumableConversations implements ResumableConversationSour
     return this;
   }
 
-  find(id: ClaudeSessionId): Promise<ResumableConversation | null> {
+  find(id: ConversationRef): Promise<ResumableConversation | null> {
     this.lookups += 1;
 
     if (this.failWith !== null) {
       return Promise.reject(this.failWith);
     }
 
-    return Promise.resolve(this.conversations.get(id.value) ?? null);
+    return Promise.resolve(this.conversations.get(id.id) ?? null);
   }
 
-  chainOf(id: ClaudeSessionId): Promise<readonly ChainEntry[]> {
+  chainOf(id: ConversationRef): Promise<readonly ChainEntry[]> {
     return this.failWith === null
-      ? Promise.resolve(this.chains.get(id.value) ?? [])
+      ? Promise.resolve(this.chains.get(id.id) ?? [])
       : Promise.reject(this.failWith);
   }
 }

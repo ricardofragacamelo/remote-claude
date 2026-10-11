@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/error/failure_messages.dart';
 import 'package:remote_claude/core/widgets/note_line.dart';
-import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The translated reason for [failure], in the error colour of the scheme, announced.
 class FailureLine extends StatelessWidget {
@@ -24,7 +23,7 @@ class FailureLine extends StatelessWidget {
     return Semantics(
       liveRegion: true,
       child: NoteLine(
-        translateFailure(AppLocalizations.of(context), failure),
+        failureText(context, failure),
         style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
       ),
     );

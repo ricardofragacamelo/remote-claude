@@ -3,11 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ReadTranscriptUseCase, TranscriptAudience } from '@application/transcript';
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
-import {
-  ClaudeSessionId,
-  TranscriptCursorStaleError,
-  TranscriptNotFoundError,
-} from '@domain/transcript';
+import { TranscriptCursorStaleError, TranscriptNotFoundError } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
 import { anAllowlist, OWNER } from '../../../support/builders/workspace.builder';
 import {
@@ -47,7 +44,7 @@ describe('ReadTranscriptUseCase', () => {
       noQuestionRecords(),
     ).execute({
       userId: owner,
-      sessionId: ClaudeSessionId.create(conversationId(n)),
+      sessionId: ConversationRef.create('claude', conversationId(n)),
       before,
       limit,
     });
@@ -101,7 +98,7 @@ describe('ReadTranscriptUseCase', () => {
   it('answers another person`s conversation exactly as a missing one — S-04', async () => {
     store.add('/srv/projects/app', aTranscriptSession({ id: 1 }), someMessages(3));
     await origins.record({
-      claudeSessionId: ClaudeSessionId.create(conversationId(1)),
+      conversation: ConversationRef.create('claude', conversationId(1)),
       sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
       openedBy: stranger,
       workspace: WorkspacePath.create('/srv/projects/app'),
@@ -148,7 +145,7 @@ describe('ReadTranscriptUseCase', () => {
         noQuestionRecords(),
       ).subagent({
         userId: as,
-        sessionId: ClaudeSessionId.create(conversationId(1)),
+        sessionId: ConversationRef.create('claude', conversationId(1)),
         toolUseId,
         before: null,
         limit: 2,

@@ -9,7 +9,8 @@ import { render, translator } from '../../../support/render';
 import {
   aConversationDto,
   aHistoryPage,
-  claudeUnavailable,
+  agentUnavailable,
+  conversationRef,
   EDITOR,
   said,
 } from '../../../support/history';
@@ -19,6 +20,7 @@ import type { LiveSocket } from '../../../support/live-socket';
 const t = translator('en');
 const AT = '2026-10-07T12:00:00.000Z';
 const LIVE = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
+const EDITOR_REF = conversationRef(EDITOR);
 
 /** The pill's name, however many it counts. */
 const GO_TO_END = new RegExp(`^${t('history.follow.newerLabel', { newer: '' })}`);
@@ -79,7 +81,7 @@ function mount() {
   const onResumed = vi.fn();
   const view = render(
     <ConversationReader
-      conversationId={EDITOR}
+      conversation={EDITOR_REF}
       onResumed={onResumed}
       onClose={vi.fn()}
       folder="/f"
@@ -101,7 +103,7 @@ function follower(socket: LiveSocket) {
         type: 'transcript.following',
         ts: AT,
         correlationId: socket.lastSent('transcript.follow')?.['id'],
-        payload: { followId, conversationId: EDITOR, activity },
+        payload: { followId, conversation: EDITOR_REF, activity },
       });
     },
     appended(followId: string, seq: number, payload: Record<string, unknown> = {}) {
@@ -114,7 +116,7 @@ function follower(socket: LiveSocket) {
         seq,
         payload: {
           followId,
-          conversationId: EDITOR,
+          conversation: EDITOR_REF,
           events: [],
           activity: 'activeElsewhere',
           working: false,
@@ -130,7 +132,7 @@ function follower(socket: LiveSocket) {
         type: 'transcript.reset',
         ts: AT,
         seq,
-        payload: { followId, conversationId: EDITOR, reason },
+        payload: { followId, conversation: EDITOR_REF, reason },
       });
     },
   };
@@ -177,7 +179,7 @@ describe('a conversation followed while it is read', () => {
       await screen.findByText('first');
       await waitFor(() => {
         expect(follow.asked()?.['payload']).toEqual({
-          conversationId: EDITOR,
+          conversation: EDITOR_REF,
           afterMessageId: 'u-41',
         });
       });
@@ -209,12 +211,12 @@ describe('a conversation followed while it is read', () => {
       expect(await screen.findByText('after the rewind')).toBeInTheDocument();
       expect(screen.queryByText('rewound away')).toBeNull();
       expect(get).toHaveBeenCalledTimes(2);
-      expect(get).toHaveBeenLastCalledWith(`/transcripts/${EDITOR}/messages`);
+      expect(get).toHaveBeenLastCalledWith(`/transcripts/claude/${EDITOR}/messages`);
       await waitFor(() => {
         expect(follow.follows()).toHaveLength(2);
       });
       expect(follow.asked()?.['payload']).toEqual({
-        conversationId: EDITOR,
+        conversation: EDITOR_REF,
         afterMessageId: 'u-90',
       });
       // The reset ended the subscription on the server: nothing to unfollow.
@@ -282,7 +284,7 @@ describe('a conversation followed while it is read', () => {
         expect(follow.follows()).toHaveLength(2);
       });
       expect(follow.asked()?.['payload']).toEqual({
-        conversationId: EDITOR,
+        conversation: EDITOR_REF,
         afterMessageId: 'u-44',
       });
 
@@ -314,7 +316,7 @@ describe('a conversation followed while it is read', () => {
 
       socket.connect();
       expect(follow.asked()?.['payload']).toEqual({
-        conversationId: EDITOR,
+        conversation: EDITOR_REF,
         afterMessageId: 'u-42',
       });
       follow.following('t2');
@@ -404,10 +406,10 @@ describe('a conversation followed while it is read', () => {
     });
 
     it('does not follow a conversation whose page could not be read', async () => {
-      vi.spyOn(api, 'get').mockRejectedValue(claudeUnavailable);
+      vi.spyOn(api, 'get').mockRejectedValue(agentUnavailable);
       mount();
 
-      await screen.findByText(t('transcript.error.claudeUnavailable'));
+      await screen.findByText(t('transcript.error.agentUnavailable', agentUnavailable.params));
 
       expect(follow.asked()).toBeUndefined();
     });
@@ -598,8 +600,8 @@ describe('a conversation followed while it is read', () => {
       socket.receive(
         hubEvent(LIVE, 'session.started', 1, {
           sessionId: LIVE,
-          claudeSessionId: '00000000-0000-4000-8000-000000000001',
-          resumedFrom: EDITOR,
+          conversation: { engine: 'claude', id: '00000000-0000-4000-8000-000000000001' },
+          resumedFrom: EDITOR_REF,
         }),
       );
       expect(onResumed).toHaveBeenCalledWith(LIVE);

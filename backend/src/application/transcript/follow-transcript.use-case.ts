@@ -1,5 +1,6 @@
 import type { CancelScheduled, Scheduler } from '@application/shared';
 import type { UserId } from '@domain/auth';
+import type { ConversationRef } from '@domain/engine';
 import type { IdGenerator } from '@domain/shared';
 import {
   inferWorking,
@@ -8,7 +9,6 @@ import {
   transcriptTail,
 } from '@domain/transcript';
 import type {
-  ClaudeSessionId,
   FollowLimitScope,
   TranscriptActivity,
   TranscriptEvent,
@@ -54,9 +54,9 @@ export interface FollowUpdate {
 export interface FollowSink {
   /** Whether the connection behind it is still there. */
   readonly open: boolean;
-  appended(followId: string, conversationId: string, update: FollowUpdate): void;
+  appended(followId: string, conversation: ConversationRef, update: FollowUpdate): void;
   /** The subscription ended without its client asking — said once, and nothing follows it. */
-  reset(followId: string, conversationId: string, reason: FollowResetReason): void;
+  reset(followId: string, conversation: ConversationRef, reason: FollowResetReason): void;
   /** The subscription is gone, whichever way it went. */
   end(): void;
 }
@@ -76,7 +76,7 @@ export interface FollowObserver {
 export interface FollowRequest {
   readonly connectionId: string;
   readonly userId: UserId;
-  readonly conversationId: ClaudeSessionId;
+  readonly conversationId: ConversationRef;
   /** The last entry the client has, or `null` when the conversation it read was empty. */
   readonly afterMessageId: string | null;
   readonly sink: FollowSink;
@@ -85,7 +85,7 @@ export interface FollowRequest {
 /** The subscription a follow made. Nothing reaches its sink before {@link start}. */
 export interface Following {
   readonly followId: string;
-  readonly conversationId: string;
+  readonly conversation: ConversationRef;
   readonly activity: TranscriptActivity;
   /** The ack went out: from now on the subscription delivers, beginning with everything it missed. */
   start(): void;
@@ -93,7 +93,7 @@ export interface Following {
 
 /** One followed conversation, and who follows it. */
 interface Followed {
-  readonly id: ClaudeSessionId;
+  readonly id: ConversationRef;
   readonly subscribers: Set<Subscriber>;
   /** The entries of the last read, and the version they were read at. */
   entries: readonly TranscriptMessage[] | null;
@@ -192,7 +192,7 @@ export class FollowTranscriptUseCase {
 
     return {
       followId: subscriber.followId,
-      conversationId: request.conversationId.value,
+      conversation: request.conversationId,
       activity: shown.activity.activity,
       start: () => {
         this.begin(subscriber);
@@ -231,7 +231,7 @@ export class FollowTranscriptUseCase {
       throw this.limit(this.settings.maxPerConnection, 'connection');
     }
 
-    const already = this.conversations.has(request.conversationId.value);
+    const already = this.conversations.has(request.conversationId.key);
     if (!already && this.conversations.size >= this.settings.max) {
       throw this.limit(this.settings.max, 'server');
     }
@@ -242,7 +242,7 @@ export class FollowTranscriptUseCase {
   }
 
   private subscribe(request: FollowRequest, shown: VisibleTranscriptSession): Subscriber {
-    const followed = this.conversations.get(request.conversationId.value) ?? this.track(request);
+    const followed = this.conversations.get(request.conversationId.key) ?? this.track(request);
     const subscriber: Subscriber = {
       followId: `t_${this.ids.next()}`,
       connectionId: request.connectionId,
@@ -276,7 +276,7 @@ export class FollowTranscriptUseCase {
       closed: false,
     };
 
-    this.conversations.set(request.conversationId.value, followed);
+    this.conversations.set(request.conversationId.key, followed);
     return followed;
   }
 
@@ -306,7 +306,7 @@ export class FollowTranscriptUseCase {
     try {
       await this.lookNow(followed);
     } catch (error) {
-      this.observer.failed(followed.id.value, error);
+      this.observer.failed(followed.id.key, error);
     }
 
     this.scheduleNext(followed);
@@ -328,7 +328,7 @@ export class FollowTranscriptUseCase {
       followed.version = session.lastModified;
     }
 
-    this.observer.looked(followed.id.value, { read, entries: followed.entries?.length ?? 0 });
+    this.observer.looked(followed.id.key, { read, entries: followed.entries?.length ?? 0 });
 
     for (const subscriber of [...followed.subscribers]) {
       subscriber.session = { ...subscriber.session, lastModified: session.lastModified };
@@ -384,7 +384,7 @@ export class FollowTranscriptUseCase {
     // The questions of Claude it carries, with what was answered here — the same path as a page read
     // (plan 24, D-27). The person's own record, never another's.
     const shown = await this.questions.of(subscriber.userId, tail.entries, entries);
-    subscriber.sink.appended(subscriber.followId, subscriber.followed.id.value, {
+    subscriber.sink.appended(subscriber.followId, subscriber.followed.id, {
       events: shown.flatMap((entry) => entry.events),
       lastMessageId,
       activity,
@@ -428,7 +428,7 @@ export class FollowTranscriptUseCase {
   /** Tells a subscriber its subscription ended, and lets it go. */
   private resetOne(subscriber: Subscriber, reason: FollowResetReason): void {
     if (subscriber.started) {
-      subscriber.sink.reset(subscriber.followId, subscriber.followed.id.value, reason);
+      subscriber.sink.reset(subscriber.followId, subscriber.followed.id, reason);
     }
     this.drop(subscriber);
   }
@@ -450,7 +450,7 @@ export class FollowTranscriptUseCase {
       followed.closed = true;
       followed.timer?.();
       followed.timer = null;
-      this.conversations.delete(followed.id.value);
+      this.conversations.delete(followed.id.key);
     }
   }
 }

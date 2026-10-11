@@ -16,6 +16,7 @@ import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import '../../../support/builders/permissions.dart';
+import '../../../support/builders/tools.dart';
 import '../../../support/fakes/fake_permission_repository.dart';
 import '../../../support/fakes/stub_device_controller.dart';
 import '../../../support/pump_app.dart';
@@ -225,6 +226,27 @@ void main() {
     expect(find.text(l10n.permissionOutcomeRefusedByRule), findsOneWidget);
   });
 
+  testWidgets('plan 28 · B-26 · a call the read-only mode refused says so, not a rule', (
+    WidgetTester tester,
+  ) async {
+    await pumpQueue(tester);
+    await ask(tester, aPermissionRequest());
+
+    repository.feed.emit(
+      settled(
+        'request-1',
+        decision: PermissionDecision.deny,
+        auto: true,
+        origin: AnswerOrigin.unknown,
+        via: AnswerVia.readOnly,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.permissionRefusedReadOnly), findsOneWidget);
+    expect(find.text(l10n.permissionOutcomeRefusedByRule), findsNothing);
+  });
+
   testWidgets('plan 23 · S-91 · the reach chosen on the card leaves with the yes, past the lock', (
     WidgetTester tester,
   ) async {
@@ -235,10 +257,10 @@ void main() {
         riskHint: RiskHint.write,
         description: 'git push | tail -5',
         reaches: const <RuleReach>[
-          RuleReach(kind: RuleReachKind.exact, patterns: <String>['Bash(git push | tail -5)']),
+          RuleReach(kind: RuleReachKind.exact, patterns: <String>['shell(git push | tail -5)']),
           RuleReach(
             kind: RuleReachKind.prefix,
-            patterns: <String>['Bash(git push:*)', 'Bash(tail:*)'],
+            patterns: <String>['shell(git push:*)', 'shell(tail:*)'],
           ),
         ],
       ),
@@ -315,6 +337,76 @@ void main() {
     expect(find.text('rm -rf build/'), findsOneWidget);
     expect(enabled(tester, l10n.permissionDeny), isFalse);
     expect(find.text(l10n.permissionDeviceBlocked), findsOneWidget);
+  });
+
+  group('plan 28, B-20 · the plan is the interaction, by its kind', () {
+    void tall(WidgetTester tester) {
+      tester.view
+        ..physicalSize = const Size(600, 2400)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    testWidgets('S-61 · an interaction of kind plan is the plan card, its markdown drawn', (
+      WidgetTester tester,
+    ) async {
+      tall(tester);
+      await pumpQueue(tester);
+      // Whatever the call is, and whatever its input says: the card reads the interaction.
+      await ask(
+        tester,
+        aPermissionRequest(
+          call: aToolCall(rawInput: const <String, Object?>{'plan': 'not this'}),
+          plan: const PlanInteraction(markdown: '## Steps\n1. Read', path: '/w/plan.md'),
+          description: null,
+          riskHint: RiskHint.read,
+        ),
+      );
+
+      expect(find.text(l10n.permissionPlanTitle), findsOneWidget);
+      expect(find.text('## Steps\n1. Read'), findsOneWidget);
+      expect(find.textContaining('not this'), findsNothing);
+    });
+
+    testWidgets('S-61 · a call of kind plan with no plan interaction is the generic card', (
+      WidgetTester tester,
+    ) async {
+      tall(tester);
+      await pumpQueue(tester);
+      await ask(
+        tester,
+        aPermissionRequest(
+          call: planCall(rawInput: const <String, Object?>{'plan': 'raw'}),
+          description: null,
+          riskHint: RiskHint.read,
+        ),
+      );
+
+      expect(find.text(l10n.permissionPlanTitle), findsNothing);
+      expect(find.text(l10n.permissionPlanApprove), findsNothing);
+    });
+
+    testWidgets('a plan approved on a phone with no lock says why it did not leave', (
+      WidgetTester tester,
+    ) async {
+      tall(tester);
+      await pumpQueue(tester, hasLock: false);
+      await ask(
+        tester,
+        aPermissionRequest(
+          call: planCall(),
+          plan: const PlanInteraction(markdown: 'The plan'),
+          description: null,
+          riskHint: RiskHint.read,
+        ),
+      );
+
+      await tester.tap(find.text(l10n.permissionPlanApprove));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.permissionNoLockTitle), findsOneWidget);
+      expect(repository.feed.answers, isEmpty);
+    });
   });
 
   // S-86 — offline: nothing that needs the network can be tapped, and the card says why.

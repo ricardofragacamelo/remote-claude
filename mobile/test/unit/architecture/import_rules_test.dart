@@ -47,6 +47,15 @@ const Map<String, String> violations = <String, String>{
       "import 'package:remote_claude/features/workspace/workspace.dart';\n",
   'lib/features/files/presentation/_arch_files_reaches_permission.dart':
       "import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';\n",
+  // Plan 28, B-40 (S-116): `engines/` is empty, and the rules refuse the import all the same — an
+  // extension written into it, reached by the core, by a feature, and by another extension.
+  'lib/engines/other/_arch_engine_inside.dart': 'const int archEngine = 0;\n',
+  'lib/core/network/_arch_core_knows_engines.dart':
+      "import 'package:remote_claude/engines/other/_arch_engine_inside.dart';\n",
+  'lib/features/session/presentation/pages/_arch_feature_knows_engines.dart':
+      "import 'package:remote_claude/engines/other/_arch_engine_inside.dart';\n",
+  'lib/engines/claude/_arch_engine_knows_another.dart':
+      "import 'package:remote_claude/engines/other/_arch_engine_inside.dart';\n",
 };
 
 /// The rule each violation is expected to trip.
@@ -68,7 +77,21 @@ const Map<String, String> expectedRules = <String, String>{
   '_arch_files_knows_session.dart': 'files_never_imports_session',
   '_arch_files_knows_workspace.dart': 'files_never_imports_workspace',
   '_arch_files_reaches_permission.dart': 'no_cross_feature_internals_permission_from_files',
+  // The three rings of ADR-025, with `engines/` empty (S-116).
+  '_arch_core_knows_engines.dart': 'core_cannot_import_engines',
+  '_arch_feature_knows_engines.dart': 'features_cannot_import_engines',
+  '_arch_engine_knows_another.dart': 'engines_are_isolated',
 };
+
+/// The first ancestor of [file] that does not exist yet — what writing it creates, and what the
+/// test removes again, so a probe under `engines/` leaves that folder as empty as it found it.
+Directory? firstMissing(File file) {
+  Directory? missing;
+  for (Directory dir = file.parent; !dir.existsSync(); dir = dir.parent) {
+    missing = dir;
+  }
+  return missing;
+}
 
 Future<ProcessResult> runImportLint() =>
     Process.run('dart', <String>['run', 'import_lint'], workingDirectory: Directory.current.path);
@@ -82,6 +105,14 @@ void main() {
 
   test('every rule refuses the import it exists to refuse', () async {
     for (final MapEntry<String, String> entry in violations.entries) {
+      final Directory? created = firstMissing(File(entry.key));
+      if (created != null) {
+        addTearDown(() {
+          if (created.existsSync()) {
+            created.deleteSync(recursive: true);
+          }
+        });
+      }
       final File file = File(entry.key)..createSync(recursive: true);
       file.writeAsStringSync(
         '// A deliberate violation. Written by a test, deleted by it.\n'

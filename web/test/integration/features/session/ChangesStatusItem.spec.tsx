@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { forgetLiveSessions } from '@/features/session';
 import { ChangesStatusItem } from '@/features/session/components/changes/ChangesStatusItem';
-import { claudePanelStore } from '@/features/session/store/claude-panel.store';
+import { agentPanelStore } from '@/features/session/store/agent-panel.store';
 import { folderTabStore } from '@/features/workbench/store/folder-tab.store';
 import { FOLDER } from '../../../support/editor';
 import { aLiveSocket } from '../../../support/live-socket';
@@ -61,6 +61,6 @@ describe('the changes in the status bar', () => {
     expect(item).toHaveTextContent(t('sessions.changes.status', { pending: 1 }));
 
     await userEvent.click(item);
-    expect(claudePanelStore(FOLDER).getState().pane).toBe('changes');
+    expect(agentPanelStore(FOLDER).getState().pane).toBe('changes');
   });
 });

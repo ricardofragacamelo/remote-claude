@@ -4,8 +4,8 @@ import type { ExplorerError } from '../types/explorer';
 export type ReasonContext = 'operation' | 'undo';
 
 /**
- * Why an undo was refused, in the words of an undo: the file changed after the operation — Claude
- * wrote to it —, the folder made has something in it now, or what was made is gone (S-185).
+ * Why an undo was refused, in the words of an undo: the file changed after the operation — the
+ * agent wrote to it —, the folder made has something in it now, or what was made is gone (S-185).
  */
 const UNDO_REASONS: Readonly<Record<string, string>> = {
   FILE_CHANGED: 'explorer.undo.changed',

@@ -11,6 +11,10 @@ import { SessionHub } from '@infra/websocket/session-hub';
 import { FixedClock } from '../../../../../support/fakes/fixed-clock';
 import { RecordingLogger } from '../../../../../support/fakes/recording-logger';
 import { SequentialIds } from '../../../../../support/fakes/sequential-ids';
+import { ConversationRef } from '@domain/engine';
+
+/** The conversation followed. */
+const CONV = ConversationRef.create('claude', 'conv');
 
 /** A socket that keeps what it was sent. */
 function socket(): Sendable & { sent: Envelope[] } {
@@ -60,9 +64,9 @@ describe('SocketFollowSink — the stream of one followId — plan 22, B-17', ()
   });
 
   it('numbers its own stream from 1, with no session, and the reset last — S-65', () => {
-    sink.appended('t_1', 'conv', update);
-    sink.appended('t_1', 'conv', { ...update, events: [], lastMessageId: null, working: false });
-    sink.reset('t_1', 'conv', 'rewritten');
+    sink.appended('t_1', CONV, update);
+    sink.appended('t_1', CONV, { ...update, events: [], lastMessageId: null, working: false });
+    sink.reset('t_1', CONV, 'rewritten');
 
     expect(wire.sent.map((frame) => [frame.type, frame.seq])).toEqual([
       ['transcript.appended', 1],
@@ -73,7 +77,7 @@ describe('SocketFollowSink — the stream of one followId — plan 22, B-17', ()
       kind: 'event',
       payload: {
         followId: 't_1',
-        conversationId: 'conv',
+        conversation: { engine: 'claude', id: 'conv' },
         lastMessageId: 'm2',
         activity: 'activeElsewhere',
         working: true,
@@ -83,13 +87,13 @@ describe('SocketFollowSink — the stream of one followId — plan 22, B-17', ()
     expect(wire.sent[1]?.payload).not.toHaveProperty('lastMessageId');
     expect(wire.sent[2]?.payload).toEqual({
       followId: 't_1',
-      conversationId: 'conv',
+      conversation: { engine: 'claude', id: 'conv' },
       reason: 'rewritten',
     });
   });
 
   it('logs how many events went, never what they say — S-72', () => {
-    sink.appended('t_1', 'conv', update);
+    sink.appended('t_1', CONV, update);
 
     expect(log.withOp('transcript.follow')).toEqual([
       expect.objectContaining({
@@ -106,7 +110,7 @@ describe('SocketFollowSink — the stream of one followId — plan 22, B-17', ()
   it('sends nothing once ended, or once the socket is gone — S-68', () => {
     expect(sink.open).toBe(true);
     sink.end();
-    sink.appended('t_1', 'conv', update);
+    sink.appended('t_1', CONV, update);
     expect(wire.sent).toEqual([]);
 
     registry.remove('c1');
@@ -117,7 +121,7 @@ describe('SocketFollowSink — the stream of one followId — plan 22, B-17', ()
     registry.remove('c1');
 
     expect(() => {
-      sink.reset('t_1', 'conv', 'gone');
+      sink.reset('t_1', CONV, 'gone');
     }).not.toThrow();
     expect(wire.sent).toEqual([]);
   });

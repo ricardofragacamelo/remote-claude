@@ -23,7 +23,12 @@ export type {
   FollowUpdate,
   Following,
 } from './follow-transcript.use-case';
-export type { StoredImage, TranscriptStore } from './ports/transcript-store.port';
-export { TRANSCRIPT_STORE } from './ports/transcript-store.port';
+export type {
+  EngineTranscriptStore,
+  StoredImage,
+  TranscriptStore,
+} from './ports/transcript-store.port';
+export { ENGINE_TRANSCRIPT_STORES, TRANSCRIPT_STORE } from './ports/transcript-store.port';
+export { TranscriptStoreRegistry } from './transcript-store-registry';
 export type { TranscriptOriginSource } from './ports/transcript-origin.source';
 export { TRANSCRIPT_ORIGIN_SOURCE } from './ports/transcript-origin.source';

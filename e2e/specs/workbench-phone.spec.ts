@@ -64,7 +64,7 @@ test(`${phone.id} — ${phone.title}`, async ({ page }) => {
   for (const view of expected.views) {
     await expectTouchable(bar.getByRole('button', { name: view }));
   }
-  await bar.getByRole('button', { name: 'Claude' }).click();
+  await bar.getByRole('button', { name: 'Claude Code' }).click();
   await expect(panelOf(page)).toBeVisible();
   await expect(page.getByRole('region', { name: 'Editor' })).toHaveCount(0);
   await bar.getByRole('button', { name: 'Editor' }).click();

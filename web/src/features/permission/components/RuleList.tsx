@@ -13,7 +13,7 @@ const KEYS: ListKeys = {
 };
 
 /**
- * What Claude may do on this machine without asking, and the way to take it back.
+ * What the agent may do on this machine without asking, and the way to take it back.
  *
  * A rule is authorisation granted **in advance**, and one that outlives the session with nowhere
  * to be seen is a door nobody knows is open. This list is where it is seen, and revoking is one

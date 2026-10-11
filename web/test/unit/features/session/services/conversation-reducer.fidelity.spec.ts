@@ -9,6 +9,7 @@ import {
 } from '@/features/session/services/conversation-reducer';
 import type { HistoryEvent } from '@/features/session/types/history';
 import type { Conversation } from '@/features/session/types/live-session';
+import { aToolCall } from '../../../../support/canonical-tool';
 
 const T0 = '2026-10-07T12:00:00.000Z';
 
@@ -63,7 +64,7 @@ describe('the conversation reducer — plan 22, F5', () => {
       const state = conversationFrom([
         {
           type: 'tool.started',
-          payload: { toolUseId: 't1', toolName: 'Bash', input: {}, at: at(1) },
+          payload: { toolUseId: 't1', ...aToolCall('Bash', {}), at: at(1) },
         },
         {
           type: 'tool.completed',
@@ -81,7 +82,7 @@ describe('the conversation reducer — plan 22, F5', () => {
         thought('m1', 'u1:0', at(2)),
         {
           type: 'tool.started',
-          payload: { toolUseId: 't1', toolName: 'Read', input: {}, at: at(2) },
+          payload: { toolUseId: 't1', ...aToolCall('Read', {}), at: at(2) },
         },
         { type: 'tool.completed', payload: { toolUseId: 't1', status: 'succeeded', at: at(3) } },
         thought('m1', 'u4:0', at(10)),
@@ -120,7 +121,7 @@ describe('the conversation reducer — plan 22, F5', () => {
           payload: {
             messageId: 'm1',
             role: 'assistant',
-            content: [{ type: 'redacted_thinking' }, { type: 'text', text: 'Done.' }],
+            content: [{ type: 'redactedThinking' }, { type: 'text', text: 'Done.' }],
             at: at(4),
           },
         },
@@ -238,13 +239,12 @@ describe('the conversation reducer — plan 22, F5', () => {
       const state = fold(
         frame('tool.started', {
           toolUseId: 't1',
-          toolName: 'Bash',
-          input: { command: 'pnpm test' },
+          ...aToolCall('Bash', { command: 'pnpm test' }),
           title: '  Run the tests ',
         }),
       );
 
-      expect(state.tools[0]).toMatchObject({ toolName: 'Bash', title: 'Run the tests' });
+      expect(state.tools[0]).toMatchObject({ kind: 'shell', title: 'Run the tests' });
     });
 
     it.each([
@@ -254,7 +254,7 @@ describe('the conversation reducer — plan 22, F5', () => {
       ['not text', { title: 7 }],
     ])('keeps none when it is %s — S-111, S-13', (_case, extra) => {
       const state = fold(
-        frame('tool.started', { toolUseId: 't1', toolName: 'Bash', input: {}, ...extra }),
+        frame('tool.started', { toolUseId: 't1', ...aToolCall('Bash', {}), ...extra }),
       );
 
       expect(state.tools[0]).not.toHaveProperty('title');

@@ -5,6 +5,7 @@ import { folderTabStore } from '@/features/workbench';
 import type { AppError } from '@/shared/api/errors';
 import { toAppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { logger } from '@/shared/logging/logger';
 import { fetchCheckpoints, rewindFiles } from '../services/checkpoint.service';
 import {
@@ -14,7 +15,7 @@ import {
   sendPrompt,
   startedBy,
 } from '../services/live-session.service';
-import { claudePanelStore } from '../store/claude-panel.store';
+import { agentPanelStore } from '../store/agent-panel.store';
 import { liveSessionStoreOf } from '../store/live-session.store';
 import { useOwnedSessionsStore } from '../store/owned-sessions.store';
 import type { StreamMessage } from '../types/live-session';
@@ -66,7 +67,7 @@ export function useEditAndResend(folder: string, sessionId: string): EditAndRese
   const [undoFiles, setUndoFiles] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   const [sending, setSending] = useState(false);
-  const [rejected, setRejected] = useState<string | null>(null);
+  const [rejected, setRejected] = useState<ConversationRef | null>(null);
   const asked = useRef<{ readonly commandId: string; readonly text: string } | null>(null);
   const forked = useRef<string | null>(null);
 
@@ -90,10 +91,10 @@ export function useEditAndResend(folder: string, sessionId: string): EditAndRese
           forked.current = opened;
           useOwnedSessionsStore.getState().claim(opened);
           sendPrompt(wsClient, opened, pending.text);
-          claudePanelStore(folder).getState().show('session', opened);
+          agentPanelStore(folder).getState().show('session', opened);
           folderTabStore(folder).getState().showSession(opened);
         } else if (isForkRejection(frame, forked.current)) {
-          setRejected(live.getState().conversationId);
+          setRejected(live.getState().conversation);
           setError(toAppError({ error: frame.payload }, frame.traceId ?? frame.id));
         }
       }),
@@ -134,16 +135,16 @@ export function useEditAndResend(folder: string, sessionId: string): EditAndRese
   /** Opens the fork before `messageId`, to send `text` there once it opened. */
   const fork = useCallback(
     (messageId: string, text: string) => {
-      const conversationId = live.getState().conversationId;
+      const conversation = live.getState().conversation;
 
-      if (conversationId === null || asked.current !== null) {
+      if (conversation === null || asked.current !== null) {
         return;
       }
 
       const commandId = forkConversation(
         wsClient,
         live.getState().workspacePath ?? folder,
-        conversationId,
+        conversation,
         messageId,
       );
 

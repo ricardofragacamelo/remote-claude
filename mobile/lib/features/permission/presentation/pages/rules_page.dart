@@ -11,15 +11,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/error/failure_messages.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/loaded_view.dart';
 import 'package:remote_claude/core/widgets/note_line.dart';
+import 'package:remote_claude/core/widgets/tool_label_words.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_rule.dart';
 import 'package:remote_claude/features/permission/permission_providers.dart';
 import 'package:remote_claude/features/permission/presentation/providers/rule_list_controller.dart';
-import 'package:remote_claude/features/permission/presentation/widgets/permission_card_view.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/verbatim_box.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
@@ -48,7 +49,7 @@ class RulesPage extends ConsumerWidget {
         labels: LoadedLabels(
           loading: l10n.rulesLoading,
           emptyTitle: l10n.rulesEmptyTitle,
-          emptyDescription: l10n.rulesEmptyBody,
+          emptyDescription: l10n.rulesEmptyBody(agentNameIn(context)),
         ),
         isEmpty: (RuleBoard board) => board.rules.isEmpty,
         onRetry: controller.reload,
@@ -76,7 +77,7 @@ class _Rules extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.all(Tokens.spaceMd),
             child: Text(
-              AppLocalizations.of(context).rulesDescription,
+              AppLocalizations.of(context).rulesDescription(agentNameIn(context)),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           );
@@ -98,8 +99,13 @@ class _Rules extends ConsumerWidget {
 
 /// One rule: how far it reaches, who granted it, until when — and the way to take it back.
 ///
+/// The reach is the short name of the kind it answers and the pattern exactly as the server wrote
+/// it, never parsed here. A disabled rule — written for an agent in a form this version could not
+/// carry over — keeps its old pattern, says why it answers nothing, and offers only revoking
+/// (plan 28, D-18).
+///
 /// Revoking is **direct**, with no second step: the promise is that taking an authorisation back is
-/// one tap away, and it is the safe direction — the worst a stray revoke does is make Claude ask
+/// one tap away, and it is the safe direction — the worst a stray revoke does is make the agent ask
 /// again. What protects it from a double tap is that a row being revoked takes no second one.
 class RuleTile extends StatelessWidget {
   const RuleTile({
@@ -127,6 +133,7 @@ class RuleTile extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     String date(DateTime at) => dates.formatMediumDate(at.toLocal());
     final Failure? failed = failure;
+    final bool disabled = rule.status == RuleStatus.disabled;
 
     return Semantics(
       container: true,
@@ -134,7 +141,7 @@ class RuleTile extends StatelessWidget {
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: Tokens.spaceMd, vertical: Tokens.spaceSm),
         child: Opacity(
-          opacity: rule.status == RuleStatus.expired ? 0.7 : 1,
+          opacity: rule.status == RuleStatus.expired || disabled ? 0.7 : 1,
           child: ContentColumn(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
@@ -151,31 +158,25 @@ class RuleTile extends StatelessWidget {
                   Text(switch (rule.status) {
                     RuleStatus.active => l10n.rulesStatusActive,
                     RuleStatus.expired => l10n.rulesStatusExpired,
+                    RuleStatus.disabled => l10n.rulesStatusDisabled,
                     RuleStatus.unknown => l10n.rulesStatusUnknown,
                   }, style: theme.textTheme.labelMedium),
                 ],
               ),
-              NoteLine(
-                l10n.rulesToolDecision(
-                  toolLabel(l10n, rule.toolName),
-                  rule.decision == PermissionDecision.allow
-                      ? l10n.rulesDecisionAllow
-                      : l10n.rulesDecisionDeny,
-                ),
-              ),
-              const SizedBox(height: Tokens.spaceSm),
-              VerbatimBox(rule.pattern),
+              ..._reach(context, l10n, theme),
               if (rule.projectPath != null)
                 NoteLine(l10n.rulesProject(rule.projectPath!), style: identifierStyle(context)),
               NoteLine(l10n.rulesGranted(rule.grantedBy, date(rule.grantedAt))),
-              NoteLine(
-                rule.status == RuleStatus.expired
-                    ? l10n.rulesExpiredOn(date(rule.expiresAt))
-                    : l10n.rulesValidUntil(date(rule.expiresAt)),
-              ),
+              // A disabled rule answers nothing: it has no validity to count down.
+              if (!disabled)
+                NoteLine(
+                  rule.status == RuleStatus.expired
+                      ? l10n.rulesExpiredOn(agentNameIn(context, rule.engine), date(rule.expiresAt))
+                      : l10n.rulesValidUntil(date(rule.expiresAt)),
+                ),
               if (expiringSoon)
                 NoteLine(
-                  l10n.rulesExpiringSoon(date(rule.expiresAt)),
+                  l10n.rulesExpiringSoon(agentNameIn(context, rule.engine), date(rule.expiresAt)),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.error,
                     fontWeight: FontWeight.bold,
@@ -191,7 +192,7 @@ class RuleTile extends StatelessWidget {
               ),
               if (failed != null)
                 NoteLine(
-                  translateFailure(l10n, failed),
+                  failureText(context, failed),
                   style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
                 ),
             ],
@@ -200,4 +201,26 @@ class RuleTile extends StatelessWidget {
       ),
     );
   }
+
+  /// What the rule answers: the short name of its kind and its decision, then the pattern exactly as
+  /// the server wrote it. A disabled rule has no kind and answers nothing — it says why instead,
+  /// naming the agent it was written for.
+  List<Widget> _reach(BuildContext context, AppLocalizations l10n, ThemeData theme) => <Widget>[
+    if (rule.status != RuleStatus.disabled)
+      NoteLine(
+        l10n.rulesToolDecision(
+          kindNameOrGeneric(l10n, rule.kind),
+          rule.decision == PermissionDecision.allow
+              ? l10n.rulesDecisionAllow
+              : l10n.rulesDecisionDeny,
+        ),
+      ),
+    const SizedBox(height: Tokens.spaceSm),
+    VerbatimBox(rule.pattern),
+    if (rule.disabledReason != null)
+      NoteLine(
+        l10n.rulesDisabledExplanation(AgentNamesScope.of(context).nameOf(rule.engine)),
+        style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+      ),
+  ];
 }

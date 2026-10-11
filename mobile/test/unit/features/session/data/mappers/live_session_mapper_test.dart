@@ -11,6 +11,7 @@ Map<String, Object?> row({
   Object? status = 'running',
   Object? openedFrom = 'web',
   Object? pending = 2,
+  Object? mode = 'ask',
 }) => <String, Object?>{
   'sessionId': sessionId,
   'claudeSessionId': 'c-1',
@@ -18,7 +19,7 @@ Map<String, Object?> row({
   'workspacePath': '/w/a/sub',
   'status': status,
   'model': 'opus',
-  'permissionMode': 'default',
+  'permissionMode': mode,
   'startedAt': '2026-10-04T10:00:00.000Z',
   'openedFrom': openedFrom,
   'pendingPermissions': pending,
@@ -37,12 +38,20 @@ void main() {
         workspacePath: '/w/a/sub',
         status: SessionStatus.running,
         model: 'opus',
-        permissionMode: 'default',
+        permissionMode: 'ask',
         startedAt: DateTime.utc(2026, 10, 4, 10),
         openedFrom: SessionOrigin.web,
         pendingPermissions: 2,
       ),
     ]);
+  });
+
+  test('plan 28 · S-82 · a mode of the previous protocol is read as the canonical one', () {
+    expect(liveSessionFrom(row(mode: 'default'))?.permissionMode, 'ask');
+    expect(liveSessionFrom(row(mode: 'plan'))?.permissionMode, 'readOnly');
+    expect(liveSessionFrom(row(mode: 'acceptEdits'))?.permissionMode, 'acceptEdits');
+    expect(liveSessionFrom(row(mode: 'bypassPermissions'))?.permissionMode, isEmpty);
+    expect(liveSessionFrom(row(mode: 7))?.permissionMode, isEmpty);
   });
 
   test('S-153 · an empty folder is an answer, not a failure', () {

@@ -5,9 +5,10 @@ import userEvent from '@testing-library/user-event';
 import { forgetLiveSessions, SessionScreen } from '@/features/session';
 import { aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
-import { anInteraction, aQuestionPayload } from '../../../support/question';
+import { anInteraction, aQuestionPayload, QUESTIONS } from '../../../support/question';
 import { render, translator } from '../../../support/render';
 import { SESSION } from '../../../support/session-tools';
+import { aToolCall } from '../../../support/canonical-tool';
 
 const t = translator('en');
 const NOW = new Date('2026-10-08T12:00:00.000Z');
@@ -54,10 +55,10 @@ function opened(): void {
   live.connect();
   says('session.started', {
     sessionId: SESSION,
-    claudeSessionId: 'conv-1',
+    conversation: { engine: 'claude', id: 'conv-1' },
     workspacePath: FOLDER,
     model: 'claude-opus-5',
-    permissionMode: 'default',
+    permissionMode: 'ask',
   });
 }
 
@@ -78,7 +79,10 @@ describe('a question of Claude in the conversation — plan 24, F3', () => {
   it('stands in the place of its tool, and becomes the questions answered — S-77', async () => {
     const user = userEvent.setup();
     opened();
-    says('tool.started', { toolUseId: 'toolu-q', toolName: 'AskUserQuestion', input: {} });
+    says('tool.started', {
+      toolUseId: 'toolu-q',
+      ...aToolCall('AskUserQuestion', { questions: QUESTIONS }),
+    });
     asks();
 
     expect(
@@ -100,7 +104,7 @@ describe('a question of Claude in the conversation — plan 24, F3', () => {
 
     expect(screen.queryByRole('listitem', { name: t('permission.question.label') })).toBeNull();
     const line = within(conversation()).getByRole('button', {
-      name: new RegExp(t('permission.question.askedMany', { count: 3 })),
+      name: new RegExp(t('sessions.tool.questions', { count: 3 })),
     });
     expect(line).toHaveAttribute('aria-expanded', 'true');
     const answered = document.querySelector('[data-answered-questions="answered"]') as HTMLElement;
@@ -120,14 +124,20 @@ describe('a question of Claude in the conversation — plan 24, F3', () => {
 
   it('says why it was not answered, and that one still open is waiting — S-78', () => {
     opened();
-    says('tool.started', { toolUseId: 'toolu-w', toolName: 'AskUserQuestion', input: {} });
+    says('tool.started', {
+      toolUseId: 'toolu-w',
+      ...aToolCall('AskUserQuestion', { questions: QUESTIONS }),
+    });
     expect(
       within(conversation()).getByRole('button', {
         name: new RegExp(t('permission.question.pending')),
       }),
     ).toBeInTheDocument();
 
-    says('tool.started', { toolUseId: 'toolu-q', toolName: 'AskUserQuestion', input: {} });
+    says('tool.started', {
+      toolUseId: 'toolu-q',
+      ...aToolCall('AskUserQuestion', { questions: QUESTIONS }),
+    });
     asks();
     says('permission.resolved', {
       requestId: 'req-q',
@@ -146,7 +156,10 @@ describe('a question of Claude in the conversation — plan 24, F3', () => {
 
   it('names its line after its one question — S-79', () => {
     opened();
-    says('tool.started', { toolUseId: 'toolu-q', toolName: 'AskUserQuestion', input: {} });
+    says('tool.started', {
+      toolUseId: 'toolu-q',
+      ...aToolCall('AskUserQuestion', { questions: [{ header: 'Tone' }] }),
+    });
     asks({
       interaction: {
         kind: 'question',
@@ -176,7 +189,7 @@ describe('a question of Claude in the conversation — plan 24, F3', () => {
 
     expect(
       within(conversation()).getByRole('button', {
-        name: new RegExp(t('permission.question.asked', { header: 'Tone' })),
+        name: new RegExp(t('sessions.tool.question', { header: 'Tone' })),
       }),
     ).toBeInTheDocument();
   });
@@ -184,11 +197,10 @@ describe('a question of Claude in the conversation — plan 24, F3', () => {
   it('keeps the question of a subagent at the end, where it is answered — S-76', async () => {
     const user = userEvent.setup();
     opened();
-    says('tool.started', { toolUseId: 'a1', toolName: 'Agent', input: { description: 'look' } });
+    says('tool.started', { toolUseId: 'a1', ...aToolCall('Agent', { description: 'look' }) });
     says('tool.started', {
       toolUseId: 'toolu-q',
-      toolName: 'AskUserQuestion',
-      input: {},
+      ...aToolCall('AskUserQuestion', { questions: QUESTIONS }),
       parentToolUseId: 'a1',
     });
     asks();
@@ -229,7 +241,7 @@ describe('a question of Claude in the conversation — plan 24, F3', () => {
     opened();
     says('turn.started', {});
     says('session.statusChanged', { status: 'waitingPermission' });
-    asks({ toolName: 'Bash', interaction: undefined, title: 'permission.tool.Bash' });
+    asks({ ...aToolCall('Bash'), interaction: undefined, title: 'permission.tool.shell' });
 
     const indicator = document.querySelector('[data-working-indicator]') as HTMLElement;
     expect(within(indicator).getByRole('status')).toHaveTextContent(t('sessions.working.waiting'));
@@ -237,7 +249,10 @@ describe('a question of Claude in the conversation — plan 24, F3', () => {
 
   it('says a question ran out of time, and one a rule refused was declined — S-78', () => {
     opened();
-    says('tool.started', { toolUseId: 'toolu-q', toolName: 'AskUserQuestion', input: {} });
+    says('tool.started', {
+      toolUseId: 'toolu-q',
+      ...aToolCall('AskUserQuestion', { questions: QUESTIONS }),
+    });
     asks();
     says('permission.resolved', {
       requestId: 'req-q',
@@ -249,7 +264,10 @@ describe('a question of Claude in the conversation — plan 24, F3', () => {
 
     expect(screen.getByText(t('permission.question.expired'))).toBeInTheDocument();
 
-    says('tool.started', { toolUseId: 'toolu-r', toolName: 'AskUserQuestion', input: {} });
+    says('tool.started', {
+      toolUseId: 'toolu-r',
+      ...aToolCall('AskUserQuestion', { questions: QUESTIONS }),
+    });
     asks({ toolUseId: 'toolu-r', requestId: 'req-r' });
     says('permission.resolved', {
       requestId: 'req-r',
@@ -274,7 +292,10 @@ describe('a question of Claude read back — plan 24, F5', () => {
     status = 'succeeded',
     summary = 'answered',
   ): void {
-    says('tool.started', { toolUseId: 'toolu-h', toolName: 'AskUserQuestion', input: {} });
+    says('tool.started', {
+      toolUseId: 'toolu-h',
+      ...aToolCall('AskUserQuestion', { questions: QUESTIONS }),
+    });
     says('tool.completed', { toolUseId: 'toolu-h', status, summary, question });
   }
 
@@ -283,7 +304,7 @@ describe('a question of Claude read back — plan 24, F5', () => {
     ended({ interaction: anInteraction(), outcome: 'answered', answers: ANSWERED });
 
     const line = within(conversation()).getByRole('button', {
-      name: new RegExp(t('permission.question.askedMany', { count: 3 })),
+      name: new RegExp(t('sessions.tool.questions', { count: 3 })),
     });
     expect(line).toHaveAttribute('aria-expanded', 'true');
     const answered = document.querySelector('[data-answered-questions="answered"]') as HTMLElement;

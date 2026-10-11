@@ -89,7 +89,9 @@ void main() {
         ),
       );
       expect(
-        find.text('${endingReason(l10n, reason)} ${l10n.sessionEndedResumes}'),
+        find.text(
+          '${endingReason(l10n, reason)} ${l10n.sessionEndedResumes(l10n.engineNameFallback)}',
+        ),
         findsOneWidget,
         reason: '$reason',
       );
@@ -97,7 +99,7 @@ void main() {
 
     await tester.tap(find.byType(EndedStrip));
     await tester.pumpAndSettle();
-    expect(find.text(l10n.sessionEndedResumes), findsOneWidget);
+    expect(find.text(l10n.sessionEndedResumes(l10n.engineNameFallback)), findsOneWidget);
   });
 
   testWidgets('S-42 · a refusal is said until the person closes it', (WidgetTester tester) async {

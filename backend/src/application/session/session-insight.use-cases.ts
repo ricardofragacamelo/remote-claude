@@ -1,7 +1,9 @@
 import type { UserId } from '@domain/auth';
+import { requireCapability } from '@domain/engine';
 import { SessionId } from '@domain/session';
 import type { ContextUse, InstallationModel, McpServer } from '@domain/session';
 import type { ModelCatalog } from './command-catalog';
+import { liveControl } from './session-registry';
 import type { SessionRegistry } from './session-registry';
 
 /** The models of a session's installation, and the one it runs (plan 08, B-36). */
@@ -25,8 +27,8 @@ export class InspectSessionUseCase {
    * The installation's models — from the catalogue, one call for every session of an installation
    * and workspace (S-167).
    *
-   * @throws {import('@domain/session').ClaudeUnavailableError} the CLI failed to answer
-   * @throws {import('@domain/session').ClaudeTimeoutError} the CLI did not answer in time
+   * @throws {import('@domain/engine').AgentUnavailableError} the CLI failed to answer
+   * @throws {import('@domain/engine').AgentTimeoutError} the CLI did not answer in time
    */
   async modelsOf(rawSessionId: string, userId: UserId): Promise<SessionModels> {
     const live = this.registry.require(SessionId.create(rawSessionId), userId);
@@ -35,11 +37,19 @@ export class InspectSessionUseCase {
 
   /** The use of the session's context window, by category (B-37). @throws as {@link modelsOf} */
   async contextOf(rawSessionId: string, userId: UserId): Promise<ContextUse> {
-    return this.registry.require(SessionId.create(rawSessionId), userId).handle.contextUse();
+    const live = this.registry.require(SessionId.create(rawSessionId), userId);
+
+    // Declared, never supposed: an engine without the capability refuses before anything is asked.
+    requireCapability(live.conversation.ref.engine.value, live.handle.capabilities, 'contextUse');
+
+    return liveControl(live, 'contextUse')();
   }
 
   /** The session's MCP servers, reduced — never their configuration (B-38). @throws as {@link modelsOf} */
   async mcpServersOf(rawSessionId: string, userId: UserId): Promise<readonly McpServer[]> {
-    return this.registry.require(SessionId.create(rawSessionId), userId).handle.mcpServers();
+    return liveControl(
+      this.registry.require(SessionId.create(rawSessionId), userId),
+      'mcpServers',
+    )();
   }
 }

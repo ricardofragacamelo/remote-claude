@@ -21,13 +21,17 @@ describe('fetchToolResult', () => {
       .mockResolvedValue({ text: 'all of it', truncated: false, bytes: 9 });
     const signal = new AbortController().signal;
 
-    await expect(fetchToolResult('conv/1', 'tool 1', signal)).resolves.toEqual({
+    await expect(
+      fetchToolResult({ engine: 'claude', id: 'conv/1' }, 'tool 1', signal),
+    ).resolves.toEqual({
       text: 'all of it',
       truncated: false,
       bytes: 9,
       cutAt: null,
     });
-    expect(get).toHaveBeenCalledWith('/transcripts/conv%2F1/tools/tool%201/result', { signal });
+    expect(get).toHaveBeenCalledWith('/transcripts/claude/conv%2F1/tools/tool%201/result', {
+      signal,
+    });
   });
 
   it('reads a cut output, and where it was cut — S-114', async () => {
@@ -38,7 +42,7 @@ describe('fetchToolResult', () => {
       cutAt: 4,
     });
 
-    await expect(fetchToolResult('c', 't')).resolves.toEqual({
+    await expect(fetchToolResult({ engine: 'claude', id: 'c' }, 't')).resolves.toEqual({
       text: 'headtail',
       truncated: true,
       bytes: 300_000,
@@ -66,7 +70,7 @@ describe('fetchToolResult', () => {
   ])('reads %s defensively', async (_case, body, read) => {
     vi.spyOn(api, 'get').mockResolvedValue(body);
 
-    await expect(fetchToolResult('c', 't')).resolves.toEqual(read);
+    await expect(fetchToolResult({ engine: 'claude', id: 'c' }, 't')).resolves.toEqual(read);
   });
 
   it('lets the refusal of the route through — S-115', async () => {
@@ -74,7 +78,9 @@ describe('fetchToolResult', () => {
       new AppError('NOT_FOUND', 'transcript.error.notFound', 'trace-1'),
     );
 
-    await expect(fetchToolResult('c', 't')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(fetchToolResult({ engine: 'claude', id: 'c' }, 't')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
   });
 });
 
@@ -86,8 +92,8 @@ describe('fetchPromptImage', () => {
       .spyOn(api, 'bytes')
       .mockResolvedValue({ status: 200, blob, header: () => null });
 
-    await expect(fetchPromptImage('conv 1', 'u1:1')).resolves.toBe(blob);
-    expect(bytes).toHaveBeenCalledWith('/transcripts/conv%201/images/u1%3A1', {});
+    await expect(fetchPromptImage({ engine: 'claude', id: 'conv 1' }, 'u1:1')).resolves.toBe(blob);
+    expect(bytes).toHaveBeenCalledWith('/transcripts/claude/conv%201/images/u1%3A1', {});
   });
 
   it('sends the credential in the header, and never in the URL — S-122', async () => {
@@ -100,11 +106,15 @@ describe('fetchPromptImage', () => {
     );
     vi.stubGlobal('fetch', fetch);
 
-    const blob = await fetchPromptImage('c1', 'u1:1', new AbortController().signal);
+    const blob = await fetchPromptImage(
+      { engine: 'claude', id: 'c1' },
+      'u1:1',
+      new AbortController().signal,
+    );
 
     expect(await blob.text()).toBe('png');
     const [url, init] = fetch.mock.calls[0] ?? [];
-    expect(String(url)).toMatch(/\/transcripts\/c1\/images\/u1%3A1$/);
+    expect(String(url)).toMatch(/\/transcripts\/claude\/c1\/images\/u1%3A1$/);
     expect(String(url)).not.toContain('secret-token');
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer secret-token');
   });
@@ -123,6 +133,9 @@ describe('fetchPromptImage', () => {
       ),
     );
 
-    await expect(fetchPromptImage('c1', 'u1:1')).rejects.toMatchObject({ code, messageKey });
+    await expect(fetchPromptImage({ engine: 'claude', id: 'c1' }, 'u1:1')).rejects.toMatchObject({
+      code,
+      messageKey,
+    });
   });
 });

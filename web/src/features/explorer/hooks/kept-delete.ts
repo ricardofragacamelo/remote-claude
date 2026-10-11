@@ -20,7 +20,7 @@ export interface KeptRound {
   readonly kept: readonly { readonly path: string; readonly entries: readonly KeptEntry[] }[];
   readonly notKept: readonly NotKept[];
 
-  /** Paths that change what Claude may do, which go only with the second step (07 · D-15). */
+  /** Paths that change what the agent may do, which go only with the second step (07 · D-15). */
   readonly sensitive: readonly string[];
   readonly failed: readonly ItemResult[];
 }

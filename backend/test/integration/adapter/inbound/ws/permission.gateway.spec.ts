@@ -2,7 +2,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import { AGENT_LOOP_RELEASE, SESSION_PERMISSION_GATE } from '@application/session';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -181,10 +182,14 @@ describe('the permission round trip', () => {
 
     expect(request.kind).toBe('request');
     expect(request.payload).toMatchObject({
-      toolName: 'Write',
+      // The canonical call (plan 28, B-15), titled by its kind.
+      kind: 'file.write',
+      origin: { engine: 'claude', native: 'Write' },
+      title: 'permission.tool.fileWrite',
       riskHint: 'write',
       defaultToNo: true,
     });
+    expect(request.payload).not.toHaveProperty('toolName');
     expect(request.payload?.['requestId']).toBeTypeOf('string');
     // Unnumbered: a question is not part of the history of the conversation, and replaying an
     // answered one would put a dead card back on screen.
@@ -214,6 +219,26 @@ describe('the permission round trip', () => {
     const resolved = await until(socket, 'permission.resolved');
     expect(resolved.payload).toMatchObject({ decision: 'allow', auto: false, resolvedBy: SUBJECT });
     // The loop was blocked on that answer; the turn only finishes because it arrived.
+    await until(socket, 'turn.completed');
+  });
+
+  it('releases canUseTool through the agent-loop port the composition provides — plan 28, S-101', async () => {
+    // The consumer of `permission.resolved` holds the port, and the port is the gate that holds the
+    // loop: one object, so what the web resolves reaches the very promise the engine waits on.
+    const release = harness.app.get<unknown>(AGENT_LOOP_RELEASE, { strict: false });
+    expect(release).toBe(harness.app.get<unknown>(SESSION_PERMISSION_GATE, { strict: false }));
+
+    const socket = await connect();
+    const { request } = await askedAbout(socket);
+
+    socket.send(
+      commandFrame('permission.resolve', {
+        requestId: request.payload?.['requestId'],
+        decision: 'allow',
+      }),
+    );
+
+    await until(socket, 'permission.resolved');
     await until(socket, 'turn.completed');
   });
 

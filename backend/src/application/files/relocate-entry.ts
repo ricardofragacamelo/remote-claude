@@ -119,7 +119,12 @@ export class EntryRelocator {
       throw new FileOperationInvalidError(target.relative, 'intoItself');
     }
 
-    const sensitive = confirmSensitive(command.confirmSensitive, source, target);
+    const sensitive = confirmSensitive(
+      this.writing.sensitive,
+      command.confirmSensitive,
+      source,
+      target,
+    );
     const sourceRealPath = await this.writing.disk.locate(source);
     const targetRealPath = await this.writing.disk.locate(target);
 

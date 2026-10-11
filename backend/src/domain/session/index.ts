@@ -13,13 +13,10 @@ export type {
 export { SessionId } from './value-objects/session-id.value-object';
 export {
   PERMISSION_MODES,
+  canonicalPermissionMode,
   isPermissionMode,
-  sdkPermissionMode,
 } from './value-objects/permission-mode.value-object';
-export type {
-  PermissionMode,
-  SdkPermissionMode,
-} from './value-objects/permission-mode.value-object';
+export type { PermissionMode } from './value-objects/permission-mode.value-object';
 export {
   ALLOWED_TRANSITIONS,
   SESSION_STATUSES,
@@ -27,22 +24,25 @@ export {
 } from './value-objects/session-status.value-object';
 export type { SessionStatus } from './value-objects/session-status.value-object';
 export { statusFor } from './services/session-status.projection';
+export type { ObservedStatus } from './services/session-status.projection';
 export { resumeStrategyFor } from './services/resume-strategy';
-export { widensSessionMode } from './services/mode-widening';
 export { sessionCapacity } from './services/session-capacity';
 export type { CapacityInputs } from './services/session-capacity';
 export type { ResumeCaller, ResumeCandidate, ResumeStrategy } from './services/resume-strategy';
 export {
-  SUGGESTED_COMMANDS,
-  SYSTEM_SKILLS_PLUGIN,
-  USER_SKILLS_PLUGIN,
+  PLAIN_MENU,
   commandIn,
   isHidden,
   menuOf,
   offers,
   originOf,
 } from './services/slash-commands';
-export type { CommandOrigin, MenuCommand, SlashCommand } from './services/slash-commands';
+export type {
+  CommandMenu,
+  CommandOrigin,
+  MenuCommand,
+  SlashCommand,
+} from './services/slash-commands';
 export {
   MENTION_GUARD,
   composePrompt,
@@ -85,25 +85,25 @@ export {
 } from './services/line-diff';
 export type { DiffHunk, DiffLine } from './services/line-diff';
 export {
-  DIFFABLE_TOOLS,
-  diffablePathOf,
+  diffableChangeOf,
   fileChangeOf,
   firstCheckpoints,
-  isDiffableTool,
+  pendingDiffOf,
   toolDiffOf,
 } from './services/session-diff';
 export { isAsLeft } from './services/file-state';
 export type {
   ChangeKind,
-  DiffableTool,
   DiffAfter,
   DiffBefore,
   DiskText,
   FileChange,
+  PendingDisk,
   SnapshotText,
   ToolDiff,
   ToolDiffFacts,
 } from './services/session-diff';
+export { applyTaskStep, TaskListTracker } from './services/task-list';
 export { AttachmentNotFoundError } from './errors/attachment-not-found.error';
 export { AttachmentTypeUnsupportedError } from './errors/attachment-type-unsupported.error';
 export { DiffNotApplicableError } from './errors/diff-not-applicable.error';
@@ -116,8 +116,6 @@ export { SessionChangeNotFoundError } from './errors/session-change-not-found.er
 export { RewindPathUnknownError } from './errors/rewind-path-unknown.error';
 export { SessionForkRejectedError } from './errors/session-fork-rejected.error';
 export { ToolUseNotFoundError } from './errors/tool-use-not-found.error';
-export { ClaudeTimeoutError } from './errors/claude-timeout.error';
-export { ClaudeUnavailableError } from './errors/claude-unavailable.error';
 export { InvalidSessionIdError } from './errors/invalid-session-id.error';
 export { InvalidSessionTransitionError } from './errors/invalid-session-transition.error';
 export { SessionForbiddenError } from './errors/session-forbidden.error';
@@ -137,12 +135,15 @@ export {
 export type { Cancellation, QueuedPrompt, Submission } from './entities/prompt-queue.entity';
 export {
   categoryIdOf,
+  CONTEXT_CATEGORIES,
+  contextCategory,
   EFFORT_LEVELS,
   forkPointOf,
   refuseUnsupportedEffort,
 } from './services/installation';
 export type {
   ChainEntry,
+  CanonicalContextCategory,
   ContextCategory,
   ContextKind,
   ContextUse,

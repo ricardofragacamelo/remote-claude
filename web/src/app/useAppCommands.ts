@@ -72,8 +72,8 @@ export function useAppCommands(): void {
       },
     })),
     {
-      // The defaults of Claude, and the test of the connection: their place is the screen of plan
-      // 13, and the palette goes there (plan 13, B-17, S-59; the keys, D-26).
+      // The defaults of the agent, and the test of the connection: their place is the screen of
+      // plan 13, and the palette goes there (plan 13, B-17, S-59; the keys, D-26).
       id: 'claude.defaultModel',
       labelKey: 'command.claude.defaultModel',
       category: 'go',

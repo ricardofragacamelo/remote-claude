@@ -17,7 +17,8 @@
  * @typedef {object} ParityEntry
  * @property {string} element what the web draws — a block, a node of markdown, a label, a line
  * @property {string} web the file of the web that draws it, `path#Name` naming the part of it
- * @property {string} [label] the key of `tool-labels.ts` this entry is the label of
+ * @property {string} [label] the label key of the label sources this entry is the label of — a
+ *   `sessions.tool.*` key the backend's tool classifier emits (plan 28, B-18)
  * @property {string} [app] the widget of the app, `path#Name` — required when `ok`
  * @property {string} [appTest] the test of the app that draws it — required when `ok`
  * @property {string} [fixture] the recording the test draws it from, which the test has to name

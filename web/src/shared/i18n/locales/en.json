@@ -31,7 +31,7 @@
     },
     "signIn": {
       "title": "Sign in to continue",
-      "description": "remote-claude runs Claude Code on your own machine, so it asks who you are first.",
+      "description": "remote-claude runs {{agent}} on your own machine, so it asks who you are first.",
       "action": "Sign in"
     },
     "signOut": {
@@ -58,11 +58,11 @@
     "error": {
       "notFound": "That session no longer exists.",
       "invalidSessionId": "{{sessionId}} is not a session identifier.",
-      "claudeUnavailable": "Claude stopped responding on this machine.",
+      "agentUnavailable": "{{agent}} stopped responding on this machine.",
       "forbidden": "That session belongs to somebody else.",
       "limitReached": "This machine is already running {{limit}} sessions, which is as many as it allows. End one and try again.",
       "unknownCommand": "This installation has no /{{command}} command. Check the list of commands for the ones it offers.",
-      "claudeTimeout": "Claude took too long to answer. Try again.",
+      "agentTimeout": "{{agent}} took too long to answer. Try again.",
       "resumeTimeout": "The backend did not answer the resume. Check the connection and try again.",
       "locked": "A turn is running, or another undo of this session is in progress. Wait for it to finish and try again.",
       "rewindTargetUnknown": "That is not a point this session can go back to. Reload the list and choose again.",
@@ -71,9 +71,9 @@
       "attachmentNotFound": "That attachment is no longer available to this session. Attach it again and send.",
       "attachmentTypeUnsupported": "Attachments of type {{mediaType}} cannot go with a prompt. Images must be PNG, JPEG, GIF or WebP, and files must be text.",
       "toolUseNotFound": "This session has no record of that tool call.",
-      "diffNotApplicable": "{{toolName}} does not write files, so there is no change to show.",
+      "diffNotApplicable": "This call changes no file, so there is no change to show.",
       "changeStale": "{{path}} changed after the changes were listed. Reload them and choose again.",
-      "forkRejected": "Claude could not continue the conversation from that message. Resume the conversation instead, and edit from there.",
+      "forkRejected": "{{agent}} could not continue the conversation from that message. Resume the conversation instead, and edit from there.",
       "queuedPromptNotFound": "That prompt is no longer in the queue.",
       "queuedPromptStarted": "That prompt has already started. Interrupt the turn to stop it.",
       "forkPointUnknown": "That message is not a prompt of this conversation. Reload the conversation and try again.",
@@ -92,7 +92,7 @@
       "closed": "Ended"
     },
     "role": {
-      "assistant": "Claude",
+      "assistant": "{{agent}}",
       "user": "You"
     },
     "toolStatus": {
@@ -104,7 +104,7 @@
     "closeReason": {
       "closedByUser": "you ended it",
       "completed": "it finished",
-      "failed": "Claude stopped responding",
+      "failed": "{{agent}} stopped responding",
       "auditUnavailable": "the audit trail could not be written",
       "shutdown": "the backend shut down",
       "idleTimeout": "it sat idle too long — resume it from the history"
@@ -118,11 +118,11 @@
       "ended": "This session ended at {{at}} because {{reason}}."
     },
     "ended": {
-      "resumes": "Sending a prompt resumes it, in a new process of Claude on this machine.",
+      "resumes": "Sending a prompt resumes it, in a new process of {{agent}} on this machine.",
       "resumeAndSend": "Resume and send"
     },
     "composer": {
-      "placeholder": "Ask Claude to do something in this folder…",
+      "placeholder": "Ask {{agent}} to do something in this folder…",
       "send": "Send"
     },
     "controls": {
@@ -142,15 +142,15 @@
       "notADirectory": "{{path}} is a file, not a folder.",
       "forbidden": "That folder is not yours to open.",
       "directoryUnreadable": "{{path}} exists, but this machine does not let remote-claude read it. Check the folder's permissions.",
-      "openFoldersLimitReached": "You already have {{limit}} folders open, which is as many as a window holds. Close one first — closing a folder does not end its Claude sessions.",
+      "openFoldersLimitReached": "You already have {{limit}} folders open, which is as many as a window holds. Close one first — closing a folder does not end its {{agent}} sessions.",
       "openFoldersOrderConflict": "Your folder tabs changed in another window. Showing them as they are now — try again."
     },
     "welcome": {
       "title": "Welcome",
       "startTitle": "Start",
-      "startDescription": "Open a folder of this machine. Claude runs inside it, and nowhere else.",
+      "startDescription": "Open a folder of this machine. {{agent}} runs inside it, and nowhere else.",
       "openFolder": "Open folder…",
-      "purpose": "Open a folder of this machine to work on it with Claude.",
+      "purpose": "Open a folder of this machine to work on it with {{agent}}.",
       "loading": "Looking for your open folders…"
     },
     "recent": {
@@ -218,8 +218,8 @@
       "notKept": "The folder is open, but it was not added to your tabs and recent folders."
     },
     "welcomeHelp": {
-      "what": "The way into the workbench. Every folder you open becomes a tab of its own, with its files, its editor and its chat with Claude side by side. Only folders under the roots this installation allows can be opened. Until each moves to a screen of its own, the round trip of the connection and your approved devices are below.",
-      "states": "Recent folders come first, pinned ones on top. A folder marked as unavailable left the allowlist or the disk: it stays listed so you know why, and it cannot be opened. With no recent folder yet the list says so, and the roots below are where to start. The roots are the allowlist — the only folders this installation lets Claude work in. To allow another, run the command shown under them on the machine the backend runs on: the web never changes the allowlist.",
+      "what": "The way into the workbench. Every folder you open becomes a tab of its own, with its files, its editor and its chat with {{agent}} side by side. Only folders under the roots this installation allows can be opened. Until each moves to a screen of its own, the round trip of the connection and your approved devices are below.",
+      "states": "Recent folders come first, pinned ones on top. A folder marked as unavailable left the allowlist or the disk: it stays listed so you know why, and it cannot be opened. With no recent folder yet the list says so, and the roots below are where to start. The roots are the allowlist — the only folders this installation lets {{agent}} work in. To allow another, run the command shown under them on the machine the backend runs on: the web never changes the allowlist.",
       "notRecorded": "Opening a folder records it among your recent folders and your tabs, on the server, so they follow you to another device. Nothing inside a folder is read to list it here, and the roots cannot be changed from this screen: that takes the pnpm allowlist command on the machine."
     },
     "recentMenu": {
@@ -239,7 +239,7 @@
       "notFound": "{{path}} is not in the folder any more.",
       "exists": "{{path}} already exists. Nothing was overwritten.",
       "directoryNotEmpty": "{{path}} holds {{entryCount}} items. Deleting it deletes all of them.",
-      "changed": "{{path}} changed on disk since you opened it — Claude may have written to it. Nothing was overwritten.",
+      "changed": "{{path}} changed on disk since you opened it — {{agent}} may have written to it. Nothing was overwritten.",
       "preconditionRequired": "{{path}} needs a confirmation before it is changed.",
       "tooLarge": "{{path}} is larger than this editor opens ({{limit}} at most).",
       "rangeNotSatisfiable": "That part of {{path}} is past its end — the file changed, or is shorter.",
@@ -282,7 +282,7 @@
       "rejectedHunk": "A change to {{name}} went back to how it was before the session."
     },
     "permission": {
-      "waiting": "Claude is waiting for you in {{folder}}."
+      "waiting": "{{agent}} is waiting for you in {{folder}}."
     }
   },
   "permission": {
@@ -311,15 +311,22 @@
       "tool": "Any use of this tool"
     },
     "tool": {
-      "Bash": "Run a shell command",
-      "Write": "Write a file",
-      "Edit": "Edit a file",
-      "MultiEdit": "Edit several files",
-      "NotebookEdit": "Edit a notebook",
-      "Read": "Read a file",
-      "WebFetch": "Fetch a page",
-      "AskUserQuestion": "Answer Claude's question",
-      "unknown": "Use {{tool}}"
+      "fileRead": "Read a file",
+      "fileEdit": "Edit a file",
+      "fileWrite": "Write a file",
+      "fileDelete": "Delete a file",
+      "fileMove": "Move a file",
+      "search": "Search the files",
+      "shell": "Run a shell command",
+      "shellOutput": "Read a command's output",
+      "webFetch": "Fetch a page",
+      "webSearch": "Search the web",
+      "mcp": "Use an MCP tool",
+      "agent": "Start a subagent",
+      "question": "Answer {{agent}}'s question",
+      "plan": "Approve the plan",
+      "tasks": "Change the task list",
+      "other": "Use a tool"
     },
     "error": {
       "requestNotFound": "That request is no longer open.",
@@ -334,12 +341,12 @@
       "ruleNotOwned": "That rule belongs to somebody else.",
       "ruleExpiryInvalid": "A rule has to expire after it is created.",
       "answersInvalid": "Those answers do not fit the question. Check each one and send again.",
-      "ruleToolInteractive": "Claude's questions and plans always come to you: a rule cannot allow them."
+      "ruleToolInteractive": "{{agent}}'s questions and plans always come to you: no rule answers them, to allow or to refuse."
     },
     "persist": {
       "title": "Stop asking about this?",
-      "project": "Claude will run what matches the rule below in this project without asking you, for {{duration}}.",
-      "always": "Claude will run what matches the rule below in any of your projects without asking you, for {{duration}}.",
+      "project": "{{agent}} will run what matches the rule below in this project without asking you, for {{duration}}.",
+      "always": "{{agent}} will run what matches the rule below in any of your projects without asking you, for {{duration}}.",
       "days": "{{days}} days",
       "hours": "{{hours}} hours",
       "revocable": "You can take it back at any time from your rules. Revoking takes effect on the next request, in every open session.",
@@ -348,7 +355,7 @@
       "openRules": "See your rules"
     },
     "plan": {
-      "label": "The plan Claude proposes",
+      "label": "The plan {{agent}} proposes",
       "title": "Approve the plan?",
       "modeLegend": "Once approved, go on",
       "approve": "Approve the plan",
@@ -356,18 +363,8 @@
       "keepPlanning": "Keep planning"
     },
     "planMode": {
-      "default": "asking before each edit",
+      "ask": "asking before each edit",
       "acceptEdits": "accepting edits without asking"
-    },
-    "preview": {
-      "ambiguous": "Edit {{edit}} names text that appears more than once in the file now: Claude's edit will be refused unless it says which.",
-      "at": "Preview against the file as it was at {{when}}. It is read again when this window gets the focus back.",
-      "label": "What this change would do to the file",
-      "loading": "Reading the file to preview the change…",
-      "noMatch": "Edit {{edit}} names text that is not in the file now: the edit will not match, and Claude will be told so.",
-      "outside": "The file is outside the folder of this tab, so there is no preview. The exact input is above.",
-      "unavailable": "No preview: {{reason}} The exact input is above.",
-      "unchanged": "The file already holds exactly this: nothing would change."
     },
     "verdict": {
       "allow": "Allowed",
@@ -382,10 +379,11 @@
       "rule": "Allowed by one of your rules",
       "ruleDenied": "Refused by one of your rules",
       "somebody": "somebody",
-      "allowAll": "Allowed automatically — Allow everything"
+      "allowAll": "Allowed automatically — Allow everything",
+      "readOnly": "Refused: the session is read-only"
     },
     "question": {
-      "label": "Claude's question",
+      "label": "{{agent}}'s question",
       "tabs": "The questions",
       "answered": "answered",
       "progress": "Question {{n}} of {{total}}",
@@ -397,16 +395,14 @@
       "noPreview": "No preview for this option",
       "submit": "Send answers",
       "decline": "Don't answer",
-      "declineReason": "Why not? Claude reads this (optional)",
+      "declineReason": "Why not? {{agent}} reads this (optional)",
       "declineConfirm": "Send without answering",
       "declineBack": "Back to the questions",
       "expired": "This question ran out of time. Nothing was sent.",
-      "malformed": "Claude's question could not be read, so it cannot be answered here. Declining tells Claude so.",
+      "malformed": "{{agent}}'s question could not be read, so it cannot be answered here. Declining tells {{agent}} so.",
       "waiting": "Waiting for your answer to a question",
-      "pill": "Claude asked you something ({{count}})",
-      "notice": "Claude asked you a question in {{folder}}.",
-      "asked": "Asked: {{header}}",
-      "askedMany": "Asked {{count}} questions",
+      "pill": "{{agent}} asked you something ({{count}})",
+      "notice": "{{agent}} asked you a question in {{folder}}.",
       "pending": "Waiting for an answer",
       "declined": "Not answered: {{reason}}",
       "answeredElsewhere": "Answered elsewhere"
@@ -419,7 +415,7 @@
     },
     "list": {
       "title": "Audit trail",
-      "description": "Every tool Claude used on this machine, newest first — including the ones nobody was asked about.",
+      "description": "Every tool {{agent}} used on this machine, newest first — including the ones nobody was asked about.",
       "loading": "Loading the trail…",
       "emptyTitle": "Nothing here",
       "emptyDescription": "No tool ran that matches these filters. Clear them to see the whole trail.",
@@ -472,7 +468,7 @@
       "forbidden": "That session belongs to somebody else, so its trail is not yours to read."
     },
     "help": {
-      "what": "The trail of every tool Claude asked to run, and how each was decided: by a rule you granted, by a person, or by nobody in time. The filters live in the address, so a filtered trail is a link you can keep or share.",
+      "what": "The trail of every tool {{agent}} asked to run, and how each was decided: by a rule you granted, by a person, or by nobody in time. The filters live in the address, so a filtered trail is a link you can keep or share.",
       "states": "An entry a rule decided opens that rule, even after it was revoked. An entry nobody answered in time was refused. Loading more adds the next page; a failure there keeps what is already on screen, with the reason beside it.",
       "notRecorded": "The trail keeps the exact input of each tool, never the content of a file a tool read: for a read it keeps the path and the size. It records decisions, not the conversation."
     },
@@ -529,10 +525,10 @@
     },
     "screen": {
       "title": "Devices",
-      "purpose": "The phones that may answer Claude's questions, and the ones waiting for your approval."
+      "purpose": "The phones that may answer {{agent}}'s questions, and the ones waiting for your approval."
     },
     "help": {
-      "what": "A phone with the app signs in and appears here, waiting. Once you approve it, it gets a push when Claude asks for permission, and can answer — allow or refuse — from wherever you are. A phone never approves itself: only a browser where you are already signed in can.",
+      "what": "A phone with the app signs in and appears here, waiting. Once you approve it, it gets a push when {{agent}} asks for permission, and can answer — allow or refuse — from wherever you are. A phone never approves itself: only a browser where you are already signed in can.",
       "states": "Waiting for approval: signed in, not allowed to answer yet. Approved: it receives the questions and may answer them. Revoked: it stopped answering at once, and its connections were closed; to use it again, sign in on it again. “No push token” means the phone only hears a question while the app is open.",
       "notRecorded": "Approving and revoking are recorded in the audit, with who did it and when. The screen does not show what a phone answered — that is in the audit trail, entry by entry."
     }
@@ -544,10 +540,10 @@
     },
     "list": {
       "title": "Rules you granted",
-      "description": "What Claude may do on this machine without asking you first. Revoking takes effect on the next request, in every open session.",
+      "description": "What {{agent}} may do on this machine without asking you first. Revoking takes effect on the next request, in every open session.",
       "loading": "Loading your rules…",
       "emptyTitle": "No rules yet",
-      "emptyDescription": "A rule is created when you answer a request with “don't ask again”. Until then, Claude asks you every time."
+      "emptyDescription": "A rule is created when you answer a request with “don't ask again”. Until then, {{agent}} asks you every time."
     },
     "scope": {
       "project": "In one project",
@@ -560,7 +556,8 @@
     "status": {
       "active": "Active",
       "expired": "Expired",
-      "revoked": "Revoked"
+      "revoked": "Revoked",
+      "disabled": "Disabled"
     },
     "row": {
       "label": "Rule {{pattern}}",
@@ -568,9 +565,10 @@
       "project": "Project: {{path}}",
       "granted": "Granted by {{who}} on {{at}}",
       "validUntil": "Valid until {{at}}",
-      "expiredOn": "Expired on {{at}}. Claude asks you again.",
-      "expiringSoon": "Expires soon: after {{at}}, Claude will ask you again.",
-      "revokedOn": "Revoked on {{at}}. It no longer answers anything."
+      "expiredOn": "Expired on {{at}}. {{agent}} asks you again.",
+      "expiringSoon": "Expires soon: after {{at}}, {{agent}} will ask you again.",
+      "revokedOn": "Revoked on {{at}}. It no longer answers anything.",
+      "disabled": "Written for {{agent}} in a form this version cannot translate: it no longer applies. Create it again if you still want it."
     },
     "action": {
       "revoke": "Revoke",
@@ -579,7 +577,7 @@
     "detail": {
       "screenTitle": "A rule you granted",
       "title": "The rule",
-      "description": "What this rule lets Claude do, and whether it still does.",
+      "description": "What this rule lets {{agent}} do, and whether it still does.",
       "loading": "Loading the rule…",
       "emptyTitle": "No rule",
       "emptyDescription": "There is no rule to show.",
@@ -587,7 +585,7 @@
     },
     "help": {
       "what": "Every rule you granted from a permission request: which tool, which pattern, where it applies and until when. Revoking is one click, and the next matching request asks you again.",
-      "states": "An active rule answers requests without asking. A rule close to expiring — less than seven days left — is marked. An expired rule stays listed, marked as such; a revoked one leaves the list. A revocation that fails keeps the row, with the reason beside it.",
+      "states": "An active rule answers requests without asking. A rule close to expiring — less than seven days left — is marked. An expired rule stays listed, marked as such; a revoked one leaves the list. A revocation that fails keeps the row, with the reason beside it. A rule written for an agent in a form this version cannot translate is listed as disabled, with the pattern it had: it answers nothing, and revoking is all it offers.",
       "notRecorded": "Rules that only last a session are not listed: they end with it. This screen does not show which requests a rule answered — the audit trail does."
     },
     "detailHelp": {
@@ -600,8 +598,8 @@
     "error": {
       "notFound": "That conversation does not exist, or it is not yours to read.",
       "invalidSessionId": "{{sessionId}} is not a conversation identifier.",
-      "claudeUnavailable": "Claude could not read its history on this machine.",
-      "claudeTimeout": "Claude took too long to read its history. Try again.",
+      "agentUnavailable": "{{agent}} could not read its history on this machine.",
+      "agentTimeout": "{{agent}} took too long to read its history. Try again.",
       "cursorStale": "This conversation changed while you were reading it. Reload it from the latest messages.",
       "followLimit": "Too many conversations are being followed right now ({{limit}} at most). This one stays readable, but it will not update by itself.",
       "followLiveHere": "This conversation is open in a live session here. Open that session to see it as it goes.",
@@ -633,7 +631,7 @@
     },
     "follow": {
       "working": "Working in another client…",
-      "workingHelp": "This is an inference, not something Claude reported: the conversation's last entry leaves the turn open — a tool without its result, a thought, or a prompt without an answer — and something wrote it a moment ago. The history does not record the state of a turn, and nothing here says which client it is.",
+      "workingHelp": "This is an inference, not something {{agent}} reported: the conversation's last entry leaves the turn open — a tool without its result, a thought, or a prompt without an answer — and something wrote it a moment ago. The history does not record the state of a turn, and nothing here says which client it is.",
       "workingHelpLabel": "What “working” means here",
       "newerOne": "1 new",
       "newer": "{{count}} new",
@@ -744,15 +742,15 @@
     "editor": {
       "label": "Editor",
       "placeholderTitle": "No file open",
-      "placeholderDescription": "The files you open appear here, beside the chat with Claude. Opening and editing them arrives with the Explorer."
+      "placeholderDescription": "The files you open appear here, beside the chat with {{agent}}. Opening and editing them arrives with the Explorer."
     },
     "panel": {
       "label": "Panel",
       "placeholderTitle": "Nothing in the panel yet",
       "placeholderDescription": "The terminal and the output of a session will be here."
     },
-    "claude": {
-      "label": "Claude",
+    "agent": {
+      "label": "{{agent}}",
       "backToStart": "Back to a new conversation",
       "showChanges": "What the session changed"
     },
@@ -760,13 +758,13 @@
       "label": "Views of this folder",
       "explorer": "Explorer",
       "editor": "Editor",
-      "claude": "Claude",
+      "agent": "{{agent}}",
       "panel": "Panel"
     },
     "layout": {
       "sideBar": "Show or hide the side bar",
       "panel": "Show or hide the panel",
-      "secondary": "Show or hide Claude"
+      "secondary": "Show or hide {{agent}}"
     },
     "tabs": {
       "label": "Open folders",
@@ -779,7 +777,7 @@
     "close": {
       "titleOne": "Close {{name}}?",
       "titleMany": "Close {{count}} folders?",
-      "sessionsCarryOn": "The Claude sessions of these folders keep running on the machine: closing a tab does not end them.",
+      "sessionsCarryOn": "The {{agent}} sessions of these folders keep running on the machine: closing a tab does not end them.",
       "listLabel": "Folders to close",
       "keep": "Keep open",
       "confirm": "Close",
@@ -796,7 +794,7 @@
       "placeholder": "Finding files and text in this folder will be here, with the Search."
     },
     "sessions": {
-      "label": "Claude sessions",
+      "label": "{{agent}} sessions",
       "placeholder": "The sessions and conversations of this folder will be listed here."
     },
     "tabState": {
@@ -817,12 +815,12 @@
     },
     "screen": {
       "title": "Workbench",
-      "purpose": "A folder of this machine: its files, its editor and Claude, side by side."
+      "purpose": "A folder of this machine: its files, its editor and {{agent}}, side by side."
     },
     "help": {
-      "what": "Each tab is one folder of this machine, with everything about it: the files, the editor and the chat with Claude beside them. A session started here runs inside the folder of the tab, and nowhere else. Open another folder with “Open folder…” or the + of the tab bar; each one is a tab of its own.",
-      "states": "Up to 8 folders can be open at once; to open another, close one first. Closing a tab never ends its Claude sessions — they keep running on the machine, and come back when you open the folder again. A tab whose folder left the allowlist, or the disk, opens as an error, and the other tabs carry on. A place still empty says what will live there.",
-      "notRecorded": "Which folders are open, and their order, are kept on the server, so they follow you to another device. The layout of each tab — its sizes, the open panels — is kept only in this browser. What you say to Claude and what it answers is the session's, not the tab's; decisions on permissions go to the audit trail."
+      "what": "Each tab is one folder of this machine, with everything about it: the files, the editor and the chat with {{agent}} beside them. A session started here runs inside the folder of the tab, and nowhere else. Open another folder with “Open folder…” or the + of the tab bar; each one is a tab of its own.",
+      "states": "Up to 8 folders can be open at once; to open another, close one first. Closing a tab never ends its {{agent}} sessions — they keep running on the machine, and come back when you open the folder again. A tab whose folder left the allowlist, or the disk, opens as an error, and the other tabs carry on. A place still empty says what will live there.",
+      "notRecorded": "Which folders are open, and their order, are kept on the server, so they follow you to another device. The layout of each tab — its sizes, the open panels — is kept only in this browser. What you say to {{agent}} and what it answers is the session's, not the tab's; decisions on permissions go to the audit trail."
     }
   },
   "status": {
@@ -874,7 +872,7 @@
       "goToFolderTab": "Folder tab {{place}}",
       "toggleSideBar": "Show or hide the side bar",
       "togglePanel": "Show or hide the panel",
-      "toggleSecondarySideBar": "View: Show or hide Claude"
+      "toggleSecondarySideBar": "View: Show or hide {{agent}}"
     },
     "notifications": {
       "show": "Show notifications",
@@ -913,7 +911,7 @@
       "convertIndentation": "Convert indentation",
       "reopenWithEncoding": "Reopen with encoding…",
       "saveWithEncoding": "Save with encoding…",
-      "addToClaude": "Add to Claude's context",
+      "addToAgent": "Add to {{agent}}'s context",
       "revealInExplorer": "Reveal the active file in the Explorer",
       "showHelp": "Help for the editor",
       "openPreview": "Open preview",
@@ -925,26 +923,28 @@
       "pdfFind": "Find in the PDF"
     },
     "sessions": {
-      "refresh": "Claude sessions: refresh",
-      "toggleSubfolders": "Claude sessions: include or leave out the folders below",
-      "help": "Claude sessions: help",
-      "openSelected": "Claude sessions: open the selected row",
-      "continueSelected": "Claude sessions: continue the selected conversation here",
-      "copySelectedId": "Claude sessions: copy the id of the selected conversation",
-      "endSelected": "Claude sessions: end the selected session"
+      "refresh": "{{agent}} sessions: refresh",
+      "toggleSubfolders": "{{agent}} sessions: include or leave out the folders below",
+      "help": "{{agent}} sessions: help",
+      "openSelected": "{{agent}} sessions: open the selected row",
+      "continueSelected": "{{agent}} sessions: continue the selected conversation here",
+      "copySelectedId": "{{agent}} sessions: copy the id of the selected conversation",
+      "endSelected": "{{agent}} sessions: end the selected session"
     },
     "session": {
-      "showChanges": "Claude: Show the changes of the session"
+      "showChanges": "{{agent}}: Show the changes of the session"
+    },
+    "agent": {
+      "newConversation": "{{agent}}: New conversation",
+      "focusComposer": "{{agent}}: Focus the prompt",
+      "interrupt": "{{agent}}: Interrupt the turn",
+      "nextConversation": "{{agent}}: Next conversation",
+      "previousConversation": "{{agent}}: Previous conversation",
+      "cycleMode": "{{agent}}: switch the mode of the conversation",
+      "goToRequest": "{{agent}}: Go to the question waiting for you ({{count}})",
+      "goToRequestNone": "{{agent}}: Go to the question waiting for you — nothing is waiting"
     },
     "claude": {
-      "newConversation": "Claude: New conversation",
-      "focusComposer": "Claude: Focus the prompt",
-      "interrupt": "Claude: Interrupt the turn",
-      "nextConversation": "Claude: Next conversation",
-      "previousConversation": "Claude: Previous conversation",
-      "cycleMode": "Claude: switch the mode of the conversation",
-      "goToRequest": "Claude: Go to the question waiting for you ({{count}})",
-      "goToRequestNone": "Claude: Go to the question waiting for you — nothing is waiting",
       "defaultModel": "Claude: Change the default model",
       "testConnection": "Claude: Test the connection to the model"
     }
@@ -1048,7 +1048,7 @@
       "purpose": "How this app looks on this device, and the folders it may open."
     },
     "help": {
-      "what": "The settings of the app itself: its look — theme, language, density — and the folders it works in. Claude's own settings — the model, the permission mode, MCP servers — are not here: they have a screen of their own.",
+      "what": "The settings of the app itself: its look — theme, language, density — and the folders it works in. {{agent}}'s own settings — the model, the permission mode, MCP servers — are not here: they have a screen of their own.",
       "states": "Every option shows its default, and “Restore default” when it is set to something else. Appearance changes at once and is kept on this device only, so your phone can look different from your desktop. The folders this installation allows are read only here: adding one takes a command on the machine the backend runs on, which the section shows ready to copy.",
       "notRecorded": "Appearance is kept only in this browser, never on the server. Recent folders are kept on the server, so they follow you to another device; removing one here removes it everywhere, and never touches the folder on disk."
     },
@@ -1095,7 +1095,7 @@
       "purpose": "The versions this installation runs — ready to paste into a bug report."
     },
     "help": {
-      "what": "The version of every part of this installation: this web, the backend, the Agent SDK, Claude's command-line tool and Node. When something goes wrong, copy the block and paste it into the report: it is the first thing anybody helping you will ask.",
+      "what": "The version of every part of this installation: this web, the backend, the Agent SDK, {{agent}}'s command-line tool and Node. When something goes wrong, copy the block and paste it into the report: it is the first thing anybody helping you will ask.",
       "states": "A version the backend could not read says why: not installed, or installed but unreadable. When the backend cannot be reached, only this web's version is shown, with the way to try again.",
       "notRecorded": "Reading the versions records nothing. Copying puts the block on your clipboard and nowhere else."
     },
@@ -1131,7 +1131,7 @@
     },
     "help": {
       "what": "The tree shows the folder this tab has open, one level at a time: a folder is read when you open it. Click a file to preview it in the editor, double-click or press Enter to keep it open. Everything you do here — create, rename, move, copy, delete — is done on the disk of this machine, in this folder only, and is written to the audit trail before it happens. An entry with the arrow-out-of-a-box icon is a link that leads outside this folder: it is shown so you know it is there, and it never opens. An entry with a question mark has a name that is not valid text: it is shown, and nothing can be done to it from here.",
-      "states": "While a folder is read, its rows show it loading. A folder that could not be read says why, and Enter on it tries again. A folder with more entries than the tree lists says so: filter by name to find the rest. Changes on disk — Claude writing, you in another program — appear by themselves; when this machine cannot follow the folder, a warning says so and a button reads it again by hand. Ctrl+Z, with the focus in the tree, undoes the last rename, move, new file or folder, or copy of this tab, as long as nothing changed it since — if Claude wrote to the file after, the undo is refused and says why. Undo lasts only while this page is open.",
+      "states": "While a folder is read, its rows show it loading. A folder that could not be read says why, and Enter on it tries again. A folder with more entries than the tree lists says so: filter by name to find the rest. Changes on disk — {{agent}} writing, you in another program — appear by themselves; when this machine cannot follow the folder, a warning says so and a button reads it again by hand. Ctrl+Z, with the focus in the tree, undoes the last rename, move, new file or folder, or copy of this tab, as long as nothing changed it since — if {{agent}} wrote to the file after, the undo is refused and says why. Undo lasts only while this page is open.",
       "notRecorded": "Hidden entries (.git, .svn, .hg, .DS_Store, Thumbs.db) are left out unless you show them; folders like node_modules, dist, build, .venv and target are shown but not followed, so a change inside them appears when you open or reload them. Deleting keeps what it takes in the local history first and does not ask: a notification says what went, with Undo. What the history cannot keep — too large, too many entries, or the history unavailable — is deleted only for good, after asking, with how much goes and why there is no undo. What you read is not written to the audit trail; what you change is, with the path and never the contents.",
       "transferHeading": "Uploading and downloading",
       "transfer": "Drag files or folders from your desktop onto a folder of the tree to upload them there — a folder keeps its structure. Without a mouse, use Upload files here… or Upload folder here… (Alt+U, Alt+Shift+U). Files already there are shown before anything is sent: replace, keep both or skip each one. Download (Alt+Shift+D) saves a file, or a folder or everything selected as one zip.",
@@ -1183,7 +1183,7 @@
       "undo": "Undo the last file operation",
       "copyPath": "Copy path",
       "copyRelativePath": "Copy relative path",
-      "addToContext": "Add to Claude's context",
+      "addToContext": "Add to {{agent}}'s context",
       "refresh": "Reload the tree",
       "collapseAll": "Collapse all folders",
       "showHidden": "Show hidden entries",
@@ -1225,7 +1225,7 @@
       "countLabel": "What goes with it",
       "holds": "{{path}} holds {{count}} entries, and all of them go too.",
       "holdsAtLeast": "{{path}} holds at least {{count}} entries, and all of them go too.",
-      "sensitive": "{{path}} changes what Claude may do without asking you.",
+      "sensitive": "{{path}} changes what {{agent}} may do without asking you.",
       "keep": "Keep them",
       "confirm": "Delete for good",
       "pending": "Deleting…",
@@ -1253,12 +1253,12 @@
       "test": "Test file",
       "gitignore": "Git ignore list",
       "editorconfig": "Editor settings (.editorconfig)",
-      "claude": "Instructions for Claude (CLAUDE.md)"
+      "agentInstructions": "Instructions for {{agent}} ({{fileName}})"
     },
     "sensitive": {
-      "title": "This changes what Claude may do",
-      "description": "These files decide what Claude can do on this machine without asking you. Change them only if you mean to.",
-      "listLabel": "Files that change what Claude may do",
+      "title": "This changes what {{agent}} may do",
+      "description": "These files decide what {{agent}} can do on this machine without asking you. Change them only if you mean to.",
+      "listLabel": "Files that change what {{agent}} may do",
       "cancel": "Leave them as they are",
       "confirm": "Change them"
     },
@@ -1281,7 +1281,7 @@
       "notKeptUnavailable": "Replaced. The local history was unavailable, so the version it replaced was not kept there."
     },
     "undo": {
-      "changed": "{{path}} changed after the operation — Claude may have written to it — so undoing it would lose that. Nothing was undone.",
+      "changed": "{{path}} changed after the operation — {{agent}} may have written to it — so undoing it would lose that. Nothing was undone.",
       "notEmpty": "{{path}} has something in it now, so undoing would delete more than was made. Nothing was undone.",
       "gone": "{{path}} is not there any more, so there is nothing to undo.",
       "taken": "Something else now has the name {{path}} had. Nothing was overwritten."
@@ -1310,7 +1310,7 @@
       "downloaded": "{{name}} downloaded."
     },
     "context": {
-      "added": "Entries added to Claude's context: {{count}}.",
+      "added": "Entries added to {{agent}}'s context: {{count}}.",
       "excluded": "Entries left out because nothing can be done to them: {{count}}."
     },
     "watch": {
@@ -1351,19 +1351,19 @@
   "editor": {
     "screen": {
       "title": "Editor",
-      "purpose": "The files of this folder, open in tabs, beside the chat with Claude."
+      "purpose": "The files of this folder, open in tabs, beside the chat with {{agent}}."
     },
     "help": {
       "open": "Help for the editor",
       "what": "The editor shows the files of this folder in tabs. A single click in the Explorer opens a file as a preview — its tab in italics, replaced by the next preview until you edit it or double-click it. A tab with unsaved changes shows a dot where its close button was. Open a file to the side to see two (or three) groups at once; the same file in two groups is one buffer, edited in both. Ctrl+S saves the active file, Ctrl+K S saves every one, and Ctrl+Shift+T reopens the last tab closed. Find and replace (Ctrl+F, Ctrl+H) and go to line (Ctrl+G) are the editor's own.",
-      "states": "A save names the version of the file you opened. If the disk changed since — Claude, probably, wrote to it — the save is refused and you choose: compare the two, overwrite on purpose, or reload and drop your changes; nothing is overwritten on its own. When a file changes on disk under a clean tab, the tab reloads and keeps your place; under a tab with unsaved changes, a warning says who changed it and offers the same three choices. A file deleted on disk is marked, and saving it offers to recreate it. Large files open in light mode — no minimap, no folding, no highlighting — binary files open in a hexadecimal view and files above the editing limit in a paged reading, both read-only; a file this machine does not let the server read opens a page that says why instead of the editor.",
+      "states": "A save names the version of the file you opened. If the disk changed since — {{agent}}, probably, wrote to it — the save is refused and you choose: compare the two, overwrite on purpose, or reload and drop your changes; nothing is overwritten on its own. When a file changes on disk under a clean tab, the tab reloads and keeps your place; under a tab with unsaved changes, a warning says who changed it and offers the same three choices. A file deleted on disk is marked, and saving it offers to recreate it. Large files open in light mode — no minimap, no folding, no highlighting — binary files open in a hexadecimal view and files above the editing limit in a paged reading, both read-only; a file this machine does not let the server read opens a page that says why instead of the editor.",
       "notRecorded": "Unsaved changes live only in this page: they are never kept in the browser, so reloading or closing the page asks first. Your saves are recorded in the audit trail, without their content; opening and reading a file is not recorded. Previews, the hexadecimal view and the paged reading only read the file: they are not recorded either.",
       "previewsHeading": "Previews, binary files and large files",
       "previews": "Open preview (Ctrl+Shift+V), or open it to the side (Ctrl+K V), to see a file rendered: markdown, images, SVG and PDF; the eye button of the tab switches between the file and its preview. The preview of a markdown file follows what you type, before you save. Images and PDFs open as their preview. A link to a file of this folder opens it in the editor; images on the internet are not loaded — they become links.",
       "previewsHtml": "HTML is never run in a preview — not in markdown, not an .html file, not a script inside an SVG. A page shown here would run with your session, inside this app; so markdown keeps its text and drops its tags, an .html file is shown as its source, and an SVG is drawn as a picture, which runs nothing.",
       "paged": "A binary file opens in a hexadecimal view, and a text above the editing limit opens as pages of text; both are read-only and read a page at a time. If the file changes on disk while you read it, the view says so and starts over on the new version — it never mixes pages of two versions.",
       "pdfReader": "A PDF opens in the reader of this app, never the browser's own: every page in one scroll, fitted to the width. Type a page number and press Enter to go to it; zoom with the buttons, the list or Ctrl+= and Ctrl+- (Ctrl+0 fits the width again, and Ctrl with the mouse wheel zooms too); select and copy its text. The side panel shows the outline of the PDF, when it has one, and the thumbnails of its pages; Ctrl+F, with the focus in the reader, finds text in it. Links to other places of the PDF move to them; links to the web open in a new tab, and any other kind is not followed. A PDF with a password asks for it, and the password stays in this page only. Nothing a PDF carries runs: no scripts, and its form fields are not filled in. The page, the zoom and the panel of each tab are kept while the page is open.",
-      "diagrams": "Tables wider than the preview scroll in their own box. A fenced block of code named mermaid is drawn as a diagram — here, in Claude's answers and in the plans to approve — once its closing fence is there; Show the code switches to its source, and an error says on which line it is. A diagram is drawn safely: nothing in it runs, its links follow the rules of every link here, and it never loads anything from the internet."
+      "diagrams": "Tables wider than the preview scroll in their own box. A fenced block of code named mermaid is drawn as a diagram — here, in {{agent}}'s answers and in the plans to approve — once its closing fence is there; Show the code switches to its source, and an error says on which line it is. A diagram is drawn safely: nothing in it runs, its links follow the rules of every link here, and it never loads anything from the internet."
     },
     "load": {
       "failed": "The editor could not be loaded. Check the connection and try again — the rest of the tab keeps working."
@@ -1406,7 +1406,7 @@
       "openToSide": "Open to the side",
       "compareWithSaved": "Compare with the saved file",
       "reveal": "Reveal in the Explorer",
-      "addToClaude": "Add to Claude's context"
+      "addToAgent": "Add to {{agent}}'s context"
     },
     "breadcrumb": {
       "label": "Where the file of group {{place}} is",
@@ -1442,7 +1442,7 @@
       "notice": "{{path}} was deleted on disk. Your text is still here; saving offers to create the file again."
     },
     "external": {
-      "claude": "Claude changed {{path}} on disk, and you have unsaved changes here.",
+      "agent": "{{agent}} changed {{path}} on disk, and you have unsaved changes here.",
       "other": "{{path}} was changed outside the editor, and you have unsaved changes here.",
       "compare": "Compare",
       "reload": "Reload from disk",
@@ -1450,7 +1450,7 @@
     },
     "conflict": {
       "title": "{{name}} changed on disk",
-      "description": "It changed since you opened it — probably Claude wrote to it. Saving now would overwrite that work, so nothing was saved.",
+      "description": "It changed since you opened it — probably {{agent}} wrote to it. Saving now would overwrite that work, so nothing was saved.",
       "compare": "Compare",
       "reload": "Reload and drop my changes",
       "overwrite": "Overwrite the file on disk",
@@ -1461,10 +1461,10 @@
     },
     "sensitive": {
       "title": "Save {{path}}?",
-      "claudeSettings": "This file holds the project's settings for Claude: the commands it may run without asking, and the hooks that run in its sessions.",
-      "claudeLocalSettings": "This file holds your own settings for Claude in this project: the commands it may run without asking, and the hooks that run in its sessions.",
-      "mcpServers": "This file lists the MCP servers Claude starts in this project — programs that run on this machine.",
-      "warning": "Saving it changes what Claude can do without asking you.",
+      "projectSettings": "This file holds the project's settings for {{agent}}: the commands it may run without asking, and the hooks that run in its sessions.",
+      "localSettings": "This file holds your own settings for {{agent}} in this project: the commands it may run without asking, and the hooks that run in its sessions.",
+      "mcpServers": "This file lists the MCP servers {{agent}} starts in this project — programs that run on this machine.",
+      "warning": "Saving it changes what {{agent}} can do without asking you.",
       "confirm": "Save anyway",
       "cancel": "Don't save"
     },
@@ -1503,10 +1503,10 @@
     "encoding": {
       "dirty": "Save or revert {{path}} before reopening it with another encoding."
     },
-    "claude": {
+    "agent": {
       "addSelection": "Add selection to chat",
-      "added": "{{path}} was added to Claude's context.",
-      "unavailable": "Nothing takes files into Claude's context right now."
+      "added": "{{path}} was added to {{agent}}'s context.",
+      "unavailable": "Nothing takes files into {{agent}}'s context right now."
     },
     "diff": {
       "disk": "{{name}} on disk",
@@ -1569,7 +1569,7 @@
       "minimap": "Minimap",
       "minimapDescription": "A small view of the whole file beside the editor. Large files never show it.",
       "autoSave": "Auto-save",
-      "autoSaveDescription": "Saves on its own. It never overwrites a file that changed on disk, and never saves a file that changes what Claude can do.",
+      "autoSaveDescription": "Saves on its own. It never overwrites a file that changed on disk, and never saves a file that changes what {{agent}} can do.",
       "autoSaveOff": "Off",
       "autoSaveAfterDelay": "A second after typing",
       "autoSaveOnFocusChange": "When the editor loses the focus",
@@ -1669,8 +1669,8 @@
     },
     "help": {
       "what": "The Timeline is this machine's local history of the files you change from here. Before a save, a delete, a restore or an upload would lose a version of a file, that version is kept — on this machine, outside the folder. Compare a version with the file as it is now, or pick one and compare it with another; restore one to put it back. \"Recently deleted\" lists what was deleted from this folder and no longer exists, and brings it back where it was. Deleting what the history can keep does not ask first: a notification says what went, with Undo.",
-      "states": "Each version says why it was kept, who wrote it — you, or another person who can reach this folder — and when, newest first; filter by reason to see only some. A file larger than the history keeps is listed without its content: it says so, and cannot be compared or restored. A file with no version yet has no history: it starts with the first save, delete or upload that would lose something. Restoring asks first only when the file has unsaved changes, which it discards; the version it replaces is kept first. If the file changed since you opened it — Claude may have written to it — the restore is refused and says so.",
-      "notRecorded": "This is not git, and it is not Claude's undo. Nothing here is a commit or a branch, and what Claude writes is not kept here: Claude's changes are undone from its session. The history follows a path, not a renamed file. A version's content never goes to the audit trail; only that a file was restored does.",
+      "states": "Each version says why it was kept, who wrote it — you, or another person who can reach this folder — and when, newest first; filter by reason to see only some. A file larger than the history keeps is listed without its content: it says so, and cannot be compared or restored. A file with no version yet has no history: it starts with the first save, delete or upload that would lose something. Restoring asks first only when the file has unsaved changes, which it discards; the version it replaces is kept first. If the file changed since you opened it — {{agent}} may have written to it — the restore is refused and says so.",
+      "notRecorded": "This is not git, and it is not {{agent}}'s undo. Nothing here is a commit or a branch, and what {{agent}} writes is not kept here: {{agent}}'s changes are undone from its session. The history follows a path, not a renamed file. A version's content never goes to the audit trail; only that a file was restored does.",
       "size": "{{megabytes}} MB",
       "sizeUnknown": "the size this installation sets",
       "limitsHeading": "What it keeps, and for how long",
@@ -1692,7 +1692,7 @@
     "empty": {
       "title": "No version kept yet",
       "filtered": "No version kept for this reason",
-      "description": "A version is kept the moment you would lose it here: before a save, a delete, a restore or an upload over the file — the history of this file starts with the first of those. Claude's writes are not kept here: they are undone from its session."
+      "description": "A version is kept the moment you would lose it here: before a save, a delete, a restore or an upload over the file — the history of this file starts with the first of those. {{agent}}'s writes are not kept here: they are undone from its session."
     },
     "filter": {
       "label": "Show the versions kept before",
@@ -1736,11 +1736,11 @@
       "title": "Restore {{path}} to the version of {{when}}?",
       "discards": "{{path}} has unsaved changes in the editor, and restoring discards them. The version on disk is kept in the history first.",
       "replaces": "The version of {{path}} there now is kept in the history first, so you can restore it back.",
-      "sensitive": "{{path}} changes what Claude may do without asking you.",
+      "sensitive": "{{path}} changes what {{agent}} may do without asking you.",
       "cancel": "Keep it as it is",
       "confirm": "Restore",
       "done": "{{path}} restored to the version of {{when}}.",
-      "changed": "{{path}} changed since you opened it — Claude may have written to it — so nothing was restored. Look at the file now, and try again.",
+      "changed": "{{path}} changed since you opened it — {{agent}} may have written to it — so nothing was restored. Look at the file now, and try again.",
       "taken": "Something now has the path {{path}}, so nothing was restored over it.",
       "dismiss": "Dismiss"
     },
@@ -1771,8 +1771,8 @@
   },
   "sessions": {
     "screen": {
-      "title": "Claude sessions",
-      "purpose": "What Claude is doing in this folder: the sessions running here, the conversations something else is writing now, and the history of the folder."
+      "title": "{{agent}} sessions",
+      "purpose": "What {{agent}} is doing in this folder: the sessions running here, the conversations something else is writing now, and the history of the folder."
     },
     "filtered": {
       "title": "Nothing matches the filter",
@@ -1784,7 +1784,7 @@
       "read": "Read in the panel",
       "continue": "Continue here",
       "fork": "Continue here, as a copy",
-      "copyId": "Copy the conversation id",
+      "copyId": "Copy the {{agent}} conversation id",
       "end": "End the session"
     },
     "fork": {
@@ -1797,9 +1797,9 @@
       "note": "The ceiling of sessions is this installation's, not yours: every person's sessions count. Wait {{seconds}} s and try again, or end one of your sessions — the ones of this folder are under \"Running here\"; the others are in the tabs of their folders."
     },
     "help": {
-      "what": "This view lists what Claude does in the folder of the tab. \"Running here\" are your sessions open now, in this folder or below it. \"Active elsewhere\" are conversations of this folder that something other than this app wrote a moment ago. \"History\" is everything else said in this folder.",
+      "what": "This view lists what {{agent}} does in the folder of the tab. \"Running here\" are your sessions open now, in this folder or below it. \"Active elsewhere\" are conversations of this folder that something other than this app wrote a moment ago. \"History\" is everything else said in this folder.",
       "states": "Each group loads, fails and empties on its own: when the history cannot be read, what runs here is still listed. The lists refresh every few seconds while the view is on screen, and at once when a session of yours begins or ends.",
-      "notRecorded": "Reading a conversation changes nothing, and nothing is deleted from here: the history is Claude's own, shared with the editor.",
+      "notRecorded": "Reading a conversation changes nothing, and nothing is deleted from here: the history is {{agent}}'s own, shared with the editor.",
       "groupsHeading": "The three groups",
       "groups": "Pressing a running session shows it in the panel beside the editor. Pressing a conversation opens it in the panel to read, with the button that continues it.",
       "originHeading": "Opened here, or begun elsewhere",
@@ -1809,7 +1809,7 @@
       "elsewhereHeading": "\"Active elsewhere\" is an estimate",
       "elsewhere": "Nothing tells this app that an editor has a conversation open. What it knows is when the conversation was last written: written within the last two minutes, it is listed as active. A long tool can leave it unwritten for minutes while it is still running.",
       "limitHeading": "The ceiling of sessions",
-      "limit": "Each session is a process of Claude on this machine, and the machine holds only so many. The ceiling is the installation's: when it is reached, end a session of yours or wait for one to finish."
+      "limit": "Each session is a process of {{agent}} on this machine, and the machine holds only so many. The ceiling is the installation's: when it is reached, end a session of yours or wait for one to finish."
     },
     "originOption": {
       "all": "All",
@@ -1826,7 +1826,7 @@
       "refresh": "Refresh the lists",
       "subfoldersOn": "Showing the conversations of the folders below too — show only this folder's",
       "subfoldersOff": "Showing only this folder's conversations — include the folders below",
-      "help": "Help about Claude sessions",
+      "help": "Help about {{agent}} sessions",
       "origin": "Origin",
       "sort": "Order"
     },
@@ -1885,27 +1885,48 @@
       "outputCut": "[… the middle of the output was left out here …]"
     },
     "tool": {
-      "read": "Read {{path}}",
-      "edit": "Edit {{path}} (+{{added}} −{{removed}})",
-      "multiEdit": "Edit {{path}} (several changes)",
-      "write": "Write {{path}} ({{lines}} lines)",
-      "notebookEdit": "Edit the notebook {{path}}",
-      "bash": "Bash: {{command}}",
-      "grep": "Search for “{{pattern}}”",
-      "grepIn": "Search for “{{pattern}}” in {{path}}",
-      "glob": "Find files {{pattern}}",
+      "fileRead": "Read {{path}}",
+      "fileEdit": "Edit {{path}} (+{{added}} −{{removed}})",
+      "fileEditMany": "Edit {{path}} (several changes)",
+      "fileEditCell": "Edit the notebook {{path}}",
+      "fileWrite": "Write {{path}} ({{lines}} lines)",
+      "shell": "Shell: {{command}}",
+      "shellOutput": "Read the output of a command",
+      "search": "Search for “{{pattern}}”",
+      "searchIn": "Search for “{{pattern}}” in {{path}}",
+      "searchFiles": "Find files {{pattern}}",
       "webFetch": "Fetch {{host}}",
       "webSearch": "Search the web for “{{query}}”",
       "agent": "Subagent ({{type}}): {{description}}",
-      "exitPlan": "Present the plan",
-      "other": "{{name}}",
-      "mcp": "{{server}} · {{tool}}",
-      "todoWrite": "Updated the task list ({{count}} tasks)",
+      "question": "Asked: {{header}}",
+      "questions": "Asked {{count}} questions",
+      "plan": "Present the plan",
+      "tasksWrite": "Updated the task list ({{count}} tasks)",
       "taskCreate": "Added a task: {{subject}}",
       "taskUpdate": "Changed task #{{id}}",
       "taskGet": "Read task #{{id}}",
       "taskList": "Read the task list",
+      "mcp": "{{server}} · {{tool}}",
+      "other": "{{name}}",
       "titled": "{{name}} · {{title}}"
+    },
+    "kind": {
+      "fileRead": "Read file",
+      "fileEdit": "Edit file",
+      "fileWrite": "Write file",
+      "fileDelete": "Delete",
+      "fileMove": "Move",
+      "search": "Search",
+      "shell": "Shell",
+      "shellOutput": "Output",
+      "webFetch": "Fetch",
+      "webSearch": "Web search",
+      "mcp": "MCP",
+      "agent": "Subagent",
+      "question": "Question",
+      "plan": "Plan",
+      "tasks": "Tasks",
+      "other": "Tool"
     },
     "subagent": {
       "loading": "Loading what the subagent said…",
@@ -1913,8 +1934,12 @@
       "label": "What the subagent said"
     },
     "turn": {
-      "summary": "Turn: {{cost}} · {{seconds}} s · {{input}} in, {{output}} out, {{cache}} cache",
-      "noUsage": "Turn ended: {{cost}} · {{seconds}} s · no token count, it was interrupted"
+      "summary": "Turn: {{details}}",
+      "seconds": "{{seconds}} s",
+      "inputTokens": "{{count}} in",
+      "outputTokens": "{{count}} out",
+      "cacheTokens": "{{count}} cache",
+      "noTokens": "no token count"
     },
     "compacted": {
       "label": "The conversation was compacted",
@@ -1930,7 +1955,7 @@
       "forkFrom": "Fork from here — send it again, unchanged, in a new conversation",
       "actions": "What to do with this prompt",
       "undo": "Put the files back to before this prompt",
-      "undoBusy": "Put the files back to before this prompt — not while Claude is working"
+      "undoBusy": "Put the files back to before this prompt — not while {{agent}} is working"
     },
     "search": {
       "label": "Search the conversation",
@@ -1943,11 +1968,11 @@
     },
     "status": {
       "cost": "This session has cost {{cost}} since it opened, over {{turns}} turn(s)",
-      "item": "Claude: {{status}} · {{model}} · {{cost}} — open the panel",
+      "item": "{{agent}}: {{status}} · {{model}} · {{cost}} — open the panel",
       "short": "{{status}} · {{cost}}"
     },
     "tasks": {
-      "label": "The task list Claude keeps for this conversation",
+      "label": "The task list {{agent}} keeps for this conversation",
       "was": "was {{state}}",
       "state": "{{state}}: ",
       "headline": "{{done}}/{{total}} · {{task}}",
@@ -1967,7 +1992,7 @@
       "accept": "Accept — mark as reviewed",
       "acceptAll": "Accept all",
       "counts": "+{{added}} −{{removed}}",
-      "emptyDescription": "When Claude creates, edits or deletes a file in this session, it is listed here, to review, accept or reject.",
+      "emptyDescription": "When {{agent}} creates, edits or deletes a file in this session, it is listed here, to review, accept or reject.",
       "emptyTitle": "No changes yet",
       "filteredDescription": "No file of this session matches the filter.",
       "filteredTitle": "Nothing here",
@@ -1976,14 +2001,14 @@
       "keep": "Keep the changes",
       "listLabel": "Files the session changed",
       "loading": "Loading what the session changed…",
-      "modifiedOutside": "Changed after Claude did. Rejecting it keeps it exactly as it is.",
+      "modifiedOutside": "Changed after {{agent}} did. Rejecting it keeps it exactly as it is.",
       "noHunks": "The file is back to how it was before the session.",
       "openDiff": "Open the diff in the editor",
       "openDiffOf": "{{path}} ({{kind}}) — open the diff in the editor",
       "reject": "Reject — put the file back as it was before the session",
       "rejectAll": "Reject all…",
       "rejectAllConfirm": "Reject all",
-      "rejectAllDescription": "Every file below goes back to how it was before the session. A file changed by hand after Claude is kept as it is.",
+      "rejectAllDescription": "Every file below goes back to how it was before the session. A file changed by hand after {{agent}} is kept as it is.",
       "rejectAllTitle": "Reject the changes to {{count}} file(s)?",
       "rejectHunk": "Reject this change",
       "reviewed": "Reviewed",
@@ -2010,7 +2035,10 @@
       "loading": "Loading the diff…",
       "now": "{{name}} now",
       "open": "Open diff",
-      "sideUnknown": "This side of the diff is not known any more. Open it again from the conversation."
+      "sideUnknown": "This side of the diff is not known any more. Open it again from the conversation.",
+      "pendingLabel": "What this change would do to the file",
+      "pendingAt": "Preview against the file as it was at {{when}}. It is read again when this window gets the focus back.",
+      "unchanged": "The file already holds exactly this: nothing would change."
     },
     "diffReason": {
       "changedSince": "The file changed since this tool ran, so only what the tool replaced is shown.",
@@ -2019,45 +2047,45 @@
       "noSnapshot": "Nothing was kept of the file before this tool, so only what it replaced is shown.",
       "tooLarge": "The file was too large to keep before this tool, so only what it replaced is shown.",
       "unknown": "A side of this diff is not known.",
-      "unreadable": "The file could not be read before this tool, so only what it replaced is shown."
+      "unreadable": "The file could not be read before this tool, so only what it replaced is shown.",
+      "editMissing": "Edit {{edit}} names text that is not in the file now: the edit will not match, and {{agent}} will be told so.",
+      "editAmbiguous": "Edit {{edit}} names text that appears more than once in the file now: {{agent}}'s edit will be refused unless it says which."
     },
     "badge": {
-      "announce": "Claude is waiting for you in {{folder}}.",
+      "announce": "{{agent}} is waiting for you in {{folder}}.",
       "label": "{{count}} question(s) waiting for you",
       "open": "Show me"
     },
     "browserNotice": {
       "denied": "The browser refused notifications for this page. Allow them again in the site settings of the browser (the icon beside the address); the badges go on telling you meanwhile.",
       "turnOff": "Stop notifying me in the browser",
-      "turnOn": "Notify me in the browser when Claude finishes or asks something",
-      "permission": "Claude is waiting for you in {{folder}}",
-      "turn": "Claude finished a turn in {{folder}}",
+      "turnOn": "Notify me in the browser when {{agent}} finishes or asks something",
+      "permission": "{{agent}} is waiting for you in {{folder}}",
+      "turn": "{{agent}} finished a turn in {{folder}}",
       "unsupported": "This browser has no notifications."
     },
     "context": {
-      "compact": "Compact the conversation (/compact)",
+      "compact": "Compact the conversation",
       "label": "Context window {{percentage}}% used",
       "near": "The conversation is near the limit of its context. Compacting it keeps it going.",
       "percentage": "{{percentage}}%",
       "tokens": "{{tokens}} tokens",
       "unavailable": "The use of the context could not be read.",
       "window": "{{total}} of {{max}} tokens",
-      "systemPrompt": "System prompt",
-      "systemTools": "System tools",
-      "mcpTools": "MCP tools",
+      "system": "System prompt",
+      "tools": "Tools",
       "messages": "Messages",
-      "memoryFiles": "Memory files",
-      "skills": "Skills",
-      "freeSpace": "Free space",
-      "buffer": "Reserved for compaction"
+      "memory": "Memory files",
+      "free": "Free space",
+      "reserved": "Reserved for compaction"
     },
     "draft": {
       "choices": "How the conversation starts",
       "commands": "Type / for the commands and skills of this installation.",
       "defaultModel": "The models of this installation appear once a session of this folder has run; until then, the installation's default is used.",
-      "description": "Nothing runs until you send the first prompt: then a session of Claude opens in this folder, with what you chose below. {{shortcut}} brings you back to this box.",
+      "description": "Nothing runs until you send the first prompt: then a session of {{agent}} opens in this folder, with what you chose below. {{shortcut}} brings you back to this box.",
       "drag": "Drag a file from the explorer or the editor into the box to talk about it.",
-      "mention": "Type @ to point Claude at a file or a folder.",
+      "mention": "Type @ to point {{agent}} at a file or a folder.",
       "starting": "Opening the session…",
       "title": "A new conversation"
     },
@@ -2078,7 +2106,7 @@
       "high": "High",
       "xhigh": "Extra high",
       "max": "Maximum",
-      "readOnly": "The effort is chosen when a conversation starts. Changing it in a running one would stop Claude from asking before each tool.",
+      "readOnly": "The effort is chosen when a conversation starts. Changing it in a running one would stop {{agent}} from asking before each tool.",
       "unknown": "As it started"
     },
     "export": {
@@ -2111,17 +2139,17 @@
       "disabled": "Turned off"
     },
     "mode": {
-      "acceptEditsWarning": "Claude will edit and write files without asking you — and without the preview of the change.",
+      "acceptEditsWarning": "{{agent}} will edit and write files without asking you — and without the preview of the change.",
       "label": "Mode",
-      "default": "Ask me",
-      "defaultDescription": "Claude asks before every tool that needs your word.",
+      "ask": "Ask me",
+      "askDescription": "{{agent}} asks before every tool that needs your word.",
       "acceptEdits": "Accept edits",
-      "acceptEditsDescription": "Claude edits and writes files without asking; it still asks before anything else.",
-      "plan": "Plan",
-      "planDescription": "Claude plans without changing anything, and asks you to approve the plan.",
+      "acceptEditsDescription": "{{agent}} edits and writes files without asking; it still asks before anything else.",
+      "readOnly": "Read only",
+      "readOnlyDescription": "{{agent}} reads and plans without changing anything: nothing that writes files or runs commands is allowed.",
       "allowAll": "Allow everything",
-      "allowAllDescription": "Claude runs every tool without asking, except what one of your rules refuses. Its questions to you still come.",
-      "allowAllWarning": "Claude will run any command on this machine without asking you, until you change the mode."
+      "allowAllDescription": "{{agent}} runs every tool without asking, except what one of your rules refuses. Its questions to you still come.",
+      "allowAllWarning": "{{agent}} will run any command on this machine without asking you, until you change the mode."
     },
     "model": {
       "default": "Installation default",
@@ -2151,7 +2179,7 @@
     "dot": {
       "connected": "Connected — nothing running",
       "reconnecting": "Reconnecting…",
-      "running": "Claude is working",
+      "running": "{{agent}} is working",
       "ended": "The session ended",
       "session": "Session {{sessionId}}"
     },
@@ -2160,12 +2188,14 @@
       "rules": "Permission rules",
       "undo": "Undo file changes…",
       "copyId": "Copy the session id",
+      "copyConversationId": "Copy the {{agent}} conversation id",
       "copied": "The session id was copied.",
-      "copyFailed": "The browser did not let the id be copied. Select it and copy it by hand: {{sessionId}}"
+      "conversationIdCopied": "The {{agent}} conversation id was copied.",
+      "copyFailed": "The browser did not let the id be copied. Select it and copy it by hand: {{id}}"
     },
     "close": {
       "title": "End this session?",
-      "description": "Claude stops on this machine. What it wrote stays on disk, but the undo of its file changes goes with the session, and the changes you have not accepted can no longer be rejected from here. The conversation stays in the history, and can be resumed.",
+      "description": "{{agent}} stops on this machine. What it wrote stays on disk, but the undo of its file changes goes with the session, and the changes you have not accepted can no longer be rejected from here. The conversation stays in the history, and can be resumed.",
       "keep": "Keep it running",
       "confirm": "End the session"
     },
@@ -2201,7 +2231,7 @@
       "tail": "Questions waiting for you"
     },
     "pending": {
-      "pill": "Claude is waiting for your answer ({{count}})"
+      "pill": "{{agent}} is waiting for your answer ({{count}})"
     },
     "rewound": {
       "summary": "Files put back: {{restored}} back, {{kept}} kept as they were",
@@ -2212,7 +2242,7 @@
       "attachedWith": "Attached image ({{details}})",
       "open": "Open the image",
       "close": "Close",
-      "description": "The image this prompt carried, as Claude received it.",
+      "description": "The image this prompt carried, as {{agent}} received it.",
       "loading": "Loading the image…",
       "alt": "The image attached to the prompt"
     }
@@ -2248,63 +2278,63 @@
       "removed": "Removed: "
     }
   },
-  "claudePanel": {
+  "agentPanel": {
     "help": {
-      "open": "Help about the panel of Claude",
+      "open": "Help about the panel of {{agent}}",
       "what": "Each tab of the panel is a conversation of this folder: a draft that becomes a session with its first prompt, a session that is running, or a conversation of the history you are reading. Closing a tab never ends its session — it goes on in the backend, and the Sessions view lists it.",
       "states": "While it loads, a placeholder holds its place; what fails says why, with the way to try again; an empty conversation teaches how to start one.",
-      "notRecorded": "The audit trail keeps every tool Claude ran and its exact input. It never keeps what a file says nor the messages of the conversation — those stay in Claude's own store, on this machine.",
+      "notRecorded": "The audit trail keeps every tool {{agent}} ran and its exact input. It never keeps what a file says nor the messages of the conversation — those stay in {{agent}}'s own store, on this machine.",
       "modesHeading": "The modes",
-      "modes": "Default asks you before every tool that needs your word. Accept edits stops asking before Claude edits or writes a file — and the preview of the change on the card is gone with it. Plan has Claude plan without changing anything, and asks you to approve the plan. Skipping every question is never offered.",
+      "modes": "Default asks you before every tool that needs your word. Accept edits stops asking before {{agent}} edits or writes a file — and the preview of the change on the card is gone with it. Plan has {{agent}} plan without changing anything, and asks you to approve the plan. Skipping every question is never offered.",
       "queueHeading": "The queue",
-      "queue": "A prompt sent while Claude works waits above the prompt box, in the order it arrived from any of your devices, and runs as a turn of its own when the turn ends. Until then, any device can take it out.",
+      "queue": "A prompt sent while {{agent}} works waits above the prompt box, in the order it arrived from any of your devices, and runs as a turn of its own when the turn ends. Until then, any device can take it out.",
       "resendHeading": "Editing and sending again",
       "resend": "Editing a prompt sends it again in a new conversation that continues from before it; the original stays as it was in the history. The files do not go back on their own: tick the undo of that turn to put them back too.",
       "reviewHeading": "Accepting and rejecting changes",
-      "review": "Accept only marks a file as reviewed in this tab — nothing is written. Reject puts a file, or one change in it, back the way it was before the session, and offers to undo that. A file you changed after Claude is never overwritten: rejecting it keeps it as it is.",
-      "contextHeading": "The context and /compact",
-      "context": "The meter shows how full the conversation's context window is, by category. Near the limit, compacting summarises the conversation so far — the command of the installation, sent as a prompt — and the conversation marks where it happened.",
+      "review": "Accept only marks a file as reviewed in this tab — nothing is written. Reject puts a file, or one change in it, back the way it was before the session, and offers to undo that. A file you changed after {{agent}} is never overwritten: rejecting it keeps it as it is.",
+      "contextHeading": "The context and compacting",
+      "context": "The meter shows how full the conversation's context window is, by category. Near the limit, compacting summarises the conversation so far — it waits for a turn running to end, like a prompt — and the conversation marks where it happened. An agent that does not say how full its context is, or cannot compact, shows neither.",
       "noticesHeading": "Questions you might miss",
       "notices": "A question asked in a folder tab that is not on screen, or with the panel closed, shows as a badge on the tab and on the activity bar, and as a notice with the way to it. With the browser's notifications turned on, a hidden page is told too — the folder and what happened, never the command.",
       "composerHeading": "The prompt box",
-      "composer": "Enter sends and Shift+Enter breaks the line; while an input method is composing a character, Enter does neither. With nothing written and no context, the send button stays off and says why. While Claude works, what you send waits in the queue.",
+      "composer": "Enter sends and Shift+Enter breaks the line; while an input method is composing a character, Enter does neither. With nothing written and no context, the send button stays off and says why. While {{agent}} works, what you send waits in the queue.",
       "mentionHeading": "@ — files, folders and the selection",
       "mention": "Type @ to choose a file or a folder of this folder: the open files and the recent ones come first, then what the folder holds, level by level — type a / to go into a folder. @selection adds what is selected in the editor. Use the arrows to move, Enter or Tab to choose, and Esc to close the list without losing what you typed.",
       "commandsHeading": "/ — commands and skills",
       "commands": "Type / at the start of the box for the commands and skills of this installation, even before the session exists. Choosing one writes it with a space after it, and says what it takes. If the list cannot be read, anything you type still goes as the prompt.",
       "dragHeading": "Dragging into the context",
-      "drag": "Drag files and folders from the explorer, or a tab of the editor, onto the box or the conversation: each becomes a chip, and a folder is one chip, never everything in it. Without dragging, use “Add to Claude's context” in the menu of the explorer, of a tab, or of a selection in the editor. Items from another folder tab are left out: the context is this folder's.",
+      "drag": "Drag files and folders from the explorer, or a tab of the editor, onto the box or the conversation: each becomes a chip, and a folder is one chip, never everything in it. Without dragging, use “Add to {{agent}}'s context” in the menu of the explorer, of a tab, or of a selection in the editor. Items from another folder tab are left out: the context is this folder's.",
       "contextSetHeading": "The context of the next prompt",
       "contextSet": "The chips above the box are what goes with the next prompt; each one can be removed with its button. The line under them adds up their size and estimates the tokens at about four bytes each — an estimate, not a count. Past a share of what is left of the context window it warns and still sends; past the limit of a prompt it does not send, and says why. The set is this conversation's, and stays until you send it.",
-      "readsHeading": "What Claude reads",
-      "reads": "A file, a folder or a range of lines goes as a reference, never as its contents: Claude reads it with the Read tool, which the audit trail records like any other tool. It reads what is saved on disk, not what is unsaved in the editor — the chip warns you. An @path you type by hand is not read by the CLI on its own: only Claude's Read reads it.",
+      "readsHeading": "What {{agent}} reads",
+      "reads": "A file, a folder or a range of lines goes as a reference, never as its contents: {{agent}} reads it with the Read tool, which the audit trail records like any other tool. It reads what is saved on disk, not what is unsaved in the editor — the chip warns you. An @path you type by hand is not read by the CLI on its own: only {{agent}}'s Read reads it.",
       "desktopHeading": "Files from your computer",
       "desktop": "An image or a text file dragged from your computer goes with the prompt as an attachment: it is kept in memory for this session only, never written into the folder nor into the trail, and is gone when the session ends. To put it in the folder, upload it in the explorer instead.",
       "skillsHeading": "Where the commands and skills come from",
-      "skills": "Each entry of / says its origin: Claude Code is the command of the installation itself; Project comes from the .claude folder of this project; User and System are the skills of your user and of the system. Two with the same name are both listed, and the one / runs is Claude Code's — the other says it is covered.",
+      "skills": "Each entry of / says its origin: {{agent}} is the command of the installation itself; Project comes from this project's own configuration of {{agent}}; User and System are the skills of your user and of the system. Two with the same name are both listed, and the one / runs is {{agent}}'s — the other says it is covered.",
       "barHeading": "The bar under the box",
-      "bar": "What holds for the next prompt is under the box, in this order: + adds a file or a folder, a file of your computer or the selection of the editor; / lists the commands and skills; then the mode, the model and the effort, the share of the context window used — with Compact inside it — and send. While Claude works, send puts what you wrote in the queue, and Stop beside it ends the turn; with the box empty, the button itself is Stop. The effort is chosen in a new conversation only. In a narrow panel, the model and the effort move into the … of the bar.",
+      "bar": "What holds for the next prompt is under the box, in this order: + adds a file or a folder, a file of your computer or the selection of the editor; / lists the commands and skills; then the mode, the model and the effort, the share of the context window used — with Compact inside it — and send. While {{agent}} works, send puts what you wrote in the queue, and Stop beside it ends the turn; with the box empty, the button itself is Stop. The effort is chosen in a new conversation only. In a narrow panel, the model and the effort move into the … of the bar.",
       "menuHeading": "The menu of the session",
       "menu": "The … of the header holds what is done to the whole session, and seldom: end it — only the browser that opened it may, and it asks first —, export it as Markdown, undo its file changes, copy its id; and the notifications of the browser, the permission rules and this help. The dot beside it says how the session stands, with its id and what it has cost since it opened; the clock beside the + opens the conversations of this folder.",
-      "workingHeading": "While Claude works",
-      "working": "While a turn runs, its last line moves: an asterisk, what Claude is doing — the tool it runs, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over, folded — press it to read it. When the turn ends, the line gives way to what the turn cost.",
+      "workingHeading": "While {{agent}} works",
+      "working": "While a turn runs, its last line moves: an asterisk, what {{agent}} is doing — the tool it runs, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over, folded — press it to read it. When the turn ends, the line gives way to what the turn cost.",
       "inlineHeading": "Questions in the conversation",
-      "inline": "When Claude asks before running a tool, the question is in the conversation, in the place of that tool: the exact command, how risky it is, the time left and how far a yes reaches. Once answered, the tool line says how — by you, on a phone and by whom, by one of your rules, or refused because nobody answered in time. A question never takes the focus from the box while you write: Enter still sends your prompt.",
+      "inline": "When {{agent}} asks before running a tool, the question is in the conversation, in the place of that tool: the exact command, how risky it is, the time left and how far a yes reaches. Once answered, the tool line says how — by you, on a phone and by whom, by one of your rules, or refused because nobody answered in time. A question never takes the focus from the box while you write: Enter still sends your prompt.",
       "pillHeading": "Waiting for your answer",
-      "pill": "With a question out of view — the conversation scrolled up, or the changes on screen — a pill above the box says Claude is waiting, and how many questions. Pressing it, or the command Go to the question waiting for you, takes you to the oldest.",
+      "pill": "With a question out of view — the conversation scrolled up, or the changes on screen — a pill above the box says {{agent}} is waiting, and how many questions. Pressing it, or the command Go to the question waiting for you, takes you to the oldest.",
       "actionsHeading": "From a prompt",
-      "actions": "Pointing at a prompt of yours, or moving the focus into it, shows what can be done from it: edit and send it again, fork from before it, and put the files back to before its turn — with the reach shown file by file first. While Claude works the undo waits for the turn to end; once the session has ended there is no undo, so the button is not there."
+      "actions": "Pointing at a prompt of yours, or moving the focus into it, shows what can be done from it: edit and send it again, fork from before it, and put the files back to before its turn — with the reach shown file by file first. While {{agent}} works the undo waits for the turn to end; once the session has ended there is no undo, so the button is not there."
     },
     "screen": {
-      "title": "Claude",
-      "purpose": "Talk to Claude about this folder: start conversations, follow and approve what it does, and review what it changed."
+      "title": "{{agent}}",
+      "purpose": "Talk to {{agent}} about this folder: start conversations, follow and approve what it does, and review what it changed."
     }
   },
   "composer": {
     "set": {
       "label": "Context of the next prompt",
       "totals": "{{count}} items · {{size}} · ≈ {{tokens}} tokens (an estimate)",
-      "folders": "Folders count as items: Claude decides what to read in them.",
+      "folders": "Folders count as items: {{agent}} decides what to read in them.",
       "warn": "That is a large share of what is left of the context window — it still sends.",
       "overItems": "A prompt carries at most 20 items of context. Remove some to send.",
       "overBytes": "The files of the context add up to more than this prompt may carry. Remove some to send.",
@@ -2313,8 +2343,8 @@
     "chip": {
       "remove": "Remove {{name}} from the context",
       "missing": "gone from the folder",
-      "binary": "not text — Claude will not read it",
-      "dirty": "unsaved — Claude reads what is saved",
+      "binary": "not text — {{agent}} will not read it",
+      "dirty": "unsaved — {{agent}} reads what is saved",
       "pending": "sent with the prompt",
       "choice": "{{label}}: {{value}}"
     },
@@ -2342,18 +2372,18 @@
       "loading": "Loading the commands of this installation…",
       "unavailable": "The commands are not available right now. Anything you type still goes as the prompt.",
       "noMatch": "No command or skill matches what you typed.",
-      "shadowed": "covered by the Claude Code command of the same name",
+      "shadowed": "covered by the {{agent}} command of the same name",
       "argumentHint": "Takes: {{hint}}",
       "open": "Commands and skills (/)"
     },
     "origin": {
-      "builtin": "Claude Code",
+      "builtin": "{{agent}}",
       "project": "Project",
       "user": "User",
       "system": "System"
     },
     "send": {
-      "queued": "Claude is working: what you send now waits in the queue and runs next.",
+      "queued": "{{agent}} is working: what you send now waits in the queue and runs next.",
       "queue": "Add to queue",
       "empty": "Write a prompt or add context to send.",
       "missing": "{{path}} is no longer in the folder. Remove it to send.",
@@ -2473,9 +2503,9 @@
       "thinking": "Thinking",
       "outputStyle": "Output style",
       "fallbackModel": "Fallback model",
-      "modeDefault": "Ask before every tool that needs it",
+      "modeAsk": "Ask before every tool that needs it",
       "modeAcceptEdits": "Edit files without asking",
-      "modePlan": "Only plan, change nothing",
+      "modeReadOnly": "Only read and plan, change nothing",
       "modeAllowAll": "Allow everything nobody’s rule refuses",
       "effortLow": "Low",
       "effortMedium": "Medium",
@@ -2517,6 +2547,15 @@
     "folder": {
       "label": "Folder",
       "none": "None — only my own defaults"
+    }
+  },
+  "engine": {
+    "name": {
+      "fallback": "The agent"
+    },
+    "error": {
+      "capabilityUnavailable": "{{agent}} cannot do this.",
+      "notInstalled": "{{agent}} is not installed on this machine."
     }
   }
 }

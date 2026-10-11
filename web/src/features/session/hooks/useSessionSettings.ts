@@ -6,12 +6,13 @@ import type { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import { fetchModels } from '../services/insight.service';
 import { setSessionModel, setSessionPermissionMode } from '../services/live-session.service';
-import { claudePanelStore } from '../store/claude-panel.store';
-import type { EffortLevel } from '../store/claude-panel.store';
+import { agentPanelStore } from '../store/agent-panel.store';
 import { liveSessionStoreOf } from '../store/live-session.store';
+import type { EngineCapabilities } from '../types/engine';
 import type { InstallationModel, SessionModels } from '../types/insight';
 import { rememberModels } from '../store/known-models.store';
 import { useCommandRefusal } from './useCommandRefusal';
+import { useEngineCapabilities } from './useEngines';
 
 /** The model and the mode of a live session, and the models it could switch to (plan 08, B-36). */
 export interface SessionSettings {
@@ -19,7 +20,13 @@ export interface SessionSettings {
   readonly mode: string | null;
 
   /** The effort it started with — `undefined` when it was not opened here, and is not known. */
-  readonly effort: EffortLevel | null | undefined;
+  readonly effort: string | null | undefined;
+
+  /**
+   * What its engine can do — as its `session.started` said, or, before that, as `GET /engines` lists
+   * its engine: the modes and the levels of effort the bar offers (plan 28, B-27, B-28).
+   */
+  readonly capabilities: EngineCapabilities | null;
 
   /** The installation's models — empty while unknown or when the list could not be had (S-168). */
   readonly models: readonly InstallationModel[];
@@ -49,7 +56,11 @@ export function useSessionSettings(
   const live = liveSessionStoreOf(sessionId);
   const model = useStore(live, (state) => state.model);
   const mode = useStore(live, (state) => state.permissionMode);
-  const effort = useStore(claudePanelStore(folder), (state) => state.efforts[sessionId]);
+  const effort = useStore(agentPanelStore(folder), (state) => state.efforts[sessionId]);
+  const declared = useStore(live, (state) => state.capabilities);
+  const listed = useEngineCapabilities(
+    useStore(live, (state) => state.conversation?.engine ?? null),
+  );
   const refused = useCommandRefusal();
   const { expect } = refused;
   const putBack = useRef<(() => void) | null>(null);
@@ -91,6 +102,7 @@ export function useSessionSettings(
     model: model ?? query.data?.current ?? null,
     mode,
     effort,
+    capabilities: declared ?? listed,
     models: query.data?.models ?? [],
     modelsError: query.error,
     refusal: refused.error,

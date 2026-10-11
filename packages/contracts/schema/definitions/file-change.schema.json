@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/file-change.json",
+  "title": "FileChange",
+  "description": "A file a tool call changes, and how. It is what the backend's undo snapshots and what turns on the diff of a row and of a pending request: the diff itself comes from `GET /sessions/:sessionId/tools/:toolUseId/diff`, never computed by the client, so the text being replaced never travels here (plan 28, D-28).",
+  "type": "object",
+  "required": ["path", "op"],
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "The file, absolute. A call that names a relative path has no change: it would resolve against the wrong folder."
+    },
+    "op": {
+      "type": "string",
+      "enum": ["edit", "write", "delete", "move"],
+      "description": "`edit` changes part of the file, `write` replaces it whole or creates it, `delete` removes it, `move` renames it to `to`."
+    },
+    "to": {
+      "type": "string",
+      "description": "Where a `move` takes the file. Absent on every other operation."
+    }
+  }
+}

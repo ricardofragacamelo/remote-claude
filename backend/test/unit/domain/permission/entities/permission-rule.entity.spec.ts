@@ -11,6 +11,10 @@ import {
 import type { PermissionRuleDraft, RuleSubject } from '@domain/permission';
 import { SessionId } from '@domain/session';
 import { SESSION_ID } from '../../../../support/builders/session.builder';
+import { canonicalTool } from '../../../../support/builders/tool.builder';
+
+/** A shell call of [command] — of Claude, unless said. */
+const run = (command: string, engine = 'claude') => canonicalTool('shell', { command }, engine);
 
 const now = new Date('2026-09-19T12:00:00.000Z');
 const owner = UserId.create('auth|owner');
@@ -33,7 +37,7 @@ function aRule(overrides: Partial<PermissionRuleDraft> & { lifetimeMs?: number }
       userId: owner,
       sessionId,
       projectPath: null,
-      pattern: 'Bash(git status:*)',
+      pattern: 'shell(git status:*)',
       decision: 'allow',
       scope: 'session',
       createdAt: now,
@@ -52,14 +56,14 @@ const anAlwaysRule = (overrides: Partial<PermissionRuleDraft> = {}) =>
 
 describe('PermissionRule', () => {
   describe('creation', () => {
-    it('keeps the pattern exactly as written, because that is the grammar of the SDK', () => {
-      expect(aRule({ pattern: '  Bash(git status:*) ' }).ruleContent).toBe('Bash(git status:*)');
+    it('keeps the pattern exactly as written, as somebody wrote it', () => {
+      expect(aRule({ pattern: '  shell(git status:*) ' }).ruleContent).toBe('shell(git status:*)');
     });
 
     it('refuses a pattern outside the grammar at creation, not at the first match — S-47', () => {
       // A malformed pattern kept as a rule would simply never fire, and look exactly like a rule
       // nobody granted.
-      expect(() => aRule({ pattern: 'Bash(' })).toThrow(PermissionRulePatternInvalidError);
+      expect(() => aRule({ pattern: 'shell(' })).toThrow(PermissionRulePatternInvalidError);
     });
 
     it('refuses to outlive the ceiling rather than being truncated in silence', () => {
@@ -101,16 +105,14 @@ describe('PermissionRule', () => {
 
   describe('matching', () => {
     it('answers an invocation it covers, for the person who granted it', () => {
-      expect(aRule().matches(here, 'Bash', { command: 'git status --short' }, now)).toBe(true);
+      expect(aRule().matches(here, run('git status --short'), now)).toBe(true);
     });
 
     it('never answers somebody else, however well the pattern fits — S-14', () => {
       // A rule belongs to a person. Otherwise "I trust this command" quietly becomes "anybody on
       // this installation trusts this command".
       for (const rule of [aRule(), aProjectRule(), anAlwaysRule()]) {
-        expect(
-          rule.matches({ ...here, userId: other }, 'Bash', { command: 'git status' }, now),
-        ).toBe(false);
+        expect(rule.matches({ ...here, userId: other }, run('git status'), now)).toBe(false);
       }
     });
 
@@ -119,68 +121,46 @@ describe('PermissionRule', () => {
       const lastMoment = new Date(now.getTime() + LIFETIME - 1);
       const expiry = new Date(now.getTime() + LIFETIME);
 
-      expect(rule.matches(here, 'Bash', { command: 'git status' }, lastMoment)).toBe(true);
-      expect(rule.matches(here, 'Bash', { command: 'git status' }, expiry)).toBe(false);
+      expect(rule.matches(here, run('git status'), lastMoment)).toBe(true);
+      expect(rule.matches(here, run('git status'), expiry)).toBe(false);
       expect(rule.statusAt(expiry)).toBe('expired');
     });
 
     it('does not answer an invocation outside its pattern — S-05', () => {
-      expect(aRule().matches(here, 'Bash', { command: 'rm -rf build' }, now)).toBe(false);
+      expect(aRule().matches(here, run('rm -rf build'), now)).toBe(false);
     });
 
     it('keeps a session rule to its own session — S-03', () => {
-      expect(
-        aRule().matches(
-          { ...here, sessionId: otherSession },
-          'Bash',
-          { command: 'git status' },
-          now,
-        ),
-      ).toBe(false);
+      expect(aRule().matches({ ...here, sessionId: otherSession }, run('git status'), now)).toBe(
+        false,
+      );
     });
 
     it('reaches every session of the same project — S-01', () => {
       expect(
-        aProjectRule().matches(
-          { ...here, sessionId: otherSession },
-          'Bash',
-          { command: 'git status' },
-          now,
-        ),
+        aProjectRule().matches({ ...here, sessionId: otherSession }, run('git status'), now),
       ).toBe(true);
     });
 
     it('does not reach a session in another project — S-57', () => {
       const elsewhere = { ...here, projectPath: '/srv/projects/other' };
 
-      expect(aProjectRule().matches(elsewhere, 'Bash', { command: 'git status' }, now)).toBe(false);
+      expect(aProjectRule().matches(elsewhere, run('git status'), now)).toBe(false);
       // Nor a sibling whose name merely starts the same way.
       expect(
-        aProjectRule().matches(
-          { ...here, projectPath: `${project}-2` },
-          'Bash',
-          { command: 'git status' },
-          now,
-        ),
+        aProjectRule().matches({ ...here, projectPath: `${project}-2` }, run('git status'), now),
       ).toBe(false);
     });
 
     it('does not reach a request whose project could not be told', () => {
-      expect(
-        aProjectRule().matches(
-          { ...here, projectPath: null },
-          'Bash',
-          { command: 'git status' },
-          now,
-        ),
-      ).toBe(false);
+      expect(aProjectRule().matches({ ...here, projectPath: null }, run('git status'), now)).toBe(
+        false,
+      );
     });
 
     it('reaches any project, and a request with none, when it is `always` — S-02', () => {
       for (const projectPath of [project, '/srv/projects/other', null]) {
-        expect(
-          anAlwaysRule().matches({ ...here, projectPath }, 'Bash', { command: 'git status' }, now),
-        ).toBe(true);
+        expect(anAlwaysRule().matches({ ...here, projectPath }, run('git status'), now)).toBe(true);
       }
     });
   });
@@ -191,7 +171,7 @@ describe('PermissionRule', () => {
 
       expect(revoked.statusAt(now)).toBe('revoked');
       expect(revoked.revokedAt).toEqual(now);
-      expect(revoked.matches(here, 'Bash', { command: 'git status' }, now)).toBe(false);
+      expect(revoked.matches(here, run('git status'), now)).toBe(false);
     });
 
     it('is the same rule when revoked twice, which is what makes twice one act — S-55', () => {
@@ -223,7 +203,7 @@ describe('PermissionRule', () => {
     it.each<[string, Partial<PermissionRuleDraft>]>([
       ['another person', { userId: other }],
       ['another project', { projectPath: '/srv/projects/other' }],
-      ['another pattern', { pattern: 'Bash(git status)' }],
+      ['another pattern', { pattern: 'shell(git status)' }],
       ['another decision', { decision: 'deny' }],
     ])('does not hold for %s', (_label, change) => {
       expect(aProjectRule().isEquivalentTo(aProjectRule({ id: 'rule-2', ...change }))).toBe(false);
@@ -232,6 +212,72 @@ describe('PermissionRule', () => {
     it('does not hold across scopes', () => {
       expect(aProjectRule().isEquivalentTo(anAlwaysRule({ id: 'rule-2' }))).toBe(false);
       expect(aRule().isEquivalentTo(aRule({ id: 'rule-2', sessionId: otherSession }))).toBe(false);
+    });
+  });
+
+  describe('engine — S-94', () => {
+    it('answers every engine whose call has the kind, when it names none', () => {
+      expect(anAlwaysRule().engine).toBeNull();
+      expect(anAlwaysRule().matches(here, run('git status', 'claude'), now)).toBe(true);
+      expect(anAlwaysRule().matches(here, run('git status', 'test-engine'), now)).toBe(true);
+    });
+
+    it('answers only the engine it is restricted to', () => {
+      const rule = anAlwaysRule({ engine: 'claude' });
+
+      expect(rule.matches(here, run('git status', 'claude'), now)).toBe(true);
+      expect(rule.matches(here, run('git status', 'test-engine'), now)).toBe(false);
+      expect(rule.snapshot().engine).toBe('claude');
+    });
+
+    it('is not equivalent to the same rule for another engine, or for every engine', () => {
+      const claude = anAlwaysRule({ engine: 'claude' });
+
+      expect(claude.isEquivalentTo(anAlwaysRule({ id: 'rule-2', engine: 'claude' }))).toBe(true);
+      expect(claude.isEquivalentTo(anAlwaysRule({ id: 'rule-2', engine: 'other' }))).toBe(false);
+      expect(claude.isEquivalentTo(anAlwaysRule({ id: 'rule-2' }))).toBe(false);
+    });
+  });
+
+  /** A rule the migration switched off: kept, listed, revocable, never answering (plan 28, D-18). */
+  describe('disabled — S-133', () => {
+    const disabled = () =>
+      PermissionRule.restore({
+        ...anAlwaysRule().snapshot(),
+        pattern: 'Bash',
+        disabledReason: 'untranslatable',
+      });
+
+    it('keeps the pattern as written, without reading it, and says why', () => {
+      const rule = disabled();
+
+      expect(rule.ruleContent).toBe('Bash');
+      expect(rule.pattern).toBeNull();
+      expect(rule.kind).toBeNull();
+      expect(rule.disabledReason).toBe('untranslatable');
+      expect(rule.snapshot()).toMatchObject({ pattern: 'Bash', disabledReason: 'untranslatable' });
+    });
+
+    it('is disabled, never active, and answers nothing', () => {
+      const rule = disabled();
+
+      expect(rule.statusAt(now)).toBe('disabled');
+      expect(rule.statusAt(new Date(now.getTime() + LIFETIME * 2))).toBe('disabled');
+      expect(rule.isActiveAt(now)).toBe(false);
+      expect(rule.matches(here, run('git status'), now)).toBe(false);
+    });
+
+    it('can be revoked, and then says revoked', () => {
+      const revoked = disabled().revoke(now);
+
+      expect(revoked.statusAt(now)).toBe('revoked');
+      expect(revoked.disabledReason).toBe('untranslatable');
+    });
+
+    it('still refuses a pattern outside the grammar on a rule that is not disabled', () => {
+      expect(() =>
+        PermissionRule.restore({ ...anAlwaysRule().snapshot(), pattern: 'Bash' }),
+      ).toThrow(PermissionRulePatternInvalidError);
     });
   });
 
@@ -246,7 +292,8 @@ describe('PermissionRule', () => {
       const restored = PermissionRule.restore(stored);
 
       expect(restored.snapshot()).toEqual(stored);
-      expect(restored.pattern).toEqual({ toolName: 'Bash', kind: 'prefix', content: 'git status' });
+      expect(restored.pattern).toEqual({ kind: 'shell', reach: 'prefix', content: 'git status' });
+      expect(restored.kind).toBe('shell');
       expect(restored.isActiveAt(now)).toBe(true);
     });
 

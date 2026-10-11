@@ -2,9 +2,10 @@ import type { UserId } from '@domain/auth';
 import type { IdGenerator } from '@domain/shared';
 import { menuOf, SessionId } from '@domain/session';
 import type { InstallationModel, MenuCommand, SlashCommand } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
 import type { WorkspacePath } from '@domain/workspace';
-import type { ClaudeSessionHandle, ClaudeSessionPort } from './ports/claude-session.port';
+import type { EngineRegistry } from './engine-registry';
+import { controlOf } from './ports/agent-engine.port';
+import type { AgentSessionHandle } from './ports/agent-engine.port';
 import type { FolderLocator } from './ports/folder-locator.port';
 import type { CommandCatalog, ModelCatalog } from './command-catalog';
 import type { SessionRegistry } from './session-registry';
@@ -35,12 +36,9 @@ export interface InstallationCatalog {
 
 /** What the query of the catalogue needs to be opened like a session — and closed at once. */
 export interface CatalogProbing {
-  readonly claude: ClaudeSessionPort;
+  /** The engines; the draft of a new session asks the default one. */
+  readonly engines: EngineRegistry;
   readonly sessionIds: IdGenerator;
-  readonly conversationIds: IdGenerator;
-
-  /** The version of the CLI the SDK spawns, read at boot — the key the answers are kept by. */
-  readonly cliVersion: string | null;
 }
 
 /** What the probe was told. */
@@ -76,8 +74,8 @@ export class ReadCatalogUseCase {
   /**
    * @throws whatever the folder is refused with — `WORKSPACE_NOT_ALLOWED`, `WORKSPACE_NOT_FOUND`…
    * @throws {import('@domain/session').SessionLimitReachedError} no slot for the query
-   * @throws {import('@domain/session').ClaudeUnavailableError} the CLI failed to answer
-   * @throws {import('@domain/session').ClaudeTimeoutError} the CLI did not answer in time
+   * @throws {import('@domain/engine').AgentUnavailableError} the CLI failed to answer
+   * @throws {import('@domain/engine').AgentTimeoutError} the CLI did not answer in time
    */
   async execute(rawPath: string, userId: UserId): Promise<InstallationCatalog> {
     const workspace = await this.folders.locate(rawPath, userId);
@@ -86,12 +84,12 @@ export class ReadCatalogUseCase {
 
     const known =
       commands !== null && models !== null
-        ? { cliVersion: this.probing.cliVersion, commands, models }
+        ? { cliVersion: (await this.probing.engines.default.describe()).version, commands, models }
         : await this.probeOnce(workspace);
 
     return {
       cliVersion: known.cliVersion,
-      commands: menuOf(known.commands),
+      commands: menuOf(known.commands, this.probing.engines.default.commandMenu),
       models: known.models,
       limits: this.limits,
     };
@@ -115,28 +113,29 @@ export class ReadCatalogUseCase {
   private async probe(workspace: WorkspacePath): Promise<Probed> {
     // A slot, as any session takes, before anything is spawned — and given back in the `finally`.
     this.registry.reserve();
-    let handle: ClaudeSessionHandle | null = null;
+    const engine = this.probing.engines.default;
+    let handle: AgentSessionHandle | null = null;
 
     try {
-      handle = await this.probing.claude.start({
+      handle = await engine.start({
         sessionId: SessionId.create(this.probing.sessionIds.next()),
         workspace,
         model: null,
-        permissionMode: 'default',
+        permissionMode: 'ask',
         // A conversation nobody will ever write: no prompt goes, so no transcript is made.
-        conversation: {
-          claudeSessionId: ClaudeSessionId.create(this.probing.conversationIds.next()),
-          resumedFrom: null,
-        },
+        conversation: { ref: engine.newConversation(), resumedFrom: null },
         onEvent: () => undefined,
         onClosed: () => undefined,
       });
 
+      const opened = handle;
       const [commands, models] = await Promise.all([
-        handle.supportedCommands(),
-        handle.supportedModels(),
+        controlOf(engine.engine, opened, 'supportedCommands')(),
+        controlOf(engine.engine, opened, 'supportedModels')(),
       ]);
-      const version = handle.cliVersion ?? this.probing.cliVersion;
+      // The version the engine said at boot, until the session reported its own: the key the
+      // answers are kept by.
+      const version = opened.cliVersion ?? (await engine.describe()).version;
 
       this.catalogs.commands.put(version, workspace.value, commands);
       this.catalogs.models.put(version, workspace.value, models);

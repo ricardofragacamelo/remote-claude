@@ -31,6 +31,8 @@ function locator(refused: string | null = null) {
 /** Pending questions by session, as the permission registry would count them. */
 const pending = (counts: Record<string, number> = {}) => ({
   countFor: (id: SessionId) => counts[id.value] ?? 0,
+  // The call of a pending question is the diff's business, not the list's (plan 28, B-17).
+  toolOf: () => null,
 });
 
 /** The live sessions of a folder, over the registry — plan 08, B-07. */

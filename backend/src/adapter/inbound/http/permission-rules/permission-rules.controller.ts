@@ -35,7 +35,9 @@ import type {
  *
  * Each outcome has its own status, and each is something a screen does differently. `201` is a
  * rule that stands — the one just granted, or the equivalent one that was already active. `400` is
- * a pattern outside the grammar, `422` a lifetime past the ceiling. On revocation, `404` is a rule
+ * a pattern outside the canonical grammar (an engine's own grammar included), `422` a lifetime past
+ * the ceiling or a rule for a question or a plan. A rule the migration switched off is listed, with
+ * why, and can be revoked like any other; it is never switched back on (plan 28, B-33). On revocation, `404` is a rule
  * that does not exist and `403` somebody else's, which stays exactly as it was
  * ([D-10](../../../../../docs/plans/03-rules-and-audit/decisions.md)).
  *
@@ -90,6 +92,7 @@ export class PermissionRulesController {
     const rule = await this.grant.execute({
       userId,
       pattern: body.pattern,
+      engine: body.engine ?? null,
       decision: body.decision,
       scope: body.scope,
       // Normalised the way a session's workspace is, or a rule for `/srv/app/` would never reach

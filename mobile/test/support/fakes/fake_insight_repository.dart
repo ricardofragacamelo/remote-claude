@@ -30,8 +30,8 @@ class FakeInsightRepository implements InsightRepository {
     maxTokens: 200000,
     percentage: 25,
     categories: <ContextCategory>[
-      ContextCategory(id: 'messages', name: 'Messages', tokens: 40000),
-      ContextCategory(id: 'somethingNew', name: 'Something new', tokens: 10000),
+      ContextCategory(id: 'messages', messageKey: 'sessions.context.messages', tokens: 40000),
+      ContextCategory(id: 'somethingNew', text: 'Something new', tokens: 10000),
     ],
   );
 

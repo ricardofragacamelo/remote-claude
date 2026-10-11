@@ -3,13 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { conversationMarkdown } from '@/features/session/lib/conversation-markdown';
 import type { MarkdownLabels } from '@/features/session/lib/conversation-markdown';
 import type { StreamMessage, ToolExecution } from '@/features/session/types/live-session';
+import { aToolCall } from '../../../../support/canonical-tool';
 
 const labels: MarkdownLabels = {
   title: 'Conversation',
   you: 'You',
-  claude: 'Claude',
+  agent: 'Claude',
   thinking: 'Thinking',
-  tool: (tool) => `Tool ${tool.toolName}`,
+  tool: (tool) => `Tool ${tool.origin.native}`,
   output: 'Output',
   compacted: 'Compacted',
 };
@@ -32,13 +33,11 @@ const message = (
 
 const tool = (summary: string | null): ToolExecution => ({
   toolUseId: 't1',
-  toolName: 'Bash',
-  input: { command: 'echo ```' },
+  ...aToolCall('Bash', { command: 'echo ```' }),
   status: 'succeeded',
   elapsed: null,
   summary,
   parentToolUseId: null,
-  taskId: null,
 });
 
 const conversation = (summary: string | null) => ({

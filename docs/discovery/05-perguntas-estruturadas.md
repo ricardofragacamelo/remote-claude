@@ -130,9 +130,9 @@ CLI → tool_result: "The user did not answer the questions."
 
 | Ponto | Onde | O que faz hoje |
 |---|---|---|
-| Ponte `canUseTool` | [session-runner.ts](../../backend/src/adapter/outbound/claude/session-runner.ts) (`canUseTool`, ~:224-252) | `allow → { behavior:'allow', updatedInput: input }`. Devolve o próprio input. |
+| Ponte `canUseTool` | [session-runner.ts](../../backend/src/adapter/outbound/engines/claude/session-runner.ts) (`canUseTool`, ~:224-252) | `allow → { behavior:'allow', updatedInput: input }`. Devolve o próprio input. |
 | Porta | [permission-gate.port.ts](../../backend/src/application/session/ports/permission-gate.port.ts) | `PermissionVerdict = { decision, reason }`. Não há onde carregar respostas. |
-| Implementação | [permission-bridge.ts](../../backend/src/adapter/outbound/claude/permission-bridge.ts) (`verdictOf`) | copia só `decision` e `reason`. É o gargalo. |
+| Implementação | [permission-bridge.ts](../../backend/src/adapter/outbound/engines/claude/permission-bridge.ts) (`verdictOf`) | copia só `decision` e `reason`. É o gargalo. |
 | Pedido | [request-permission.use-case.ts](../../backend/src/application/permission/request-permission.use-case.ts), [permission-payloads.ts](../../backend/src/application/permission/permission-payloads.ts) | `title = permission.tool.AskUserQuestion` (chave inexistente nos clientes), `input` cru, `defaultToNo: true`, sugestões `once`/`session`. |
 | Risco | [risk.classifier.ts](../../backend/src/domain/permission/services/risk.classifier.ts) | a tool não está em nenhuma lista, então cai em **`destructive`**. No celular isso dispara a confirmação em dois passos. |
 | Resposta WS | [permission-commands.ts](../../backend/src/adapter/inbound/ws/permission/permission-commands.ts) | zod não estrito: um `answers` enviado hoje seria **descartado em silêncio**. |
@@ -140,8 +140,8 @@ CLI → tool_result: "The user did not answer the questions."
 | Domínio | [permission-request.entity.ts](../../backend/src/domain/permission/entities/permission-request.entity.ts) | `PermissionAnswer`/`PermissionResolution` sem respostas. |
 | Persistência e auditoria | `permission_requests`, `audit_entries` | guardam o input original. **As respostas não ficam em lugar nenhum.** |
 | Push | [push-translator.ts](../../backend/src/shared/i18n/push-translator.ts), `push.permission.body` | "Quer executar AskUserQuestion. Abra para permitir ou recusar." Texto errado para uma pergunta. |
-| Linha da tool (ao vivo) | [sdk-message.mapper.ts](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts) | `tool.completed.summary` = os primeiros 200 caracteres do `tool_result`. O `tool_use_result` estruturado (`questions`, `answers`) é descartado. |
-| Linha da tool (histórico) | [transcript.adapter.ts](../../backend/src/adapter/outbound/claude/transcript.adapter.ts) | a leitura de volta do SDK não traz o resultado estruturado. Sobra só o texto. |
+| Linha da tool (ao vivo) | [sdk-message.mapper.ts](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts) | `tool.completed.summary` = os primeiros 200 caracteres do `tool_result`. O `tool_use_result` estruturado (`questions`, `answers`) é descartado. |
+| Linha da tool (histórico) | [transcript.adapter.ts](../../backend/src/adapter/outbound/engines/claude/transcript.adapter.ts) | a leitura de volta do SDK não traz o resultado estruturado. Sobra só o texto. |
 | Web, card | [PermissionRequestCard.tsx](../../web/src/features/permission/components/PermissionRequestCard.tsx) | desvia só `ExitPlanMode` → `PlanApprovalCard`. O resto vai para o `PermissionCard` genérico. |
 | Web, linha | [ToolRow.tsx](../../web/src/features/session/components/conversation/ToolRow.tsx) | sem renderer por tool: `JSON.stringify(input)` e o `summary`. |
 | Mobile, card | [permission_panel.dart](../../mobile/lib/features/permission/presentation/widgets/permission_panel.dart) | desvia só `ExitPlanMode` → `PlanApprovalCard`. O resto vai para o `PermissionCardView`. |

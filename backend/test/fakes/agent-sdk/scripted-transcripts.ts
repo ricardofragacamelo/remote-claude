@@ -5,7 +5,7 @@ import type {
   SessionMessage,
 } from '@anthropic-ai/claude-agent-sdk';
 
-import type { TranscriptSdk } from '@adapter/outbound/claude/transcript-sdk';
+import type { TranscriptSdk } from '@adapter/outbound/engines/claude/transcript-sdk';
 import { loadFixture } from './fixture';
 
 /** One conversation of the scripted store. */

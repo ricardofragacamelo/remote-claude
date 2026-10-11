@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/engine-origin.json",
+  "title": "EngineOrigin",
+  "description": "Which engine a call came from, and the engine's own name for it. Opaque text, for diagnosis and for the dialect of the rules: no client decides by it — it decides by the `kind` (ADR-025).",
+  "type": "object",
+  "required": ["engine", "native"],
+  "properties": {
+    "engine": {
+      "type": "string",
+      "maxLength": 32,
+      "description": "An `id` of `GET /engines`."
+    },
+    "native": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "The name the engine gave the tool, exactly."
+    }
+  }
+}

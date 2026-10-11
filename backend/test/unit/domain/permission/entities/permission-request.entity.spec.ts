@@ -11,6 +11,7 @@ import {
 import type { PermissionAnswer } from '@domain/permission';
 import { SessionId } from '@domain/session';
 import { SESSION_ID } from '../../../../support/builders/session.builder';
+import { claudeTool } from '../../../../support/builders/tool.builder';
 
 const now = new Date('2026-09-19T12:00:00.000Z');
 const owner = UserId.create('auth|owner');
@@ -25,6 +26,7 @@ function aRequest(expiresInMs = 1_000): PermissionRequest {
     toolUseId: 'toolu-1',
     toolName: 'Bash',
     input: { command: 'rm -rf build/' },
+    tool: claudeTool('Bash', { command: 'rm -rf build/' }),
     riskHint: 'destructive',
     requestedAt: now,
     expiresAt: new Date(now.getTime() + expiresInMs),

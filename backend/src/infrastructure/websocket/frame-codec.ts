@@ -1,4 +1,4 @@
-import { isEnvelope, PROTOCOL_VERSION } from '@remote-claude/contracts';
+import { isEnvelope } from '@remote-claude/contracts';
 import type { Envelope } from '@remote-claude/contracts';
 
 import { InputValidationError } from '@shared/errors/input-validation.error';
@@ -29,7 +29,7 @@ export function decodeFrame(raw: string, maxBytes: number): Envelope {
   // The version is read before the envelope is validated: a frame from a future protocol may not
   // even have the shape this build knows, and the client still deserves to be told why.
   const version = (parsed as { v?: unknown } | null)?.v;
-  if (version !== PROTOCOL_VERSION) {
+  if (typeof version !== 'number' || !SUPPORTED_VERSIONS.includes(version)) {
     throw new UnsupportedProtocolVersionError(version, SUPPORTED_VERSIONS);
   }
 

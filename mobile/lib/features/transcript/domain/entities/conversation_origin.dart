@@ -1,4 +1,4 @@
-/// Where a conversation of Claude's store came from, as far as this product can prove it.
+/// Where a conversation of the engine's store came from, as far as this product can prove it.
 ///
 /// Pure Dart. The names are the wire's, on purpose: the backend says `ours` or `external`, and a
 /// value this build does not know is read as nothing rather than guessed at.

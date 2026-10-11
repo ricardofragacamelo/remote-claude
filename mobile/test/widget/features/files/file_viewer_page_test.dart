@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/storage/credential_store_provider.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/features/files/domain/entities/text_document.dart';
 import 'package:remote_claude/features/files/files.dart';
 import 'package:remote_claude/features/files/files_providers.dart';
@@ -45,8 +46,16 @@ void main() {
   });
 
   /// The viewer of [path], over a home screen it was pushed from.
-  Future<void> pumpViewer(WidgetTester tester, String path, {String? sessionId}) async {
+  Future<void> pumpViewer(
+    WidgetTester tester,
+    String path, {
+    String? sessionId,
+    Locale locale = const Locale('en'),
+    TransitionBuilder? builder,
+  }) async {
     await tester.pumpRouted(
+      locale: locale,
+      builder: builder,
       <RouteBase>[
         GoRoute(
           path: '/',
@@ -557,7 +566,7 @@ void main() {
     });
   });
 
-  group('Claude waiting while the file is read — B-18, D-11', () {
+  group('the agent waiting while the file is read — B-18, D-11', () {
     testWidgets(
       'S-78 · a question of the session shows the strip; "back to the session" lands on its card',
       (WidgetTester tester) async {
@@ -567,7 +576,7 @@ void main() {
         permissions.feed.emit(asked(aPermissionRequest()));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.fileViewerClaudeWaiting(1)), findsOneWidget);
+        expect(find.text(l10n.fileViewerAgentWaiting('engine-a', 1)), findsOneWidget);
         await tester.tap(find.text(l10n.fileViewerBackToSession));
         await tester.pumpAndSettle();
         expect(
@@ -576,6 +585,41 @@ void main() {
         );
       },
     );
+
+    group('S-115 · the strip names the engine that asks by its display name (plan 28, B-40)', () {
+      const AgentNames names = AgentNames(
+        names: <String, String>{'engine-a': 'Agent A', 'engine-b': 'Agent B'},
+        defaultEngine: 'engine-a',
+      );
+
+      Widget named(BuildContext _, Widget? child) => AgentNamesScope(names: names, child: child!);
+
+      testWidgets('in English', (WidgetTester tester) async {
+        await pumpViewer(tester, 'notes.txt', sessionId: 'session-1', builder: named);
+
+        permissions.feed.emit(asked(aPermissionRequest(engine: 'engine-b')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Agent B is waiting for your answer'), findsOneWidget);
+      });
+
+      testWidgets('in Portuguese, with two waiting', (WidgetTester tester) async {
+        await pumpViewer(
+          tester,
+          'notes.txt',
+          sessionId: 'session-1',
+          locale: const Locale('pt'),
+          builder: named,
+        );
+
+        permissions.feed
+          ..emit(asked(aPermissionRequest(engine: 'engine-b')))
+          ..emit(asked(aPermissionRequest(requestId: 'request-2', engine: 'engine-b')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('O Agent B está esperando 2 respostas'), findsOneWidget);
+      });
+    });
 
     testWidgets('opened from the folder, no session: no strip', (WidgetTester tester) async {
       await pumpViewer(tester, 'notes.txt');

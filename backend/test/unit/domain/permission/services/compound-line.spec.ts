@@ -6,6 +6,7 @@ import type { PermissionRuleDraft, RuleQuestion } from '@domain/permission';
 import type { PermissionMode } from '@domain/session';
 import { SessionId } from '@domain/session';
 import { SESSION_ID } from '../../../../support/builders/session.builder';
+import { claudeTool } from '../../../../support/builders/tool.builder';
 
 const now = new Date('2026-09-19T12:00:00.000Z');
 const owner = UserId.create('auth|owner');
@@ -30,24 +31,23 @@ function rule(id: string, pattern: string, overrides: Partial<PermissionRuleDraf
   );
 }
 
-function asking(command: string, permissionMode: PermissionMode = 'default'): RuleQuestion {
+function asking(command: string, permissionMode: PermissionMode = 'ask'): RuleQuestion {
   return {
     subject: { userId: owner, sessionId, projectPath: project },
-    toolName: 'Bash',
-    input: { command },
+    tool: claudeTool('Bash', { command }, project),
     permissionMode,
     now,
   };
 }
 
-const push = rule('push', 'Bash(git push:*)');
-const tail = rule('tail', 'Bash(tail:*)');
-const cd = rule('cd', 'Bash(cd:*)');
-const pnpmTest = rule('pnpm-test', 'Bash(pnpm test:*)');
-const commit = rule('commit', 'Bash(git commit:*)');
-const echo = rule('echo', 'Bash(echo:*)');
-const ls = rule('ls', 'Bash(ls:*)');
-const status = rule('status', 'Bash(git status:*)');
+const push = rule('push', 'shell(git push:*)');
+const tail = rule('tail', 'shell(tail:*)');
+const cd = rule('cd', 'shell(cd:*)');
+const pnpmTest = rule('pnpm-test', 'shell(pnpm test:*)');
+const commit = rule('commit', 'shell(git commit:*)');
+const echo = rule('echo', 'shell(echo:*)');
+const ls = rule('ls', 'shell(ls:*)');
+const status = rule('status', 'shell(git status:*)');
 
 /**
  * The commands of a line, for the side that allows — plan 23, D-07.
@@ -144,12 +144,12 @@ describe('answeringRule — a line of several commands', () => {
   });
 
   it('asks about a substitution, every command covered or not — S-36', () => {
-    expect(answeringRule([echo, rule('rm', 'Bash(rm:*)')], asking('echo $(rm -rf x)'))).toBeNull();
+    expect(answeringRule([echo, rule('rm', 'shell(rm:*)')], asking('echo $(rm -rf x)'))).toBeNull();
   });
 
   it('asks when a quote does not close in a piece — S-37', () => {
     expect(
-      answeringRule([commit, rule('b', 'Bash(b:*)')], asking('git commit -m "a && b"')),
+      answeringRule([commit, rule('b', 'shell(b:*)')], asking('git commit -m "a && b"')),
     ).toBeNull();
   });
 
@@ -162,8 +162,8 @@ describe('answeringRule — a line of several commands', () => {
   });
 
   it('lets an exact rule cover the identical line, and an identical piece — S-40', () => {
-    const whole = rule('whole', 'Bash(git push 2>&1 | tail -5)');
-    const piece = rule('piece', 'Bash(pnpm test)');
+    const whole = rule('whole', 'shell(git push 2>&1 | tail -5)');
+    const piece = rule('piece', 'shell(pnpm test)');
 
     expect(answeringRule([whole], asking('git push 2>&1 | tail -5'))).toBe(whole);
     expect(answeringRule([piece, cd], asking('cd /x && pnpm test'))).toBe(cd);
@@ -175,20 +175,20 @@ describe('answeringRule — a line of several commands', () => {
   });
 
   it('lets a deny on any piece beat the allows of the others — S-42', () => {
-    const denyRm = rule('deny-rm', 'Bash(rm:*)', { decision: 'deny' });
+    const denyRm = rule('deny-rm', 'shell(rm:*)', { decision: 'deny' });
 
-    expect(answeringRule([ls, rule('rm', 'Bash(rm:*)'), denyRm], asking('ls && rm -rf x'))).toBe(
+    expect(answeringRule([ls, rule('rm', 'shell(rm:*)'), denyRm], asking('ls && rm -rf x'))).toBe(
       denyRm,
     );
   });
 
   it('asks in `plan`, every command covered — S-43', () => {
-    expect(answeringRule([push, tail], asking('git push 2>&1 | tail -5', 'plan'))).toBeNull();
+    expect(answeringRule([push, tail], asking('git push 2>&1 | tail -5', 'readOnly'))).toBeNull();
   });
 
   it('combines scopes, and answers with the first command`s rule — S-44, D-11', () => {
-    const sessionTail = rule('session-tail', 'Bash(tail:*)', { scope: 'session', sessionId });
-    const projectPush = rule('project-push', 'Bash(git push:*)', {
+    const sessionTail = rule('session-tail', 'shell(tail:*)', { scope: 'session', sessionId });
+    const projectPush = rule('project-push', 'shell(git push:*)', {
       scope: 'project',
       projectPath: project,
     });
@@ -199,7 +199,7 @@ describe('answeringRule — a line of several commands', () => {
   });
 
   it('never reads a deny as covering a piece for the allow side', () => {
-    const denyTail = rule('deny-tail', 'Bash(tail:*)', { decision: 'deny' });
+    const denyTail = rule('deny-tail', 'shell(tail:*)', { decision: 'deny' });
 
     expect(answeringRule([push, denyTail], asking('git push | tail -5'))).toBe(denyTail);
   });
@@ -208,10 +208,11 @@ describe('answeringRule — a line of several commands', () => {
     // `a && b` is a file name to `Edit`, never two commands: each piece having a rule says nothing.
     const question: RuleQuestion = {
       ...asking('a && b'),
-      toolName: 'Edit',
-      input: { file_path: 'a && b' },
+      tool: claudeTool('Edit', { file_path: 'a && b' }, project),
     };
 
-    expect(answeringRule([rule('a', 'Edit(a)'), rule('b', 'Edit(b)')], question)).toBeNull();
+    expect(
+      answeringRule([rule('a', 'file.edit(a)'), rule('b', 'file.edit(b)')], question),
+    ).toBeNull();
   });
 });

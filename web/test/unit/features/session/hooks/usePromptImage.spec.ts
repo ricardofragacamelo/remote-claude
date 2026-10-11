@@ -20,7 +20,7 @@ describe('usePromptImage', () => {
   it('reads nothing while no image is open', () => {
     const bytes = vi.spyOn(api, 'bytes').mockResolvedValue(answer());
 
-    const { result } = renderHook(() => usePromptImage('c1', null));
+    const { result } = renderHook(() => usePromptImage({ engine: 'claude', id: 'c1' }, null));
     renderHook(() => usePromptImage(null, 'u1:1'));
 
     expect(bytes).not.toHaveBeenCalled();
@@ -32,7 +32,8 @@ describe('usePromptImage', () => {
     const bytes = vi.spyOn(api, 'bytes').mockResolvedValue(answer());
 
     const { result, rerender } = renderHook(
-      ({ blockId }: { blockId: string | null }) => usePromptImage('c1', blockId),
+      ({ blockId }: { blockId: string | null }) =>
+        usePromptImage({ engine: 'claude', id: 'c1' }, blockId),
       { initialProps: { blockId: 'u1:1' as string | null } },
     );
 
@@ -40,7 +41,7 @@ describe('usePromptImage', () => {
       expect(result.current.url).toBe('blob:http://localhost/object-1');
     });
     expect(bytes).toHaveBeenCalledWith(
-      '/transcripts/c1/images/u1%3A1',
+      '/transcripts/claude/c1/images/u1%3A1',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
 
@@ -54,7 +55,9 @@ describe('usePromptImage', () => {
     const urls = fakeObjectUrls();
     vi.spyOn(api, 'bytes').mockResolvedValue(answer());
 
-    const { result, unmount } = renderHook(() => usePromptImage('c1', 'u1:1'));
+    const { result, unmount } = renderHook(() =>
+      usePromptImage({ engine: 'claude', id: 'c1' }, 'u1:1'),
+    );
     await waitFor(() => {
       expect(result.current.url).not.toBeNull();
     });
@@ -67,7 +70,8 @@ describe('usePromptImage', () => {
     const urls = fakeObjectUrls();
     const bytes = vi.spyOn(api, 'bytes').mockResolvedValue(answer());
     const { result, rerender } = renderHook(
-      ({ blockId }: { blockId: string | null }) => usePromptImage('c1', blockId),
+      ({ blockId }: { blockId: string | null }) =>
+        usePromptImage({ engine: 'claude', id: 'c1' }, blockId),
       { initialProps: { blockId: 'u1:1' as string | null } },
     );
     await waitFor(() => {
@@ -94,7 +98,7 @@ describe('usePromptImage', () => {
       }),
     );
 
-    const { unmount } = renderHook(() => usePromptImage('c1', 'u1:1'));
+    const { unmount } = renderHook(() => usePromptImage({ engine: 'claude', id: 'c1' }, 'u1:1'));
     unmount();
     await act(async () => {
       deliver(answer());
@@ -113,7 +117,8 @@ describe('usePromptImage', () => {
     );
 
     const { result, rerender } = renderHook(
-      ({ blockId }: { blockId: string | null }) => usePromptImage('c1', blockId),
+      ({ blockId }: { blockId: string | null }) =>
+        usePromptImage({ engine: 'claude', id: 'c1' }, blockId),
       { initialProps: { blockId: 'u1:1' as string | null } },
     );
     rerender({ blockId: null });
@@ -134,7 +139,7 @@ describe('usePromptImage', () => {
       )
       .mockResolvedValueOnce(answer());
 
-    const { result } = renderHook(() => usePromptImage('c1', 'u1:1'));
+    const { result } = renderHook(() => usePromptImage({ engine: 'claude', id: 'c1' }, 'u1:1'));
 
     await waitFor(() => {
       expect(result.current.error?.messageKey).toBe('transcript.error.imageTooLarge');
@@ -154,7 +159,7 @@ describe('usePromptImage', () => {
   it('turns a failure that is no AppError into the unexpected one', async () => {
     vi.spyOn(api, 'bytes').mockRejectedValue(new TypeError('boom'));
 
-    const { result } = renderHook(() => usePromptImage('c1', 'u1:1'));
+    const { result } = renderHook(() => usePromptImage({ engine: 'claude', id: 'c1' }, 'u1:1'));
 
     await waitFor(() => {
       expect(result.current.error?.messageKey).toBe('common.error.unexpected');

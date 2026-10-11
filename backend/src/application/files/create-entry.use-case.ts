@@ -39,7 +39,7 @@ export class CreateEntryUseCase {
   async execute(command: CreateEntryCommand, userId: UserId): Promise<CreatedEntry> {
     const { folders, disk, lock, trail } = this.writing;
     const entry = FilePath.naming(await folders.resolve(command.folder, userId), command.path);
-    const sensitive = confirmSensitive(command.confirmSensitive, entry);
+    const sensitive = confirmSensitive(this.writing.sensitive, command.confirmSensitive, entry);
     const bytes =
       command.kind === 'file' ? encodedWithin(this.writing, entry.relative, command) : null;
     const realPath = await disk.locate(entry);

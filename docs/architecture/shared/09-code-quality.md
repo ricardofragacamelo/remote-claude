@@ -114,7 +114,10 @@ Cada regra estrutural desta documentação tem um verificador. **A violação qu
 | `application-is-framework-free` | `@nestjs/*` em `src/application/` | [01](../backend/01-clean-architecture.md) |
 | `no-outward-dependency` | `domain/` → `application/`; `application/` → `adapter/` | [01](../backend/01-clean-architecture.md) |
 | `no-cross-domain-internals` | caminho profundo de outro domínio, em vez do barril | [02](../backend/02-folder-structure.md) |
-| `sdk-is-isolated` | `@anthropic-ai/*` fora de `adapter/outbound/claude/` | [04](../backend/04-claude-integration.md) |
+| `sdk-is-isolated` | `@anthropic-ai/*` fora de `adapter/outbound/claude/` (e de `adapter/outbound/engines/claude/`, o lugar novo a partir da F1 do plano 28) | [04](../backend/04a-claude.md) |
+| `engine-extension-is-isolated` | importar `*/engines/<motor>/` de fora dele, exceto a composição em `infrastructure/modules/engines/` | [12](12-engines.md) |
+| `engines-do-not-know-each-other` | `engines/<a>/` importando `engines/<b>/` | [12](12-engines.md) |
+| `adapters-do-not-know-each-other` | um adapter importando o adapter de um motor, sem exceção desde a F5 do plano 28 (o `diag` pergunta ao `describe()`, e o `permission` libera o loop pela porta `AgentLoopRelease`) | [12](12-engines.md) |
 | `identity-is-isolated` | SDK de provedor de identidade fora de `adapter/outbound/identity/` | [08](08-authentication.md) |
 | `no-test-in-src` | `*.spec.ts` dentro de `src/` | [06](06-testing-strategy.md) |
 
@@ -128,6 +131,8 @@ Cada regra estrutural desta documentação tem um verificador. **A violação qu
 | `shared-cannot-import-features` | `shared/` importando `features/` | [02](../web/02-folder-structure.md) |
 | `no-literal-colour` | cor literal em classe (`bg-red-500`, `text-white`, `bg-[#…]`, `oklch(…)`) em componente de feature, no `app/` e nos compostos de `shared/components/` — o token do papel (`bg-destructive`) é o caminho | [03](../web/03-ui-system.md#o-sistema-visual) |
 | `icons-only-lucide` | ícone de outra biblioteca (`react-icons`, `@heroicons/*`, `@radix-ui/react-icons`…) em componente, `app/` ou `shared/` | [03](../web/03-ui-system.md#o-sistema-visual) |
+| `core-cannot-import-engines` | `features/`, `shared/` e `app/` (menos `app/engines.ts`, a composição) importando `engines/`, pelo alias ou por caminho relativo | [12](12-engines.md) |
+| `engines-are-isolated` | `engines/<a>/` importando `engines/<b>/`, ou o interior de uma feature (só o barril); um escopo por motor, listado em `WEB_ENGINES` | [12](12-engines.md) |
 
 ### Mobile — `import_lint`
 
@@ -137,6 +142,8 @@ Cada regra estrutural desta documentação tem um verificador. **A violação qu
 | `presentation_cannot_reach_data` | `presentation/` importando `data/` direto, sem passar pelo domínio |
 | `no_cross_feature_internals_*` | caminho profundo entre features — só o barril |
 | `core_cannot_import_features` | `core/` conhecendo uma feature; a seta aponta sempre para `core/` |
+| `core_cannot_import_engines`, `features_cannot_import_engines` | `core/` e `features/` importando `engines/`; só `app/engines.dart`, a composição, pode ([12](12-engines.md)) |
+| `engines_are_isolated` | `engines/<a>/` importando `engines/<b>/` |
 
 `import_lint` **lista as violações e sai 0 de qualquer jeito**. Ele roda atrás de
 `scripts/mobile.mjs arch`, que lê a saída e sai com a verdade — portão que não consegue
@@ -266,7 +273,7 @@ formalidade:
 As regras próprias são específicas deste produto, e existem porque um spike mostrou que o furo
 acontece **em silêncio**: nem `settingSources` omitido nem hook ausente produzem
 erro ou aviso — apenas desligam a proteção. Ver
-[backend/04](../backend/04-claude-integration.md#a-armadilha-do-settingsources).
+[backend/04](../backend/04a-claude.md#a-armadilha-do-settingsources).
 
 **Aviso sem versão corrigida.** A regra das duas checagens de dependência é "atualize a dependência;
 nunca ignore o id". Um aviso que **não tem versão corrigida** não se atualiza, e a exceção é uma
@@ -302,7 +309,7 @@ roda no **portão 11**, com o `contracts:check` e o `i18n:check` (`pnpm check:co
 dele rodam no portão 6. Reprova:
 
 - um `.tsx` da conversa do web (`components/conversation/`, `shared/components/markdown/`) ou um rótulo
-  de `tool-labels.ts` sem entrada no mapa;
+  do classificador de ferramentas do backend (`sessions.tool.*`, plano 28 · F2) sem entrada no mapa;
 - uma entrada `ok` cujo widget, ou o teste que o desenha, o app não tem;
 - uma entrada `pending` cuja fase já está ✅ — e qualquer `pending`, depois que o plano 26 fechar;
 - uma entrada `excluded` cuja decisão não existe ou não está ✅.
@@ -312,13 +319,33 @@ decisão registrada, nunca um comentário.
 
 ---
 
+## O núcleo não fala o nome de um agente
+
+"Nada no núcleo depende de um agente de código" é regra
+([ADR-025](00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)),
+então é verificada por máquina. O `pnpm neutral:check` lê o código do núcleo das três pontas, os schemas
+do contrato e o i18n contra o vocabulário de
+[`scripts/engine-vocabulary.json`](../../../scripts/engine-vocabulary.json). Ele roda no **portão 11**, no
+`pnpm check:contracts-i18n`, e os testes dele rodam no portão 6. Reprova:
+
+- um termo do vocabulário fora do baseline
+  ([`scripts/engine-neutrality-baseline.json`](../../../scripts/engine-neutrality-baseline.json)), ou mais
+  ocorrências do que ele guarda;
+- uma entrada do baseline que ocorre menos do que diz, ou não ocorre mais;
+- uma entrada cuja fase está ✅ no plano 28, ou sem fase.
+
+O baseline só encolhe, e esvazia ao fim do [plano 28](../../plans/28-agent-neutral-core/README.md). O
+que fica fora da leitura, e por quê, está no [12-engines](12-engines.md#o-portão-de-neutralidade).
+
+---
+
 ## Onde cada portão roda
 
 | Momento | Roda | Por quê |
 |---|---|---|
 | **Pre-commit** (`husky` + `lint-staged`) | formatação, lint e `gitleaks` nos arquivos tocados | segundos, pega 80 % |
 | **Pre-push** | typecheck + unit + `jscpd` | evita CI vermelho por descuido |
-| **CI, todo push** | lint, typecheck, unit, cobertura, regras de arquitetura, i18n e a [paridade da conversa](#a-conversa-do-app-contra-a-do-web) | |
+| **CI, todo push** | lint, typecheck, unit, cobertura, regras de arquitetura, i18n, a [paridade da conversa](#a-conversa-do-app-contra-a-do-web) e a [neutralidade](#o-núcleo-não-fala-o-nome-de-um-agente) | |
 | **CI, todo PR** | tudo acima + integração + e2e + segurança (SonarQube: ausente, [D-07](../../plans/05-hardening-operations/decisions.md)) | |
 | **Nightly** | `semgrep` completo | checagem cara, fora do caminho crítico — o `smoke-live` **não** entra: roda sob demanda, sem credencial do Claude no CI ([D-12 do plano 01](../../plans/01-live-session/decisions.md), mantida na [D-11 do plano 05](../../plans/05-hardening-operations/decisions.md#d-11--o-smoke-live-continua-sob-demanda)) |
 

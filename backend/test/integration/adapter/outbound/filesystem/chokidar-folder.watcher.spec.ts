@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { ChangeOrigins, ClaudeWrites, FolderWatches, UserWrites } from '@application/files';
+import { ChangeOrigins, AgentWrites, FolderWatches, UserWrites } from '@application/files';
 import type { LabelledChange, WatchSink, WatchStopReason } from '@application/files';
 import { UserId } from '@domain/auth';
 import { WorkspacePath } from '@domain/workspace';
@@ -68,7 +68,7 @@ describe('the folder watcher over the disk', () => {
       { resolve: (raw: string) => Promise.resolve(WorkspacePath.create(raw)) },
       new ChokidarFolderWatcher(log.logger),
       new ChangeOrigins(
-        new ClaudeWrites(),
+        new AgentWrites(),
         new UserWrites(new SystemClock()),
         new NodeFolderDisk(log.logger),
         new SystemClock(),

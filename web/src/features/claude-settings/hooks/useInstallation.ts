@@ -15,7 +15,7 @@ export interface Installation extends ReadState {
   check(): void;
   readonly checking: boolean;
 
-  /** What the test found, or why it could not run — `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`… */
+  /** What the test found, or why it could not run — `AGENT_UNAVAILABLE`, `AGENT_TIMEOUT`… */
   readonly outcome: ModelCheckOutcome | null;
   readonly checkError: AppError | null;
 }

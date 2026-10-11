@@ -18,7 +18,7 @@ import {
   WorkspaceWatchHandler,
   workspaceUnwatchHandler,
 } from '@adapter/inbound/ws/files/workspace-watch.gateway-handler';
-import { FollowTranscriptUseCase } from '@application/transcript';
+import { FollowTranscriptUseCase, TranscriptStoreRegistry } from '@application/transcript';
 import { ConnectionFollowRelease } from '@adapter/inbound/ws/transcript/connection-follow.release';
 import { SocketFollowSinks } from '@adapter/inbound/ws/transcript/socket-follow.sinks';
 import {
@@ -142,9 +142,13 @@ const HANDLERS = [
     },
     {
       provide: TranscriptFollowHandler,
-      inject: [FollowTranscriptUseCase, SocketFollowSinks, LOGGER],
-      useFactory: (follower: FollowTranscriptUseCase, sinks: SocketFollowSinks, logger: Logger) =>
-        new TranscriptFollowHandler(follower, sinks, logger),
+      inject: [FollowTranscriptUseCase, SocketFollowSinks, LOGGER, TranscriptStoreRegistry],
+      useFactory: (
+        follower: FollowTranscriptUseCase,
+        sinks: SocketFollowSinks,
+        logger: Logger,
+        engines: TranscriptStoreRegistry,
+      ) => new TranscriptFollowHandler(follower, sinks, logger, engines),
     },
     {
       provide: TRANSCRIPT_UNFOLLOW_HANDLER,

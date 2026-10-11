@@ -26,7 +26,7 @@ export interface FolderTab {
 }
 
 /** The views under `md`: one at a time, all inside the same folder tab (06 · D-08). */
-export const MOBILE_VIEWS = ['explorer', 'editor', 'claude', 'panel'] as const;
+export const MOBILE_VIEWS = ['explorer', 'editor', 'agent', 'panel'] as const;
 
 export type MobileView = (typeof MOBILE_VIEWS)[number];
 
@@ -37,7 +37,7 @@ export interface FolderViewProps {
 }
 
 /**
- * A view of the activity bar — Explorer, Search, Claude's sessions.
+ * A view of the activity bar — Explorer, Search, the agent's sessions.
  *
  * Plan 06 holds the places with placeholders; the plan that fills one registers the same id with
  * its component (plans 07, 11 and 08).
@@ -53,12 +53,12 @@ export interface ViewEntry extends RegistryEntry {
   /** The key of what the side bar says while there is no component — named in full. */
   readonly placeholderKey: string;
 
-  /** What the view counts for the folder — Claude's questions waiting (plan 08, B-42). */
+  /** What the view counts for the folder — the agent's questions waiting (plan 08, B-42). */
   readonly badge?: ComponentType<FolderViewProps>;
 }
 
 /**
- * Something said on a folder tab itself — a question of Claude waiting in a tab not on screen
+ * Something said on a folder tab itself — a question of the agent waiting in a tab not on screen
  * (plan 08, B-42). Rendered beside the folder's name; nothing at all when there is nothing to say.
  */
 export interface FolderTabBadgeEntry extends RegistryEntry {

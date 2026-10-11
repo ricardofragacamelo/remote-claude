@@ -7,6 +7,7 @@ library;
 export 'domain/entities/permission_outcome.dart';
 export 'domain/entities/permission_queue.dart';
 export 'domain/entities/permission_request.dart';
+export 'domain/entities/plan_interaction.dart';
 export 'domain/entities/question.dart';
 export 'presentation/pages/permission_page.dart';
 export 'presentation/pages/rules_page.dart';

@@ -26,8 +26,8 @@ export function useActiveFile(folder: string): string | null {
 }
 
 /**
- * Whether the buffer of a file has changes the disk does not — what a chip of Claude's context warns
- * of: Claude reads what is saved, not what is on screen (plan 08, S-250).
+ * Whether the buffer of a file has changes the disk does not — what a chip of the agent's context
+ * warns of: the agent reads what is saved, not what is on screen (plan 08, S-250).
  */
 export function useFileDirty(folder: string, path: string): boolean {
   return useEditorState(folder, (state) => {

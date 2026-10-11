@@ -1,4 +1,4 @@
-/// The commands the Claude installation on the user's machine offers, as the menu shows them.
+/// The commands the engine's installation on the user's machine offers, as the menu shows them.
 ///
 /// Pure Dart. The list is **never** ours: it comes from the installation, already filtered and
 /// ordered by the backend, and an installation with fewer commands shows fewer (S-30). What lives

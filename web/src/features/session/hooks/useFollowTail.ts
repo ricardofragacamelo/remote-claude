@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
-import type { ScrollMemory } from '../store/claude-panel.store';
+import type { ScrollMemory } from '../store/agent-panel.store';
 
 /** How near the end counts as "at the end": a line of slack, so a rounding is not a scroll up. */
 const SLACK_PX = 24;

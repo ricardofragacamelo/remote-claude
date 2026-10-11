@@ -31,7 +31,7 @@ vez e fechar ao fim do plano é uma subida de `v` só, e não cinco
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-08 — O domínio `engine` e os erros neutros 🔲
+### B-08 — O domínio `engine` e os erros neutros ✅
 
 `backend/src/domain/engine/`, sem framework:
 
@@ -49,9 +49,9 @@ Entra também o `EngineCapabilityUnavailableError` (`ENGINE_CAPABILITY_UNAVAILAB
 para o [catálogo](../../architecture/shared/04-errors-and-http.md) e para as chaves de i18n das três
 pontas, pareadas no `i18n-shared.json`. Cenários S-25…S-27.
 
-### B-09 — `AgentEnginePort` e `EngineRegistry` 🔲
+### B-09 — `AgentEnginePort` e `EngineRegistry` ✅
 
-A porta substitui a [claude-session.port.ts](../../../backend/src/application/session/ports/claude-session.port.ts)
+A porta substitui a [claude-session.port.ts](../../../backend/src/application/session/ports/agent-engine.port.ts)
 na forma da [discovery 03 §6.1](../../discovery/03-multiplos-motores-de-agente.md#61-a-porta-de-motor):
 
 - o núcleo obrigatório (`describe`, `start`, `prompt`, `interrupt`, `close`);
@@ -67,9 +67,9 @@ O `SessionEvent` ganha tipo na aplicação: a união dos eventos do contrato, e 
 Configuração `RC_ENGINES_ENABLED` e `RC_ENGINE_DEFAULT`, com `claude` como padrão, validada no boot.
 Cenários S-28…S-30.
 
-### B-10 — O adapter no lugar novo, e a composição 🔲
+### B-10 — O adapter no lugar novo, e a composição ✅
 
-O adapter muda de pasta: `backend/src/adapter/outbound/claude/` → `backend/src/adapter/outbound/engines/claude/`.
+O adapter muda de pasta: `backend/src/adapter/outbound/engines/claude/` → `backend/src/adapter/outbound/engines/claude/`.
 A composição fica em `infrastructure/modules/engines/claude.module.ts` (ex-`claude-sdk.module.ts`), que
 é o único que importa o adapter.
 
@@ -81,7 +81,7 @@ B-09, e a asserção de segurança do ADR-011 continua no `query.factory.ts`. O 
 `04-engine-integration.md` (a porta, as capacidades, como um adapter se registra) mais o anexo
 `04a-claude.md` com o que é do Claude. O roteador do AGENTS aponta para os dois. Cenários S-31, S-32.
 
-### B-11 — `ConversationRef` nas portas e no banco 🔲
+### B-11 — `ConversationRef` nas portas e no banco ✅
 
 `SessionOrigin`, `ResumableConversationSource`, `UndoReach`, `JournalScope`, `LiveConversationSource`,
 `TranscriptOriginSource` e o `TranscriptStore` passam a receber `ConversationRef`. O `TranscriptStore`
@@ -98,7 +98,7 @@ aplicadas não mudam):
 
 A coluna antiga sai numa migration seguinte, na [F7](F7-e2e.md), depois da janela. Cenários S-33…S-35.
 
-### B-12 — O contrato: conversa, motor e capacidades, em `v+1` 🔲
+### B-12 — O contrato: conversa, motor e capacidades, em `v+1` ✅
 
 Em [packages/contracts/schema/](../../../packages/contracts/schema/), com o 05 na mesma entrega:
 
@@ -117,7 +117,7 @@ Em [packages/contracts/schema/](../../../packages/contracts/schema/), com o 05 n
 O servidor emite os dois formatos durante a janela. O `PROTOCOL_VERSION` sobe uma vez aqui e não sobe
 de novo até o fim do plano ([D-08](decisions.md#f1--porta-de-motor-e-conversa)). Cenários S-36…S-38.
 
-### B-13 — O web e o app pela conversa e pelos erros neutros 🔲
+### B-13 — O web e o app pela conversa e pelos erros neutros ✅
 
 O `claudeSessionId` sai do web (9 arquivos: `live-session.store.ts`, `ws-client.ts`,
 `useSessionFrames.ts`, `sessions-view.service.ts`…) e do app (11 arquivos: `resume_controller.dart`,

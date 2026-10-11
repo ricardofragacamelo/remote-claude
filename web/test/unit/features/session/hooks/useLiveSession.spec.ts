@@ -112,10 +112,12 @@ describe('driving a session', () => {
       result.current.interrupt();
       result.current.setModel('claude-opus-5');
       result.current.setPermissionMode('plan');
+      result.current.compact();
       result.current.close();
     });
 
     expect(sentTypes()).not.toContain('session.prompt');
+    expect(sentTypes()).not.toContain('session.compact');
     expect(sentTypes()).not.toContain('session.close');
   });
 });

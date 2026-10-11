@@ -78,7 +78,7 @@ Onde o bug mora. Zero, um, limite exato, limite ± 1, vazio, máximo, estouro.
 **É aqui que a dimensão `branches` da cobertura reprova.** Cada `throw`, cada `catch`, cada
 retorno de erro precisa ser alcançado por um teste. Neste sistema o caminho de erro é o que
 não pode falhar: permissão negada, timeout, workspace fora da allowlist, socket caído,
-`CLAUDE_UNAVAILABLE`.
+`AGENT_UNAVAILABLE`.
 
 ### 4. Transições de estado
 Para tudo que tem máquina de estados (sessão, permission request, connection): teste cada

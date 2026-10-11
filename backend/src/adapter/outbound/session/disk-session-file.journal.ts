@@ -58,7 +58,7 @@ export class DiskSessionFileJournal implements SessionFileJournal {
       await this.files.saveCheckpointIfAbsent(
         TurnFileCheckpoint.capture({
           sessionId,
-          claudeSessionId: scope.claudeSessionId,
+          conversation: scope.conversation,
           promptId,
           path,
           existedBefore: snapshot.kind === 'absent' ? 'absent' : 'present',
@@ -91,7 +91,7 @@ export class DiskSessionFileJournal implements SessionFileJournal {
       await this.files.saveState(
         SessionFileState.record({
           sessionId,
-          claudeSessionId: scope.claudeSessionId,
+          conversation: scope.conversation,
           path,
           hash: measured.hash,
           mtime: measured.mtime,
@@ -101,7 +101,12 @@ export class DiskSessionFileJournal implements SessionFileJournal {
       );
 
       // After the baseline, so whoever hears it can rely on the journal saying the same thing.
-      this.events.fileStateRecorded({ path, hash: measured.hash, at: this.clock.now() });
+      this.events.fileStateRecorded({
+        path,
+        hash: measured.hash,
+        at: this.clock.now(),
+        engine: scope.conversation.engine.value,
+      });
     } catch (error) {
       this.fail(sessionId, path, 'state', error);
     }

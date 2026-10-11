@@ -1,11 +1,11 @@
 {
-  "$comment": "Every element the web draws in a message of the conversation, and its widget in the app — plan 26, B-04 (docs/plans/26-mobile-conversation-parity/F1-parity-map.md). `pnpm render:check` reads it: a component of the web roots or a label of the label sources with no entry fails; an `ok` entry names the widget (`path#Name`) and the widget test that draws it; a `pending` one names the phase that closes it, which must not be ✅ yet; an `excluded` one names a decision of plan 26 that is ✅. A component added to the web's conversation enters here in the same delivery (web/03-ui-system).",
+  "$comment": "Every element the web draws in a message of the conversation, and its widget in the app — plan 26, B-04 (docs/plans/26-mobile-conversation-parity/F1-parity-map.md). `pnpm render:check` reads it: a component of the web roots or a label of the label sources — the `sessions.tool.*` keys the backend's tool classifier emits (plan 28, B-18) — with no entry fails; an `ok` entry names the widget (`path#Name`) and the widget test that draws it; a `pending` one names the phase that closes it, which must not be ✅ yet; an `excluded` one names a decision of plan 26 that is ✅. A component added to the web's conversation enters here in the same delivery (web/03-ui-system).",
   "webRoots": [
     "web/src/features/session/components/conversation",
     "web/src/shared/components/markdown"
   ],
-  "labelSources": ["web/src/features/session/lib/tool-labels.ts"],
-  "labelPattern": "'((?:sessions\\.tool|permission\\.question)\\.[A-Za-z]+)'",
+  "labelSources": ["backend/src/adapter/outbound/engines/claude/tool-classifier.ts"],
+  "labelPattern": "'(sessions\\.tool\\.[A-Za-z]+)'",
   "pendingAllowed": true,
   "entries": [
     {
@@ -305,167 +305,195 @@
       "state": "ok"
     },
     {
-      "element": "label.read",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.read",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.fileRead",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.fileRead",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.edit",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.edit",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.fileEdit",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.fileEdit",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.multiEdit",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.multiEdit",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.fileEditMany",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.fileEditMany",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.write",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.write",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.fileEditCell",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.fileEditCell",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.notebookEdit",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.notebookEdit",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.fileWrite",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.fileWrite",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.bash",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.bash",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.shell",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.shell",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.grep",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.grep",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.shellOutput",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.shellOutput",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.grepIn",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.grepIn",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.search",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.search",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.glob",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.glob",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.searchIn",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.searchIn",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "label.searchFiles",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.searchFiles",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
       "element": "label.webFetch",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
       "label": "sessions.tool.webFetch",
-      "state": "pending",
-      "phase": "F4"
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
       "element": "label.webSearch",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
       "label": "sessions.tool.webSearch",
-      "state": "pending",
-      "phase": "F4"
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
       "element": "label.agent",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
       "label": "sessions.tool.agent",
-      "state": "pending",
-      "phase": "F4"
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.exitPlan",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.exitPlan",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.question",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.question",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.todoWrite",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.todoWrite",
-      "state": "pending",
-      "phase": "F4"
+      "element": "label.questions",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.questions",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "label.plan",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.plan",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "label.tasksWrite",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.tasksWrite",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
       "element": "label.taskCreate",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
       "label": "sessions.tool.taskCreate",
-      "state": "pending",
-      "phase": "F4"
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
       "element": "label.taskUpdate",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
       "label": "sessions.tool.taskUpdate",
-      "state": "pending",
-      "phase": "F4"
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
       "element": "label.taskGet",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
       "label": "sessions.tool.taskGet",
-      "state": "pending",
-      "phase": "F4"
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
       "element": "label.taskList",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
       "label": "sessions.tool.taskList",
-      "state": "pending",
-      "phase": "F4"
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
+      "state": "ok"
     },
     {
-      "element": "label.titled",
-      "web": "web/src/features/session/lib/tool-labels.ts#toolLabel",
-      "label": "sessions.tool.titled",
-      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#toolLabel",
-      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "element": "label.mcp",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
+      "label": "sessions.tool.mcp",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
       "state": "ok"
     },
     {
       "element": "label.other",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
+      "web": "web/src/shared/lib/tool-label.ts#toolLabelText",
       "label": "sessions.tool.other",
-      "state": "pending",
-      "phase": "F4"
-    },
-    {
-      "element": "label.mcp",
-      "web": "web/src/features/session/lib/tool-labels.ts#LABELLERS",
-      "label": "sessions.tool.mcp",
-      "state": "pending",
-      "phase": "F4"
-    },
-    {
-      "element": "label.question.asked",
-      "web": "web/src/features/session/lib/tool-labels.ts#questionLabel",
-      "label": "permission.question.asked",
-      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#questionLabel",
-      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
       "state": "ok"
     },
     {
-      "element": "label.question.askedMany",
-      "web": "web/src/features/session/lib/tool-labels.ts#questionLabel",
-      "label": "permission.question.askedMany",
-      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#questionLabel",
-      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "element": "label.titled",
+      "web": "web/src/shared/lib/tool-label.ts#toolLine",
+      "label": "sessions.tool.titled",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_label.dart#toolLabelText",
+      "appTest": "mobile/test/widget/features/session/tool_label_test.dart",
       "state": "ok"
     }
   ]

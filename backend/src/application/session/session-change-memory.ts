@@ -1,32 +1,33 @@
-import { diffablePathOf, isDiffableTool } from '@domain/session';
+import type { CanonicalTool, FileChange, ToolKind } from '@domain/engine';
+import { diffableChangeOf } from '@domain/session';
 import type { Session } from '@domain/session';
 
 /** How many tool invocations of one session are remembered — the oldest go first. */
 export const MAX_REMEMBERED_TOOLS = 2_000;
 
 /**
- * How much of the input of the file tools of one session is remembered, in characters.
+ * How much of the changes of one session is remembered, in characters.
  *
- * A `Write` carries the whole file. Past this, the oldest invocations are forgotten, and a diff
- * asked of one of them is `TOOL_USE_NOT_FOUND` — the honest answer for an input nobody kept.
+ * A `write` carries the whole file. Past this, the oldest invocations are forgotten, and a diff
+ * asked of one of them is `TOOL_USE_NOT_FOUND` — the honest answer for a change nobody kept.
  */
 export const MAX_REMEMBERED_INPUT_CHARS = 16 * 1024 * 1024;
 
-/** A tool invocation of a live session, as the `PreToolUse` hook reported it. */
+/** A tool invocation of a live session, as the hook before each call reported it. */
 export interface RememberedInvocation {
   readonly toolUseId: string;
-  readonly toolName: string;
-  readonly input: Readonly<Record<string, unknown>>;
+  /** The call, as the core reads it — its change is what the diff is made of. */
+  readonly tool: CanonicalTool;
   readonly promptId: string | null;
 }
 
 /** One remembered invocation, and where it stands among the others. */
 interface RememberedTool {
   readonly toolUseId: string;
-  readonly toolName: string;
+  readonly kind: ToolKind;
 
-  /** Only a file tool's: the input of anything else is the trail's, and nothing here needs it. */
-  readonly input: Readonly<Record<string, unknown>>;
+  /** Only a diffable call's: what anything else changes is the trail's, and nothing here needs it. */
+  readonly change: FileChange | null;
 
   /** The turn — `unknown` when the hook carried none, as the journal names it. */
   readonly promptId: string;
@@ -38,8 +39,9 @@ interface RememberedTool {
 /** A tool invocation, with what its diff needs to know of the others. */
 export interface RecordedTool {
   readonly toolUseId: string;
-  readonly toolName: string;
-  readonly input: Readonly<Record<string, unknown>>;
+  readonly kind: ToolKind;
+  /** The change its diff is made of — `null` for a call with no diff. */
+  readonly change: FileChange | null;
   readonly promptId: string;
 
   /** No earlier write of the same turn reached the same file. */
@@ -75,7 +77,7 @@ export interface Rejection {
 /**
  * What a live session's changes need to remember that the journal does not keep — plan 08, F3.
  *
- * The input of each file tool: the diff of a tool is made of it ([D-03](../../../../docs/plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)),
+ * The change of each call that writes a file: the diff of a tool is made of it ([D-03](../../../../docs/plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)),
  * and the trail that holds it is write-only to this module. And what each rejection replaced, so it
  * can be undone.
  *
@@ -99,17 +101,16 @@ export class SessionChangeMemory {
     const order = (this.orders.get(session) ?? 0) + 1;
     this.orders.set(session, order);
 
-    const diffable = isDiffableTool(invocation.toolName);
-    const input = diffable ? invocation.input : {};
+    const change = diffableChangeOf(invocation.tool);
 
     tools.push({
       toolUseId: invocation.toolUseId,
-      toolName: invocation.toolName,
-      input,
+      kind: invocation.tool.kind,
+      change,
       promptId: invocation.promptId ?? 'unknown',
-      path: diffable ? diffablePathOf(invocation.input) : null,
+      path: change?.path ?? null,
       order,
-      size: diffable ? JSON.stringify(input).length : 0,
+      size: change === null ? 0 : JSON.stringify(change).length,
     });
 
     this.tools.set(session, bounded(tools));
@@ -130,8 +131,8 @@ export class SessionChangeMemory {
 
     return {
       toolUseId: tool.toolUseId,
-      toolName: tool.toolName,
-      input: tool.input,
+      kind: tool.kind,
+      change: tool.change,
       promptId: tool.promptId,
       firstTouchInTurn: !sameFile.some(
         (other) => other.promptId === tool.promptId && other.order < tool.order,

@@ -10,7 +10,7 @@ import { setEngineLoader } from '@/features/editor/lib/engine-loader';
 import { createPlainEngine } from '@/features/editor/lib/plain-engine';
 import { useCommands } from '@/features/commands';
 import { useTheme } from '@/shared/hooks/useTheme';
-import { claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentContextTargets } from '@/shared/lib/files-drag';
 import { VIEW_OPTIONS } from '../../../../support/code-editor-contract';
 import { FOLDER, editorState } from '../../../../support/editor';
 import { fakeDisk } from '../../../../support/editor-disk';
@@ -179,7 +179,7 @@ describe('what an editor of a file is wired to', () => {
       },
     };
     const add = vi.fn();
-    const stop = claudeContextTargets.register({ id: 'chat', position: 1, add });
+    const stop = agentContextTargets.register({ id: 'chat', position: 1, add });
     const keys = renderHook(
       () => {
         useCommands([

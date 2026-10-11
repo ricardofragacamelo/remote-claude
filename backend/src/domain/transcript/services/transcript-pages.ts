@@ -43,7 +43,7 @@ export function pageOfSessions<T extends TranscriptSession>(
     items,
     next:
       rest.length > limit && last !== undefined
-        ? { lastModified: last.lastModified, id: last.id.value }
+        ? { lastModified: last.lastModified, id: last.id.key }
         : null,
   };
 }
@@ -88,14 +88,14 @@ function newestFirst(left: TranscriptSession, right: TranscriptSession): number 
     return right.lastModified - left.lastModified;
   }
 
-  return compare(right.id.value, left.id.value);
+  return compare(right.id.key, left.id.key);
 }
 
 /** Whether a session sorts strictly after the cursor. */
 function isAfter(session: TranscriptSession, cursor: SessionListCursor): boolean {
   return (
     session.lastModified < cursor.lastModified ||
-    (session.lastModified === cursor.lastModified && compare(session.id.value, cursor.id) < 0)
+    (session.lastModified === cursor.lastModified && compare(session.id.key, cursor.id) < 0)
   );
 }
 

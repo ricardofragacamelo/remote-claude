@@ -2,7 +2,9 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AppError } from '@/shared/api/errors';
-import { toolLabel } from '../lib/tool-labels';
+import { useStableConversation } from '@/shared/hooks/useStableConversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
+import { toolLine } from '@/shared/lib/tool-label';
 import { exportConversation } from '../services/conversation-export.service';
 
 /** Where an export is. */
@@ -34,33 +36,28 @@ function save(text: string, name: string): void {
  * the transcript the person can already read — all of them, newest page first, with how many came so
  * far — and saved only once every page arrived: a failure halfway saves nothing (S-182).
  */
-export function useExportConversation(
-  conversationId: string | null,
-  folder: string,
-): ConversationExport {
+export function useExportConversation(asked: ConversationRef | null): ConversationExport {
+  const conversation = useStableConversation(asked);
   const { t } = useTranslation();
   const [state, setState] = useState<ExportState>({ kind: 'idle' });
 
   const run = useCallback(
     ({ outputs }: { readonly outputs: boolean }) => {
-      if (conversationId === null) {
+      if (conversation === null) {
         return;
       }
 
       const read = async (): Promise<void> => {
         const markdown = await exportConversation(
-          conversationId,
+          conversation,
           {
-            title: t('sessions.export.title', { conversationId }),
+            title: t('sessions.export.title', { conversationId: conversation.id }),
             you: t('session.role.user'),
-            claude: t('session.role.assistant'),
+            agent: t('session.role.assistant'),
             thinking: t('sessions.export.thinking'),
             output: t('sessions.export.output'),
             compacted: t('sessions.export.compacted'),
-            tool: (tool) => {
-              const label = toolLabel(tool, folder, new Set());
-              return t(label.key, label.params);
-            },
+            tool: (tool) => toolLine(tool, t).text,
           },
           { outputs },
           (pages) => {
@@ -68,7 +65,7 @@ export function useExportConversation(
           },
         );
 
-        save(markdown, `conversation-${conversationId}.md`);
+        save(markdown, `conversation-${conversation.id}.md`);
         setState({ kind: 'idle' });
       };
 
@@ -76,7 +73,7 @@ export function useExportConversation(
         setState({ kind: 'failed', error: error as AppError });
       });
     },
-    [conversationId, folder, t],
+    [conversation, t],
   );
 
   return { state, run };

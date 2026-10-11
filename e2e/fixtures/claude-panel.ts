@@ -5,6 +5,8 @@ import type { Locator, Page } from '@playwright/test';
 
 import type { AuthenticatedUser } from './auth';
 import { environment } from './environment';
+import { conversationIn } from './conversation';
+import type { ConversationRef } from './conversation';
 import { attachFrom, connected } from './live-session';
 
 /**
@@ -22,7 +24,7 @@ import { attachFrom, connected } from './live-session';
 
 /** The panel of Claude of the folder tab on screen. */
 export function panelOf(page: Page): Locator {
-  return page.getByRole('complementary', { name: 'Claude' });
+  return page.getByRole('complementary', { name: 'Claude Code' });
 }
 
 /** The box a person writes the prompt in, at the foot of the panel. */
@@ -153,11 +155,33 @@ export function waitingPrompts(page: Page): Locator {
 }
 
 /**
+ * How the label of a call of each tool the scenarios ask about begins — what a card is named by
+ * since the label comes from the backend, by kind (plan 28, B-18): "Permission for Shell: ls". The
+ * scenarios keep naming the tool; this is the one place that knows its label.
+ */
+const LABEL_START: Readonly<Record<string, string>> = {
+  Bash: 'Shell: ',
+  Read: 'Read ',
+  Write: 'Write ',
+  Edit: 'Edit ',
+  MultiEdit: 'Edit ',
+  NotebookEdit: 'Edit the notebook ',
+  WebFetch: 'Fetch ',
+  WebSearch: 'Search the web ',
+};
+
+/** The accessible name of the card that asks about a call of [toolName]. */
+function cardName(toolName: string): RegExp {
+  const start = (LABEL_START[toolName] ?? toolName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^Permission for ${start}`);
+}
+
+/**
  * The question on screen about one tool — its card, in the conversation where the tool is, or at
  * its end until the tool's line arrives (plan 09, B-23).
  */
 export function cardFor(page: Page, toolName: string): Locator {
-  return panelOf(page).getByRole('listitem', { name: `Permission for ${toolName}` });
+  return panelOf(page).getByRole('listitem', { name: cardName(toolName) });
 }
 
 /**
@@ -166,12 +190,12 @@ export function cardFor(page: Page, toolName: string): Locator {
  * its first tool, so a question about a later tool comes before that tool's line.
  */
 export function inlineCardFor(page: Page, toolName: string): Locator {
-  return conversationScroller(page).getByRole('listitem', { name: `Permission for ${toolName}` });
+  return conversationScroller(page).getByRole('listitem', { name: cardName(toolName) });
 }
 
 /** The card of a question standing exactly where the line of its tool would be. */
 export function cardInPlaceOf(page: Page, toolName: string): Locator {
-  return conversationOf(page).getByRole('listitem', { name: `Permission for ${toolName}` });
+  return conversationOf(page).getByRole('listitem', { name: cardName(toolName) });
 }
 
 /**
@@ -298,7 +322,7 @@ export async function send(page: Page, text: string): Promise<void> {
 }
 
 /**
- * The compact row of one tool — "Read notes.md", "Bash: ls" — in the state given.
+ * The compact row of one tool — "Read notes.md", "Shell: ls" — in the state given.
  *
  * @param label the line of the row, or a pattern of it: a replay keeps the recording's input, so a
  *   path the replay does not move is the recording's `/workspace/…`
@@ -348,13 +372,13 @@ export async function recordedTurn(
 export async function conversationOfSession(
   user: AuthenticatedUser,
   sessionId: string,
-): Promise<string> {
+): Promise<ConversationRef> {
   const socket = await connected(user);
   try {
     await attachFrom(socket, sessionId, 0);
     const attached = socket.frames.find((frame) => frame.type === 'session.attached');
 
-    return String((attached?.payload as { claudeSessionId?: unknown }).claudeSessionId);
+    return conversationIn((attached?.payload as { conversation?: unknown }).conversation);
   } finally {
     socket.close();
   }

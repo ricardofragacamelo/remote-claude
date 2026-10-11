@@ -9,6 +9,7 @@ import { useContextSet } from '../../hooks/useContextSet';
 import { useDraft } from '../../hooks/useDraft';
 import type { Draft } from '../../hooks/useDraft';
 import { unsendable } from '../../lib/context-set';
+import { offeredEfforts } from '../../lib/effort-levels';
 import { useKnownModels } from '../../store/known-models.store';
 import type { InstallationModel } from '../../types/insight';
 import { ChatComposer } from '../composer/ChatComposer';
@@ -38,7 +39,7 @@ export function DraftView({ folder, tabKey }: DraftViewProps): React.JSX.Element
   const { t } = useTranslation();
   const draft = useDraft(folder, tabKey, folder);
   const known = useStore(useKnownModels, (state) => state.byFolder[folder]) ?? NO_MODELS;
-  const focus = useShortcut('claude.focusComposer');
+  const focus = useShortcut('agent.focusComposer');
   const context = useContextSet(folder, tabKey, null);
   const [held, setHeld] = useState(0);
 
@@ -93,7 +94,10 @@ export function DraftView({ folder, tabKey }: DraftViewProps): React.JSX.Element
   );
 }
 
-/** The choices of a draft's bar: the mode, the model and — for a model that takes it — the effort. */
+/**
+ * The choices of a draft's bar: the mode — among the ones the engine announces —, the model and — for
+ * a model and an engine that take it — the effort (plan 28, B-27, B-28).
+ */
 function draftBarOf(
   draft: Draft,
   known: readonly InstallationModel[],
@@ -111,7 +115,7 @@ function draftBarOf(
       />
       <EffortPicker
         sub={sub}
-        model={knownModel(known, draft.choices.model)}
+        levels={offeredEfforts(draft.capabilities, knownModel(known, draft.choices.model))}
         current={draft.choices.effort}
         onPick={(effort) => {
           draft.choose({ effort });
@@ -124,6 +128,7 @@ function draftBarOf(
     label: t('sessions.draft.choices'),
     mode: (
       <ModePicker
+        offered={draft.modes}
         current={draft.choices.mode}
         onPick={(mode) => {
           draft.choose({ mode });

@@ -154,7 +154,7 @@ canUseTool bloqueia o loop
 ```
 
 Detalhes de idempotência e das regras não negociáveis:
-[04-claude-integration.md](04-claude-integration.md#a-ponte-de-permissão) e
+[04a-claude.md](04a-claude.md#a-ponte-de-permissão) e
 [o contrato](../shared/05-websocket-protocol.md#o-fluxo-de-permissão).
 
 ---
@@ -213,7 +213,7 @@ sockets no seu hook — se fechasse, ninguém saberia dizer se foi antes ou depo
 vezes, devolve a promessa da primeira.
 
 O subprocesso que escapar mesmo assim — backend morto com `kill -9` — é encontrado no boot seguinte
-pela marca no ambiente ([backend/04](04-claude-integration.md#ciclo-de-vida-e-recursos)).
+pela marca no ambiente ([backend/04](04a-claude.md#ciclo-de-vida-e-recursos)).
 
 ---
 

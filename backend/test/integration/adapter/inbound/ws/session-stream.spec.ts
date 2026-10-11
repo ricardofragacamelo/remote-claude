@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
 import type { ScriptRecord } from '../../../../fakes/agent-sdk/scripted-query';
 import { startPostgres } from '../../../../support/containers/postgres';
@@ -127,7 +127,7 @@ describe('a live session over the gateway', () => {
     expect(ack).toMatchObject({ kind: 'ack', type: 'command.accepted' });
 
     const started = await until(socket, 'session.started');
-    expect(started.payload).toMatchObject({ workspacePath: root, permissionMode: 'default' });
+    expect(started.payload).toMatchObject({ workspacePath: root, permissionMode: 'ask' });
     expect(started.seq).toBe(1);
   });
 

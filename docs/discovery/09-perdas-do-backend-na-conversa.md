@@ -71,7 +71,7 @@ fixtures gravadas, e conferido contra os redutores e os widgets das duas pontas.
 
 **A perda é maior do que a antiga F6 listava.** O `SDKMessage` tem 39 variantes. O mapper converte 8 em
 eventos e cala 9 de propósito. As outras **22 caem no `default`**: viram uma linha de `warn` no log e
-mais nada ([session-runner.ts:474-481](../../backend/src/adapter/outbound/claude/session-runner.ts#L474-L481)).
+mais nada ([session-runner.ts:474-481](../../backend/src/adapter/outbound/engines/claude/session-runner.ts#L474-L481)).
 Entre elas estão a saída de slash command, o aviso de troca de modelo, o banner de hook, a notificação
 do CLI e a negação automática de permissão (§4).
 
@@ -79,7 +79,7 @@ do CLI e a negação automática de permissão (§4).
 
 1. **"A compactação some do histórico porque `historicalEvents` devolve `[]`."** Isso é verdade, mas
    não é o único motivo. O adapter chama `getSessionMessages` **sem** `includeSystemMessages`
-   ([transcript.adapter.ts:311](../../backend/src/adapter/outbound/claude/transcript.adapter.ts#L311)).
+   ([transcript.adapter.ts:311](../../backend/src/adapter/outbound/engines/claude/transcript.adapter.ts#L311)).
    Por isso nenhuma entrada `system` chega ao mapper. A correção mexe nos dois lugares, e o custo da
    leitura com as mensagens de sistema precisa ser medido.
 2. **"O `hook_response` traz o `systemMessage`."** Não traz. O tipo tem `output`, `stdout`, `stderr`,
@@ -149,7 +149,7 @@ compactações, a segunda substitui a primeira.
 
 A fonte é o `sdk.d.ts` do 0.3.277 (a união `SDKMessage`, linha 5025), mais o `command_lifecycle`,
 que o CLI emite sem estar na união. "Hoje" é o
-[sdk-message.mapper.ts](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts) em
+[sdk-message.mapper.ts](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts) em
 2026-10-09. "Proposta" é a recomendação; quem decide é a D-04.
 
 ### 4.1 Mapeadas hoje
@@ -163,7 +163,7 @@ que o CLI emite sem estar na união. "Hoje" é o
 | `result` | `turn.completed` | o erro: `subtype`, `is_error`, `errors[]`, `permission_denials` | `turn.completed` ganha `outcome` canônico (`failed`, `limitReached`, `budgetExceeded`…, nunca o subtipo do SDK) **e** um aviso `turn.failed` com o texto do `errors[]` cortado |
 | `system:compact_boundary` | `session.compacted` | só ao vivo (§6); sem id estável | ganha `compactionId` (o `uuid`) e entra no histórico |
 | `system:api_retry` | `statusChanged: thinking` | tentativa, máximo, espera, `error_status` | mantém o status e acrescenta o aviso `request.retrying` com os números em `params`. Medir o volume num caso real (D-05) |
-| `rate_limit_event` | nada, de propósito ([mapper:85-95](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L85-L95)) | o terminal avisa que o limite está perto ou foi atingido | aviso `usage.limited` **só** quando o `rate_limit_info` diz que o limite foi atingido ou está perto; nada quando o estado é normal. Medir os campos (D-05) |
+| `rate_limit_event` | nada, de propósito ([mapper:85-95](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L85-L95)) | o terminal avisa que o limite está perto ou foi atingido | aviso `usage.limited` **só** quando o `rate_limit_info` diz que o limite foi atingido ou está perto; nada quando o estado é normal. Medir os campos (D-05) |
 
 ### 4.2 Quietas hoje, de propósito
 
@@ -207,7 +207,7 @@ do SDK trouxer, e isso aparece na tela pela R3 (§7).
 
 ## 5. Perdas dentro da mensagem de usuário
 
-O `fromUser`/`userEvents` ([mapper:352-395](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L352-L395))
+O `fromUser`/`userEvents` ([mapper:352-395](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L352-L395))
 trata toda mensagem de usuário sem `tool_result` como prompt.
 
 | Caso | Hoje | Medido? | Proposta |
@@ -217,7 +217,7 @@ trata toda mensagem de usuário sem `tool_result` como prompt.
 | corpo de skill (`isSynthetic`) | provavelmente um balão "Você" com o `SKILL.md` | não: precisa da fixture `skill-turn` | `injected: { kind: 'instructions', name }` com o `parentToolUseId` do `Skill`; linha dobrada "Skill *x* carregada" sob o card (é a D-04 do plano 26) |
 | expansão de `/comando` (`<command-name>`, `<command-message>`, `<command-args>`) | tags cruas, ao vivo ou no histórico | não | o prompt vira o `/comando args` digitado; nenhuma tag chega ao cliente |
 | prompt de outro dispositivo (`isReplay` sem tag) | balão "Você" | sim | mantém: é o que mostra o que foi enviado do outro aparelho |
-| `image` **dentro** de `tool_result` | descartada: `resultText` só lê texto ([mapper:423-427](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L423-L427)) | não: precisa da fixture `mcp-media-result-turn` | marcador em `tool.completed.attachments[]` (`kind: 'image'`). A imagem está **aninhada** no bloco, então o `blockId` precisa de um terceiro nível (`<uuid>:<índice>:<sub-índice>`), e o índice da rota ([transcript-contents.ts](../../backend/src/adapter/outbound/claude/transcript-contents.ts)) passa a olhar dentro do `tool_result` |
+| `image` **dentro** de `tool_result` | descartada: `resultText` só lê texto ([mapper:423-427](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L423-L427)) | não: precisa da fixture `mcp-media-result-turn` | marcador em `tool.completed.attachments[]` (`kind: 'image'`). A imagem está **aninhada** no bloco, então o `blockId` precisa de um terceiro nível (`<uuid>:<índice>:<sub-índice>`), e o índice da rota ([transcript-contents.ts](../../backend/src/adapter/outbound/engines/claude/transcript-contents.ts)) passa a olhar dentro do `tool_result` |
 | `resource` de texto | descartado | não | o texto entra no resumo e na saída inteira, com o URI como cabeçalho |
 | `resource_link` | descartado | não | `tool.completed.attachments[]` (`kind: 'link'`, `uri`, `title`), mostrado como **texto**. Vira link só se for `http`/`https`, com confirmação. `javascript:` nunca vira link |
 | bloco que não é `tool_result` numa mensagem com `tool_result` | descartado | não | medir se o CLI produz isso. Se produzir, vira `message.completed` à parte |
@@ -227,8 +227,8 @@ trata toda mensagem de usuário sem `tool_result` como prompt.
 
 | Perda | Onde | Proposta |
 |---|---|---|
-| nenhuma entrada `system` é lida | [transcript.adapter.ts:311](../../backend/src/adapter/outbound/claude/transcript.adapter.ts#L311): `getSessionMessages` sem `includeSystemMessages` | ler com `includeSystemMessages: true` e medir o custo (o SDK reparsa o JSONL inteiro a cada leitura, [transcript-reads.ts](../../backend/src/adapter/outbound/claude/transcript-reads.ts)) |
-| `system` → `[]` | [`historicalEvents`, mapper:455-480](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L455-L480) | passa pelas **mesmas** funções do ao vivo (`fromSystem`), como o plano 22 fez com `assistant` e `user` |
+| nenhuma entrada `system` é lida | [transcript.adapter.ts:311](../../backend/src/adapter/outbound/engines/claude/transcript.adapter.ts#L311): `getSessionMessages` sem `includeSystemMessages` | ler com `includeSystemMessages: true` e medir o custo (o SDK reparsa o JSONL inteiro a cada leitura, [transcript-reads.ts](../../backend/src/adapter/outbound/engines/claude/transcript-reads.ts)) |
+| `system` → `[]` | [`historicalEvents`, mapper:455-480](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L455-L480) | passa pelas **mesmas** funções do ao vivo (`fromSystem`), como o plano 22 fez com `assistant` e `user` |
 | os subtipos do JSONL não são os do stream | — | o transcript grava `system` com subtipos próprios. **Medir** quais aparecem (compactação, saída de comando, informativo, erro de API) e mapear cada um para o mesmo evento do ao vivo. O que não tiver par vai para a regra da R3 |
 | compactação sem id estável | app: `CompactionLine.entryId` = `compaction:$seq` ([conversation_entry.dart:309](../../mobile/lib/features/session/domain/entities/conversation_entry.dart#L309)), e o histórico usa `seq = 0`. Web: `id: seq ?? frame.id` ([conversation-reducer.ts:604](../../web/src/features/session/services/conversation-reducer.ts#L604)) | `compactionId` no contrato, e as duas pontas passam a usar esse id. O web tem que ser conferido no histórico |
 | a cadeia depois do `/compact` é outra | [scripted-transcripts.ts `compactedChain`](../../backend/test/fakes/agent-sdk/scripted-transcripts.ts) | medir onde o `compact_boundary` e o resumo ficam na cadeia que o SDK reconstrói, para a linha cair no mesmo lugar em que caiu ao vivo |
@@ -246,10 +246,10 @@ nem no log.
 
 | # | Ponta | Caso | Onde | Hoje | Proposta |
 |---|---|---|---|---|---|
-| U-01 | backend | tipo de `SDKMessage` desconhecido | [mapper:96-99](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L96-L99) | `warn` | `session.notice` `unknown` (§7.1) |
-| U-02 | backend | subtipo de `system` desconhecido | [mapper:143-146](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L143-L146) | `warn` | idem |
-| U-03 | backend | entrada do histórico de tipo desconhecido, e todo `system` | [mapper:476](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L476) | `[]`, **sem log** | idem, pelo mesmo caminho do ao vivo (§7.2) |
-| U-04 | backend | bloco do `tool_result` que não é texto | [`resultText`, mapper:423-427](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L423-L427) | descartado, **sem log** | os conhecidos viram `attachments` (§5); o resto vira um anexo `unknown` com o tipo |
+| U-01 | backend | tipo de `SDKMessage` desconhecido | [mapper:96-99](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L96-L99) | `warn` | `session.notice` `unknown` (§7.1) |
+| U-02 | backend | subtipo de `system` desconhecido | [mapper:143-146](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L143-L146) | `warn` | idem |
+| U-03 | backend | entrada do histórico de tipo desconhecido, e todo `system` | [mapper:476](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L476) | `[]`, **sem log** | idem, pelo mesmo caminho do ao vivo (§7.2) |
+| U-04 | backend | bloco do `tool_result` que não é texto | [`resultText`, mapper:423-427](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L423-L427) | descartado, **sem log** | os conhecidos viram `attachments` (§5); o resto vira um anexo `unknown` com o tipo |
 | U-05 | web e app | bloco de conteúdo de tipo desconhecido (o backend já o repassa com o `type`) | web [`BLOCK_KINDS`](../../web/src/features/session/services/conversation-reducer.ts#L332-L337); app `_finished` e `_thoughtOf` ([session_event_mapper.dart:226-288](../../mobile/lib/features/session/data/mappers/session_event_mapper.dart#L226-L288)) | descartado | bloco genérico, na ordem (§7.3) |
 | U-06 | web e app | evento WS de tipo desconhecido | web [`readEvent`:63-72](../../web/src/features/session/services/conversation-reducer.ts#L63-L72); app [`_pongOr`:171-174](../../mobile/lib/features/session/data/mappers/session_event_mapper.dart#L171-L174) | estado sem mudança / `UnreadEvent`; o `seq` avança | linha genérica, uma por tipo (§7.4, D-02) |
 | U-07 | web e app | valor de enum desconhecido num evento conhecido: o `status` da sessão, o `status` da tool, o motivo do `session.closed`, o resultado do `session.rewound` | web `STATUSES` (:163-175) e `TOOL_OUTCOMES` (:504-520); app :177-188, :325-333, :391-402, :409 | web: ignora o campo ou a mudança; app: o evento **inteiro** vira `UnreadEvent` | o evento é aplicado com o valor neutro (o card fica no estado anterior), e uma linha genérica diz qual valor não foi entendido |
@@ -278,7 +278,7 @@ Hoje: `{ events: [], unknown: 'system:xyz' }` e um `warn`. Proposta:
 - `text` **só** quando a mensagem tem um campo de texto conhecido no nível de cima (`content`, `text`,
   `message`, `error` ou `reason`, como string). Vai cortado (p. ex. 2 000 caracteres) e marcado como não
   confiável. **Nunca** o JSON da mensagem: o mesmo motivo pelo qual o `describe` não loga o payload
-  ([mapper:502](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L502)) vale para o
+  ([mapper:502](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L502)) vale para o
   buffer de replay e para a tela (D-03).
 - O `warn` continua.
 - Na tela, as duas pontas mostram uma linha discreta: "O agente enviou uma mensagem que esta versão
@@ -553,7 +553,7 @@ o markdown e o aninhamento do app que o 26 entrega. As medições que o 26 fazia
 
 **Backend:**
 
-- [sdk-message.mapper.ts](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts):
+- [sdk-message.mapper.ts](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts):
   - `rate_limit_event`: 85-95;
   - `default` dos tipos: 96-99;
   - `QUIET_TYPES`: 109;
@@ -564,10 +564,10 @@ o markdown e o aninhamento do app que o 26 entrega. As medições que o 26 fazia
   - `fromResult`: 430-441;
   - `historicalEvents`: 455-480;
   - `describe`: 502.
-- [session-runner.ts:474-481](../../backend/src/adapter/outbound/claude/session-runner.ts#L474-L481) (o `warn`).
-- [transcript.adapter.ts:311](../../backend/src/adapter/outbound/claude/transcript.adapter.ts#L311) (`getSessionMessages` sem `includeSystemMessages`).
-- [transcript-contents.ts](../../backend/src/adapter/outbound/claude/transcript-contents.ts) (o índice de imagens, só de prompt).
-- [sdk-options.factory.ts:98](../../backend/src/adapter/outbound/claude/sdk-options.factory.ts#L98) (`includeHookEvents: true`).
+- [session-runner.ts:474-481](../../backend/src/adapter/outbound/engines/claude/session-runner.ts#L474-L481) (o `warn`).
+- [transcript.adapter.ts:311](../../backend/src/adapter/outbound/engines/claude/transcript.adapter.ts#L311) (`getSessionMessages` sem `includeSystemMessages`).
+- [transcript-contents.ts](../../backend/src/adapter/outbound/engines/claude/transcript-contents.ts) (o índice de imagens, só de prompt).
+- [sdk-options.factory.ts:98](../../backend/src/adapter/outbound/engines/claude/sdk-options.factory.ts#L98) (`includeHookEvents: true`).
 - Fixtures: [compact-turn.json](../../backend/test/fakes/agent-sdk/fixtures/compact-turn.json) (a sintética e o eco medidos), [tool-turn.json](../../backend/test/fakes/agent-sdk/fixtures/tool-turn.json) (nenhum `hook_*` com o nosso `PreToolUse`).
 
 **SDK** (`sdk.d.ts` 0.3.277): a união `SDKMessage` (5025); `includeHookEvents` (≈1777); `SDKHookResponseMessage`,

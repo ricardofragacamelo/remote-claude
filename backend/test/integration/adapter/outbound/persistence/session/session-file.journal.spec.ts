@@ -8,7 +8,7 @@ import { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.st
 import { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
 import { DiskSessionFileJournal } from '@adapter/outbound/session/disk-session-file.journal';
 import { SessionId } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { migrate } from '@infra/database/migrator';
@@ -22,12 +22,12 @@ import { RecordingSessionFileEvents } from '../../../../../support/fakes/recordi
 const sessionId = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ');
 
 /** The conversation every session of this suite was. */
-const CONVERSATION = ClaudeSessionId.create('6b41b192-a41b-46c2-b8d7-5098d8c825be');
+const CONVERSATION = ConversationRef.create('claude', '6b41b192-a41b-46c2-b8d7-5098d8c825be');
 
 /** What the journal is told about a session: which one, and which conversation it was. */
-const scopeOf = (id: SessionId): { sessionId: SessionId; claudeSessionId: ClaudeSessionId } => ({
+const scopeOf = (id: SessionId): { sessionId: SessionId; conversation: ConversationRef } => ({
   sessionId: id,
-  claudeSessionId: CONVERSATION,
+  conversation: CONVERSATION,
 });
 const otherSession = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXY0');
 const now = new Date('2026-09-18T12:00:00.000Z');
@@ -105,6 +105,16 @@ describe('the session file journal', () => {
       expect(state?.hash).toHaveLength(64);
       expect(state?.sizeBytes).toBe(5);
       expect(state?.mtime.getTime()).toBeCloseTo((await stat(file())).mtime.getTime(), -2);
+    });
+
+    it('tells the files who wrote it — the engine of the conversation — after the row — S-73', async () => {
+      await write('after');
+      await journal.recordResult(scopeOf(sessionId), file());
+
+      const [state] = await files.statesOf(sessionId);
+      expect(events.recorded).toEqual([
+        { path: file(), hash: state?.hash, at: now, engine: 'claude' },
+      ]);
     });
 
     it('leaves one row with the latest state after two writes — S-100', async () => {

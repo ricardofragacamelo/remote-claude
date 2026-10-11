@@ -6,8 +6,10 @@ import {
   isRuleReach,
   parseRulePattern,
   reachesFor,
-  readRulePattern,
 } from '@domain/permission';
+import { canonicalTool, claudeTool } from '../../../../support/builders/tool.builder';
+
+const folder = '/srv/projects/app';
 
 /**
  * How far a rule left by an answer may reach — plan 23, B-09.
@@ -16,22 +18,22 @@ import {
  * are the same call, so every case is also a case of what the server will accept.
  */
 describe('reachesFor', () => {
-  const shell = (command: string) => reachesFor('Bash', { command });
+  const shell = (command: string) => reachesFor(claudeTool('Bash', { command }), folder);
 
   it('offers the exact command and its prefix — S-45', () => {
     expect(shell('git push -u origin x')).toEqual([
-      { reach: 'exact', patterns: ['Bash(git push -u origin x)'] },
-      { reach: 'prefix', patterns: ['Bash(git push:*)'] },
+      { reach: 'exact', patterns: ['shell(git push -u origin x)'] },
+      { reach: 'prefix', patterns: ['shell(git push:*)'] },
     ]);
   });
 
   it.each([
-    ['ls -la', 'Bash(ls:*)'],
-    ['cat file.txt', 'Bash(cat:*)'],
-    ['pnpm test', 'Bash(pnpm test:*)'],
-    ['rm build', 'Bash(rm build:*)'],
-    ['git status', 'Bash(git status:*)'],
-    ['pnpm run:dev', 'Bash(pnpm run:dev:*)'],
+    ['ls -la', 'shell(ls:*)'],
+    ['cat file.txt', 'shell(cat:*)'],
+    ['pnpm test', 'shell(pnpm test:*)'],
+    ['rm build', 'shell(rm build:*)'],
+    ['git status', 'shell(git status:*)'],
+    ['pnpm run:dev', 'shell(pnpm run:dev:*)'],
   ])('reads the prefix of %s as %s — S-46', (command, pattern) => {
     expect(shell(command).find((reach) => reach.reach === 'prefix')?.patterns).toEqual([pattern]);
   });
@@ -39,7 +41,7 @@ describe('reachesFor', () => {
   it('gives a pattern per command of a line, without repeating one — S-47', () => {
     expect(shell('git push 2>&1 | tail -5 && git status && git push')).toContainEqual({
       reach: 'prefix',
-      patterns: ['Bash(git push:*)', 'Bash(tail:*)', 'Bash(git status:*)'],
+      patterns: ['shell(git push:*)', 'shell(tail:*)', 'shell(git status:*)'],
     });
   });
 
@@ -70,39 +72,74 @@ describe('reachesFor', () => {
   );
 
   it.each([
-    ['Edit', { file_path: '/a/b.ts' }, 'Edit(/a/b.ts)'],
-    ['Write', { file_path: '/a/c.ts' }, 'Write(/a/c.ts)'],
-    ['Read', { file_path: '/a/d.ts' }, 'Read(/a/d.ts)'],
-    ['WebFetch', { url: 'https://example.com' }, 'WebFetch(https://example.com)'],
-  ])('offers %s exactly and as the whole tool — S-51', (toolName, input, exact) => {
-    expect(reachesFor(toolName, input)).toEqual([
+    ['Edit', { file_path: `${folder}/b.ts` }, 'file.edit(b.ts)', 'file.edit'],
+    ['MultiEdit', { file_path: `${folder}/src/b.ts` }, 'file.edit(src/b.ts)', 'file.edit'],
+    ['Write', { file_path: '/a/c.ts' }, 'file.write(/a/c.ts)', 'file.write'],
+    ['Read', { file_path: `${folder}/d.ts` }, 'file.read(d.ts)', 'file.read'],
+    ['Grep', { pattern: 'x', path: `${folder}/src` }, 'search(src)', 'search'],
+    ['WebFetch', { url: 'https://example.com/a?b' }, 'web.fetch(domain:example.com)', 'web.fetch'],
+    // The whole tool of an MCP server is its server's tools, never every MCP call.
+    [
+      'mcp__productdock__list_work_items',
+      {},
+      'mcp(productdock:list_work_items)',
+      'mcp(productdock:*)',
+    ],
+  ])('offers %s exactly and as the whole kind — S-51, S-92', (toolName, input, exact, kind) => {
+    expect(reachesFor(claudeTool(toolName, input, folder), folder)).toEqual([
       { reach: 'exact', patterns: [exact] },
-      { reach: 'tool', patterns: [toolName] },
+      { reach: 'tool', patterns: [kind] },
+    ]);
+  });
+
+  it('offers an MCP call with no readable server only as the bare kind', () => {
+    const tool = { kind: 'mcp', subject: { tool: 'x' } };
+    expect(reachesFor(tool, folder)).toEqual([{ reach: 'tool', patterns: ['mcp'] }]);
+    expect(reachesFor({ kind: 'mcp', subject: { server: '', tool: 'x' } }, folder)).toEqual([
+      { reach: 'tool', patterns: ['mcp'] },
+    ]);
+    expect(reachesFor({ kind: 'mcp', subject: { server: 'a)b', tool: 'x' } }, folder)).toEqual([
+      { reach: 'tool', patterns: ['mcp'] },
     ]);
   });
 
   it.each([
-    ['WebSearch', { query: 'vitest' }],
-    ['mcp__productdock__list_work_items', {}],
+    ['WebSearch', { query: 'vitest' }, 'web.search'],
+    ['Glob', { pattern: '**/*.ts' }, 'search'],
+    ['Agent', { description: 'explore' }, 'agent'],
   ])(
-    'offers %s only as the whole tool, with nothing a pattern can name — S-51',
-    (toolName, input) => {
-      expect(reachesFor(toolName, input)).toEqual([{ reach: 'tool', patterns: [toolName] }]);
+    'offers %s only as the whole kind, with nothing a pattern can name — S-51',
+    (toolName, input, kind) => {
+      expect(reachesFor(claudeTool(toolName, input, folder), folder)).toEqual([
+        { reach: 'tool', patterns: [kind] },
+      ]);
     },
   );
 
   it('never offers the whole shell — S-52', () => {
     expect(shell('ls').map((reach) => reach.reach)).not.toContain('tool');
-    expect(reachesFor('Bash', {})).toEqual([]);
+    expect(reachesFor(canonicalTool('shell'), folder)).toEqual([]);
   });
 
   it('offers no exact for a value with `)`, and the prefix when it has none — S-53', () => {
-    expect(shell('echo )')).toEqual([{ reach: 'prefix', patterns: ['Bash(echo:*)'] }]);
+    expect(shell('echo )')).toEqual([{ reach: 'prefix', patterns: ['shell(echo:*)'] }]);
     expect(shell('(cd x)')).toEqual([]);
   });
 
-  it('offers nothing for a tool whose name is outside the grammar', () => {
-    expect(reachesFor('mcp__claude-vscode__getDiagnostics', {})).toEqual([]);
+  it.each([
+    ['AskUserQuestion', { questions: [] }],
+    ['ExitPlanMode', { plan: '# x' }],
+    ['TodoWrite', { todos: [] }],
+    ['BashOutput', {}],
+    ['LS', { path: '/a' }],
+  ])('offers nothing for %s, whose kind takes no rule — S-95', (toolName, input) => {
+    expect(reachesFor(claudeTool(toolName, input, folder), folder)).toEqual([]);
+  });
+
+  it('offers the same reaches for the same kind of any engine — S-131', () => {
+    expect(
+      reachesFor(canonicalTool('shell', { command: 'npm test' }, 'test-engine'), folder),
+    ).toEqual(reachesFor(claudeTool('Bash', { command: 'npm test' }), folder));
   });
 
   it('offers no exact that would read back as a prefix', () => {
@@ -119,10 +156,8 @@ describe('reachesFor', () => {
       for (const pattern of reach.patterns) {
         const read = parseRulePattern(pattern);
 
-        expect(read.kind).toBe(reach.reach === 'prefix' ? 'prefix' : 'exact');
-        expect(`${read.toolName}(${read.content}${read.kind === 'prefix' ? ':*' : ''})`).toBe(
-          pattern,
-        );
+        expect(read.reach).toBe(reach.reach === 'prefix' ? 'prefix' : 'exact');
+        expect(`${read.kind}(${read.content}${read.reach === 'prefix' ? ':*' : ''})`).toBe(pattern);
       }
     }
   });
@@ -155,14 +190,4 @@ describe('the reach names', () => {
   it.each(['', 'Exact', 'glob', 'all'])('does not know %j', (reach) => {
     expect(isRuleReach(reach)).toBe(false);
   });
-});
-
-describe('readRulePattern', () => {
-  it.each(['', 'Bash()', 'Bash(:*)', '1Bash', 'mcp__a-b__c', 'Bash(x'])(
-    'answers null where parseRulePattern throws: %j',
-    (pattern) => {
-      expect(readRulePattern(pattern)).toBeNull();
-      expect(() => parseRulePattern(pattern)).toThrow();
-    },
-  );
 });

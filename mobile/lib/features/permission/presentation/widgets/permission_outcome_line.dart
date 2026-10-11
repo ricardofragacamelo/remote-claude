@@ -18,15 +18,8 @@ String outcomeSentence(AppLocalizations l10n, PermissionOutcome outcome) {
     return l10n.permissionOutcomeExpired;
   }
 
-  // Decided by the server with nobody answering, and not the deadline: Permitir tudo, when the
-  // server says so (plan 23, S-93), or a rule — of this session, this project or every project. The
-  // event does not say which rule, so the sentence does not either.
   if (outcome.auto) {
-    if (allowed && outcome.via == AnswerVia.allowAll) {
-      return l10n.permissionOutcomeAllowedByAllowAll;
-    }
-
-    return allowed ? l10n.permissionOutcomeAllowedByRule : l10n.permissionOutcomeRefusedByRule;
+    return _automaticSentence(l10n, outcome.via, allowed: allowed);
   }
 
   return switch (outcome.origin) {
@@ -37,6 +30,17 @@ String outcomeSentence(AppLocalizations l10n, PermissionOutcome outcome) {
     AnswerOrigin.unknown => allowed ? l10n.permissionOutcomeAllowed : l10n.permissionOutcomeRefused,
   };
 }
+
+/// Decided by the server with nobody answering, and not the deadline: Permitir tudo, when the server
+/// says so (plan 23, S-93), the read-only mode (plan 28, B-26), or a rule — of this session, this
+/// project or every project. The event does not say which rule, so the sentence does not either.
+String _automaticSentence(AppLocalizations l10n, AnswerVia? via, {required bool allowed}) =>
+    switch ((allowed, via)) {
+      (true, AnswerVia.allowAll) => l10n.permissionOutcomeAllowedByAllowAll,
+      (false, AnswerVia.readOnly) => l10n.permissionRefusedReadOnly,
+      (true, _) => l10n.permissionOutcomeAllowedByRule,
+      (false, _) => l10n.permissionOutcomeRefusedByRule,
+    };
 
 /// The line under the queue that says how the last request ended.
 class PermissionOutcomeLine extends StatelessWidget {

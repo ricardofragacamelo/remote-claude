@@ -10,6 +10,7 @@ import type {
   FileChange,
   SessionChanges,
   ToolDiff,
+  ToolDiffAfter,
 } from '../types/changes';
 import { SESSION_COMMANDS } from './live-session.service';
 
@@ -39,10 +40,11 @@ export async function fetchToolDiff(sessionId: string, toolUseId: string): Promi
 
   return {
     path: readText(record, 'path') ?? '',
-    toolName: readText(record, 'toolName') ?? '',
+    kind: readText(record, 'kind') ?? '',
+    pending: record['pending'] === true,
     scope: record['scope'] === 'file' ? 'file' : 'edit',
     before: sideOf(record['before']),
-    after: sideOf(record['after']),
+    after: afterOf(record['after']),
     hunks: hunksOf(record['hunks']),
   };
 }
@@ -151,6 +153,16 @@ function sideOf(value: unknown): ChangeSide {
     state: state !== null && SIDE_STATES.has(state) ? (state as ChangeSideState) : 'unavailable',
     content: typeof record['content'] === 'string' ? record['content'] : null,
     reason: readText(record, 'reason'),
+  };
+}
+
+/** The side after a call, with the replacement that would not apply when the server names one. */
+function afterOf(value: unknown): ToolDiffAfter {
+  const edit = isRecord(value) ? value['edit'] : undefined;
+
+  return {
+    ...sideOf(value),
+    edit: typeof edit === 'number' && Number.isInteger(edit) && edit >= 0 ? edit : null,
   };
 }
 

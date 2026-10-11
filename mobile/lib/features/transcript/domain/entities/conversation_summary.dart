@@ -1,16 +1,17 @@
-/// A conversation of Claude's store, as the history of one workspace lists it.
+/// A conversation of an engine's store, as the history of one workspace lists it.
 ///
 /// Pure Dart. The store is shared with the editor and the terminal, so the list holds what was
 /// said anywhere on the machine — inside the allowlist, and only there (04 · D-01).
 library;
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/features/transcript/domain/entities/conversation_origin.dart';
 
 /// One conversation of the list.
 class ConversationSummary extends Equatable {
   const ConversationSummary({
-    required this.conversationId,
+    required this.conversation,
     required this.origin,
     required this.cwd,
     required this.lastModified,
@@ -19,8 +20,9 @@ class ConversationSummary extends Equatable {
     this.createdAt,
   });
 
-  /// The id in Claude's store — what a page of it is read by, and what a resume names.
-  final String conversationId;
+  /// The conversation — its engine and its id there: what a page of it is read by, and what a resume
+  /// names.
+  final ConversationKey conversation;
 
   /// What the store calls it. Empty when it calls it nothing.
   final String summary;
@@ -40,7 +42,7 @@ class ConversationSummary extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
-    conversationId,
+    conversation,
     summary,
     origin,
     cwd,

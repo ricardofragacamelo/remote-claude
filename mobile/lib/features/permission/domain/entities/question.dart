@@ -1,5 +1,5 @@
-/// Claude asking the person something — the questions of an `AskUserQuestion`, as the server
-/// normalised them, what the person answered, and what they have chosen so far (plan 24).
+/// The agent asking the person something — the questions of a call of kind `question`, as the
+/// server normalised them, what the person answered, and what they have chosen so far (plan 24).
 ///
 /// Pure values: every rule of the card — what counts as an answer, what a choice does to the ones
 /// before it — is a function here, proved without a widget.
@@ -122,8 +122,8 @@ class QuestionDraft extends Equatable {
     );
   }
 
-  /// After "Other" is marked or unmarked. Marked, it starts empty — and on a single choice it is the
-  /// choice, so the labels go.
+  /// After "Other" is marked or unmarked. Marked, it starts empty — and on a single choice it is
+  /// the choice, so the labels go.
   QuestionDraft toggleOther(Question question) {
     if (otherOf(question) != null) {
       return _copy(other: <String, String?>{...other, question.id: null});
@@ -183,8 +183,8 @@ class QuestionDraft extends Equatable {
   List<Object?> get props => <Object?>[step, selected, other];
 }
 
-/// The option Claude recommends — its label ends in "(Recommended)". Highlighted, never pre-chosen
-/// (D-23).
+/// The option the agent recommends — its label ends in "(Recommended)". Highlighted, never
+/// pre-chosen (D-23).
 bool isRecommended(String label) =>
     RegExp(r'\(recommended\)\s*$', caseSensitive: false).hasMatch(label);
 
@@ -192,7 +192,7 @@ bool isRecommended(String label) =>
 ///
 /// It **fails closed**: a question this build cannot read whole — a field missing, fewer than two
 /// options — is read as one that can only be refused. Half a question on screen is an invitation to
-/// answer something Claude did not ask.
+/// answer something the agent did not ask.
 QuestionInteraction? questionInteractionFrom(Object? value) {
   if (value is! Map<String, Object?> || value['kind'] != 'question') {
     return null;
@@ -274,10 +274,10 @@ QuestionAnswer? _answer(Object? entry) {
         );
 }
 
-/// How a question of Claude ended, as the history says it (plan 24, B-21).
+/// How a question of the agent ended, as the history says it (plan 24, B-21).
 enum QuestionOutcome { answered, declined, expired }
 
-/// A question of Claude as `tool.completed` carries it: the questions and, when this backend
+/// A question of the agent as `tool.completed` carries it: the questions and, when this backend
 /// recorded them, how they ended (plan 24, B-22).
 class RecordedQuestion extends Equatable {
   const RecordedQuestion({required this.interaction, this.outcome, this.answers, this.reason});

@@ -58,7 +58,7 @@ export class TranscriptAudience {
       const origin = transcriptOriginFor(session, {
         allowlist,
         userId,
-        openedBy: openers.get(session.id.value),
+        openedBy: openers.get(session.id.key),
       });
 
       if (origin === null) {

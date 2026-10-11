@@ -39,7 +39,9 @@ const complete: RawEnvironment = {
   RC_SESSION_MAX_BUDGET_USD: '10',
   RC_MODEL_CHECK_MAX_BUDGET_USD: '0.05',
   RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
-  RC_SESSION_DEFAULT_PERMISSION_MODE: 'default',
+  RC_ENGINES_ENABLED: '',
+  RC_ENGINE_DEFAULT: '',
+  RC_SESSION_DEFAULT_PERMISSION_MODE: 'ask',
   RC_PERMISSION_TIMEOUT_MS: '120000',
   RC_QUESTION_TIMEOUT_MS: '600000',
   RC_PERMISSION_EXTENSION_MS: '120000',
@@ -113,8 +115,9 @@ describe('loadConfig', () => {
         capacity: { floor: 1, ceiling: 10, memoryFraction: 0.5, perSessionBytes: 268_435_456 },
         idleTtlMs: 1_800_000,
         limits: { maxBudgetUsd: 10, maxTurns: 100 },
-        defaults: { model: 'claude-sonnet-5', permissionMode: 'default' },
+        defaults: { model: 'claude-sonnet-5', permissionMode: 'ask' },
       },
+      engines: { enabled: [], default: null },
       websocket: { maxFramesPerSecond: 20, maxFrameBytes: 65_536, maxAttachedSessions: 16 },
       permission: {
         timeoutMs: 120_000,
@@ -264,6 +267,26 @@ describe('loadConfig', () => {
   });
 
   it.each([
+    ['ask', 'ask'],
+    ['acceptEdits', 'acceptEdits'],
+    ['readOnly', 'readOnly'],
+    ['allowAll', 'allowAll'],
+    // The names before the canonical modes, still in an older `.env` (plan 28, B-26).
+    ['default', 'ask'],
+    ['plan', 'readOnly'],
+  ])('reads the default mode %s as %s', (raw, mode) => {
+    const config = loadConfig(withChange({ RC_SESSION_DEFAULT_PERMISSION_MODE: raw }));
+
+    expect(config.session.defaults.permissionMode).toBe(mode);
+  });
+
+  it('names the canonical modes when it refuses a default mode', () => {
+    expect(() =>
+      loadConfig(withChange({ RC_SESSION_DEFAULT_PERMISSION_MODE: 'bypassPermissions' })),
+    ).toThrow(/must be one of ask, acceptEdits, readOnly, allowAll/i);
+  });
+
+  it.each([
     ['NODE_ENV', 'staging'],
     ['LOG_LEVEL', 'verbose'],
     ['RC_BACKEND_PORT', 'nope'],
@@ -287,6 +310,11 @@ describe('loadConfig', () => {
     ['RC_SESSION_MAX_TURNS', '0'],
     ['RC_SESSION_MAX_BUDGET_USD', '0'],
     ['RC_SESSION_DEFAULT_PERMISSION_MODE', 'yolo'],
+    // Never honoured, so not carried over as anything else (plan 28, B-26).
+    ['RC_SESSION_DEFAULT_PERMISSION_MODE', 'bypassPermissions'],
+    ['RC_SESSION_DEFAULT_PERMISSION_MODE', ''],
+    ['RC_SESSION_DEFAULT_PERMISSION_MODE', 'Ask'],
+    ['RC_SESSION_DEFAULT_PERMISSION_MODE', 'constructor'],
     ['RC_CHECKPOINT_MAX_FILE_BYTES', '0'],
     ['RC_CHECKPOINT_MAX_STORE_BYTES', '-1'],
     ['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS', '0'],
@@ -597,6 +625,26 @@ describe('loadConfig', () => {
         );
       },
     );
+  });
+
+  it('enables every engine an adapter registers, with no default, when both are empty — plan 28, S-28', () => {
+    expect(loadConfig(complete).engines).toEqual({ enabled: [], default: null });
+  });
+
+  it('reads the engines enabled, comma-separated and trimmed, and the default', () => {
+    expect(
+      loadConfig({
+        ...complete,
+        RC_ENGINES_ENABLED: ' claude , codex ,',
+        RC_ENGINE_DEFAULT: ' codex ',
+      }).engines,
+    ).toEqual({ enabled: ['claude', 'codex'], default: 'codex' });
+  });
+
+  it('leaves the engines unset as empty, and the default unset as none', () => {
+    const rest = { ...complete, RC_ENGINES_ENABLED: undefined, RC_ENGINE_DEFAULT: undefined };
+
+    expect(loadConfig(rest).engines).toEqual({ enabled: [], default: null });
   });
 
   it('makes the allowlist path absolute, whatever the working directory turns out to be', () => {

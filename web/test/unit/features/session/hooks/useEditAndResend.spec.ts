@@ -5,7 +5,7 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { forgetLiveSessions, liveSessionStoreOf } from '@/features/session';
 import { useEditAndResend } from '@/features/session/hooks/useEditAndResend';
-import { forgetClaudePanel } from '@/features/session/store/claude-panel.store';
+import { forgetAgentPanel } from '@/features/session/store/agent-panel.store';
 import type { StreamMessage } from '@/features/session/types/live-session';
 import { forgetFolderTabs } from '@/features/workbench';
 import { logger } from '@/shared/logging/logger';
@@ -15,7 +15,7 @@ import { providers } from '../../../../support/render';
 import { aCheckpointDto, aWireError, routeApi, SESSION } from '../../../../support/session-tools';
 
 const FOLDER = '/srv/projects/app';
-const CONVERSATION = 'conv-1';
+const CONVERSATION = { engine: 'claude', id: 'conv-1' };
 const FORKED = '01J0FORKEDFORKEDFORKEDFORK';
 const CHECKPOINTS = `/sessions/${SESSION}/checkpoints`;
 
@@ -40,7 +40,7 @@ beforeEach(() => {
 
 afterEach(() => {
   live.close();
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
   forgetFolderTabs();
   vi.restoreAllMocks();
 });
@@ -60,7 +60,7 @@ function started(extra: Record<string, unknown> = {}): void {
       .apply(
         hubEvent(SESSION, 'session.started', 1, {
           sessionId: SESSION,
-          claudeSessionId: CONVERSATION,
+          conversation: CONVERSATION,
           ...extra,
         }) as unknown as Envelope,
       );
@@ -109,7 +109,7 @@ describe('editing and sending again — plan 08, B-35', () => {
 
     expect(starts()).toHaveLength(1);
     expect(starts()[0]).toMatchObject({
-      payload: { workspacePath: FOLDER, resumeSessionId: CONVERSATION, forkAt: 'u1' },
+      payload: { workspacePath: FOLDER, resumeFrom: CONVERSATION, forkAt: 'u1' },
     });
     expect(hook.result.current.isSending).toBe(true);
   });
@@ -150,7 +150,7 @@ describe('editing and sending again — plan 08, B-35', () => {
 
   it('offers no undo, and says so in the log, when the points cannot be read', async () => {
     routeApi({
-      [CHECKPOINTS]: [aWireError('CLAUDE_UNAVAILABLE', 'session.error.claudeUnavailable')],
+      [CHECKPOINTS]: [aWireError('AGENT_UNAVAILABLE', 'session.error.agentUnavailable')],
     });
     const warn = vi.spyOn(logger, 'warn');
     const hook = mount();
@@ -206,6 +206,16 @@ describe('editing and sending again — plan 08, B-35', () => {
       traceId: 'err-fork',
     });
     expect(hook.result.current.canResumeInstead).toBe(true);
+
+    // The plain resume continues the conversation the fork was of, by its engine and its id.
+    act(() => {
+      hook.result.current.resumeInstead();
+    });
+    expect(starts().at(-1)).toMatchObject({
+      payload: { workspacePath: FOLDER, resumeFrom: CONVERSATION },
+    });
+    expect(starts().at(-1)?.['payload']).not.toHaveProperty('forkAt');
+    expect(hook.result.current.canResumeInstead).toBe(false);
   });
 
   it('resumes only after a refusal of the point', () => {

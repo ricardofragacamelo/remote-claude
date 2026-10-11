@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/session-tasks-changed.json",
+  "title": "SessionTasksChanged",
+  "description": "The agent's task list changed: the whole list, as it is now, after a call of the main conversation that changed it ended well (plan 28, B-22). Read by the adapter of the engine from its own tools — a client draws it and never rebuilds it. A session event with its `seq`, so it is replayed; in the history (`transcript.appended`, `GET /transcripts/…/messages`) it follows the `tool.completed` of the call, by the same function as live. Only for an engine with the `taskList` capability.",
+  "x-kind": "event",
+  "x-type": "session.tasksChanged",
+  "type": "object",
+  "required": ["tasks"],
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "maxItems": 500,
+      "description": "Every task, in the agent's order. Empty when the agent cleared the list.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Opaque and stable for the life of the task — what a client keys a task by between two lists."
+          },
+          "title": {
+            "type": "string",
+            "description": "What the task is."
+          },
+          "activeTitle": {
+            "type": "string",
+            "description": "What the task is called while it runs (\"Running the tests\"). Absent when the agent gave none: the client shows the `title`."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "inProgress", "completed"]
+          }
+        }
+      }
+    },
+    "at": {
+      "type": "string",
+      "description": "When the call that changed the list was written, ISO 8601 — on the history only, like the `at` of the `tool.completed` it follows. Absent live, where the frame's `ts` is the clock."
+    }
+  }
+}

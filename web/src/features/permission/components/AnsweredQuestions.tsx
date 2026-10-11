@@ -23,9 +23,10 @@ export interface AnsweredQuestionsProps {
 }
 
 /**
- * A question of Claude, once it is over — read-only (plan 24, B-15): each question with the option
- * chosen marked, the others faded, and the free answer in words. Refused, it says why; out of time,
- * that nothing was sent. Of a session answered elsewhere, the questions and what the CLI said.
+ * A question of the agent, once it is over — read-only (plan 24, B-15): each question with the
+ * option chosen marked, the others faded, and the free answer in words. Refused, it says why; out
+ * of time, that nothing was sent. Of a session answered elsewhere, the questions and what the CLI
+ * said.
  */
 export function AnsweredQuestions({
   interaction,

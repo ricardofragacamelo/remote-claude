@@ -11,7 +11,7 @@ import {
 } from '@application/files';
 import {
   ChangeOrigins,
-  ClaudeWrites,
+  AgentWrites,
   CopyEntryUseCase,
   CreateEntryUseCase,
   DeleteEntryUseCase,
@@ -43,12 +43,13 @@ import type {
 } from '@application/files';
 import { CLOCK, ID_GENERATOR, PATH_LOCK, SCHEDULER } from '@application/shared';
 import type { PathLock, Scheduler } from '@application/shared';
+import type { SensitiveFiles } from '@domain/files';
 import type { Clock, IdGenerator } from '@domain/shared';
 import { FileHistoryController } from '@adapter/inbound/http/files/file-history.controller';
 import { FileTransferController } from '@adapter/inbound/http/files/file-transfer.controller';
 import { FilesController } from '@adapter/inbound/http/files/files.controller';
 import { AllowlistReloadListener } from '@adapter/outbound/files/allowlist-reload.listener';
-import { ClaudeWriteListener } from '@adapter/outbound/files/claude-write.listener';
+import { AgentWriteListener } from '@adapter/outbound/files/agent-write.listener';
 import { IconvTextCodec } from '@adapter/outbound/files/iconv.text-codec';
 import { WorkspaceModuleFolderResolver } from '@adapter/outbound/files/workspace-module.folder-resolver';
 import { ChokidarFolderWatcher } from '@adapter/outbound/filesystem/chokidar-folder.watcher';
@@ -63,6 +64,7 @@ import type { PersistenceContext } from '../database/persistence-context';
 import { FileHistoryPurgeJob } from '../jobs/file-history-purge.job';
 import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
+import { ENGINE_SENSITIVE_FILES, engineSensitiveFileProviders } from './engines';
 import { WorkspaceModule } from './workspace.module';
 
 /** What saving and creating share, as one provider so both get the very same things. */
@@ -193,11 +195,13 @@ const TRANSFER_PROVIDERS = [
   imports: [AuthModule, AuditModule, WorkspaceModule],
   controllers: [FilesController, FileHistoryController, FileTransferController],
   providers: [
+    // Every registered engine's configuration files take the second step (plan 28, B-35).
+    ...engineSensitiveFileProviders,
     { provide: FOLDER_RESOLVER, useClass: WorkspaceModuleFolderResolver },
     { provide: FOLDER_DISK, useClass: NodeFolderDisk },
     { provide: TEXT_CODEC, useClass: IconvTextCodec },
-    { provide: ClaudeWrites, useFactory: () => new ClaudeWrites() },
-    ClaudeWriteListener,
+    { provide: AgentWrites, useFactory: () => new AgentWrites() },
+    AgentWriteListener,
     {
       provide: UserWrites,
       inject: [CLOCK],
@@ -210,9 +214,9 @@ const TRANSFER_PROVIDERS = [
     },
     {
       provide: ChangeOrigins,
-      inject: [ClaudeWrites, UserWrites, FOLDER_DISK, CLOCK, LOGGER],
+      inject: [AgentWrites, UserWrites, FOLDER_DISK, CLOCK, LOGGER],
       useFactory: (
-        claude: ClaudeWrites,
+        claude: AgentWrites,
         user: UserWrites,
         disk: FolderDisk,
         clock: Clock,
@@ -259,6 +263,7 @@ const TRANSFER_PROVIDERS = [
         FileTrail,
         APP_CONFIG,
         UserWrites,
+        ENGINE_SENSITIVE_FILES,
       ],
       useFactory: (
         folders: FolderResolver,
@@ -268,7 +273,17 @@ const TRANSFER_PROVIDERS = [
         trail: FileTrail,
         config: AppConfig,
         writes: UserWrites,
-      ): FileWriting => ({ folders, disk, codec, lock, trail, limits: config.files, writes }),
+        sensitive: SensitiveFiles,
+      ): FileWriting => ({
+        folders,
+        disk,
+        codec,
+        lock,
+        trail,
+        limits: config.files,
+        writes,
+        sensitive,
+      }),
     },
     {
       provide: EntryRelocator,

@@ -23,7 +23,7 @@ import {
   setPinned,
   tabsToClose,
 } from './tabs';
-import { addFileToClaude } from './text-actions';
+import { addFileToAgent } from './text-actions';
 
 /** One thing an editor tab's menu offers. */
 export interface EditorTabAction {
@@ -42,8 +42,8 @@ export interface TabMenuContext {
   readonly group: string;
   readonly dirty: boolean;
 
-  /** Somebody takes files into Claude's context — the panel of plan 08 (S-276). */
-  readonly claude: boolean;
+  /** Somebody takes files into the agent's context — the panel of plan 08 (S-276). */
+  readonly agent: boolean;
 
   /** "Reveal in explorer" — the explorer's command, when it is registered. */
   reveal: (() => void) | null;
@@ -143,7 +143,7 @@ function fileActions(tab: EditorTab, context: TabMenuContext): EditorTabAction[]
     return [];
   }
 
-  const { folder, group, dirty, claude, reveal } = context;
+  const { folder, group, dirty, agent, reveal } = context;
   const path = tab.path;
 
   return [
@@ -179,16 +179,16 @@ function fileActions(tab: EditorTab, context: TabMenuContext): EditorTabAction[]
             },
           },
         ]),
-    // Only while somebody takes it: without Claude's panel, the item does not exist (S-276).
-    ...(claude
+    // Only while somebody takes it: without the agent's panel, the item does not exist (S-276).
+    ...(agent
       ? [
           {
-            id: 'addToClaude',
-            labelKey: 'editor.tabMenu.addToClaude',
+            id: 'addToAgent',
+            labelKey: 'editor.tabMenu.addToAgent',
             icon: MessageSquarePlus,
             disabled: false,
             run: () => {
-              addFileToClaude(folder, path, []);
+              addFileToAgent(folder, path, []);
             },
           },
         ]
@@ -199,7 +199,7 @@ function fileActions(tab: EditorTab, context: TabMenuContext): EditorTabAction[]
 /**
  * What an editor tab's menu offers, in its sections: closing (this one, the others, to the right,
  * the saved ones, all — never a pinned one but itself, S-212), its place (pin, move, S-213), and the
- * file (open to the side, compare with saved, reveal in the explorer, add to Claude's context).
+ * file (open to the side, compare with saved, reveal in the explorer, add to the agent's context).
  */
 export function tabMenuOf(
   tab: EditorTab,

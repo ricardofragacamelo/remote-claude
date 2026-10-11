@@ -51,7 +51,7 @@ organização, e-mail ([D-07](decisions.md#d-07--o-que-da-conta-aparece-e-para-q
 `tokenSource`/`apiKeySource` só o **nome** da fonte. CLI sem login é **estado** (`loginRequired`), com a
 instrução de rodar `claude` e `/login` na máquina — o produto não loga ninguém no CLI remotamente, porque
 o backend herda o login e não conhece a credencial
-([backend/04](../../architecture/backend/04-claude-integration.md#autenticação--não-faça-nada)).
+([backend/04](../../architecture/backend/04a-claude.md#autenticação--não-faça-nada)).
 `refresh=true` ignora o TTL do cache da conta.
 
 `GET /claude/installation` — o diagnóstico que responde "por que o Claude não funciona aqui": versão do

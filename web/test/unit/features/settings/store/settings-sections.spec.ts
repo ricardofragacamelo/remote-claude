@@ -58,22 +58,22 @@ describe('the sections of the app’s Settings — plan 06, B-31', () => {
   });
 
   it.each([
-    ['its id', aSection({ id: 'claude' })],
-    ['its label', aSection({ labelKey: 'claude.settings.model' })],
+    ['its id', aSection({ id: 'agent' })],
+    ['its label', aSection({ labelKey: 'settings.engine.choice' })],
     ['an option', aSection({ options: [{ id: 'permissionMode', labelKey: 'settings.x.mode' }] })],
     ['an option’s label', aSection({ options: [{ id: 'servers', labelKey: 'settings.x.mcp' }] })],
-  ])('refuses a section about Claude, given away by %s — S-145', (_how, section) => {
+  ])('refuses a section about the agent, given away by %s — S-145', (_how, section) => {
     expect(() => createSettingsSections().register(section)).toThrow(/plan 13/);
     expect(() => {
       assertAppSection(section);
-    }).toThrow(/about Claude/);
+    }).toThrow(/about the agent/);
   });
 
   it('refuses one declared at creation too', () => {
     expect(() => createSettingsSections([aSection({ id: 'model' })])).toThrow(/plan 13/);
   });
 
-  it('declares no section about Claude itself — S-145', () => {
+  it('declares no section about the agent itself — S-145', () => {
     for (const section of settingsSections.entries()) {
       expect(() => {
         assertAppSection(section);

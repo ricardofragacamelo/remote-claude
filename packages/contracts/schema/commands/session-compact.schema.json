@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/commands/session-compact.json",
+  "title": "SessionCompact",
+  "description": "Compacts the conversation of a live session (plan 28, B-23). The backend sends the engine's own prompt for it through the queue, so it waits for a running turn and is acknowledged before its turn starts; `session.compacted` says when it happened. Refused with `ENGINE_CAPABILITY_UNAVAILABLE` (409) when the engine has no `compaction`. A slash command the person types still goes as a `session.prompt`: it is the engine that reads it, not us.",
+  "x-kind": "command",
+  "x-type": "session.compact",
+  "type": "object",
+  "required": ["sessionId"],
+  "properties": { "sessionId": { "type": "string" } }
+}

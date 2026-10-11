@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/transcript-page.json",
+  "title": "TranscriptPage",
+  "description": "What `GET /transcripts/:engine/:id/messages` answers: a page of a conversation, newest page first and oldest first within it (plan 28, B-12). The route of the previous protocol, `GET /transcripts/:sessionId/messages`, answers the same during its window.",
+  "x-kind": "http",
+  "x-type": "transcripts.page",
+  "type": "object",
+  "required": ["session", "events", "nextCursor", "lastMessageId"],
+  "properties": {
+    "session": {
+      "$ref": "../definitions/listed-transcript.schema.json",
+      "description": "The conversation the page is of."
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "../definitions/transcript-event.schema.json"
+      },
+      "description": "The events of the page."
+    },
+    "nextCursor": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The id of the message the next page — what came before — starts from, or `null` at the first message."
+    },
+    "lastMessageId": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The last entry of the conversation, `null` when it has none — what `transcript.follow` takes as `afterMessageId`."
+    }
+  }
+}

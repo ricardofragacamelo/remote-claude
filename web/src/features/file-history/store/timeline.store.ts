@@ -19,7 +19,7 @@ export interface RestoreQuestion {
   /** The buffer of the file has changes a restore would discard. */
   readonly dirty: boolean;
 
-  /** The file changes what Claude may do (07 · D-15). */
+  /** The file changes what the agent may do (07 · D-15). */
   readonly sensitive: boolean;
 }
 

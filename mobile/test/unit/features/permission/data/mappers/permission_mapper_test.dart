@@ -3,16 +3,17 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 // The wire's own question classes stay out: the domain's are the ones read here (plan 24).
-import 'package:remote_claude/core/network/contracts/protocol.g.dart'
-    hide QuestionAnswer, QuestionInteraction;
+import 'package:remote_claude/core/network/contracts/protocol.g.dart' hide QuestionAnswer;
 import 'package:remote_claude/features/permission/data/mappers/permission_mapper.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_event.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/plan_interaction.dart';
 import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 import '../../../../../support/builders/frames.dart';
+import '../../../../../support/builders/tools.dart';
 
 Envelope envelope(
   String type, {
@@ -69,9 +70,10 @@ void main() {
             requestId: 'req-1',
             sessionId: 'session-1',
             toolUseId: 'tu-1',
-            toolName: 'Bash',
+            call: shellCall('rm -rf build/'),
+            titleKey: 'permission.tool.shell',
+            engine: 'engine-a',
             description: 'rm -rf build/',
-            input: const <String, Object?>{'command': 'rm -rf build/'},
             riskHint: RiskHint.destructive,
             expiresAt: DateTime.utc(2026, 9, 14, 12, 5),
           ),
@@ -94,13 +96,7 @@ void main() {
       expect(permissionEventFrom(envelope(PermissionFrames.requested, kind: 'request')), isNull);
     });
 
-    for (final String field in <String>[
-      'requestId',
-      'toolName',
-      'title',
-      'expiresAt',
-      'riskHint',
-    ]) {
+    for (final String field in <String>['requestId', 'kind', 'title', 'expiresAt', 'riskHint']) {
       test('is dropped when $field is missing', () {
         expect(permissionEventFrom(requested(<String, Object?>{field: null})), isNull);
       });
@@ -154,10 +150,51 @@ void main() {
       );
     });
 
-    test('reads an input that is not a map as empty', () {
+    test('reads an exact input that is not a map as empty', () {
       expect(
-        requestOf(requested(const <String, Object?>{'input': 'rm -rf /'}))?.input,
+        requestOf(requested(const <String, Object?>{'rawInput': 'rm -rf /'}))?.call.rawInput,
         const <String, Object?>{},
+      );
+    });
+
+    test('plan 28, B-19 · is dropped with no readable label: there is nothing to draw it by', () {
+      expect(permissionEventFrom(requested(const <String, Object?>{'label': null})), isNull);
+      expect(permissionEventFrom(requested(const <String, Object?>{'label': 'Shell'})), isNull);
+    });
+
+    test("plan 28, B-19 · the engine's own name alone is not a request this build can draw", () {
+      expect(
+        permissionEventFrom(
+          requested(const <String, Object?>{'kind': null, 'label': null, 'toolName': 'Bash'}),
+        ),
+        isNull,
+      );
+    });
+
+    test('plan 28, B-19 · reads the call, the title key and the engine that asks', () {
+      final PermissionRequest? request = requestOf(
+        requested(<String, Object?>{
+          ...toolCallJson(readA),
+          'title': 'permission.tool.fileRead',
+          'description': null,
+        }),
+      );
+
+      expect(request?.call, readA);
+      expect(request?.titleKey, 'permission.tool.fileRead');
+      expect(request?.engine, 'engine-a');
+      expect(request?.command, '{\n  "file_path": "/w/a.txt"\n}');
+    });
+
+    test('plan 28, B-19 · an origin out of shape names no engine', () {
+      expect(requestOf(requested(const <String, Object?>{'origin': 'x'}))?.engine, isNull);
+      expect(
+        requestOf(
+          requested(const <String, Object?>{
+            'origin': <String, Object?>{'engine': 3},
+          }),
+        )?.engine,
+        isNull,
       );
     });
 
@@ -223,14 +260,14 @@ void main() {
             <String, Object?>{
               'scope': 'always',
               'labelKey': 'permission.scope.always',
-              'pattern': 'Bash(git status)',
+              'pattern': 'shell(git status)',
               'lifetimeMs': 7776000000,
             },
             <String, Object?>{'scope': 'once'},
             <String, Object?>{
               'scope': 'project',
               'labelKey': 'permission.scope.project',
-              'pattern': 'Bash(git status)',
+              'pattern': 'shell(git status)',
               'lifetimeMs': 7776000000,
             },
             <String, Object?>{'scope': 'session'},
@@ -246,18 +283,18 @@ void main() {
       ]);
       expect(
         request?.rule,
-        const RuleOffer(pattern: 'Bash(git status)', lifetime: Duration(days: 90)),
+        const RuleOffer(pattern: 'shell(git status)', lifetime: Duration(days: 90)),
       );
     });
 
     for (final (String name, Map<String, Object?> rule) in <(String, Map<String, Object?>)>[
       ('no pattern', <String, Object?>{'lifetimeMs': 1000}),
-      ('no lifetime', <String, Object?>{'pattern': 'Bash(x)'}),
+      ('no lifetime', <String, Object?>{'pattern': 'shell(x)'}),
       (
         'a lifetime that is not a whole number',
-        <String, Object?>{'pattern': 'Bash(x)', 'lifetimeMs': 1.5},
+        <String, Object?>{'pattern': 'shell(x)', 'lifetimeMs': 1.5},
       ),
-      ('a lifetime of zero', <String, Object?>{'pattern': 'Bash(x)', 'lifetimeMs': 0}),
+      ('a lifetime of zero', <String, Object?>{'pattern': 'shell(x)', 'lifetimeMs': 0}),
     ]) {
       test('does not offer a persisted scope with $name — S-67', () {
         final PermissionRequest? request = requestOf(
@@ -505,9 +542,10 @@ void main() {
             requestId: 'req-1',
             sessionId: 'session-1',
             toolUseId: 'tu-1',
-            toolName: 'Bash',
+            call: shellCall('rm -rf build/'),
+            titleKey: 'permission.tool.shell',
+            engine: 'engine-a',
             description: 'rm -rf build/',
-            input: const <String, Object?>{'command': 'rm -rf build/'},
             riskHint: RiskHint.destructive,
             expiresAt: DateTime.utc(2026, 9, 14, 12, 5),
           ),
@@ -615,11 +653,11 @@ void main() {
           'reaches': <Object?>[
             <String, Object?>{
               'reach': 'prefix',
-              'patterns': <Object?>['Bash(git push:*)', 'Bash(tail:*)'],
+              'patterns': <Object?>['shell(git push:*)', 'shell(tail:*)'],
             },
             <String, Object?>{
               'reach': 'glob',
-              'patterns': <Object?>['Bash(*)'],
+              'patterns': <Object?>['file.read(src/**)'],
             },
             <String, Object?>{'reach': 'exact', 'patterns': <Object?>[]},
             <String, Object?>{
@@ -634,7 +672,7 @@ void main() {
       expect(request?.reaches, const <RuleReach>[
         RuleReach(
           kind: RuleReachKind.prefix,
-          patterns: <String>['Bash(git push:*)', 'Bash(tail:*)'],
+          patterns: <String>['shell(git push:*)', 'shell(tail:*)'],
         ),
       ]);
     });
@@ -660,13 +698,13 @@ void main() {
       final PermissionRequest? request = requestOf(
         requested(<String, Object?>{
           'suggestions': <Object?>[
-            <String, Object?>{...always, 'pattern': 'Bash(git status)'},
+            <String, Object?>{...always, 'pattern': 'shell(git status)'},
           ],
         }),
       );
 
       expect(request?.reaches, const <RuleReach>[
-        RuleReach(kind: RuleReachKind.exact, patterns: <String>['Bash(git status)']),
+        RuleReach(kind: RuleReachKind.exact, patterns: <String>['shell(git status)']),
       ]);
       expect(request?.scopes, contains(PermissionScope.always));
     });
@@ -690,10 +728,13 @@ void main() {
     });
 
     test('S-90 · starts on the prefix, then the exact input, then the whole tool', () {
-      const RuleReach exact = RuleReach(kind: RuleReachKind.exact, patterns: <String>['Edit(/a)']);
+      const RuleReach exact = RuleReach(
+        kind: RuleReachKind.exact,
+        patterns: <String>['file.edit(a)'],
+      );
       const RuleReach prefix = RuleReach(
         kind: RuleReachKind.prefix,
-        patterns: <String>['Bash(ls:*)'],
+        patterns: <String>['shell(ls:*)'],
       );
       const RuleReach tool = RuleReach(kind: RuleReachKind.tool, patterns: <String>['Edit']);
 
@@ -720,6 +761,30 @@ void main() {
       expect(settled(null)?.via, isNull);
     });
 
+    test('plan 28 · B-26 · a refusal of the read-only mode says why, and is no deadline', () {
+      final PermissionOutcome? refused = permissionOutcomeFrom(<String, Object?>{
+        'requestId': 'req-1',
+        'decision': 'deny',
+        'auto': true,
+        'via': 'readOnly',
+      });
+
+      expect(refused?.via, AnswerVia.readOnly);
+      expect(refused?.expired, isFalse);
+      expect(refused?.auto, isTrue);
+    });
+
+    test('an automatic refusal with no author and no reason is still the deadline', () {
+      final PermissionOutcome? expired = permissionOutcomeFrom(<String, Object?>{
+        'requestId': 'req-1',
+        'decision': 'deny',
+        'auto': true,
+      });
+
+      expect(expired?.expired, isTrue);
+      expect(expired?.via, isNull);
+    });
+
     test('keeps `via` on the same settlement about another tool', () {
       expect(settled('allowAll')?.about('toolu-9').via, AnswerVia.allowAll);
     });
@@ -743,7 +808,8 @@ void main() {
     test('S-82 · reads the questions the server normalised', () {
       final PermissionRequest? request = requestOf(
         requested(<String, Object?>{
-          'toolName': 'AskUserQuestion',
+          ...toolCallJson(questionCall(count: 1)),
+          'title': 'permission.tool.question',
           'interaction': interaction(<Object?>[library]),
         }),
       );
@@ -775,6 +841,45 @@ void main() {
           }),
         )?.interaction,
         isNull,
+      );
+    });
+
+    test('S-61 · a plan is read from the interaction of kind plan — never from the input', () {
+      final PermissionRequest? request = requestOf(
+        requested(<String, Object?>{
+          ...toolCallJson(planCall(rawInput: const <String, Object?>{'plan': 'stale'})),
+          'title': 'permission.tool.plan',
+          'suggestions': <Object?>[],
+          'reaches': <Object?>[],
+          'interaction': <String, Object?>{
+            'kind': 'plan',
+            'markdown': '1. Read\n2. Fix',
+            'path': '/w/.plans/plan.md',
+          },
+        }),
+      );
+
+      expect(
+        request?.plan,
+        const PlanInteraction(markdown: '1. Read\n2. Fix', path: '/w/.plans/plan.md'),
+      );
+      expect(request?.interaction, isNull);
+      expect(request?.defaultToNo, isTrue);
+    });
+
+    test('S-61 · no plan without its text, nor on a question or on nothing', () {
+      PlanInteraction? planOf(Object? interaction) =>
+          requestOf(requested(<String, Object?>{'interaction': interaction}))?.plan;
+
+      expect(planOf(<String, Object?>{'kind': 'plan'}), isNull);
+      expect(planOf(<String, Object?>{'kind': 'plan', 'markdown': 3}), isNull);
+      expect(planOf(<String, Object?>{'kind': 'question', 'markdown': 'm'}), isNull);
+      expect(planOf(null), isNull);
+      expect(planOf('plan'), isNull);
+      // A path that says nothing is no path.
+      expect(
+        planOf(<String, Object?>{'kind': 'plan', 'markdown': 'm', 'path': ''}),
+        const PlanInteraction(markdown: 'm'),
       );
     });
 

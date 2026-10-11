@@ -17,7 +17,7 @@ export interface SettingOption {
 
 /**
  * One section of the app's Settings — a registry entry: plan 06 declares Appearance and Workspaces,
- * plan 07 registers "Editor" and plan 12 "Terminal". **Never** Claude's settings, which are the
+ * plan 07 registers "Editor" and plan 12 "Terminal". **Never** the agent's settings, which are the
  * screen of plan 13 (docs/architecture/web/03-ui-system.md#os-registros--onde-os-planos-seguintes-encaixam).
  */
 export interface SettingsSectionEntry extends RegistryEntry {

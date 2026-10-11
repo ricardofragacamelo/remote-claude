@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:remote_claude/app/router_provider.dart';
 import 'package:remote_claude/core/config/app_config.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/features/session/session.dart';
 
@@ -51,10 +52,20 @@ void main() {
     final Map<String, Object?> started = browser.frames.firstWhere(
       (Map<String, Object?> frame) => frame['type'] == 'session.started',
     );
-    final String conversationId =
-        (started['payload']! as Map<String, Object?>)['claudeSessionId']! as String;
+    final Map<String, Object?> conversation =
+        (started['payload']! as Map<String, Object?>)['conversation']! as Map<String, Object?>;
 
-    app.container.read(routerProvider).go(conversationRouteFor(conversationId, workspace));
+    app.container
+        .read(routerProvider)
+        .go(
+          conversationRouteFor(
+            ConversationKey(
+              engine: conversation['engine']! as String,
+              id: conversation['id']! as String,
+            ),
+            workspace,
+          ),
+        );
     await pumpUntil(tester, () => find.byType(ConversationHistoryPage).evaluate().isNotEmpty);
 
     // Looked for **on** the history screen: the session screen being left is still in the tree

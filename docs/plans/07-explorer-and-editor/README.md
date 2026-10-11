@@ -129,7 +129,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Nenhum save apaga o trabalho do Claude em silêncio, nem trunca arquivo, nem duplica no reenvio | B-11, B-34, B-35, B-40 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#tabela-de-status-http) | S-62…S-79, S-225…S-242, S-259…S-263 |
 | Criar, mover, copiar e apagar nunca sobrescrevem nem atravessam link | B-12…B-15 | [backend/03-modules](../../architecture/backend/03-modules.md#workspace) | S-80…S-115 |
 | Toda escrita humana entra na trilha antes do disco, sem conteúdo, e é visível | B-16, B-17, B-29 | [backend/05-persistence](../../architecture/backend/05-persistence.md#os-fatos-de-conta) | S-116…S-123, S-196, S-197 |
-| A escrita humana convive com o desfazer da sessão, que a preserva | B-18, B-44 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#desfazer-arquivos--o-store-é-nosso) | S-124…S-127, S-283…S-285 |
+| A escrita humana convive com o desfazer da sessão, que a preserva | B-18, B-44 | [backend/04a-claude](../../architecture/backend/04a-claude.md#desfazer-arquivos--o-store-é-nosso) | S-124…S-127, S-283…S-285 |
 | O watcher não esgota o inotify da máquina, e toda assinatura é liberada | B-19, B-20, B-21 | [backend/06-realtime](../../architecture/backend/06-realtime.md#fan-out) | S-128…S-147 |
 | A origem da mudança rotula, e não decide | B-22 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#envelope) | S-148…S-151 |
 | O explorer é acessível, virtualizado e tem as funções de arquivo completas, em lote e com desfazer | B-24…B-27 | [web/03-ui-system](../../architecture/web/03-ui-system.md#acessibilidade--não-é-opcional) | S-157…S-187 |

@@ -38,7 +38,7 @@ lista já dobrada.
 
 ### B-29 — Ferramenta: título, IN/OUT e a saída completa ✅
 
-[tool-labels.ts](../../../web/src/features/session/lib/tool-labels.ts) usa o `title` quando presente.
+`tool-labels.ts` (removido no plano 28 · F2) usa o `title` quando presente.
 [ToolRow.tsx](../../../web/src/features/session/components/conversation/ToolRow.tsx): Bash expandido mostra IN
 com o `command` em mono e OUT com a saída (ANSI); as outras ferramentas mantêm o input como hoje. Expandir pede
 a saída completa por um hook (`useToolResult`) → service → api, uma vez por ferramenta; falha mostra o `summary`

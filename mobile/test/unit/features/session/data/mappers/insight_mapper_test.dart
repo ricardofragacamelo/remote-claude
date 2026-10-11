@@ -78,7 +78,13 @@ void main() {
         'maxTokens': 200000.0,
         'percentage': 25.4,
         'categories': <Object?>[
-          <String, Object?>{'id': 'messages', 'name': 'Messages', 'tokens': 40000},
+          <String, Object?>{
+            'id': 'messages',
+            'messageKey': 'sessions.context.messages',
+            'name': 'Messages',
+            'tokens': 40000,
+            'kind': 'used',
+          },
           <String, Object?>{'id': 'broken', 'name': 'Broken'},
           'nope',
         ],
@@ -88,7 +94,40 @@ void main() {
       expect(use.maxTokens, 200000);
       expect(use.percentage, 25);
       expect(use.categories, const <ContextCategory>[
-        ContextCategory(id: 'messages', name: 'Messages', tokens: 40000),
+        ContextCategory(id: 'messages', messageKey: 'sessions.context.messages', tokens: 40000),
+      ]);
+    });
+
+    test('S-71 · a canonical category comes by its key, another by the engine\'s words', () {
+      final ContextUse use = contextUseFrom(<String, Object?>{
+        'model': 'model-a',
+        'totalTokens': 3,
+        'maxTokens': 10,
+        'percentage': 30,
+        'categories': <Object?>[
+          <String, Object?>{
+            'id': 'system',
+            'messageKey': 'sessions.context.system',
+            'name': 'Engine words for the system prompt',
+            'tokens': 1,
+            'kind': 'used',
+          },
+          <String, Object?>{
+            'id': 'engineOwn',
+            'text': 'Something only the engine counts',
+            'name': 'Something only the engine counts',
+            'tokens': 2,
+            'kind': 'deferred',
+          },
+          // Blank is not a key nor a name: neither is read.
+          <String, Object?>{'id': 'blank', 'messageKey': '', 'text': '', 'tokens': 0},
+        ],
+      })!;
+
+      expect(use.categories, const <ContextCategory>[
+        ContextCategory(id: 'system', messageKey: 'sessions.context.system', tokens: 1),
+        ContextCategory(id: 'engineOwn', text: 'Something only the engine counts', tokens: 2),
+        ContextCategory(id: 'blank', tokens: 0),
       ]);
     });
 

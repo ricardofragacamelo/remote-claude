@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ReadToolResultUseCase } from '@application/transcript';
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
-import { ClaudeSessionId, TranscriptNotFoundError } from '@domain/transcript';
+import { TranscriptNotFoundError } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
 import { OWNER } from '../../../support/builders/workspace.builder';
 import {
@@ -28,7 +29,7 @@ describe('ReadToolResultUseCase — plan 22, B-11', () => {
   const read = (toolUseId = 'toolu_1', maxBytes = 1_024) =>
     new ReadToolResultUseCase(store, aTranscriptAudience({ origins }), maxBytes).execute({
       userId: owner,
-      sessionId: ClaudeSessionId.create(conversationId(1)),
+      sessionId: ConversationRef.create('claude', conversationId(1)),
       toolUseId,
     });
 
@@ -56,7 +57,7 @@ describe('ReadToolResultUseCase — plan 22, B-11', () => {
   it('answers another person`s conversation exactly as a missing one — S-25', async () => {
     store.addToolResult(conversationId(1), 'toolu_1', 'secret');
     await origins.record({
-      claudeSessionId: ClaudeSessionId.create(conversationId(1)),
+      conversation: ConversationRef.create('claude', conversationId(1)),
       sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
       openedBy: UserId.create('auth|stranger'),
       workspace: WorkspacePath.create('/srv/projects/app'),

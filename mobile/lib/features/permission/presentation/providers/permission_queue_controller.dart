@@ -85,7 +85,7 @@ class PermissionQueueController extends _$PermissionQueueController {
   /// [lockReason] is what the system prompt says, already translated — the controller has no
   /// catalogue, and the prompt is shown by the operating system rather than by a widget.
   ///
-  /// [reason] is what a refusal tells Claude — what to change in a plan, say. Without one, the
+  /// [reason] is what a refusal tells the agent — what to change in a plan, say. Without one, the
   /// refusal says it came from the phone.
   Future<AnswerResult> answer(
     String requestId,
@@ -184,7 +184,7 @@ class PermissionQueueController extends _$PermissionQueueController {
   void saveDraft(String requestId, QuestionDraft draft) =>
       _update(state.saveDraft(requestId, draft));
 
-  /// Answers a question of Claude: a yes, with the answers, and nothing to persist.
+  /// Answers a question of the agent: a yes, with the answers, and nothing to persist.
   ///
   /// No lock and no second step: answering authorises nothing (D-11), and the server says the tool
   /// reads nothing (`riskHint: read`, D-10).

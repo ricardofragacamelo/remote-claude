@@ -16,7 +16,7 @@ respondendo — e outro o remove sem levar os dados junto.
 O backend **herda o login do Claude** (`~/.claude/.credentials.json`) e roda como o usuário dono
 da máquina. Serviço instalado como root, ou como um usuário de sistema, não encontra essa
 credencial — e o produto simplesmente não funciona
-([04-claude-integration](../../architecture/backend/04-claude-integration.md#autenticação--não-faça-nada)).
+([04a-claude](../../architecture/backend/04a-claude.md#autenticação--não-faça-nada)).
 
 Por isso a instalação é **por usuário**, e isso é o primeiro cenário a provar.
 

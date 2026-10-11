@@ -10,6 +10,7 @@ import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
+import '../../../../../support/builders/tools.dart';
 
 /// Not `const` anywhere below: two identical constant expressions are one instance, and identity
 /// would answer before the equality these tests are about.
@@ -38,8 +39,8 @@ void main() {
       MessageFinished(1, messageId: 'm', text: 'a', isFromUser: false),
     );
     expect(
-      ToolInvoked(1, toolUseId: 't', toolName: 'Bash', input: <String, Object?>{}),
-      ToolInvoked(1, toolUseId: 't', toolName: 'Bash', input: <String, Object?>{}),
+      ToolInvoked(1, toolUseId: 't', call: shellLs),
+      ToolInvoked(1, toolUseId: 't', call: shellLs),
     );
     expect(ToolOutput(1, toolUseId: 't', chunk: 'x'), ToolOutput(1, toolUseId: 't', chunk: 'x'));
     expect(
@@ -78,8 +79,8 @@ void main() {
       isNot(MessageFinished(1, messageId: 'm', text: 'a', isFromUser: true)),
     );
     expect(
-      ToolInvoked(1, toolUseId: 't', toolName: 'Bash', input: <String, Object?>{}),
-      isNot(ToolInvoked(1, toolUseId: 't', toolName: 'Read', input: <String, Object?>{})),
+      ToolInvoked(1, toolUseId: 't', call: shellLs),
+      isNot(ToolInvoked(1, toolUseId: 't', call: readA)),
     );
     expect(
       ToolOutput(1, toolUseId: 't', chunk: 'x'),
@@ -111,7 +112,7 @@ void main() {
       SessionStatusReported(7, SessionStatus.idle),
       MessageFragment(7, messageId: 'm', delta: 'a'),
       MessageFinished(7, messageId: 'm', text: 'a', isFromUser: false),
-      ToolInvoked(7, toolUseId: 't', toolName: 'Bash', input: <String, Object?>{}),
+      ToolInvoked(7, toolUseId: 't', call: shellLs),
       ToolOutput(7, toolUseId: 't', chunk: 'x'),
       ToolFinished(7, toolUseId: 't', status: ToolStatus.succeeded),
       TurnFinished(7, TurnSummary(turnId: 't', costUsd: '0.1', durationMs: 2)),
@@ -162,11 +163,11 @@ void main() {
         1,
         's',
         model: 'a',
-        permissionMode: 'plan',
+        permissionMode: 'readOnly',
         workspacePath: '/w',
         commandId: 'c',
       ),
-      isNot(SessionOpened(1, 's', model: 'a', permissionMode: 'plan', workspacePath: '/w')),
+      isNot(SessionOpened(1, 's', model: 'a', permissionMode: 'readOnly', workspacePath: '/w')),
     );
   });
 }

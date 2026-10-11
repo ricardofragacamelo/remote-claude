@@ -97,7 +97,7 @@ export function answersOf(
   }));
 }
 
-/** The option Claude recommends — its label ends in "(Recommended)". Highlighted, never pre-chosen. */
+/** The option the agent recommends — its label ends in "(Recommended)". Shown, never pre-chosen. */
 export function isRecommended(label: string): boolean {
   return /\(recommended\)\s*$/i.test(label);
 }

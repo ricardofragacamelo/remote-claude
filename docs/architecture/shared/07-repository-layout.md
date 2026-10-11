@@ -175,3 +175,17 @@ silencioso para o limite.
 Sobre duplicar utilitário: um pacote `shared/` genérico entre back e front vira depósito, e
 acopla duas coisas que deveriam evoluir separado. `contracts/` existe porque contrato
 **precisa** ser único. Helper de string, não.
+
+---
+
+## Alvo do plano 28 — `engines/` nas três pontas, e o REST no contrato
+
+> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)).
+
+- Cada ponta ganha um anel `engines/<motor>/` e uma composição: `infrastructure/modules/engines/` no
+  backend (F1), `web/src/app/engines.ts` no web (F6) e `mobile/lib/app/engines.dart` no app (já na F0,
+  vazio). Ver [12-engines](12-engines.md).
+- O pacote `packages/contracts/` passa a gerar também os tipos de **todas** as rotas REST, em
+  `schema/http/`, para TypeScript e Dart: as da conversa na F1, o resto na F6 (D-09 do plano 28).
+- O vocabulário e o baseline do portão de neutralidade moram em `scripts/`
+  (`engine-vocabulary.json`, `engine-neutrality-baseline.json`), ao lado do `render-parity.json`.

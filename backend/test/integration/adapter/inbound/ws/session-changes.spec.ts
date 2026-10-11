@@ -6,8 +6,8 @@ import request from 'supertest';
 import { sql } from 'drizzle-orm';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -42,20 +42,24 @@ const CONFIG_BEFORE = '{"debug": false}\n';
 /** The ceiling of a snapshot in this suite, in bytes. */
 const SNAPSHOT_CEILING = 1_000;
 
-/** A tool the turn ran, as `tool.started` said it. */
+/** A tool the turn ran, as `tool.started` said it — by its canonical fields (plan 28, B-15). */
 interface StartedTool {
   readonly toolUseId: string;
-  readonly toolName: string;
+  readonly kind: string;
+  /** The engine's own name for it, opaque to a client — this suite is the engine's. */
+  readonly native: string;
   readonly path: string | null;
 }
 
 function startedTool(frame: Envelope): StartedTool {
-  const input = (frame.payload?.['input'] ?? {}) as { file_path?: string };
+  const subject = (frame.payload?.['subject'] ?? {}) as { paths?: string[] };
+  const origin = (frame.payload?.['origin'] ?? {}) as { native?: string };
 
   return {
     toolUseId: String(frame.payload?.['toolUseId']),
-    toolName: String(frame.payload?.['toolName']),
-    path: input.file_path ?? null,
+    kind: String(frame.payload?.['kind']),
+    native: String(origin.native),
+    path: subject.paths?.[0] ?? null,
   };
 }
 
@@ -151,8 +155,16 @@ describe('what a session changed on disk', () => {
     return String((await until(socket, 'session.started')).payload?.['sessionId']);
   }
 
-  /** The edit turn, every question answered yes, and the tools it ran, in order. */
-  async function editTurn(socket: TestSocket, sessionId: string): Promise<StartedTool[]> {
+  /**
+   * The edit turn, every question answered yes, and the tools it ran, in order.
+   *
+   * @param beforeAnswer what to do with each question while it is still open
+   */
+  async function editTurn(
+    socket: TestSocket,
+    sessionId: string,
+    beforeAnswer: (request: Envelope) => Promise<void> = () => Promise.resolve(),
+  ): Promise<StartedTool[]> {
     socket.send(commandFrame('session.prompt', { sessionId, text: EDIT_TURN }));
     const tools: StartedTool[] = [];
 
@@ -160,6 +172,7 @@ describe('what a session changed on disk', () => {
       const frame = await socket.next();
 
       if (frame.type === 'permission.requested') {
+        await beforeAnswer(frame);
         socket.send(
           commandFrame(
             'permission.resolve',
@@ -183,7 +196,7 @@ describe('what a session changed on disk', () => {
     request(harness.app.getHttpServer()).get(route).set('Authorization', `Bearer ${bearer}`);
 
   const toolsNamed = (tools: readonly StartedTool[], name: string): StartedTool[] =>
-    tools.filter((tool) => tool.toolName === name);
+    tools.filter((tool) => tool.native === name);
 
   /** Sends a command about the files and answers the first frame about it. */
   async function answer(
@@ -232,7 +245,8 @@ describe('what a session changed on disk', () => {
       expect(first.status).toBe(200);
       expect(first.body).toMatchObject({
         path: file('app.js'),
-        toolName: 'Edit',
+        kind: 'file.edit',
+        pending: false,
         before: { state: 'content', content: APP_BEFORE },
         // The second edit wrote the file again: what the first left is not on disk any more.
         after: { state: 'unavailable', reason: 'laterWrite' },
@@ -285,8 +299,61 @@ describe('what a session changed on disk', () => {
       const notWriting = await get(`/sessions/${sessionId}/tools/${String(read?.toolUseId)}/diff`);
       expect([notWriting.status, notWriting.body.error]).toEqual([
         422,
-        expect.objectContaining({ code: 'DIFF_NOT_APPLICABLE', params: { toolName: 'Read' } }),
+        expect.objectContaining({ code: 'DIFF_NOT_APPLICABLE', params: { kind: 'file.read' } }),
       ]);
+    });
+
+    it('shows a call still waiting for an answer against the disk now — plan 28, S-53', async () => {
+      const socket = await connect();
+      const sessionId = await started(socket);
+      const previews: { kind: string; body: Record<string, unknown> }[] = [];
+
+      await editTurn(socket, sessionId, async (request) => {
+        const toolUseId = String(request.payload?.['toolUseId']);
+        const response = await get(`/sessions/${sessionId}/tools/${toolUseId}/diff`);
+        expect(response.status).toBe(200);
+        previews.push({ kind: String(request.payload?.['kind']), body: response.body });
+      });
+
+      const [firstEdit, overConfig, newNotes] = previews;
+      expect(previews.map((preview) => preview.kind)).toEqual([
+        'file.edit',
+        'file.write',
+        'file.write',
+        'file.edit',
+      ]);
+      // The edit, not yet run: the file as it is, and as the edit would leave it.
+      expect(firstEdit?.body).toMatchObject({
+        path: file('app.js'),
+        kind: 'file.edit',
+        pending: true,
+        scope: 'file',
+        before: { state: 'content', content: APP_BEFORE },
+        after: {
+          state: 'content',
+          content: APP_BEFORE.replace("const greeting = 'hello';", "const greeting = 'hi';"),
+        },
+        // The whole file is known on both sides: a hunk of the file, with its context.
+        hunks: [
+          {
+            lines: expect.arrayContaining([
+              { kind: 'removed', text: "const greeting = 'hello';" },
+              { kind: 'added', text: "const greeting = 'hi';" },
+              { kind: 'context', text: '// one' },
+            ]),
+          },
+        ],
+      });
+      expect(overConfig?.body).toMatchObject({
+        pending: true,
+        before: { state: 'content', content: CONFIG_BEFORE },
+        after: { state: 'content', content: '{"debug": true}\n' },
+      });
+      expect(newNotes?.body).toMatchObject({
+        pending: true,
+        before: { state: 'absent' },
+        hunks: [{ lines: [{ kind: 'added', text: 'done' }] }],
+      });
     });
 
     it("refuses somebody else's session, and one that ended — S-110", async () => {

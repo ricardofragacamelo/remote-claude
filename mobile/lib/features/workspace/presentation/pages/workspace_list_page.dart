@@ -2,7 +2,7 @@
 ///
 /// It shows the four states a screen that loads data owes the person. The allowlist is decided on
 /// the machine running the backend, and a phone that could add a root would be a phone that could
-/// point Claude at any directory on somebody's computer: the picker only walks what is there.
+/// point the agent at any directory on somebody's computer: the picker only walks what is there.
 library;
 
 import 'dart:async';
@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/loaded_view.dart';
 import 'package:remote_claude/features/workspace/domain/entities/workspace.dart';
@@ -88,7 +89,7 @@ class _Description extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(top: Tokens.spaceMd),
     child: Text(
-      AppLocalizations.of(context).folderPickerRoots,
+      AppLocalizations.of(context).folderPickerRoots(agentNameIn(context)),
       style: Theme.of(context).textTheme.bodyMedium,
     ),
   );

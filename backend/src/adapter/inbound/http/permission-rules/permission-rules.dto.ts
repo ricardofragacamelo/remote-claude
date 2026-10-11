@@ -11,7 +11,13 @@ import type { ListedPermissionRule } from '@application/permission';
  * code — a schema that answered them would answer all three with the same `INVALID_INPUT`.
  */
 export const grantPermissionRuleSchema = z.object({
+  /** In the canonical grammar — `shell(git status:*)`, `file.edit(src/**)` (plan 28, B-31). */
   pattern: z.string().min(1).max(4096),
+  /** The engine the rule is restricted to; absent for every engine whose calls have the kind. */
+  engine: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]{0,31}$/)
+    .optional(),
   decision: z.enum(['allow', 'deny']),
   scope: z.enum(PERSISTED_PERMISSION_SCOPES),
   /** The workspace root. Required for `project` — the domain says so — and ignored for `always`. */
@@ -31,17 +37,36 @@ export type GrantPermissionRuleBody = z.infer<typeof grantPermissionRuleSchema>;
 export interface PermissionRuleDto {
   readonly id: string;
   readonly scope: string;
+
+  /** The canonical kind the pattern names — `shell`, `file.edit` —, `null` on a disabled rule. */
+  readonly kind: string | null;
+
+  /**
+   * The kind again, or the engine's pattern of a disabled rule — kept beside for the published app,
+   * which reads it (plan 28, D-22).
+   */
   readonly toolName: string;
-  /** The pattern exactly as written, in the grammar of the Claude Code settings. */
+
+  /**
+   * The pattern exactly as written, in the canonical grammar — or, on a disabled rule, the engine's
+   * grammar it was written in, for the person to write it again.
+   */
   readonly pattern: string;
   readonly decision: string;
   readonly projectPath: string | null;
+
+  /** The engine the rule is restricted to, or `null` for every engine whose calls have the kind. */
+  readonly engine: string | null;
   /** Who granted it. Always the caller, since nobody sees another person's rules. */
   readonly grantedBy: string;
   readonly grantedAt: string;
   readonly expiresAt: string;
+  /** `active`, `expired`, `revoked` or `disabled`. */
   readonly status: string;
   readonly revokedAt: string | null;
+
+  /** Why the rule was switched off — `{ reason: 'untranslatable' }` —, or `null`. */
+  readonly disabled: { readonly reason: string } | null;
 }
 
 /** The listing. An object and not a bare array, so the response can grow a field later. */
@@ -54,14 +79,17 @@ export function toPermissionRuleDto({ rule, status }: ListedPermissionRule): Per
   return {
     id: rule.id,
     scope: rule.scope,
-    toolName: rule.pattern.toolName,
+    kind: rule.kind,
+    toolName: rule.kind ?? rule.ruleContent,
     pattern: rule.ruleContent,
     decision: rule.decision,
     projectPath: rule.projectPath,
+    engine: rule.engine,
     grantedBy: rule.userId.value,
     grantedAt: rule.createdAt.toISOString(),
     expiresAt: rule.expiresAt.toISOString(),
     status,
     revokedAt: rule.revokedAt?.toISOString() ?? null,
+    disabled: rule.disabledReason === null ? null : { reason: rule.disabledReason },
   };
 }

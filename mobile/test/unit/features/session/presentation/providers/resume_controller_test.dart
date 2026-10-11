@@ -11,6 +11,7 @@ import 'package:remote_claude/features/session/domain/repositories/session_repos
 import 'package:remote_claude/features/session/presentation/providers/resume_controller.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
 import '../../../../../support/fakes/fake_session_repository.dart';
 
@@ -33,7 +34,7 @@ void main() {
     );
 
     final ProviderSubscription<ResumeState> held = container.listen(
-      resumeControllerProvider('conv-1'),
+      resumeControllerProvider(conversationOf('conv-1')),
       (ResumeState? previous, ResumeState next) {},
     );
 
@@ -46,8 +47,9 @@ void main() {
 
   Future<void> settle() => Future<void>.delayed(Duration.zero);
 
-  ResumeController controller() => container.read(resumeControllerProvider('conv-1').notifier);
-  ResumeState state() => container.read(resumeControllerProvider('conv-1'));
+  ResumeController controller() =>
+      container.read(resumeControllerProvider(conversationOf('conv-1')).notifier);
+  ResumeState state() => container.read(resumeControllerProvider(conversationOf('conv-1')));
 
   test('B-10 · a resume is a start that names the conversation, in the workspace it ran in', () {
     controller().resume('/home/someone/project');
@@ -57,7 +59,7 @@ void main() {
       repository.commands.single.$2,
       equals(<String, Object?>{
         'workspacePath': '/home/someone/project',
-        'resumeSessionId': 'conv-1',
+        'resumeFrom': conversationJson('conv-1'),
       }),
     );
     expect(state().isPending, isTrue);
@@ -84,7 +86,7 @@ void main() {
 
     repository.emit(
       arrivalOf(
-        sessionStarted(sessionId: 'session-7', claudeSessionId: 'conv-1', resumedFrom: 'conv-1'),
+        sessionStarted(sessionId: 'session-7', conversation: 'conv-1', resumedFrom: 'conv-1'),
       ),
     );
     await settle();
@@ -98,7 +100,7 @@ void main() {
 
     repository.emit(
       arrivalOf(
-        sessionStarted(sessionId: 'session-8', claudeSessionId: 'conv-new', resumedFrom: 'conv-1'),
+        sessionStarted(sessionId: 'session-8', conversation: 'conv-new', resumedFrom: 'conv-1'),
       ),
     );
     await settle();
@@ -109,7 +111,7 @@ void main() {
   test('S-24 · a conversation already live is joined, never opened twice', () async {
     controller().resume('/p');
 
-    repository.emit(const SessionJoined(sessionId: 'session-3', claudeSessionId: 'conv-1'));
+    repository.emit(SessionJoined(sessionId: 'session-3', conversation: conversationOf('conv-1')));
     await settle();
 
     expect(state().sessionId, 'session-3');
@@ -119,19 +121,40 @@ void main() {
     controller().resume('/p');
 
     repository.emit(
-      const SessionJoined(sessionId: 'session-4', claudeSessionId: 'x', resumedFrom: 'conv-1'),
+      SessionJoined(
+        sessionId: 'session-4',
+        conversation: conversationOf('x'),
+        resumedFrom: conversationOf('conv-1'),
+      ),
     );
     await settle();
 
     expect(state().sessionId, 'session-4');
   });
 
+  test('S-39 · the same id in another engine is another conversation, not this resume', () async {
+    controller().resume('/p');
+
+    repository
+      ..emit(
+        SessionJoined(
+          sessionId: 'elsewhere',
+          conversation: conversationOf('conv-1', engine: 'engine-b'),
+          resumedFrom: conversationOf('conv-1', engine: 'engine-b'),
+        ),
+      )
+      ..emit(SessionJoined(sessionId: 'mine', conversation: conversationOf('conv-1')));
+    await settle();
+
+    expect(state().sessionId, 'mine');
+  });
+
   test('somebody else’s session opening or joining is not this resume', () async {
     controller().resume('/p');
 
     repository
-      ..emit(arrivalOf(sessionStarted(sessionId: 'fresh', claudeSessionId: 'other')))
-      ..emit(const SessionJoined(sessionId: 'joined', claudeSessionId: 'other'))
+      ..emit(arrivalOf(sessionStarted(sessionId: 'fresh', conversation: 'other')))
+      ..emit(SessionJoined(sessionId: 'joined', conversation: conversationOf('other')))
       ..emit(arrivalOf(messageDelta(messageId: 'm1', delta: 'x', seq: 2)));
     await settle();
 
@@ -158,7 +181,7 @@ void main() {
   });
 
   test('nothing is taken while no resume is in flight', () async {
-    repository.emit(arrivalOf(sessionStarted(sessionId: 's', claudeSessionId: 'conv-1')));
+    repository.emit(arrivalOf(sessionStarted(sessionId: 's', conversation: 'conv-1')));
     await settle();
 
     expect(state(), const ResumeState());
@@ -166,7 +189,7 @@ void main() {
 
   test('once the screen has moved to the session, it is forgotten', () async {
     controller().resume('/p');
-    repository.emit(const SessionJoined(sessionId: 'session-3', claudeSessionId: 'conv-1'));
+    repository.emit(SessionJoined(sessionId: 'session-3', conversation: conversationOf('conv-1')));
     await settle();
 
     controller().acknowledge();
@@ -204,7 +227,9 @@ void main() {
     test('S-57 · never fires for a resume that was answered', () {
       fakeAsync((FakeAsync async) {
         controller().resume('/p');
-        repository.emit(const SessionJoined(sessionId: 'session-3', claudeSessionId: 'conv-1'));
+        repository.emit(
+          SessionJoined(sessionId: 'session-3', conversation: conversationOf('conv-1')),
+        );
         async.flushMicrotasks();
 
         async.elapse(resumeTimeout);
@@ -228,7 +253,9 @@ void main() {
     test('the deadline of an earlier resume does not end a later one', () {
       fakeAsync((FakeAsync async) {
         controller().resume('/p');
-        repository.emit(const SessionJoined(sessionId: 'session-3', claudeSessionId: 'conv-1'));
+        repository.emit(
+          SessionJoined(sessionId: 'session-3', conversation: conversationOf('conv-1')),
+        );
         async.flushMicrotasks();
         controller().acknowledge();
 

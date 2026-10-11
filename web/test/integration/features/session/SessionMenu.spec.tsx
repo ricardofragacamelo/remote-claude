@@ -6,10 +6,11 @@ import { axe } from 'jest-axe';
 import { SessionMenu } from '@/features/session/components/panel/SessionMenu';
 import { StatusDot } from '@/features/session/components/panel/StatusDot';
 import type { SessionHeaderState } from '@/features/session/hooks/useSessionHeader';
+import { api } from '@/shared/api/api';
+import { anEngineList, OTHER_ENGINE, OTHER_ENGINE_NAME } from '../../../support/engines';
 import { render, translator } from '../../../support/render';
 
 const t = translator('en');
-const A = '/srv/projects/app';
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 
 afterEach(() => {
@@ -27,7 +28,7 @@ function aSession(overrides: Partial<SessionHeaderState> = {}): SessionHeaderSta
     turns: 0,
     isOwner: true,
     ended: false,
-    conversationId: 'conv-1',
+    conversation: { engine: 'claude', id: 'conv-1' },
     close: vi.fn(),
     ...overrides,
   };
@@ -93,14 +94,7 @@ describe('the menu of the session — plan 09, B-17', () => {
     const help = extra.onOpenHelp ?? vi.fn();
     // A browser that has notifications, and was not asked yet.
     vi.stubGlobal('Notification', { permission: 'default', requestPermission: vi.fn() });
-    render(
-      <SessionMenu
-        session={session}
-        folder={A}
-        onOpenHelp={help}
-        onOpenRules={extra.onOpenRules}
-      />,
-    );
+    render(<SessionMenu session={session} onOpenHelp={help} onOpenRules={extra.onOpenRules} />);
     await user.click(screen.getByRole('button', { name: t('sessions.menu.open') }));
     return { user, menu: await screen.findByRole('menu'), help };
   }
@@ -118,10 +112,21 @@ describe('the menu of the session — plan 09, B-17', () => {
       t('sessions.export.open'),
       t('sessions.menu.undo'),
       t('sessions.menu.copyId'),
+      t('sessions.menu.copyConversationId', { agent: 'claude' }),
       t('sessions.browserNotice.turnOn'),
       t('sessions.menu.rules'),
-      t('claudePanel.help.open'),
+      t('agentPanel.help.open'),
     ]);
+  });
+
+  it('offers no copy of the conversation id before the stream named the conversation', async () => {
+    const { menu } = await opened(aSession({ conversation: null }));
+
+    expect(names(menu)).not.toContain(t('sessions.menu.copyConversationId', { agent: 'claude' }));
+    expect(within(menu).getByRole('menuitem', { name: t('sessions.export.open') })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 
   it('holds only what holds without a session, in a draft — S-41', async () => {
@@ -130,7 +135,7 @@ describe('the menu of the session — plan 09, B-17', () => {
     expect(names(menu)).toEqual([
       t('sessions.browserNotice.turnOn'),
       t('sessions.menu.rules'),
-      t('claudePanel.help.open'),
+      t('agentPanel.help.open'),
     ]);
   });
 
@@ -144,7 +149,7 @@ describe('the menu of the session — plan 09, B-17', () => {
 
     await first.user.click(screen.getByRole('button', { name: t('sessions.menu.open') }));
     await first.user.click(
-      await screen.findByRole('menuitem', { name: t('claudePanel.help.open') }),
+      await screen.findByRole('menuitem', { name: t('agentPanel.help.open') }),
     );
     expect(first.help).toHaveBeenCalledTimes(1);
   });
@@ -219,8 +224,52 @@ describe('the menu of the session — plan 09, B-17', () => {
     await user.click(within(menu).getByRole('menuitem', { name: t('sessions.menu.copyId') }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      t('sessions.menu.copyFailed', { sessionId: SESSION }),
+      t('sessions.menu.copyFailed', { id: SESSION }),
     );
+  });
+
+  describe('the id of the conversation, named by its engine — plan 28, S-40', () => {
+    const OTHERS = { engine: OTHER_ENGINE, id: 'other-conv-7' };
+
+    it('names the engine as the server does, copies the conversation id, and says so', async () => {
+      vi.spyOn(api, 'get').mockResolvedValue(anEngineList());
+      const { user, menu } = await opened(aSession({ conversation: OTHERS }));
+      const label = t('sessions.menu.copyConversationId', { agent: OTHER_ENGINE_NAME });
+
+      await user.click(await within(menu).findByRole('menuitem', { name: label }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        t('sessions.menu.conversationIdCopied', { agent: OTHER_ENGINE_NAME }),
+      );
+      expect(await navigator.clipboard.readText()).toBe(OTHERS.id);
+    });
+
+    it('names an engine the server does not list by its id, never by a name it knows', async () => {
+      vi.spyOn(api, 'get').mockResolvedValue(anEngineList());
+      const { menu } = await opened(aSession({ conversation: { engine: 'unlisted', id: 'u-1' } }));
+
+      expect(
+        await within(menu).findByRole('menuitem', {
+          name: t('sessions.menu.copyConversationId', { agent: 'unlisted' }),
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it('gives the conversation id to copy by hand when the browser refuses the clipboard', async () => {
+      vi.spyOn(api, 'get').mockResolvedValue(anEngineList());
+      const { user, menu } = await opened(aSession({ conversation: OTHERS }));
+      vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('refused'));
+
+      await user.click(
+        await within(menu).findByRole('menuitem', {
+          name: t('sessions.menu.copyConversationId', { agent: OTHER_ENGINE_NAME }),
+        }),
+      );
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        t('sessions.menu.copyFailed', { id: OTHERS.id }),
+      );
+    });
   });
 
   it('closes the export with its own button', async () => {

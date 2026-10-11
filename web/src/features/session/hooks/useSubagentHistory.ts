@@ -1,5 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { skipToken, useQuery } from '@tanstack/react-query';
 
+import { conversationKey } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import type { AppError } from '@/shared/api/errors';
 import { unfoldedOf } from './loaded';
 import { conversationFrom } from '../services/conversation-reducer';
@@ -20,15 +22,16 @@ export interface SubagentHistory {
  * reducer as everything else, so it is drawn as it was drawn live.
  */
 export function useSubagentHistory(
-  conversationId: string | null,
+  conversation: ConversationRef | null,
   toolUseId: string,
   enabled: boolean,
 ): SubagentHistory {
   const query = useQuery<Conversation, AppError>({
-    queryKey: ['subagent', conversationId, toolUseId],
-    queryFn: async () =>
-      conversationFrom((await fetchSubagentPage(String(conversationId), toolUseId)).events),
-    enabled: enabled && conversationId !== null,
+    queryKey: ['subagent', conversation === null ? null : conversationKey(conversation), toolUseId],
+    queryFn:
+      enabled && conversation !== null
+        ? async () => conversationFrom((await fetchSubagentPage(conversation, toolUseId)).events)
+        : skipToken,
   });
 
   const { data, ...loaded } = unfoldedOf(query);

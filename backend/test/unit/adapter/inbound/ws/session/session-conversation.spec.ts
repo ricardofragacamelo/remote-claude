@@ -12,13 +12,15 @@ describe('conversationFields — plan 04, B-07/B-11', () => {
   });
 
   it('names a fresh conversation, and says it continues nothing by leaving the field out', () => {
-    expect(conversationFields(aConversation())).toEqual({ claudeSessionId: CONVERSATION_ID });
+    expect(conversationFields(aConversation())).toEqual({
+      conversation: { engine: 'claude', id: CONVERSATION_ID },
+    });
   });
 
   it('names what a resumed one continues', () => {
     expect(conversationFields(aConversation(CONVERSATION_ID, SOURCE))).toEqual({
-      claudeSessionId: CONVERSATION_ID,
-      resumedFrom: SOURCE,
+      conversation: { engine: 'claude', id: CONVERSATION_ID },
+      resumedFrom: { engine: 'claude', id: SOURCE },
     });
   });
 });

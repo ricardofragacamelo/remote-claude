@@ -10,6 +10,7 @@ import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/notifications/push_providers.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/features/device/device.dart';
 import 'package:remote_claude/features/session/domain/repositories/checkpoint_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/command_repository.dart';
@@ -18,6 +19,7 @@ import 'package:remote_claude/features/session/domain/repositories/insight_repos
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
+import 'builders/conversations.dart';
 import 'builders/frames.dart';
 import 'builders/permissions.dart';
 import 'fakes/fake_checkpoint_repository.dart';
@@ -45,7 +47,8 @@ class SessionScreen {
   static Widget destination(GoRouterState state) => Text('at ${state.uri}');
 
   /// Mounts `session-1`, connected as [connection] says, and — unless [opened] is false — opened
-  /// and idle, which is what the undo needs.
+  /// and idle, which is what the undo needs, on an engine that declared [capabilities] — every one,
+  /// unless a test says otherwise (plan 28, F3).
   ///
   /// [routed] mounts it inside a router, at its own address, for a test of where it navigates.
   Future<void> pump(
@@ -54,7 +57,13 @@ class SessionScreen {
     bool opened = true,
     bool routed = false,
     List<Override> extra = const <Override>[],
+    AgentNames agents = AgentNames.none,
+    Map<String, Object?>? capabilities,
   }) async {
+    // Above the navigator, where the app puts them: a sheet reads them too.
+    Widget named(BuildContext context, Widget? child) =>
+        AgentNamesScope(names: agents, child: child ?? const SizedBox.shrink());
+
     addTearDown(sessions.dispose);
 
     final List<Override> overrides = <Override>[
@@ -108,13 +117,26 @@ class SessionScreen {
         ],
         initialLocation: sessionRouteFor('session-1'),
         overrides: overrides,
+        builder: named,
       );
     } else {
-      await tester.pumpApp(const SessionPage(sessionId: 'session-1'), overrides: overrides);
+      await tester.pumpApp(
+        const SessionPage(sessionId: 'session-1'),
+        overrides: overrides,
+        builder: named,
+      );
     }
 
     if (opened) {
-      sessions.emit(arrivalOf(sessionStarted(sessionId: 'session-1')));
+      sessions.emit(
+        arrivalOf(
+          sessionStarted(
+            sessionId: 'session-1',
+            engine: anEngine,
+            capabilities: capabilities ?? capabilitiesJson(),
+          ),
+        ),
+      );
     }
 
     await tester.pumpAndSettle();

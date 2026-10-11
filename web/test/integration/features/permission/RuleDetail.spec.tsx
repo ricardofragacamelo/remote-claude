@@ -12,15 +12,19 @@ const NOW = new Date('2026-09-24T12:00:00.000Z');
 const rule = {
   id: 'rule_1',
   scope: 'always',
-  toolName: 'Bash',
-  pattern: 'Bash(git status)',
+  kind: 'shell',
+  // Kept by the server beside the kind, for the published app — never what the screen names.
+  toolName: 'shell',
+  pattern: 'shell(git status)',
   decision: 'allow',
   projectPath: null,
+  engine: null,
   grantedBy: 'auth|42',
   grantedAt: '2026-09-20T10:00:00.000Z',
   expiresAt: '2026-12-19T10:00:00.000Z',
   status: 'active',
   revokedAt: null,
+  disabled: null,
 };
 
 const revokedAt = '2026-09-23T09:00:00.000Z';
@@ -58,6 +62,24 @@ describe('the screen of one rule', () => {
       await screen.findByText(t('rules.row.revokedOn', { at: shown(revokedAt) })),
     ).toBeInTheDocument();
     expect(screen.getByText(t('rules.status.revoked'))).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('rules.action.revoke') })).toBeNull();
+  });
+
+  it('explains a disabled rule that was revoked: why it stopped, and when it left', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue({
+      ...rule,
+      kind: null,
+      toolName: 'Glob',
+      pattern: 'Glob(src/**)',
+      status: 'revoked',
+      revokedAt,
+      disabled: { reason: 'untranslatable' },
+    });
+    render(<RuleDetail ruleId="rule_1" />);
+
+    expect(await screen.findByText('Glob(src/**)')).toBeInTheDocument();
+    expect(screen.getByText(t('rules.status.revoked'))).toBeInTheDocument();
+    expect(screen.getAllByRole('note')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: t('rules.action.revoke') })).toBeNull();
   });
 

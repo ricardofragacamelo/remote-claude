@@ -85,26 +85,26 @@
       "bashTitle": {
         "web": "sessions.tool.titled",
         "app": "sessionToolTitled",
-        "params": { "name": "Bash", "title": "Print numbers 1 through 600" },
-        "en": "Bash · Print numbers 1 through 600"
+        "params": { "name": "Shell", "title": "Print numbers 1 through 600" },
+        "en": "Shell · Print numbers 1 through 600"
       },
       "bashRunning": {
         "web": "sessions.toolRow.labelTitled",
         "params": {
-          "tool": "Bash · Print numbers 1 through 600",
-          "detail": "Bash: seq 1 600",
+          "tool": "Shell · Print numbers 1 through 600",
+          "detail": "Shell: seq 1 600",
           "status": "Running"
         },
-        "en": "Bash · Print numbers 1 through 600 (Bash: seq 1 600) — Running. Show the exact input"
+        "en": "Shell · Print numbers 1 through 600 (Shell: seq 1 600) — Running. Show the exact input"
       },
       "bashDone": {
         "web": "sessions.toolRow.labelTitled",
         "params": {
-          "tool": "Bash · Print numbers 1 through 600",
-          "detail": "Bash: seq 1 600",
+          "tool": "Shell · Print numbers 1 through 600",
+          "detail": "Shell: seq 1 600",
           "status": "Done"
         },
-        "en": "Bash · Print numbers 1 through 600 (Bash: seq 1 600) — Done. Show the exact input"
+        "en": "Shell · Print numbers 1 through 600 (Shell: seq 1 600) — Done. Show the exact input"
       },
       "input": {
         "web": "sessions.toolRow.input",

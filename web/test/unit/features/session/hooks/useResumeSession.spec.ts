@@ -6,9 +6,9 @@ import { useOwnedSessionsStore } from '@/features/session/store/owned-sessions.s
 import { aLiveSocket, hubEvent } from '../../../../support/live-socket';
 import type { LiveSocket } from '../../../../support/live-socket';
 
-const CONVERSATION = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
+const CONVERSATION = { engine: 'claude', id: '6b41b192-a41b-46c2-b8d7-5098d8c825be' };
 const LIVE = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
-const target = { conversationId: CONVERSATION, workspacePath: '/srv/projects/app' };
+const target = { conversation: CONVERSATION, workspacePath: '/srv/projects/app' };
 
 /** The guards of a resume that no screen can reach, because its button is disabled first. */
 describe('useResumeSession', () => {
@@ -37,6 +37,39 @@ describe('useResumeSession', () => {
     expect(starts()).toBe(1);
   });
 
+  it('asks for the conversation by its engine and its id — plan 28, S-39', () => {
+    const { result } = renderHook(() => useResumeSession(target, vi.fn()));
+    socket.connect();
+
+    act(() => {
+      result.current.resume();
+    });
+
+    expect(socket.lastSent('session.start')?.['payload']).toEqual({
+      workspacePath: '/srv/projects/app',
+      resumeFrom: CONVERSATION,
+    });
+  });
+
+  it('takes the same id on another engine for no answer — plan 28, B-13', () => {
+    const onResumed = vi.fn();
+    const { result } = renderHook(() => useResumeSession(target, onResumed));
+    socket.connect();
+
+    act(() => {
+      result.current.resume();
+    });
+    socket.receive(
+      hubEvent(LIVE, 'session.started', 1, {
+        sessionId: LIVE,
+        conversation: { engine: 'other', id: CONVERSATION.id },
+      }),
+    );
+
+    expect(onResumed).not.toHaveBeenCalled();
+    expect(result.current.isResuming).toBe(true);
+  });
+
   it('sends nothing before it knows which conversation, and where', () => {
     const { result } = renderHook(() => useResumeSession(null, vi.fn()));
     socket.connect();
@@ -54,7 +87,7 @@ describe('useResumeSession', () => {
     socket.connect();
 
     socket.receive(
-      hubEvent(LIVE, 'session.started', 1, { sessionId: LIVE, claudeSessionId: CONVERSATION }),
+      hubEvent(LIVE, 'session.started', 1, { sessionId: LIVE, conversation: CONVERSATION }),
     );
 
     expect(onResumed).not.toHaveBeenCalled();
@@ -127,7 +160,7 @@ describe('useResumeSession', () => {
 
       act(() => {
         socket.receive(
-          hubEvent(LIVE, 'session.started', 1, { sessionId: LIVE, claudeSessionId: CONVERSATION }),
+          hubEvent(LIVE, 'session.started', 1, { sessionId: LIVE, conversation: CONVERSATION }),
         );
       });
       act(() => {
@@ -150,7 +183,7 @@ describe('useResumeSession', () => {
 
     act(() => {
       socket.receive(
-        hubEvent(LIVE, 'session.started', 1, { sessionId: LIVE, claudeSessionId: CONVERSATION }),
+        hubEvent(LIVE, 'session.started', 1, { sessionId: LIVE, conversation: CONVERSATION }),
       );
     });
 

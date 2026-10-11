@@ -47,7 +47,7 @@ class FilesPanel extends ConsumerStatefulWidget {
 
   final String folder;
 
-  /// The session the panel is on, if any — the viewer says when Claude waits in it (D-11).
+  /// The session the panel is on, if any — the viewer says when the agent waits in it (D-11).
   final String? sessionId;
 
   /// What a tap on a file does — the viewer, unless a test says otherwise.

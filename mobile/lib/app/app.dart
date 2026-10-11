@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:remote_claude/app/router_provider.dart';
 import 'package:remote_claude/app/session_scope.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The app.
@@ -31,6 +32,9 @@ class RemoteClaudeApp extends ConsumerWidget {
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: ref.watch(routerProvider),
+      // Above every screen: a sentence that names an engine reads its name from here (plan 28).
+      builder: (BuildContext context, Widget? child) =>
+          EngineNames(child: child ?? const SizedBox.shrink()),
     );
   }
 }

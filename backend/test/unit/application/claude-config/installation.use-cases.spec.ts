@@ -1,3 +1,4 @@
+import { AgentUnavailableError } from '@domain/engine';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -11,7 +12,7 @@ import {
 import type { FolderAccess, InstallationFacts, ModelCheck } from '@application/claude-config';
 import { UserId } from '@domain/auth';
 import { ClaudeConfigForbiddenError } from '@domain/claude-config';
-import { ClaudeUnavailableError } from '@domain/session';
+
 import type { SessionInitialization } from '@domain/session';
 import { WorkspacePath } from '@domain/workspace';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
@@ -167,12 +168,12 @@ describe('the test of the connection — plan 13, B-12', () => {
 
   it('keeps no result of a test that could not run — S-31', async () => {
     const checks = new ModelChecks(
-      { run: () => Promise.reject(new ClaudeUnavailableError('model-check')) },
+      { run: () => Promise.reject(new AgentUnavailableError('claude', 'model-check')) },
       clock,
     );
 
     await expect(new CheckModelUseCase(checks).execute(USER, 'sonnet')).rejects.toThrow(
-      ClaudeUnavailableError,
+      AgentUnavailableError,
     );
     expect(checks.lastOf(USER)).toBeNull();
   });

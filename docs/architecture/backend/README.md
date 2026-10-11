@@ -22,7 +22,8 @@ Eles vencem qualquer coisa escrita nesta pasta.
 | 01 | [Clean Architecture](01-clean-architecture.md) | **Sempre**, antes do primeiro arquivo. Define as camadas, a Dependency Rule e como o NestJS se encaixa nela sem contaminar o domínio. |
 | 02 | [Estrutura de pastas](02-folder-structure.md) | Vai criar arquivo ou pasta. Vai procurar onde algo deveria estar. |
 | 03 | [Módulos de domínio](03-modules.md) | Vai criar um módulo novo, ou mexer num existente. Define fronteiras e quem pode falar com quem. |
-| 04 | [Integração com o Claude](04-claude-integration.md) | Vai tocar em sessão, streaming, permissão ou qualquer coisa do Agent SDK. **O documento mais denso desta pasta.** |
+| 04 | [Integração com um agente de código](04-engine-integration.md) | Vai tocar na porta de motor, no registro de motores, na conversa `{ engine, id }`, nas capacidades ou na janela do protocolo. |
+| 04a | [Anexo do motor Claude](04a-claude.md) | Vai tocar em sessão, streaming, permissão ou qualquer coisa do Agent SDK. **O documento mais denso desta pasta.** |
 | 05 | [Persistência](05-persistence.md) | Vai mexer em banco, schema, migration ou repositório. |
 | 06 | [Tempo real](06-realtime.md) | Vai mexer no gateway WebSocket, no fan-out ou no ring buffer de eventos. |
 | 07 | [Testes](07-testing.md) | Vai escrever qualquer teste do backend. Leia junto com [a estratégia geral](../shared/06-testing-strategy.md). |

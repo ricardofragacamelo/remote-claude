@@ -111,8 +111,8 @@ export function useWorkbenchCommands(control: FolderTabs): void {
       keys: [{ key: 'Mod+J', context: 'workbench' }],
     },
     {
-      // The chat with Claude beside the editor, as the editor people know opens its secondary side
-      // bar (plan 08, B-40). Hidden, it keeps everything: its state is the tab's.
+      // The chat with the agent beside the editor, as the editor people know opens its secondary
+      // side bar (plan 08, B-40). Hidden, it keeps everything: its state is the tab's.
       id: 'workbench.toggleSecondarySideBar',
       labelKey: 'command.workbench.toggleSecondarySideBar',
       category: 'view',

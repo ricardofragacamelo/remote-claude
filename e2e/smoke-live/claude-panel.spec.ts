@@ -172,7 +172,7 @@ test(`${live.id} — the real Claude: references, @path, the installation, the s
   const socket = await connected(context().user);
 
   try {
-    const { sessionId, conversationId } = await startConversation(socket, folder);
+    const { sessionId, conversation } = await startConversation(socket, folder);
 
     // S-270 — the installation answers about itself: its models, its MCP servers, its context.
     const models = await callApi(context().user, `/sessions/${sessionId}/models`);
@@ -206,7 +206,7 @@ test(`${live.id} — the real Claude: references, @path, the installation, the s
       (frame) =>
         frame.type === 'message.completed' && (frame.payload as { role?: unknown }).role === 'user',
     );
-    const kept = (await transcriptOf(context().user, conversationId)).events
+    const kept = (await transcriptOf(context().user, conversation)).events
       .filter((event) => event.type === 'message.completed' && event.payload['role'] === 'user')
       .map((event) => event.payload['messageId']);
     expect(kept).toContain((echoed?.payload as { messageId?: unknown } | undefined)?.messageId);
@@ -229,10 +229,10 @@ test(`${live.id} — the real Claude: references, @path, the installation, the s
     const thought = blocksOf(
       await turn(socket, sessionId, folder, { text: expected.thinkingPrompt }),
     );
-    const thinking = thought.filter((block) => block.type.includes('thinking'));
+    const thinking = thought.filter((block) => /thinking/i.test(block.type));
     expect(thinking.length).toBeGreaterThan(0);
     for (const block of thinking) {
-      expect(['thinking', 'redacted_thinking']).toContain(block.type);
+      expect(['thinking', 'redactedThinking']).toContain(block.type);
       expect(block.text).toBeUndefined();
     }
 
@@ -240,8 +240,7 @@ test(`${live.id} — the real Claude: references, @path, the installation, the s
     const delegated = await turn(socket, sessionId, folder, { text: expected.subagentPrompt });
     const agent = delegated.find(
       (frame) =>
-        frame.type === 'tool.started' &&
-        ['Agent', 'Task'].includes(String((frame.payload as { toolName?: unknown }).toolName)),
+        frame.type === 'tool.started' && (frame.payload as { kind?: unknown }).kind === 'agent',
     );
     expect(agent).toBeDefined();
     const opener = (agent?.payload as { toolUseId?: unknown } | undefined)?.toolUseId;

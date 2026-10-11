@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/message_strip.dart';
@@ -65,14 +66,15 @@ String standingWord(AppLocalizations l10n, SessionStanding standing) => switch (
   SessionStanding.ended => l10n.sessionStandingEnded,
 };
 
-/// The sentence of the sheet.
-String standingSentence(AppLocalizations l10n, SessionStanding standing) => switch (standing) {
-  SessionStanding.connected => l10n.sessionDotConnected,
-  SessionStanding.reconnecting => l10n.sessionDotReconnecting,
-  SessionStanding.running => l10n.sessionDotRunning,
-  SessionStanding.waiting => l10n.sessionDotWaiting,
-  SessionStanding.ended => l10n.sessionDotEnded,
-};
+/// The sentence of the sheet, naming the engine of the session by [agent].
+String standingSentence(AppLocalizations l10n, SessionStanding standing, String agent) =>
+    switch (standing) {
+      SessionStanding.connected => l10n.sessionDotConnected,
+      SessionStanding.reconnecting => l10n.sessionDotReconnecting,
+      SessionStanding.running => l10n.sessionDotRunning(agent),
+      SessionStanding.waiting => l10n.sessionDotWaiting(agent),
+      SessionStanding.ended => l10n.sessionDotEnded,
+    };
 
 /// The colour of each standing — a role of the scheme, never a shade, and never alone.
 Color standingColour(ColorScheme scheme, SessionStanding standing) => switch (standing) {
@@ -90,6 +92,32 @@ String formatUsd(String costUsd, String locale) {
     ..maximumFractionDigits = 4;
 
   return format.format(double.tryParse(costUsd) ?? 0);
+}
+
+/// What the session cost, in one sentence: nothing yet, the cost of the turns that said it, or that
+/// its engine says none.
+String _costSentence(
+  BuildContext context,
+  AppLocalizations l10n,
+  Conversation conversation, {
+  required int turns,
+}) {
+  final String? cost = conversation.costUsd;
+
+  if (turns == 0) {
+    return l10n.sessionStatusNoCost;
+  }
+
+  if (cost == null) {
+    return l10n.sessionStatusCostNotReported(
+      AgentNamesScope.of(context).nameOf(conversation.facts.engine),
+    );
+  }
+
+  return l10n.sessionStatusCost(
+    formatUsd(cost, Localizations.localeOf(context).toLanguageTag()),
+    '${conversation.costedTurns.length}',
+  );
 }
 
 /// The chip of [sessionId], as it stands.
@@ -172,7 +200,11 @@ class StatusSheet extends ConsumerWidget {
             children: <Widget>[
               _Dot(standing: standing),
               const SizedBox(width: Tokens.spaceSm),
-              Expanded(child: Text(standingSentence(l10n, standing))),
+              Expanded(
+                child: Text(
+                  standingSentence(l10n, standing, agentNameIn(context, conversation.facts.engine)),
+                ),
+              ),
             ],
           ),
           Row(
@@ -191,18 +223,8 @@ class StatusSheet extends ConsumerWidget {
             ],
           ),
           // Before the first turn ended there is no cost — never "$0", which would be a number about
-          // nothing (S-47).
-          Text(
-            turns == 0
-                ? l10n.sessionStatusNoCost
-                : l10n.sessionStatusCost(
-                    formatUsd(
-                      conversation.costUsd,
-                      Localizations.localeOf(context).toLanguageTag(),
-                    ),
-                    '$turns',
-                  ),
-          ),
+          // nothing (S-47) —, and on an engine that reports none, it says so (plan 28, B-29).
+          Text(_costSentence(context, l10n, conversation, turns: turns)),
         ],
       ),
     );

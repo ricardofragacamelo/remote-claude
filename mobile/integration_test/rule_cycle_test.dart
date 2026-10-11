@@ -120,7 +120,7 @@ void main() {
     await approvedFromTheBrowser(tester, app);
 
     final Map<String, Object?> granted = await app.browser.grantRule(
-      'Write(/workspace/e2e-app-revoke-race.md)',
+      'file.write(/workspace/e2e-app-revoke-race.md)',
     );
     final String ruleId = granted['id']! as String;
 

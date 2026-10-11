@@ -34,6 +34,7 @@ export class AuditController {
       userId,
       sessionId: query.sessionId === undefined ? null : SessionId.create(query.sessionId),
       toolName: query.toolName ?? null,
+      kind: query.kind ?? null,
       decision: query.decision ?? null,
       from: query.from === undefined ? null : new Date(query.from),
       to: query.to === undefined ? null : new Date(query.to),

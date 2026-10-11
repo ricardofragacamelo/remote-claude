@@ -204,7 +204,7 @@ function patternsOf(
     return [];
   }
 
-  const chosen = reachesFor(request.toolName, request.input).find(
+  const chosen = reachesFor(request.tool, request.projectPath).find(
     (offered) => offered.reach === (reach ?? 'exact'),
   );
 

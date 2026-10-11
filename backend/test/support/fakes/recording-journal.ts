@@ -6,11 +6,11 @@ export class RecordingJournal implements SessionFileJournal {
   readonly turns: { sessionId: string; promptId: string; promptText: string }[] = [];
   readonly captured: {
     sessionId: string;
-    claudeSessionId: string;
+    conversation: string;
     promptId: string;
     path: string;
   }[] = [];
-  readonly results: { sessionId: string; claudeSessionId: string; path: string }[] = [];
+  readonly results: { sessionId: string; conversation: string; path: string }[] = [];
 
   openTurn(sessionId: SessionId, promptId: string, promptText: string): Promise<void> {
     this.turns.push({ sessionId: sessionId.value, promptId, promptText });
@@ -20,7 +20,7 @@ export class RecordingJournal implements SessionFileJournal {
   captureBefore(scope: JournalScope, promptId: string, path: string): Promise<void> {
     this.captured.push({
       sessionId: scope.sessionId.value,
-      claudeSessionId: scope.claudeSessionId.value,
+      conversation: scope.conversation.key,
       promptId,
       path,
     });
@@ -30,7 +30,7 @@ export class RecordingJournal implements SessionFileJournal {
   recordResult(scope: JournalScope, path: string): Promise<void> {
     this.results.push({
       sessionId: scope.sessionId.value,
-      claudeSessionId: scope.claudeSessionId.value,
+      conversation: scope.conversation.key,
       path,
     });
     return Promise.resolve();

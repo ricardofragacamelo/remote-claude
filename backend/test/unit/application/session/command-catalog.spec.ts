@@ -1,8 +1,9 @@
+import { AgentUnavailableError } from '@domain/engine';
 import { describe, expect, it } from 'vitest';
 
 import { CommandCatalog } from '@application/session';
 import type { LiveSession } from '@application/session';
-import { ClaudeUnavailableError } from '@domain/session';
+
 import {
   aCommand,
   aConversation,
@@ -104,9 +105,12 @@ describe('CommandCatalog', () => {
   it('keeps no failure, so the next ask tries again — S-31', async () => {
     const catalog = new CommandCatalog();
     const session = live();
-    session.handle.commandsFailWith = new ClaudeUnavailableError('01J0ABCDEFGHJKMNPQRSTVWXYZ');
+    session.handle.commandsFailWith = new AgentUnavailableError(
+      'claude',
+      '01J0ABCDEFGHJKMNPQRSTVWXYZ',
+    );
 
-    await expect(catalog.commandsOf(session)).rejects.toThrow(ClaudeUnavailableError);
+    await expect(catalog.commandsOf(session)).rejects.toThrow(AgentUnavailableError);
 
     session.handle.commandsFailWith = null;
     const listed = await catalog.commandsOf(session);

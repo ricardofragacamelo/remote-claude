@@ -18,6 +18,7 @@ import { AppError } from '@/shared/api/errors';
 import { FOLDER, editorState, openedModel } from '../../../support/editor';
 import { fakeDisk } from '../../../support/editor-disk';
 import { renderRouted, translator } from '../../../support/render';
+import { aToolCall } from '../../../support/canonical-tool';
 
 const t = translator('en');
 const T0 = '2026-09-19T12:00:00.000Z';
@@ -42,7 +43,7 @@ function fold(...frames: readonly Envelope[]): ConversationState {
 
 function show(
   conversation: ConversationState,
-  props: { conversationId?: string; onSearchEverything?: () => void } = {},
+  props: { reference?: { engine: string; id: string }; onSearchEverything?: () => void } = {},
 ) {
   return renderRouted(
     <Conversation
@@ -50,7 +51,7 @@ function show(
       isPartial={false}
       folder={FOLDER}
       sessionId="s-1"
-      conversationId={props.conversationId ?? null}
+      reference={props.reference ?? null}
       {...(props.onSearchEverything === undefined
         ? {}
         : { onSearchEverything: props.onSearchEverything })}
@@ -356,6 +357,24 @@ describe('the conversation of the panel', () => {
       expect(screen.getByText('Weighing it')).toBeVisible();
     });
 
+    it('reserves no place for a thinking that never came — plan 28, S-89', async () => {
+      show(
+        fold(
+          frame('message.delta', { messageId: 'm1', delta: 'Answer' }),
+          frame('message.completed', {
+            messageId: 'm1',
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Answer.' }],
+          }),
+        ),
+      );
+
+      expect(await screen.findByText('Answer.')).toBeInTheDocument();
+      expect(document.querySelector('details')).toBeNull();
+      expect(screen.queryByText(t('sessions.thinking.live'))).toBeNull();
+      expect(screen.queryByText(t('sessions.thinking.done'))).toBeNull();
+    });
+
     it('says it is thinking while the thinking arrives', async () => {
       show(fold(frame('message.delta', { messageId: 'm1', delta: 'hmm', blockType: 'thinking' })));
 
@@ -368,7 +387,7 @@ describe('the conversation of the panel', () => {
           frame('message.completed', {
             messageId: 'm1',
             role: 'assistant',
-            content: [{ type: 'redacted_thinking' }],
+            content: [{ type: 'redactedThinking' }],
           }),
         ),
       );
@@ -400,21 +419,21 @@ describe('the conversation of the panel', () => {
   describe('tools — B-17, B-18', () => {
     function bash(command: string, extra: Envelope[] = []): ConversationState {
       return fold(
-        frame('tool.started', { toolUseId: 't1', toolName: 'Bash', input: { command } }),
+        frame('tool.started', { toolUseId: 't1', ...aToolCall('Bash', { command }) }),
         ...extra,
       );
     }
 
     it('says how a tool is doing by word, as it changes — S-75', async () => {
       const { rerender } = show(bash('ls'));
-      const running = await screen.findByRole('button', { name: /Bash: ls/ });
+      const running = await screen.findByRole('button', { name: /Shell: ls/ });
       expect(running).toHaveTextContent(t('session.toolStatus.running'));
 
       act(() => {
         rerender(<></>);
       });
       show(bash('ls', [frame('tool.completed', { toolUseId: 't1', status: 'succeeded' })]));
-      expect(await screen.findByRole('button', { name: /Bash: ls/ })).toHaveTextContent(
+      expect(await screen.findByRole('button', { name: /Shell: ls/ })).toHaveTextContent(
         t('session.toolStatus.succeeded'),
       );
     });
@@ -433,7 +452,7 @@ describe('the conversation of the panel', () => {
         ]),
       );
 
-      await user.click(await screen.findByRole('button', { name: /Bash: pnpm test/ }));
+      await user.click(await screen.findByRole('button', { name: /Shell: pnpm test/ }));
 
       expect(screen.getByText('FAIL')).toHaveClass('text-destructive');
       expect(screen.getByText(/click/)).toBeInTheDocument();
@@ -449,7 +468,7 @@ describe('the conversation of the panel', () => {
         ]),
       );
 
-      await user.click(await screen.findByRole('button', { name: /Bash: cat big/ }));
+      await user.click(await screen.findByRole('button', { name: /Shell: cat big/ }));
       expect(screen.getByText(/END$/)).toBeInTheDocument();
       expect(screen.queryByText(/^START/)).not.toBeInTheDocument();
 
@@ -465,20 +484,19 @@ describe('the conversation of the panel', () => {
       const user = userEvent.setup();
       show(bash('ls'));
 
-      await user.click(await screen.findByRole('button', { name: /Bash: ls/ }));
+      await user.click(await screen.findByRole('button', { name: /Shell: ls/ }));
 
-      expect(screen.getByRole('link', { name: t('sessions.toolRow.trail') })).toHaveAttribute(
-        'href',
-        expect.stringContaining('/audit?'),
-      );
+      const link = screen.getByRole('link', { name: t('sessions.toolRow.trail') });
+      expect(link).toHaveAttribute('href', expect.stringContaining('/audit?'));
+      // The trail is kept by the engine's own name of the tool: handed over as the filter.
+      expect(link).toHaveAttribute('href', expect.stringContaining('toolName=Bash'));
     });
   });
 
   describe('subagents — B-21', () => {
     const opened = frame('tool.started', {
       toolUseId: 'a1',
-      toolName: 'Agent',
-      input: { description: 'look around', subagent_type: 'Explore' },
+      ...aToolCall('Agent', { description: 'look around', subagent_type: 'Explore' }),
     });
 
     it('nests what a subagent did under the tool that opened it — S-88', async () => {
@@ -488,8 +506,7 @@ describe('the conversation of the panel', () => {
           opened,
           frame('tool.started', {
             toolUseId: 't2',
-            toolName: 'Glob',
-            input: { pattern: '*.ts' },
+            ...aToolCall('Glob', { pattern: '*.ts' }),
             parentToolUseId: 'a1',
           }),
           said('s1', 'Found three.', { parentToolUseId: 'a1' }),
@@ -514,8 +531,7 @@ describe('the conversation of the panel', () => {
           opened,
           frame('tool.started', {
             toolUseId: 'a2',
-            toolName: 'Agent',
-            input: { description: 'other' },
+            ...aToolCall('Agent', { description: 'other' }),
           }),
           said('x', 'of the first', { parentToolUseId: 'a1' }),
           said('y', 'of the second', { parentToolUseId: 'a2' }),
@@ -545,19 +561,19 @@ describe('the conversation of the panel', () => {
         ],
         nextCursor: null,
       });
-      show(fold(opened), { conversationId: 'conv-1' });
+      show(fold(opened), { reference: { engine: 'claude', id: 'conv-1' } });
 
       expect(get).not.toHaveBeenCalled();
       await user.click(await screen.findByRole('button', { name: /look around/ }));
 
       expect(await screen.findByText('From the store.', {}, SLOW)).toBeInTheDocument();
-      expect(get).toHaveBeenCalledWith('/transcripts/conv-1/subagents/a1/messages');
+      expect(get).toHaveBeenCalledWith('/transcripts/claude/conv-1/subagents/a1/messages');
     });
 
     it('says the history has nothing of a subagent that said nothing', async () => {
       const user = userEvent.setup();
       vi.spyOn(api, 'get').mockResolvedValue({ events: [] });
-      show(fold(opened), { conversationId: 'conv-1' });
+      show(fold(opened), { reference: { engine: 'claude', id: 'conv-1' } });
 
       await user.click(await screen.findByRole('button', { name: /look around/ }));
 
@@ -571,7 +587,7 @@ describe('the conversation of the panel', () => {
       vi.spyOn(api, 'get').mockRejectedValue(
         new AppError('NOT_FOUND', 'error.notFound', 'trace-1'),
       );
-      show(fold(opened), { conversationId: 'conv-1' });
+      show(fold(opened), { reference: { engine: 'claude', id: 'conv-1' } });
 
       await user.click(await screen.findByRole('button', { name: /look around/ }));
 
@@ -612,22 +628,64 @@ describe('the conversation of the panel', () => {
       expect(screen.getByText(t('sessions.compacted.auto'))).toBeInTheDocument();
     });
 
+    /** The line of a finished turn, from its parts, as the reader's language says each. */
+    const turnLine = (...details: string[]): string =>
+      t('sessions.turn.summary', { details: details.join(' · ') });
+    const seconds = (value: string): string => t('sessions.turn.seconds', { seconds: value });
+    const turnOf = (payload: Record<string, unknown>) =>
+      frame('turn.completed', { turnId: 'turn-1', durationMs: 1500, ...payload });
+
     it('says a cost it cannot read as nothing, never NaN — S-98', async () => {
+      show(fold(turnOf({ costUsd: 'n/a', usage: {} })));
+
+      expect(
+        await screen.findByText(turnLine('$0.00', seconds('1.5'), t('sessions.turn.noTokens'))),
+      ).toBeInTheDocument();
+      expect(document.body.textContent).not.toContain('NaN');
+    });
+
+    it('draws a turn with no cost and no count without either, and without breaking — plan 28, S-86', async () => {
+      show(fold(turnOf({ usage: {} })));
+
+      expect(
+        await screen.findByText(turnLine(seconds('1.5'), t('sessions.turn.noTokens'))),
+      ).toBeInTheDocument();
+      expect(document.body.textContent).not.toContain('$');
+      expect(document.body.textContent).not.toContain('NaN');
+    });
+
+    it('says a cost of zero as zero, never as absent — plan 28, S-87', async () => {
+      show(fold(turnOf({ costUsd: '0.000000', usage: { outputTokens: 3 } })));
+
+      expect(
+        await screen.findByText(
+          turnLine('$0.00', seconds('1.5'), t('sessions.turn.outputTokens', { count: '3' })),
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('says only the counts the engine reported, the cache read and written as one — plan 28, S-85', async () => {
       show(
         fold(
-          frame('turn.completed', {
-            turnId: 'turn-1',
-            costUsd: 'n/a',
-            durationMs: 1500,
-            usage: {},
+          turnOf({
+            costUsd: '0.0123',
+            usage: { inputTokens: 1200, cacheWriteTokens: 40, reasoningTokens: 9 },
           }),
         ),
       );
 
       expect(
-        await screen.findByText(t('sessions.turn.noUsage', { cost: '$0.00', seconds: '1.5' })),
+        await screen.findByText(
+          turnLine(
+            '$0.0123',
+            seconds('1.5'),
+            [
+              t('sessions.turn.inputTokens', { count: '1,200' }),
+              t('sessions.turn.cacheTokens', { count: '40' }),
+            ].join(', '),
+          ),
+        ),
       ).toBeInTheDocument();
-      expect(document.body.textContent).not.toContain('NaN');
     });
 
     it('draws nothing for an entry whose content it does not have', async () => {
@@ -745,8 +803,7 @@ describe('the conversation of the panel', () => {
         said('m1', '# Title\n\n```ts\nconst a = 1;\n```'),
         frame('tool.started', {
           toolUseId: 't1',
-          toolName: 'Read',
-          input: { file_path: `${FOLDER}/a.ts` },
+          ...aToolCall('Read', { file_path: `${FOLDER}/a.ts` }),
         }),
         frame('turn.completed', { turnId: 'turn-1', costUsd: '0.01', durationMs: 1000, usage: {} }),
       ),

@@ -1,3 +1,4 @@
+import type { CanonicalTool } from '@domain/engine';
 import type { SessionId } from '@domain/session';
 
 /** One invocation of a tool, as the `PreToolUse` hook reports it. */
@@ -11,6 +12,12 @@ export interface ToolInvocation {
 
   /** The exact input the tool was called with. Never summarised — the trail is the record. */
   readonly input: Readonly<Record<string, unknown>>;
+
+  /**
+   * The call as the core reads it (plan 28, B-16). The name and the input above go to the rules
+   * and to the trail alone.
+   */
+  readonly tool: CanonicalTool;
 
   /**
    * The turn this invocation belongs to.

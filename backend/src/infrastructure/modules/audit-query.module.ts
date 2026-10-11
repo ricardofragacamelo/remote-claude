@@ -7,11 +7,13 @@ import {
   QueryAuditTrailUseCase,
 } from '@application/audit';
 import type { AuditEventReader, AuditTrailReader } from '@application/audit';
+import { ToolClassifiers } from '@application/engine';
 import { AuditController } from '@adapter/inbound/http/audit/audit.controller';
 import { AuditEventsController } from '@adapter/inbound/http/audit/audit-events.controller';
 import { DrizzleAuditEventReader } from '@adapter/outbound/persistence/audit/drizzle-audit-event.reader';
 import { DrizzleAuditTrailReader } from '@adapter/outbound/persistence/audit/drizzle-audit-trail.reader';
 import { AuthModule } from './auth.module';
+import { engineToolClassifierProviders } from './engines';
 
 /**
  * The read side of `audit`: the query of the trail and of the account facts, and nothing else.
@@ -37,10 +39,12 @@ import { AuthModule } from './auth.module';
       inject: [AUDIT_EVENT_READER],
       useFactory: (reader: AuditEventReader) => new QueryAuditEventsUseCase(reader),
     },
+    ...engineToolClassifierProviders,
     {
       provide: QueryAuditTrailUseCase,
-      inject: [AUDIT_TRAIL_READER],
-      useFactory: (reader: AuditTrailReader) => new QueryAuditTrailUseCase(reader),
+      inject: [AUDIT_TRAIL_READER, ToolClassifiers],
+      useFactory: (reader: AuditTrailReader, classifiers: ToolClassifiers) =>
+        new QueryAuditTrailUseCase(reader, classifiers),
     },
   ],
 })

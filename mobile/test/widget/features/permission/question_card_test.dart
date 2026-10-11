@@ -243,7 +243,7 @@ void main() {
   ) async {
     await pumpQuestion(tester, interaction: QuestionInteraction.unreadable);
 
-    expect(find.text(l10n.permissionQuestionMalformed), findsOneWidget);
+    expect(find.text(l10n.permissionQuestionMalformed('engine-a')), findsOneWidget);
     expect(find.text(l10n.permissionQuestionSubmit), findsNothing);
     expect(find.text(l10n.permissionRemaining(600)), findsOneWidget);
 

@@ -6,13 +6,13 @@ import type {
 } from '@/features/permission';
 import type { ToolExecution } from '../../types/live-session';
 
-/** A question of Claude on the line of its tool: the questions, what was answered, and how it ended. */
+/** The agent's question on the line of its tool: the questions, what was answered, how it ended. */
 export interface QuestionView {
   readonly interaction: QuestionInteraction;
   readonly answers: readonly QuestionAnswer[] | null;
   readonly end: QuestionEnd;
 
-  /** Why it was refused, on `declined` — what Claude was told. */
+  /** Why it was refused, on `declined` — what the agent was told. */
   readonly reason: string | null;
 
   /** What the CLI said of it. */
@@ -20,23 +20,23 @@ export interface QuestionView {
 }
 
 /**
- * The question on the line of an `AskUserQuestion`, as far as this screen knows it — or `null`, and
- * the line is drawn like any other (plan 24, B-15).
+ * The question on the line of a call of kind `question`, as far as this screen knows it — or `null`,
+ * and the line is drawn like any other (plan 24, B-15; plan 28, B-18).
  *
  * Live, the settlement of its request carries the questions — they were the card's — and the answers
- * of `permission.resolved`; a refusal's reason is what the tool said, which is what Claude was told.
- * From the history, `tool.completed` carries them, with what this backend recorded (plan 24, B-22) —
- * and a question it has no record of, answered in another client, says so.
+ * of `permission.resolved`; a refusal's reason is what the tool said, which is what the agent was
+ * told. From the history, `tool.completed` carries them, with what this backend recorded (plan 24,
+ * B-22) — and a question it has no record of, answered in another client, says so.
  */
 export function questionOf(
   tool: ToolExecution,
   outcome: PermissionOutcome | undefined,
 ): QuestionView | null {
-  if (tool.toolName !== 'AskUserQuestion') {
+  if (tool.kind !== 'question') {
     return null;
   }
 
-  if (outcome?.interaction != null) {
+  if (outcome?.interaction?.kind === 'question') {
     const end = endOf(outcome);
 
     return {

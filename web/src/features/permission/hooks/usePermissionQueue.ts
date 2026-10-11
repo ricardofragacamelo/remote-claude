@@ -50,17 +50,17 @@ export interface PermissionQueue {
   readonly drafts: Readonly<Record<string, QuestionDraft>>;
   saveDraft(requestId: string, draft: QuestionDraft): void;
 
-  /** Answers a question of Claude: `allow`, with the answers, and nothing to persist. */
+  /** Answers a question of the agent: `allow`, with the answers, and nothing to persist. */
   answerQuestion(request: PermissionRequest, answers: readonly QuestionAnswer[]): void;
 
   /** Does not answer a question: `deny`, with what the person wrote — or our sentence for nothing. */
   declineQuestion(request: PermissionRequest, reason: string): void;
 }
 
-/** What Claude is told when a person refuses from this screen. */
+/** What the agent is told when a person refuses from this screen. */
 const REFUSED_HERE = 'refused from the web client';
 
-/** What Claude is told when a person chose not to answer its question, and wrote nothing. */
+/** What the agent is told when a person chose not to answer its question, and wrote nothing. */
 const DECLINED_HERE = 'The user chose not to answer the question.';
 
 /**
@@ -138,7 +138,7 @@ export function usePermissionQueue(sessionId: string | null): PermissionQueue {
       send(request, {
         decision,
         scope,
-        // The contract requires a reason on a refusal: it goes into the trail and back to Claude
+        // The contract requires a reason on a refusal: it goes into the trail and back to the agent
         // as a message, which is how the agent learns to propose something else.
         reason: decision === 'deny' ? refusalReason(reason, REFUSED_HERE) : null,
         reach: reach ?? null,

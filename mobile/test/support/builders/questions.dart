@@ -6,6 +6,7 @@ import 'package:remote_claude/features/permission/domain/entities/permission_req
 import 'package:remote_claude/features/permission/domain/entities/question.dart';
 
 import 'permissions.dart';
+import 'tools.dart';
 
 /// Which sections — a multiple choice.
 const Question sections = Question(
@@ -56,9 +57,9 @@ PermissionRequest aQuestionRequest({
 }) => aPermissionRequest(
   requestId: requestId,
   toolUseId: 'toolu-q',
-  toolName: 'AskUserQuestion',
+  call: questionCall(count: 3, rawInput: const <String, Object?>{'questions': <Object?>[]}),
+  titleKey: 'permission.tool.question',
   description: null,
-  input: const <String, Object?>{'questions': <Object?>[]},
   riskHint: RiskHint.read,
   defaultToNo: false,
   expiresAt: expiresAt ?? t0.add(const Duration(minutes: 10)),

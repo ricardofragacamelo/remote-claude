@@ -49,7 +49,7 @@ medição e o porquê estão em
 
 O ponto de atenção aqui é **branches**. É trivial passar de 90 % de linhas cobrindo só o
 caminho feliz; neste backend o caminho de erro é o que não pode falhar. Cada `if` de
-permissão negada, cada `catch` de `CLAUDE_UNAVAILABLE`, cada ramo de timeout e cada
+permissão negada, cada `catch` de `AGENT_UNAVAILABLE`, cada ramo de timeout e cada
 `default` de mapper precisa de teste — é justamente o que a dimensão `branches` cobra.
 
 ---

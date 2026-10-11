@@ -8,19 +8,19 @@ import type { SessionMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { Envelope } from '@remote-claude/contracts';
 import type { Router } from 'express';
 
-import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
+import { TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
 import {
   TRANSCRIPT_LIMITS,
   TRANSCRIPT_READ_LIMITS,
-} from '@adapter/outbound/claude/transcript-reads';
+} from '@adapter/outbound/engines/claude/transcript-reads';
 import { SESSION_ORIGIN_REPOSITORY } from '@application/session';
 import type { SessionOriginRepository } from '@application/session';
 import { FollowTranscriptUseCase } from '@application/transcript';
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
@@ -196,7 +196,7 @@ describe('the history read live — plan 22', () => {
   /** Records a conversation as opened here by somebody. */
   async function openedHere(id: string, subject: string): Promise<void> {
     await harness.app.get<SessionOriginRepository>(SESSION_ORIGIN_REPOSITORY).record({
-      claudeSessionId: ClaudeSessionId.create(id),
+      conversation: ConversationRef.create('claude', id),
       sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
       openedBy: UserId.create(subject),
       workspace: WorkspacePath.create(allowlist.root),
@@ -242,7 +242,7 @@ describe('the history read live — plan 22', () => {
     afterMessageId?: string,
   ): Promise<Envelope> {
     const command = commandFrame('transcript.follow', {
-      conversationId: id,
+      conversation: { engine: 'claude', id },
       ...(afterMessageId === undefined ? {} : { afterMessageId }),
     });
     socket.send(command);
@@ -446,7 +446,7 @@ describe('the history read live — plan 22', () => {
       expect(ack).toMatchObject({
         kind: 'ack',
         type: 'transcript.following',
-        payload: { conversationId: id, activity: 'activeElsewhere' },
+        payload: { conversation: { engine: 'claude', id }, activity: 'activeElsewhere' },
       });
       expect(update.seq).toBe(1);
       expect(update.sessionId).toBeUndefined();
@@ -516,7 +516,7 @@ describe('the history read live — plan 22', () => {
 
       expect(reset).toMatchObject({
         type: 'transcript.reset',
-        payload: { followId, conversationId: id, reason: 'rewritten' },
+        payload: { followId, conversation: { engine: 'claude', id }, reason: 'rewritten' },
       });
     });
 
@@ -535,7 +535,7 @@ describe('the history read live — plan 22', () => {
       const socket = await connected();
       socket.send(commandFrame('session.start', { workspacePath: allowlist.root }));
       const started = (await until(socket, (frame) => frame.type === 'session.started')).at(-1);
-      const live = String(started?.payload?.['claudeSessionId']);
+      const live = String((started?.payload?.['conversation'] as { id?: string } | undefined)?.id);
       store.add({
         sessionId: live,
         directory: allowlist.root,
@@ -667,7 +667,7 @@ describe('the history read live — plan 22', () => {
     it('refuses a payload it cannot read, with every invalid field — S-69', async () => {
       const socket = await connected();
       const command = commandFrame('transcript.follow', {
-        conversationId: 'not-a-uuid',
+        conversation: { engine: 'claude' },
         afterMessageId: 42,
       });
       socket.send(command);

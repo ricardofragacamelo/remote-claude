@@ -1,14 +1,12 @@
 /**
- * What this domain knows about a shell line — one list, read by both the risk classifier and the
- * rule matcher, so the two can never disagree about what joins one command to the next.
+ * What this domain knows about a shell line — the `subject.command` of a `shell` call — one list,
+ * read by both the risk classifier and the rule matcher, so the two can never disagree about what
+ * joins one command to the next. No engine's name of a tool: a shell is `kind === 'shell'`.
  *
  * It is deliberately not a parser. Quotes are not understood: `git commit -m "a; b"` counts as
  * having a separator. Every place that reads these fails **closed** on that — a question more,
  * never an authorisation more — which is the only safe way to be wrong without a parser.
  */
-
-/** The tools whose input is a shell line. */
-export const SHELL_TOOLS: ReadonlySet<string> = new Set(['Bash', 'BashTool']);
 
 /**
  * What separates one command from the next in a single line: `&&`, `||`, `;`, `|`, `&` and a line

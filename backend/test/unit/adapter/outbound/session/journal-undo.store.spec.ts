@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import type { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
 import { JournalUndoStore } from '@adapter/outbound/session/journal-undo.store';
 import { SessionFileState, SessionId } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { CONVERSATION_ID, SESSION_ID } from '../../../../support/builders/session.builder';
 import { RecordingLogger } from '../../../../support/fakes/recording-logger';
 
 const reach = {
   sessionId: SessionId.create(SESSION_ID),
-  claudeSessionId: ClaudeSessionId.create(CONVERSATION_ID),
+  conversation: ConversationRef.create('claude', CONVERSATION_ID),
 };
 
 const state = SessionFileState.record({
@@ -25,16 +25,16 @@ const state = SessionFileState.record({
 function aRepository(saveState: () => Promise<void> = () => Promise.resolve()) {
   const asked: string[] = [];
   const files = {
-    checkpointsOfConversation: (sessionId: SessionId, conversation: ClaudeSessionId) => {
-      asked.push(`checkpoints ${sessionId.value} ${conversation.value}`);
+    checkpointsOfConversation: (sessionId: SessionId, conversation: ConversationRef) => {
+      asked.push(`checkpoints ${sessionId.value} ${conversation.id}`);
       return Promise.resolve([]);
     },
-    statesOfConversation: (sessionId: SessionId, conversation: ClaudeSessionId) => {
-      asked.push(`states ${sessionId.value} ${conversation.value}`);
+    statesOfConversation: (sessionId: SessionId, conversation: ConversationRef) => {
+      asked.push(`states ${sessionId.value} ${conversation.id}`);
       return Promise.resolve([]);
     },
-    sessionsOfConversations: (conversations: readonly string[]) => {
-      asked.push(`sessions ${conversations.join(',')}`);
+    sessionsOfConversations: (conversations: readonly ConversationRef[]) => {
+      asked.push(`sessions ${conversations.map((each) => each.id).join(',')}`);
       return Promise.resolve(['01J0ABCDEFGHJKMNPQRSTVWXY0']);
     },
     saveState,

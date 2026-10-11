@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -192,7 +192,8 @@ describe('a question of Claude, over the socket', () => {
   /** The text of the question the recording asks — the key the SDK's answers go under. */
   const promptOf = (request: Envelope): string =>
     String(
-      (request.payload?.['input'] as { questions: { question: string }[] }).questions[0]?.question,
+      (request.payload?.['rawInput'] as { questions: { question: string }[] }).questions[0]
+        ?.question,
     );
 
   /** The error frame an answer earned. */
@@ -204,8 +205,8 @@ describe('a question of Claude, over the socket', () => {
     const { request } = await asked(await connect());
 
     expect(request.payload).toMatchObject({
-      toolName: 'AskUserQuestion',
-      title: 'permission.tool.AskUserQuestion',
+      kind: 'question',
+      title: 'permission.tool.question',
       riskHint: 'read',
       defaultToNo: false,
       suggestions: [],
@@ -316,7 +317,7 @@ describe('a question of Claude, over the socket', () => {
     it('refuses answers on a request that is not a question — S-20', async () => {
       const socket = await connect();
       const { requestId, request } = await asked(socket, 'do the work [fixture:tool-turn]');
-      expect(request.payload?.['toolName']).not.toBe('AskUserQuestion');
+      expect(request.payload?.['kind']).not.toBe('question');
 
       answer(socket, requestId, {
         decision: 'allow',
@@ -442,7 +443,7 @@ describe('a question of Claude, over the socket', () => {
         {
           behavior: 'allow',
           updatedInput: {
-            ...(request.payload?.['input'] as object),
+            ...(request.payload?.['rawInput'] as object),
             answers: { [promptOf(request)]: 'a counter, one day' },
           },
         },
@@ -638,16 +639,17 @@ describe('a question of Claude, over the socket', () => {
     });
   });
 
-  describe('rules and questions — B-07', () => {
+  describe('rules and questions — B-07; plan 28, B-32', () => {
     async function ruleFor(decision: 'allow' | 'deny'): Promise<void> {
-      // Stored directly: the API refuses an allow for a tool that asks the person, and this is one
-      // left from before that rule existed.
+      // Stored directly: no rule can name a question any more, and this is one left from before —
+      // which the migration switched off (plan 28, D-18).
       await connection.db.execute(
         sql`INSERT INTO "permission_rules"
               ("id", "user_id", "scope", "project_path", "pattern", "decision", "granted_at",
-               "expires_at")
+               "expires_at", "grammar", "disabled_reason", "native_pattern")
             VALUES (${`rule-${decision}-${String(Date.now())}`}, ${SUBJECT}, 'always', NULL,
-                    'AskUserQuestion', ${decision}, now(), now() + interval '1 day')`,
+                    'AskUserQuestion', ${decision}, now(), now() + interval '1 day',
+                    'canonical', 'untranslatable', 'AskUserQuestion')`,
       );
     }
 
@@ -657,33 +659,15 @@ describe('a question of Claude, over the socket', () => {
       );
     });
 
-    it('ignores an allow already recorded, asks the person, and says so in debug — S-29', async () => {
-      await ruleFor('allow');
-      const { requestId, request } = await asked(await connect());
+    it.each<'allow' | 'deny'>(['allow', 'deny'])(
+      'reads no old %s for a question, and asks the person — S-29, S-30, S-95',
+      async (decision) => {
+        await ruleFor(decision);
 
-      expect(request.payload).toMatchObject({ toolName: 'AskUserQuestion' });
-      expect(
-        harness.log
-          .withOp('permission.rule.lookup')
-          .some((line) => line.level === 'debug' && line['requestId'] === requestId),
-      ).toBe(true);
-    });
+        const { request } = await asked(await connect());
 
-    it('lets a deny refuse by itself — S-30', async () => {
-      await ruleFor('deny');
-      const socket = await connect();
-
-      socket.send(commandFrame('session.start', { workspacePath: root }));
-      await socket.next();
-      const sessionId = String((await until(socket, 'session.started')).payload?.['sessionId']);
-      started.push({ socket, sessionId });
-      socket.send(commandFrame('session.prompt', { sessionId, text: 'plan the readme' }));
-
-      expect((await until(socket, 'permission.resolved')).payload).toMatchObject({
-        decision: 'deny',
-        auto: true,
-        via: 'rule',
-      });
-    });
+        expect(request.payload).toMatchObject({ kind: 'question', reaches: [], suggestions: [] });
+      },
+    );
   });
 });

@@ -8,6 +8,7 @@ import { FixedClock } from '../fakes/fixed-clock';
 import { RecordingAuditEvents } from '../fakes/recording-audit-events';
 import { SequentialIds } from '../fakes/sequential-ids';
 import { stubFolderDisk } from '../fakes/stub-folder-disk';
+import { PRODUCT_SENSITIVE_FILES } from './sensitive-files';
 
 /** The open folder the unit specs of the writes resolve to. */
 export const WRITING_FOLDER = WorkspacePath.create('/srv/app');
@@ -39,6 +40,7 @@ export function aFileWriting(overrides: Partial<FileWriting> = {}): FileWriting 
     trail: aFileTrail(),
     limits: { maxEditBytes: 65_536 },
     writes: new UserWrites(new FixedClock(WRITING_NOW)),
+    sensitive: PRODUCT_SENSITIVE_FILES,
     ...overrides,
   };
 }

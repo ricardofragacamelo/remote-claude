@@ -1,4 +1,4 @@
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 import type { SessionId } from '../value-objects/session-id.value-object';
 
 /** The persisted shape, as the mapper on either side of the repository sees it. */
@@ -6,7 +6,7 @@ export interface SessionFileStateSnapshot {
   readonly sessionId: SessionId;
 
   /** The conversation the session was, or `null` for a row older than the undo that reads it. */
-  readonly claudeSessionId: ClaudeSessionId | null;
+  readonly conversation: ConversationRef | null;
   readonly path: string;
 
   /**

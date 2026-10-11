@@ -10,7 +10,16 @@ import type { PermissionDecision, PersistedScope } from './permission';
  * answered, and then it says it was revoked
  * ([D-18](../../../../../docs/plans/03-rules-and-audit/decisions.md)).
  */
-export type RuleStatus = 'active' | 'expired' | 'revoked';
+export type RuleStatus = 'active' | 'expired' | 'revoked' | 'disabled';
+
+/**
+ * Why a rule stopped answering on its own: it was written for an agent in a form this version cannot
+ * carry over to the canonical grammar, so it was kept, disabled, for the person to see and create
+ * again (plan 28, D-18). `reason` is a code (`untranslatable`), never a sentence.
+ */
+export interface RuleDisabled {
+  readonly reason: string;
+}
 
 /**
  * Something the user authorised in advance, as the rules screen knows it.
@@ -21,9 +30,17 @@ export type RuleStatus = 'active' | 'expired' | 'revoked';
 export interface PermissionRule {
   readonly id: string;
   readonly scope: PersistedScope;
-  readonly toolName: string;
 
-  /** Exactly as granted, in the grammar of the Claude Code settings: `Bash(git status)`. */
+  /**
+   * The kind of call the rule answers (`shell`, `file.edit`), as the server read it from the pattern.
+   * `null` on a disabled rule, whose pattern was never carried over.
+   */
+  readonly kind: string | null;
+
+  /**
+   * Exactly as granted, in the canonical grammar: `shell(git status:*)`. Opaque here — the server
+   * parses it, the screen shows it as written. A disabled rule keeps the pattern it was written with.
+   */
   readonly pattern: string;
 
   readonly decision: PermissionDecision;
@@ -42,6 +59,12 @@ export interface PermissionRule {
 
   /** ISO 8601, when it was taken back. `null` while it has not been. */
   readonly revokedAt: string | null;
+
+  /** The engine the rule is restricted to; `null` when it holds for every agent with the kind. */
+  readonly engine: string | null;
+
+  /** Why it answers nothing any more, when it was disabled; `null` otherwise. */
+  readonly disabled: RuleDisabled | null;
 }
 
 /** A rule on screen: the rule, and whether it is about to stop answering. */

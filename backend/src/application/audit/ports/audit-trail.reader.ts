@@ -12,6 +12,9 @@ export interface AuditTrailFilter {
   readonly userId: UserId;
   readonly sessionId: SessionId | null;
   readonly toolName: string | null;
+
+  /** The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33). Absent or `null`: any. */
+  readonly kind?: string | null;
   readonly decision: AuditDecision | null;
 
   /** Inclusive. */

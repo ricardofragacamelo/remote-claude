@@ -45,7 +45,7 @@ class SessionBody extends StatelessWidget {
     if (!conversation.isEmpty || asks || working != null) {
       return ConversationView(
         conversation: conversation,
-        conversationId: conversation.facts.conversationId,
+        conversationKey: conversation.facts.conversation,
         inline: inline,
         working: working,
         prompts: prompts,

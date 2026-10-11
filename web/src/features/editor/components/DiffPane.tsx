@@ -35,7 +35,7 @@ function sideLabel(side: DiffSide, t: TFunction, language: string): string {
           new Date(side.version.at),
         );
 
-  // A provided side is named by whoever provides it (plan 08: "before Claude's changes").
+  // A provided side is named by whoever provides it (plan 08: "before the agent's changes").
   const key =
     side.source === 'provided'
       ? (side.provided?.labelKey ?? 'editor.diff.disk')
@@ -47,7 +47,7 @@ function sideLabel(side: DiffSide, t: TFunction, language: string): string {
 /**
  * A read-only diff tab (B-38): the conflict's "Compare", "Compare with saved" (buffer × disk),
  * "Compare selected" of the explorer, a version of the local history (07 · B-59) — and later
- * Claude's changes (plan 08) and the preview of a replace (plan 11). Nothing in it can be edited
+ * the agent's changes (plan 08) and the preview of a replace (plan 11). Nothing in it can be edited
  * (S-256).
  */
 export function DiffPane({ folder, left, right }: DiffPaneProps): React.JSX.Element {

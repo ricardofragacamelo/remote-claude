@@ -14,6 +14,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/features/session/presentation/widgets/composer_bar.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
@@ -63,6 +64,7 @@ class ComposerState {
     this.isTurnRunning = false,
     this.isClosed = false,
     this.isStopping = false,
+    this.engine,
   });
 
   /// Whether anything may be sent at all — false with the socket gone.
@@ -82,6 +84,9 @@ class ComposerState {
 
   /// An interrupt left: stop does not send another.
   final bool isStopping;
+
+  /// The engine the box talks to, which its words name — the default engine's when `null`.
+  final String? engine;
 }
 
 /// The box and its bar.
@@ -89,8 +94,8 @@ class ChatComposer extends StatefulWidget {
   const ChatComposer({
     required this.controller,
     required this.onSend,
-    required this.mode,
     super.key,
+    this.mode,
     this.state = const ComposerState(),
     this.choices = const <ComposerChoice>[],
     this.onStop,
@@ -105,8 +110,9 @@ class ChatComposer extends StatefulWidget {
 
   final ComposerState state;
 
-  /// The mode, which never leaves the bar.
-  final ComposerChoice mode;
+  /// The mode, which never leaves the bar — absent when the engine announced nothing to choose
+  /// (plan 28, B-27).
+  final ComposerChoice? mode;
 
   /// The model, the effort and the context — what goes to the overflow when the bar is narrow.
   final List<ComposerChoice> choices;
@@ -218,7 +224,8 @@ class _ChatComposerState extends State<ChatComposer> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             if (_notSent) _Said(l10n.sessionPromptRefused, error: true),
-            if (state.isTurnRunning && hasText && !state.isClosed) _Said(l10n.composerQueued),
+            if (state.isTurnRunning && hasText && !state.isClosed)
+              _Said(l10n.composerQueued(agentNameIn(context, state.engine))),
             ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: (left * boxShare).clamp(Tokens.touchTarget, double.infinity),
@@ -231,7 +238,7 @@ class _ChatComposerState extends State<ChatComposer> {
                 keyboardType: TextInputType.multiline,
                 decoration: InputDecoration(
                   labelText: l10n.composerBoxLabel,
-                  hintText: l10n.composerPlaceholder,
+                  hintText: l10n.composerPlaceholder(agentNameIn(context, state.engine)),
                   border: const OutlineInputBorder(),
                 ),
               ),

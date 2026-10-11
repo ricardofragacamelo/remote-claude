@@ -1,35 +1,43 @@
 /**
- * Files that change what Claude may do — a rule `allow` in the project settings goes past
- * `canUseTool` in a trusted folder, and a hook there is code that runs in the next session.
+ * The files of a folder that change what an agent may do — a project rule that goes past the gate,
+ * a hook that is code the next session runs, the servers it starts.
  *
  * Editable, with a second step: writing, creating, moving or deleting one of them needs the
  * explicit confirmation, and the trail marks the fact `sensitive`
  * ([07 · D-15](../../../../../docs/plans/07-explorer-and-editor/decisions.md#d-15--arquivos-que-mudam-a-permissão)).
- * Plan 13 reuses the same list for its own screen.
- */
-export const SENSITIVE_FILES = [
-  '.claude/settings.json',
-  '.claude/settings.local.json',
-  '.mcp.json',
-] as const;
-
-/**
- * Whether a path relative to the open folder is one of them.
  *
- * Relative to the open folder, because that is where Claude reads a project's settings from: the
- * session's `cwd` is the folder of the tab.
+ * The list is not the domain's: it is what each registered engine declares of its own configuration
+ * (plan 28, B-35 — an agent that rewrites the configuration of **another** agent is a vector that
+ * only exists once there are several), put together by the composition.
  */
-export function isSensitive(relative: string): boolean {
-  return (SENSITIVE_FILES as readonly string[]).includes(relative);
-}
+export class SensitiveFiles {
+  private constructor(readonly files: readonly string[]) {}
 
-/**
- * Whether an operation on `relative` reaches one of them — the file itself, or a folder that holds
- * one: deleting or moving `.claude` takes `.claude/settings.json` with it, and passes through the
- * same step.
- */
-export function touchesSensitive(relative: string): boolean {
-  return SENSITIVE_FILES.some(
-    (sensitive) => sensitive === relative || sensitive.startsWith(`${relative}/`),
-  );
+  /**
+   * @param files paths relative to the open folder — repeated ones count once, in their first place
+   */
+  static of(files: Iterable<string>): SensitiveFiles {
+    return new SensitiveFiles([...new Set(files)]);
+  }
+
+  /**
+   * Whether a path relative to the open folder is one of them.
+   *
+   * Relative to the open folder, because that is where an agent reads a project's configuration
+   * from: the session's `cwd` is the folder of the tab.
+   */
+  includes(relative: string): boolean {
+    return this.files.includes(relative);
+  }
+
+  /**
+   * Whether an operation on `relative` reaches one of them — the file itself, or a folder that holds
+   * one: deleting or moving a configuration folder takes the files in it along, and passes through
+   * the same step.
+   */
+  touchedBy(relative: string): boolean {
+    return this.files.some(
+      (sensitive) => sensitive === relative || sensitive.startsWith(`${relative}/`),
+    );
+  }
 }

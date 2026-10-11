@@ -3,10 +3,10 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
-import { ChangesView, forgetLiveSessions, registerClaudeChanges } from '@/features/session';
+import { ChangesView, forgetLiveSessions, registerAgentChanges } from '@/features/session';
 import { PanelHeader } from '@/features/session/components/panel/PanelHeader';
 import { usePanelTabs } from '@/features/session/hooks/usePanelTabs';
-import { claudePanelStore, forgetClaudePanel } from '@/features/session/store/claude-panel.store';
+import { agentPanelStore, forgetAgentPanel } from '@/features/session/store/agent-panel.store';
 import { EditorWorkspace } from '@/features/editor/components/EditorWorkspace';
 import { folderTabStore, releaseFolderTabs } from '@/features/workbench/store/folder-tab.store';
 import { onNotify } from '@/shared/lib/notify';
@@ -81,7 +81,7 @@ const rowOf = async (name: string): Promise<HTMLElement> => {
 let unregister: () => void;
 
 beforeAll(() => {
-  unregister = registerClaudeChanges();
+  unregister = registerAgentChanges();
 });
 
 afterAll(() => {
@@ -245,15 +245,15 @@ describe('the changes of a session', () => {
 
     // A reload: the tab's state is dropped from memory, and made again from what this browser kept.
     folderTabStore(FOLDER);
-    forgetClaudePanel(null);
+    forgetAgentPanel(null);
     releaseFolderTabs();
     folderTabStore(FOLDER);
-    expect(claudePanelStore(FOLDER).getState().reviewed[SESSION]).toEqual({ [APP]: `r-${APP}` });
+    expect(agentPanelStore(FOLDER).getState().reviewed[SESSION]).toEqual({ [APP]: `r-${APP}` });
   });
 
   it('makes an accepted file pending again once it changes', async () => {
     routeApi({ [CHANGES]: [twoChanges()] });
-    claudePanelStore(FOLDER)
+    agentPanelStore(FOLDER)
       .getState()
       .review(SESSION, [{ path: APP, revision: 'an older version' }]);
     show();
@@ -468,14 +468,11 @@ describe('the changes of a session', () => {
 
   it('says the list could not be read, and tries again', async () => {
     routeApi({
-      [CHANGES]: [
-        aWireError('CLAUDE_UNAVAILABLE', 'session.error.claudeUnavailable'),
-        twoChanges(),
-      ],
+      [CHANGES]: [aWireError('AGENT_UNAVAILABLE', 'session.error.agentUnavailable'), twoChanges()],
     });
     show();
 
-    expect(await screen.findByText(t('session.error.claudeUnavailable'))).toBeVisible();
+    expect(await screen.findByText(t('session.error.agentUnavailable'))).toBeVisible();
     await userEvent.click(screen.getByRole('button', { name: t('common.action.retry') }));
     expect(await rows()).toHaveLength(2);
   });
@@ -532,7 +529,7 @@ describe('the changes, from the header of the panel — plan 09, B-16', () => {
 
   afterEach(() => {
     live.close();
-    forgetClaudePanel(null);
+    forgetAgentPanel(null);
     releaseFolderTabs();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -544,7 +541,7 @@ describe('the changes, from the header of the panel — plan 09, B-16', () => {
     render(<Header />);
     live.connect();
     act(() => {
-      claudePanelStore(FOLDER).getState().show('session', SESSION);
+      agentPanelStore(FOLDER).getState().show('session', SESSION);
     });
 
     const toggle = await screen.findByRole('button', {
@@ -553,10 +550,10 @@ describe('the changes, from the header of the panel — plan 09, B-16', () => {
     expect(toggle.parentElement).toHaveTextContent('2');
 
     await user.click(toggle);
-    expect(claudePanelStore(FOLDER).getState().pane).toBe('changes');
+    expect(agentPanelStore(FOLDER).getState().pane).toBe('changes');
     expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await user.click(toggle);
-    expect(claudePanelStore(FOLDER).getState().pane).toBe('chat');
+    expect(agentPanelStore(FOLDER).getState().pane).toBe('chat');
   });
 
   it('opens the sessions of the folder in its own place on a phone — S-45', async () => {

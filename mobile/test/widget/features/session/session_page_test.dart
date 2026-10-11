@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
@@ -23,8 +24,11 @@ import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/builders/frames.dart';
 import '../../../support/builders/permissions.dart';
+import '../../../support/builders/tools.dart';
+import '../../../support/fakes/fake_engine_repository.dart';
 import '../../../support/fakes/fake_history_repository.dart';
 import '../../../support/fakes/fake_insight_repository.dart';
 import '../../../support/fakes/fake_permission_repository.dart';
@@ -36,7 +40,7 @@ import '../../../support/pump_app.dart';
 
 /// What the transcript of the conversation says: a question and its answer.
 final HistoryPage transcript = HistoryPage(
-  conversationId: 'conv-1',
+  conversation: conversationOf('conv-1'),
   workspacePath: '/home/someone/project',
   events: historyOf(<String>[
     messageCompleted(messageId: 'h1', text: 'what broke?', role: 'user', seq: 1),
@@ -74,6 +78,7 @@ void main() {
     historyRepositoryProvider.overrideWithValue(history as HistoryRepository),
     insightRepositoryProvider.overrideWithValue(insight as InsightRepository),
     transcriptContentRepositoryProvider.overrideWithValue(content),
+    engineRepositoryProvider.overrideWithValue(FakeEngineRepository()),
     deviceControllerAnswering(
       AsyncValue<RegisteredDevice?>.data(aRegisteredDevice(status: device)),
     ),
@@ -355,17 +360,15 @@ void main() {
   ) async {
     await pumpSession(tester);
 
-    await emit(
-      tester,
-      toolStarted(toolUseId: 't1', seq: 1, input: <String, Object?>{'command': 'rm -rf /tmp/x'}),
-    );
+    await emit(tester, toolStarted(toolUseId: 't1', seq: 1, call: shellCall('rm -rf /tmp/x')));
 
     expect(find.text(l10n.sessionToolStatusRunning), findsOneWidget);
 
-    // Folded, like the web's line (plan 22, S-117); opened, the command whole.
-    await tester.tap(find.text('Bash'));
+    // Folded, like the web's line (plan 22, S-117), with the label the backend built; opened, the
+    // command whole.
+    await tester.tap(find.text('Shell: rm -rf /tmp/x'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('rm -rf /tmp/x'), findsOneWidget);
+    expect(find.text('rm -rf /tmp/x'), findsOneWidget);
   });
 
   testWidgets(
@@ -374,16 +377,13 @@ void main() {
       await pumpSession(tester);
       content.outputs['t1'] = const ToolOutput(text: 'the whole of it');
 
-      await emit(tester, sessionStarted(sessionId: 'session-1', claudeSessionId: 'conv-9'));
-      await emit(
-        tester,
-        toolStarted(toolUseId: 't1', seq: 2, input: <String, Object?>{'command': 'ls'}),
-      );
+      await emit(tester, sessionStarted(sessionId: 'session-1', conversation: 'conv-9'));
+      await emit(tester, toolStarted(toolUseId: 't1', seq: 2));
       await emit(tester, toolCompleted(toolUseId: 't1', seq: 3, summary: 'end'));
-      await tester.tap(find.text('Bash'));
+      await tester.tap(find.text('Shell: ls'));
       await tester.pumpAndSettle();
 
-      expect(content.toolReads, <(String, String)>[('conv-9', 't1')]);
+      expect(content.toolReads, <(ConversationKey, String)>[(conversationOf('conv-9'), 't1')]);
       expect(find.text('the whole of it'), findsOneWidget);
     },
   );
@@ -523,11 +523,16 @@ void main() {
       await pumpSession(tester);
       await emit(
         tester,
-        sessionStarted(sessionId: 'session-1', model: 'sonnet', permissionMode: 'default'),
+        sessionStarted(
+          sessionId: 'session-1',
+          model: 'sonnet',
+          permissionMode: 'ask',
+          capabilities: capabilitiesJson(),
+        ),
       );
 
       expect(find.text('Sonnet'), findsOneWidget);
-      expect(find.text(l10n.modeDefault), findsOneWidget);
+      expect(find.text(l10n.modeAsk), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       await tester.tap(find.text('Sonnet'));
@@ -560,40 +565,187 @@ void main() {
     ) async {
       phone(tester, width: 900, height: 800);
       await pumpSession(tester);
-      await emit(tester, sessionStarted(sessionId: 'session-1', model: 'opus'));
+      await emit(
+        tester,
+        sessionStarted(sessionId: 'session-1', model: 'opus', capabilities: capabilitiesJson()),
+      );
 
       expect(find.text(l10n.effortUnknown), findsOneWidget);
       await tester.tap(find.text(l10n.effortUnknown));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.effortReadOnly), findsOneWidget);
+      expect(find.text(l10n.effortReadOnly(l10n.engineNameFallback)), findsOneWidget);
     });
 
-    testWidgets('S-44 · Compact sends /compact, once, and the compaction is a line', (
+    testWidgets('plan 28 · S-83 · an engine that announced no level has no effort chip', (
       WidgetTester tester,
     ) async {
       phone(tester, width: 900, height: 800);
       await pumpSession(tester);
+      await emit(
+        tester,
+        sessionStarted(
+          sessionId: 'session-1',
+          model: 'opus',
+          capabilities: capabilitiesJson(<String, Object?>{'effortLevels': <Object?>[]}),
+        ),
+      );
+
+      expect(find.text(l10n.effortUnknown), findsNothing);
+      expect(find.text(l10n.effortLabel), findsNothing);
+    });
+
+    testWidgets('plan 28 · S-81 · the session offers the modes its engine announced, one is none', (
+      WidgetTester tester,
+    ) async {
+      phone(tester, width: 900, height: 800);
+      await pumpSession(tester);
+      await emit(
+        tester,
+        sessionStarted(
+          sessionId: 'session-1',
+          permissionMode: 'ask',
+          capabilities: capabilitiesJson(<String, Object?>{
+            'permissionModes': <Object?>['ask', 'readOnly'],
+          }),
+        ),
+      );
+
+      await tester.tap(find.text(l10n.modeAsk));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.modeReadOnly), findsOneWidget);
+      expect(find.text(l10n.modeAllowAll), findsNothing);
+      await tester.tap(find.text(l10n.modeReadOnly));
+      await tester.pumpAndSettle();
+      expect(sessions.commands.last.$2, <String, Object?>{
+        'sessionId': 'session-1',
+        'mode': 'readOnly',
+      });
+    });
+
+    testWidgets('plan 28 · S-81 · an engine with one mode: the bar has no mode chip', (
+      WidgetTester tester,
+    ) async {
+      phone(tester, width: 900, height: 800);
+      await pumpSession(tester);
+      await emit(
+        tester,
+        sessionStarted(
+          sessionId: 'session-1',
+          permissionMode: 'ask',
+          capabilities: capabilitiesJson(<String, Object?>{
+            'permissionModes': <Object?>['ask'],
+          }),
+        ),
+      );
+
+      expect(find.text(l10n.modeAsk), findsNothing);
+      expect(find.byTooltip(l10n.composerSlash), findsOneWidget);
+    });
+
+    testWidgets('S-44 · Compact sends session.compact, once, and the compaction is a line', (
+      WidgetTester tester,
+    ) async {
+      phone(tester, width: 900, height: 800);
+      await pumpSession(tester);
+      await emit(tester, sessionStarted(sessionId: 'session-1', capabilities: capabilitiesJson()));
 
       await tester.tap(find.byType(CircularProgressIndicator));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.contextCompact));
       await tester.pumpAndSettle();
 
-      expect(sessions.commands.single.$2['text'], '/compact');
+      expect(sessions.commands.single.$1, 'session.compact');
+      expect(sessions.commands.single.$2, <String, Object?>{'sessionId': 'session-1'});
 
       await emit(tester, sessionCompacted(seq: 2));
       expect(find.text(l10n.sessionCompactedManual), findsOneWidget);
+    });
+
+    testWidgets('S-70 · an engine with no compaction: the context, and no Compact', (
+      WidgetTester tester,
+    ) async {
+      phone(tester, width: 900, height: 800);
+      await pumpSession(tester);
+      await emit(
+        tester,
+        sessionStarted(
+          sessionId: 'session-1',
+          capabilities: capabilitiesJson(<String, Object?>{'compaction': false}),
+        ),
+      );
+
+      await tester.tap(find.byType(CircularProgressIndicator));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.contextWindow('50,000', '200,000')), findsOneWidget);
+      expect(find.text(l10n.contextCompact), findsNothing);
+    });
+
+    testWidgets('S-70 · the refusal of a compaction is said over the box, in the existing words', (
+      WidgetTester tester,
+    ) async {
+      phone(tester, width: 900, height: 800);
+      await pumpSession(tester);
+      await emit(tester, sessionStarted(sessionId: 'session-1', capabilities: capabilitiesJson()));
+
+      await tester.tap(find.byType(CircularProgressIndicator));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.contextCompact));
+      await tester.pumpAndSettle();
+      sessions.emit(
+        const CommandRefused(
+          commandId: 'command-1',
+          failure: ServerFailure(
+            code: 'ENGINE_CAPABILITY_UNAVAILABLE',
+            messageKey: 'engine.error.capabilityUnavailable',
+            params: <String, String>{'engine': anEngine},
+            traceId: 't',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.engineErrorCapabilityUnavailable(anEngine)), findsOneWidget);
+    });
+
+    testWidgets('S-72 · an engine that cannot measure its context: no ring, nothing asked', (
+      WidgetTester tester,
+    ) async {
+      phone(tester, width: 900, height: 800);
+      await pumpSession(tester);
+      await emit(
+        tester,
+        sessionStarted(
+          sessionId: 'session-1',
+          capabilities: capabilitiesJson(<String, Object?>{'contextUse': false}),
+        ),
+      );
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byIcon(Icons.data_usage), findsNothing);
+      expect(insight.asked.where((String asked) => asked.startsWith('context:')), isEmpty);
+    });
+
+    testWidgets('S-72 · an engine that declared nothing gets no ring either', (
+      WidgetTester tester,
+    ) async {
+      phone(tester, width: 900, height: 800);
+      await pumpSession(tester);
+      await emit(tester, sessionStarted(sessionId: 'session-1'));
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
     testWidgets('S-30 · on a 360 phone the model, the effort and the context go to ⋯', (
       WidgetTester tester,
     ) async {
       phone(tester);
+      // Before its `session.started`, the modes are the ones the list of engines gives its engine.
       await pumpSession(tester);
 
       expect(find.byTooltip(l10n.composerMore), findsOneWidget);
       expect(find.byTooltip(l10n.composerSlash), findsOneWidget);
-      expect(find.text(l10n.modeDefault), findsOneWidget);
+      expect(find.text(l10n.modeAsk), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -605,12 +757,14 @@ void main() {
       await pumpRoutedSession(tester);
       await emit(
         tester,
-        sessionStarted(sessionId: 'session-1', claudeSessionId: 'conv-1', workspacePath: '/w'),
+        sessionStarted(sessionId: 'session-1', conversation: 'conv-1', workspacePath: '/w'),
       );
       await emit(tester, sessionClosed(seq: 2, reason: 'idleTimeout'));
 
       expect(
-        find.text('${l10n.sessionClosedIdleTimeout} ${l10n.sessionEndedResumes}'),
+        find.text(
+          '${l10n.sessionClosedIdleTimeout} ${l10n.sessionEndedResumes(l10n.engineNameFallback)}',
+        ),
         findsOneWidget,
       );
       expect(find.byTooltip(l10n.composerStop), findsNothing);
@@ -620,7 +774,7 @@ void main() {
 
       expect(sessions.commands.single.$2, <String, Object?>{
         'workspacePath': '/w',
-        'resumeSessionId': 'conv-1',
+        'resumeFrom': conversationJson('conv-1'),
       });
       // The text stays while the resume is on its way.
       expect(tester.widget<TextField>(box()).controller?.text, 'pick it up again');
@@ -630,7 +784,7 @@ void main() {
           sessionStarted(
             sessionId: 'session-2',
             seq: 1,
-            claudeSessionId: 'conv-1',
+            conversation: 'conv-1',
             resumedFrom: 'conv-1',
           ),
         ),
@@ -648,7 +802,7 @@ void main() {
       'S-18 · resuming with the ceiling full says why above the box, and keeps the text',
       (WidgetTester tester) async {
         await pumpRoutedSession(tester);
-        await emit(tester, sessionStarted(sessionId: 'session-1', claudeSessionId: 'conv-1'));
+        await emit(tester, sessionStarted(sessionId: 'session-1', conversation: 'conv-1'));
         await emit(tester, sessionClosed(seq: 2));
 
         await send(tester, 'try again', tooltip: l10n.sessionEndedResumeAndSend);
@@ -681,13 +835,13 @@ void main() {
       await pumpSession(tester);
       await emit(tester, messageDelta(messageId: 'm1', delta: 'half a sent', seq: 40));
 
-      sessions.emit(const StreamGap(claudeSessionId: 'conv-1'));
+      sessions.emit(StreamGap(conversation: conversationOf('conv-1')));
       await tester.pumpAndSettle();
 
       expect(find.text('half a sent'), findsNothing);
       expect(find.text('what broke?'), findsOneWidget);
       expect(find.text('the build'), findsOneWidget);
-      expect(history.reads.single, ('conv-1', null));
+      expect(history.reads.single, (conversationOf('conv-1'), null));
     });
 
     testWidgets('S-15 · the replay arriving with the transcript never shows a message twice', (
@@ -696,7 +850,7 @@ void main() {
       await pumpSession(tester);
       history.gate = Completer<void>();
 
-      sessions.emit(const StreamGap(claudeSessionId: 'conv-1'));
+      sessions.emit(StreamGap(conversation: conversationOf('conv-1')));
       await tester.pump();
       sessions
         ..emit(arrivalOf(messageCompleted(messageId: 'h2', text: 'the build', seq: 9)))
@@ -717,7 +871,7 @@ void main() {
 
       await emit(
         tester,
-        sessionStarted(sessionId: 'session-1', claudeSessionId: 'conv-1', resumedFrom: 'conv-1'),
+        sessionStarted(sessionId: 'session-1', conversation: 'conv-1', resumedFrom: 'conv-1'),
       );
       await emit(tester, messageCompleted(messageId: 'n1', text: 'continuing', seq: 2));
 
@@ -733,7 +887,7 @@ void main() {
       await pumpSession(tester);
       history.gate = Completer<void>();
 
-      sessions.emit(const StreamGap(claudeSessionId: 'conv-1'));
+      sessions.emit(StreamGap(conversation: conversationOf('conv-1')));
       sessions.emit(arrivalOf(messageDelta(messageId: 'n1', delta: 'live', seq: 3)));
       await tester.pump();
       await tester.pump();
@@ -750,23 +904,24 @@ void main() {
     ) async {
       await pumpSession(tester);
       history.failure = const ServerFailure(
-        code: 'CLAUDE_UNAVAILABLE',
-        messageKey: 'transcript.error.claudeUnavailable',
+        code: 'AGENT_UNAVAILABLE',
+        messageKey: 'transcript.error.agentUnavailable',
+        params: <String, String>{'engine': anEngine},
         traceId: 'trace-8',
       );
 
-      sessions.emit(const StreamGap(claudeSessionId: 'conv-1'));
+      sessions.emit(StreamGap(conversation: conversationOf('conv-1')));
       sessions.emit(arrivalOf(messageDelta(messageId: 'n1', delta: 'still live', seq: 3)));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.transcriptErrorClaudeUnavailable), findsOneWidget);
+      expect(find.text(l10n.transcriptErrorAgentUnavailable(anEngine)), findsOneWidget);
       expect(find.text('still live'), findsOneWidget);
 
       history.failure = null;
       await tester.tap(find.text(l10n.commonActionRetry));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.transcriptErrorClaudeUnavailable), findsNothing);
+      expect(find.text(l10n.transcriptErrorAgentUnavailable(anEngine)), findsNothing);
       expect(find.text('the build'), findsOneWidget);
     });
 
@@ -775,15 +930,16 @@ void main() {
     ) async {
       await pumpSession(tester);
       history.failure = const ServerFailure(
-        code: 'CLAUDE_TIMEOUT',
-        messageKey: 'transcript.error.claudeTimeout',
+        code: 'AGENT_TIMEOUT',
+        messageKey: 'transcript.error.agentTimeout',
+        params: <String, String>{'engine': anEngine},
         traceId: 'trace-8',
       );
 
-      sessions.emit(const StreamGap(claudeSessionId: 'conv-1'));
+      sessions.emit(StreamGap(conversation: conversationOf('conv-1')));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.transcriptErrorClaudeTimeout), findsOneWidget);
+      expect(find.text(l10n.transcriptErrorAgentTimeout(anEngine)), findsOneWidget);
       expect(find.text(l10n.sessionEmptyTitle), findsNothing);
     });
   });

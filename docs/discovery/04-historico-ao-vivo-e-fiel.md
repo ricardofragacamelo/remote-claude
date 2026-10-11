@@ -39,7 +39,7 @@ no web **e** no mobile, mesmo quando a conversa está sendo conduzida em outro c
 | **Leitor** | a tela que mostra uma conversa do histórico, só para ler: `ConversationReader` no web, `ConversationHistoryPage` no mobile. Tem o botão "Continuar esta conversa" (web) / "Retomar" (mobile). |
 | **Sessão viva** | uma sessão que **este backend** opera pelo `query()` do Agent SDK. Os clientes a acompanham pelo WebSocket (`session.attach`). |
 | **Conversa ativa em outro cliente** | uma conversa de origem `external` (VS Code, terminal) escrita dentro da janela `RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS` (120 s): `activity = 'activeElsewhere'` ([transcript-activity.ts](../../backend/src/domain/transcript/services/transcript-activity.ts#L46-L61)). Este backend não a opera, e só a enxerga pelo transcript. |
-| **Transcript** | o histórico que o Claude Code grava em `~/.claude/projects/`. O backend o lê **só** pelo Agent SDK (`getSessionInfo`, `getSessionMessages`) e nunca abre o arquivo ([transcript.adapter.ts](../../backend/src/adapter/outbound/claude/transcript.adapter.ts#L30-L35), S-09). |
+| **Transcript** | o histórico que o Claude Code grava em `~/.claude/projects/`. O backend o lê **só** pelo Agent SDK (`getSessionInfo`, `getSessionMessages`) e nunca abre o arquivo ([transcript.adapter.ts](../../backend/src/adapter/outbound/engines/claude/transcript.adapter.ts#L30-L35), S-09). |
 | **Entrada** | uma `SessionMessage` do SDK. O Claude Code grava **um bloco de conteúdo por entrada**: uma resposta da API com `thinking`, `text` e `tool_use` vira três entradas com o mesmo `message.id` e `uuid`s distintos. |
 | **Acompanhar** (*follow*) | o mecanismo novo desta proposta: o leitor recebe, por push, as entradas que o transcript ganhou depois da última que ele tem (§5). |
 | **Pensamento omitido / resumido** | `thinking` sem texto (o padrão do CLI) ou com o resumo pedido por `display: 'summarized'` ([descoberta §10.7](01-descoberta-claude-agent-sdk.md#107--thinking-vem-omitido-por-padrão-display-summarized-o-traz-d-17)). |
@@ -132,7 +132,7 @@ em outro cliente" inferido (§5.6).
 
 - **Rótulo:** [ThinkingBlock.tsx](../../web/src/features/session/components/conversation/ThinkingBlock.tsx#L17-L21)
   escolhe `sessions.thinking.hidden` quando o texto é vazio. O backend omite o campo `thinking` vazio
-  ([sdk-message.mapper.ts](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L455-L469)).
+  ([sdk-message.mapper.ts](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L455-L469)).
   As sessões do próprio remote-claude pedem `display: 'summarized'`, mas as do VS Code e do terminal
   não pedem, então para elas o "omitido" é a regra, e não a exceção. O mobile só usa "hidden" para
   `isRedacted` ([thinking_line.dart](../../mobile/lib/features/session/presentation/widgets/thinking_line.dart#L84-L98)),
@@ -181,9 +181,9 @@ mark scenarios"). O remote-claude mostra "Bash: cd /home/ricardocamelo/projects/
 
 - O contrato **já tem** `tool.started.title`, um "short human label … derived by the backend"
   ([tool-started.schema.json](../../packages/contracts/schema/events/tool-started.schema.json#L22-L25)).
-  O backend, porém, nunca o preenche ([sdk-message.mapper.ts](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L280-L286)).
+  O backend, porém, nunca o preenche ([sdk-message.mapper.ts](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L280-L286)).
 - O web monta o rótulo do Bash com `firstLine(input.command)`
-  ([tool-labels.ts](../../web/src/features/session/lib/tool-labels.ts#L98-L102)) e só lê
+  (`tool-labels.ts` (removido no plano 28 · F2)) e só lê
   `description` para Agent/Task.
 - O mobile mostra o nome da ferramenta e o `input` como `Map.toString()`
   ([tool_card.dart](../../mobile/lib/features/session/presentation/widgets/tool_card.dart#L135)).
@@ -202,7 +202,7 @@ o `input` inteiro como JSON e até 200 caracteres do **início** da saída.
 **Causa.**
 
 - `summarise` corta em 200 caracteres pela **cabeça**
-  ([sdk-message.mapper.ts](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L478-L482)).
+  ([sdk-message.mapper.ts](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L478-L482)).
   Numa saída de teste ou de build, o que importa (o resultado) fica no fim.
 - Quando o `tool_result` é uma lista de blocos, `summarise` aplica `JSON.stringify` e o cliente
   recebe `[{"type":"text","text":"…`. O próprio arquivo já tem `resultText`, que junta os textos, mas
@@ -255,7 +255,7 @@ porque foi depois desse resultado que o modelo leu a pergunta. Fica um cenário 
 ninguém "corrija" isso ordenando por timestamp.
 
 **Prompt com imagem — a corrigir.**
-[toContentBlock](../../backend/src/adapter/outbound/claude/sdk-message.mapper.ts#L458-L470) envia só
+[toContentBlock](../../backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts#L458-L470) envia só
 `type`, então a imagem chega como `{ type: 'image' }`, sem nada. O redutor do web descarta o bloco e
 desenha "Você" vazio. O mobile desenha um balão vazio. **Correção:** o bloco de imagem leva
 `mediaType` e o tamanho (nunca os dados), e as duas pontas mostram um marcador "imagem anexada"
@@ -327,7 +327,7 @@ Leitor                         Backend                                   SDK
    Nesse caso o backend envia `transcript.reset`, e o cliente relê a página 1 e reassina.
 4. **Uma sondagem por conversa.** Os assinantes da mesma conversa (abas, web e mobile) compartilham um
    único tick e uma única releitura. A releitura passa pelo `TranscriptCache` e pelo `ReadLimiter` que
-   já existem ([transcript-reads.ts](../../backend/src/adapter/outbound/claude/transcript-reads.ts)).
+   já existem ([transcript-reads.ts](../../backend/src/adapter/outbound/engines/claude/transcript-reads.ts)).
 5. **Intervalo adaptativo.** O tick é curto enquanto `activity = 'activeElsewhere'` e longo quando a
    conversa está parada, porque uma conversa parada pode ser retomada no VS Code a qualquer momento.
    Os valores ficam na decisão HV-02.

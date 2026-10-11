@@ -21,9 +21,9 @@ function megabytes(bytes: number, language: string): string {
 
 /**
  * The help of the Timeline, for somebody who has never seen it (B-60): what is kept and what is not
- * — Claude's writes are not, they are undone from its session —, the ceiling of a version (read from
- * the installation's limits) and how long versions last, and that this is neither git nor Claude's
- * undo; with its shortcuts, from the registry.
+ * — the agent's writes are not, they are undone from its session —, the ceiling of a version (read
+ * from the installation's limits) and how long versions last, and that this is neither git nor the
+ * agent's undo; with its shortcuts, from the registry.
  */
 export function TimelineHelp({ folder }: { readonly folder: string }): React.JSX.Element {
   const { t, i18n } = useTranslation();

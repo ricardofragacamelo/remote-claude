@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import { PROTOCOL_VERSION } from '@remote-claude/contracts';
 import type { Envelope } from '@remote-claude/contracts';
 
 /** How a socket ended. */
@@ -14,7 +15,7 @@ export function commandFrame(
   overrides: Partial<Envelope> = {},
 ): Record<string, unknown> {
   return {
-    v: 1,
+    v: PROTOCOL_VERSION,
     id: `cmd-${Math.random().toString(36).slice(2, 10)}`,
     kind: 'command',
     type,
@@ -41,9 +42,13 @@ export class TestSocket {
 
   private constructor(private readonly socket: WebSocket) {}
 
-  /** Opens a socket against `http://host:port`, on the gateway's path. */
-  static open(baseUrl: string): Promise<TestSocket> {
-    const socket = new WebSocket(`${baseUrl.replace(/^http/, 'ws')}/ws?v=1`);
+  /**
+   * Opens a socket against `http://host:port`, on the gateway's path — in the current protocol, or
+   * the one before it for a test of its window (plan 28, D-08). The version a connection speaks is
+   * the `v` of what it sends, so a test of the window sends its frames with `{ v: 1 }` too.
+   */
+  static open(baseUrl: string, version: number = PROTOCOL_VERSION): Promise<TestSocket> {
+    const socket = new WebSocket(`${baseUrl.replace(/^http/, 'ws')}/ws?v=${String(version)}`);
     const client = new TestSocket(socket);
 
     socket.on('message', (data: Buffer) => {

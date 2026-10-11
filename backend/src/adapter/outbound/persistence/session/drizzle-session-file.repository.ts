@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
+import { and, eq, inArray, or } from 'drizzle-orm';
 
 import { SessionFileState, TurnFileCheckpoint } from '@domain/session';
 import type { SessionId } from '@domain/session';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { sessionFileStates, turnFileCheckpoints } from '@infra/database/schema';
@@ -39,6 +39,8 @@ export class DrizzleSessionFileRepository {
         .onConflictDoUpdate({
           target: [sessionFileStates.sessionId, sessionFileStates.path],
           set: {
+            engine: row.engine,
+            conversationId: row.conversationId,
             claudeSessionId: row.claudeSessionId,
             hash: row.hash,
             mtime: row.mtime,
@@ -119,7 +121,7 @@ export class DrizzleSessionFileRepository {
    */
   async checkpointsOfConversation(
     sessionId: SessionId,
-    claudeSessionId: ClaudeSessionId,
+    conversation: ConversationRef,
   ): Promise<readonly TurnFileCheckpoint[]> {
     const rows = await runLogged(
       this.context.logger,
@@ -129,7 +131,10 @@ export class DrizzleSessionFileRepository {
         .from(turnFileCheckpoints)
         .where(
           or(
-            eq(turnFileCheckpoints.claudeSessionId, claudeSessionId.value),
+            and(
+              eq(turnFileCheckpoints.engine, conversation.engine.value),
+              eq(turnFileCheckpoints.conversationId, conversation.id),
+            ),
             eq(turnFileCheckpoints.sessionId, sessionId.value),
           ),
         ),
@@ -141,7 +146,7 @@ export class DrizzleSessionFileRepository {
   /** How each session of the conversation left each path — several rows per path, possibly. */
   async statesOfConversation(
     sessionId: SessionId,
-    claudeSessionId: ClaudeSessionId,
+    conversation: ConversationRef,
   ): Promise<readonly SessionFileState[]> {
     const rows = await runLogged(
       this.context.logger,
@@ -151,7 +156,10 @@ export class DrizzleSessionFileRepository {
         .from(sessionFileStates)
         .where(
           or(
-            eq(sessionFileStates.claudeSessionId, claudeSessionId.value),
+            and(
+              eq(sessionFileStates.engine, conversation.engine.value),
+              eq(sessionFileStates.conversationId, conversation.id),
+            ),
             eq(sessionFileStates.sessionId, sessionId.value),
           ),
         ),
@@ -166,8 +174,10 @@ export class DrizzleSessionFileRepository {
    * What a purge must keep for a live session: its own snapshots, and those of the earlier sessions
    * of its conversation, which its undo still reaches.
    */
-  async sessionsOfConversations(claudeSessionIds: readonly string[]): Promise<readonly string[]> {
-    if (claudeSessionIds.length === 0) {
+  async sessionsOfConversations(
+    conversations: readonly ConversationRef[],
+  ): Promise<readonly string[]> {
+    if (conversations.length === 0) {
       return [];
     }
 
@@ -178,9 +188,13 @@ export class DrizzleSessionFileRepository {
         .selectDistinct({ sessionId: turnFileCheckpoints.sessionId })
         .from(turnFileCheckpoints)
         .where(
-          and(
-            isNotNull(turnFileCheckpoints.claudeSessionId),
-            inArray(turnFileCheckpoints.claudeSessionId, [...claudeSessionIds]),
+          or(
+            ...conversations.map((conversation) =>
+              and(
+                eq(turnFileCheckpoints.engine, conversation.engine.value),
+                eq(turnFileCheckpoints.conversationId, conversation.id),
+              ),
+            ),
           ),
         ),
     );

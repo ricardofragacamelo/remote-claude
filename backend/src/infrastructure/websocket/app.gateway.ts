@@ -20,6 +20,7 @@ import { ConnectionRegistry } from './connection-registry';
 import type { Connection, Sendable } from './connection-registry';
 import { decodeFrame } from './frame-codec';
 import { FrameBuilder } from './frame-builder';
+import { fromConnection } from './protocol-window';
 import { FrameRateLimiter } from './frame-rate-limiter';
 import {
   announcedLimits,
@@ -188,7 +189,11 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let frame: Envelope;
 
     try {
-      frame = decodeFrame(raw, this.settings.maxFrameBytes);
+      const decoded = decodeFrame(raw, this.settings.maxFrameBytes);
+      // The version of its last frame is the one the connection speaks, and what it receives is
+      // translated to it; what it sent is read in the current one (plan 28, D-08).
+      connection.version = decoded.v;
+      frame = fromConnection(decoded);
     } catch (error) {
       this.refuseUndecodable(connection, error);
       return;

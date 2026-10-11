@@ -20,11 +20,11 @@ export class JournalUndoStore implements UndoJournal {
   ) {}
 
   checkpointsOf(reach: UndoReach): Promise<readonly TurnFileCheckpoint[]> {
-    return this.files.checkpointsOfConversation(reach.sessionId, reach.claudeSessionId);
+    return this.files.checkpointsOfConversation(reach.sessionId, reach.conversation);
   }
 
   baselinesOf(reach: UndoReach): Promise<readonly SessionFileState[]> {
-    return this.files.statesOfConversation(reach.sessionId, reach.claudeSessionId);
+    return this.files.statesOfConversation(reach.sessionId, reach.conversation);
   }
 
   /**
@@ -55,7 +55,7 @@ export class JournalUndoStore implements UndoJournal {
 
   async reachOf(live: readonly UndoReach[]): Promise<ReadonlySet<string>> {
     const earlier = await this.files.sessionsOfConversations(
-      live.map((reach) => reach.claudeSessionId.value),
+      live.map((reach) => reach.conversation),
     );
 
     return new Set([...live.map((reach) => reach.sessionId.value), ...earlier]);

@@ -71,7 +71,7 @@ async function sessionIn(page: Page, files: Readonly<Record<string, string>>): P
 /** The task list, folded into one line above the box (plan 09, B-26) — "1/3 · Write b.txt". */
 function taskList(page: Page): ReturnType<Page['getByRole']> {
   return panelOf(page).getByRole('region', {
-    name: 'The task list Claude keeps for this conversation',
+    name: 'The task list Claude Code keeps for this conversation',
   });
 }
 

@@ -19,4 +19,6 @@ export interface SessionFileStateRecorded {
   /** SHA-256 in hex of what the session left there. */
   readonly hash: string;
   readonly at: Date;
+  /** The engine of the session that wrote it — what the change is attributed to (plan 28, B-25). */
+  readonly engine: string;
 }

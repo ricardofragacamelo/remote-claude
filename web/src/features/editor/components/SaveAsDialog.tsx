@@ -13,7 +13,8 @@ import { EditorQuestion } from './EditorQuestion';
 /**
  * "Save as" (S-233): the buffer written at another path of the folder. A path that is taken is never
  * overwritten by it: the dialog says so and offers to replace — over the version that is there, which
- * a change since would refuse. A path that changes what Claude may do says so before it is written.
+ * a change since would refuse. A path that changes what the agent may do says so before it is
+ * written.
  */
 export function SaveAsDialog({ folder }: { readonly folder: string }): React.JSX.Element {
   const request = useEditorState(folder, (state) => state.saveAs);

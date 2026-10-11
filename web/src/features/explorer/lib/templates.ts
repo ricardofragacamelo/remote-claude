@@ -66,8 +66,8 @@ export const FILE_TEMPLATES: readonly FileTemplate[] = [
       'indent_size = 2\ninsert_final_newline = true\ntrim_trailing_whitespace = true\n',
   },
   {
-    id: 'claude',
-    labelKey: 'explorer.template.claude',
+    id: 'agentInstructions',
+    labelKey: 'explorer.template.agentInstructions',
     suggestedName: 'CLAUDE.md',
     content: '# ${fileName}\n\n<!-- ${date} -->\n',
   },

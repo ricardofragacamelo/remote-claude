@@ -12,7 +12,7 @@ import type { DirectoryListing, NewEntryKind, WrittenEntry } from '../types/expl
  * `api.ts`, at both edges.
  */
 
-/** The second step of a path that changes what Claude may do (07 · D-15). */
+/** The second step of a path that changes what the agent may do (07 · D-15). */
 export interface SensitiveOption {
   readonly confirmSensitive?: boolean;
 }

@@ -1,12 +1,15 @@
-import { matchedInput, reachesFor } from '@domain/permission';
+import { canonicalToolPayload, interactionPayload } from '@application/session';
+import { toolKindKey } from '@domain/engine';
+import { reachesFor } from '@domain/permission';
+import type { CanonicalTool } from '@domain/engine';
 import type {
+  Interaction,
   PermissionDecision,
   PermissionOrigin,
   PermissionRequest,
   PermissionResolution,
   PermissionVia,
   QuestionAnswer,
-  QuestionInteraction,
 } from '@domain/permission';
 
 /** One answer, as the contract's `QuestionAnswer` carries it: the free answer absent when there is none. */
@@ -46,8 +49,8 @@ export type ResolvedPermissionPayload = {
 /**
  * A request, as the contract's `permission.requested` describes it.
  *
- * `title` is a key rather than a sentence, and `description` is the input itself — the command
- * line, the path being written. Between them the client has everything it needs to say what is
+ * `title` is a key rather than a sentence, and `description` is what the call is about — the
+ * command line, the path being written, the URL — read from its canonical subject. Between them the client has everything it needs to say what is
  * being asked, in the language of whoever is holding the device, and the server has sent no prose
  * (docs/architecture/shared/02-i18n.md).
  *
@@ -67,16 +70,15 @@ export function requestedPayload(
     // The contract requires it; the SDK does not always give one, and an empty string is a
     // truthful "there was none" where a missing field would break a required one.
     toolUseId: request.toolUseId ?? '',
-    toolName: request.toolName,
-    title: `permission.tool.${request.toolName}`,
-    input: request.input,
+    ...canonicalToolPayload(request.tool, request.input),
+    title: `permission.tool.${toolKindKey(request.tool.kind)}`,
     riskHint: request.riskHint,
     expiresAt: request.expiresAt.toISOString(),
   };
 
   return request.interaction === null
     ? { ...common, ...permissionFields(request, ruleLifetimeMs) }
-    : { ...common, ...questionFields(request.interaction) };
+    : { ...common, ...interactionFields(request.interaction) };
 }
 
 /** What asking leave to run a tool adds: the detail, refusal first, the scopes and the reaches. */
@@ -84,7 +86,7 @@ function permissionFields(
   request: PermissionRequest,
   ruleLifetimeMs: number,
 ): Readonly<Record<string, unknown>> {
-  const detail = matchedInput(request.input);
+  const detail = detailOf(request.tool);
 
   return {
     ...(detail === null ? {} : { description: detail }),
@@ -93,49 +95,35 @@ function permissionFields(
     suggestions: suggestionsFor(request, ruleLifetimeMs),
     // What a rule left by this answer may reach — computed here, and chosen by the client by name
     // only (plan 23, B-10). Every scope but `once` takes it.
-    reaches: reachesFor(request.toolName, request.input),
+    reaches: reachesFor(request.tool, request.projectPath),
   };
 }
 
 /**
- * What a question adds: the questions themselves, and nothing to authorise (plan 24, B-06).
- *
- * No `description` — the interaction is what a screen draws. Not refusal first: a question is
- * answered, and the focus goes to the first option (D-10). No scope and no reach: answering leaves
- * no rule (D-09).
+ * The one line a card shows of what the call is about, from its subject: the command, else the
+ * path, else the pattern searched, else the URL — or nothing, when none says anything. Never the raw
+ * input (plan 28, B-31).
  */
-function questionFields(interaction: QuestionInteraction): Readonly<Record<string, unknown>> {
+function detailOf({ subject }: CanonicalTool): string | null {
+  const said = [subject.command, subject.paths?.[0], subject.pattern, subject.url];
+
+  return said.find((value) => value !== undefined && value !== '') ?? null;
+}
+
+/**
+ * What a question or a plan adds: what it asks, and nothing to authorise (plan 24, B-06; plan 28,
+ * B-20).
+ *
+ * No `description` — the interaction is what a screen draws. No scope and no reach: answering leaves
+ * no rule (D-09), and no rule may answer one. Refusal first only on a plan: a question is answered,
+ * and the focus goes to the first option (D-10).
+ */
+function interactionFields(interaction: Interaction): Readonly<Record<string, unknown>> {
   return {
-    defaultToNo: false,
+    defaultToNo: interaction.kind === 'plan',
     suggestions: [],
     reaches: [],
     interaction: interactionPayload(interaction),
-  };
-}
-
-/**
- * The questions as the contract's `QuestionInteraction` carries them.
- *
- * What Claude wrote before a cut stays on this side: it is what the SDK expects back, and a screen
- * shows and answers with what the server published. A preview is absent rather than `null`.
- */
-export function interactionPayload(
-  interaction: QuestionInteraction,
-): Readonly<Record<string, unknown>> {
-  return {
-    kind: interaction.kind,
-    malformed: interaction.malformed,
-    questions: interaction.questions.map((question) => ({
-      id: question.id,
-      header: question.header,
-      prompt: question.prompt,
-      multiSelect: question.multiSelect,
-      options: question.options.map((option) => ({
-        label: option.label,
-        description: option.description,
-        ...(option.preview === null ? {} : { preview: option.preview }),
-      })),
-    })),
   };
 }
 
@@ -166,7 +154,7 @@ function suggestionsFor(
   request: PermissionRequest,
   ruleLifetimeMs: number,
 ): readonly Readonly<Record<string, unknown>>[] {
-  const reaches = reachesFor(request.toolName, request.input);
+  const reaches = reachesFor(request.tool, request.projectPath);
   const ephemeral = [
     { scope: 'once', labelKey: 'permission.scope.once' },
     { scope: 'session', labelKey: 'permission.scope.session' },

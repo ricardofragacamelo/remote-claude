@@ -68,8 +68,8 @@ export interface ManageEntry extends RegistryEntry {
 }
 
 /**
- * The entries of the navigation: plan 06's, and plan 13's "Claude settings" — every place but the
- * one held for plan 16.
+ * The entries of the navigation: plan 06's, and plan 13's "the agent's settings" — every place but
+ * the one held for plan 16.
  */
 const DECLARED: readonly NavigationEntry[] = [
   {
@@ -118,8 +118,8 @@ const DECLARED: readonly NavigationEntry[] = [
     sections: ['diagnostics'],
   },
   {
-    // How Claude works on this machine (plan 13): a screen of its own, never a section of the app's
-    // Settings (13 · D-09, D-27).
+    // How the agent works on this machine (plan 13): a screen of its own, never a section of the
+    // app's Settings (13 · D-09, D-27).
     id: 'claude',
     position: NAVIGATION_POSITIONS.claude,
     labelKey: 'navigation.entry.claude',
@@ -128,7 +128,8 @@ const DECLARED: readonly NavigationEntry[] = [
     sections: ['claude-settings'],
   },
   {
-    // The app's settings — never Claude's, which is the screen plan 13 registers at its own place.
+    // The app's settings — never the agent's, which is the screen plan 13 registers at its own
+    // place.
     id: 'settings',
     position: NAVIGATION_POSITIONS.settings,
     labelKey: 'navigation.entry.settings',

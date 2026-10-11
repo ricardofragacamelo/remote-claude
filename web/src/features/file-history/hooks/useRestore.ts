@@ -27,7 +27,7 @@ export interface Restorer {
 
   /**
    * Restores a version — at once, or after asking when the buffer has unsaved changes a restore
-   * would discard, or the file changes what Claude may do (S-346).
+   * would discard, or the file changes what the agent may do (S-346).
    *
    * @param gone the file no longer exists: it is recreated, never written over something
    */
@@ -59,7 +59,7 @@ async function currentOf(folder: string, path: string, gone: boolean): Promise<s
 
 /**
  * Restoring a version of the Timeline: a write like any other — `If-Match` with the version the
- * person sees, so a file Claude changed since is never written over (`412`, said plainly); the
+ * person sees, so a file the agent changed since is never written over (`412`, said plainly); the
  * buffer read again from the disk once it went; one restore at a time.
  */
 export function useRestore(folder: string): Restorer {

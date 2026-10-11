@@ -11,8 +11,8 @@ function aRule(overrides: Partial<PermissionRule> = {}): PermissionRule {
   return {
     id: 'rule_1',
     scope: 'always',
-    toolName: 'Bash',
-    pattern: 'Bash(git status)',
+    kind: 'shell',
+    pattern: 'shell(git status)',
     decision: 'allow',
     projectPath: null,
     grantedBy: 'user-1',
@@ -20,6 +20,8 @@ function aRule(overrides: Partial<PermissionRule> = {}): PermissionRule {
     expiresAt: '2026-12-23T10:00:00.000Z',
     status: 'active',
     revokedAt: null,
+    engine: null,
+    disabled: null,
     ...overrides,
   };
 }

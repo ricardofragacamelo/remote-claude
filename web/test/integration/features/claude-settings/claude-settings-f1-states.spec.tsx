@@ -12,6 +12,7 @@ import {
   ACCOUNT,
   backendAnswers,
   DEFAULTS,
+  ENGINES,
   INSTALLATION,
   NONE,
 } from '../../../support/claude-settings';
@@ -24,7 +25,7 @@ const session = {
   idToken: null,
 };
 const unavailable = () =>
-  Promise.reject(new AppError('CLAUDE_UNAVAILABLE', 'session.error.claudeUnavailable', 't1'));
+  Promise.reject(new AppError('AGENT_UNAVAILABLE', 'session.error.agentUnavailable', 't1'));
 
 describe('Claude settings — what each section does when things are not well (plan 13, F1)', () => {
   beforeEach(() => {
@@ -102,7 +103,7 @@ describe('Claude settings — what each section does when things are not well (p
     await screen.findByText(t('claudeSettings.installation.pathCliDiffers'));
 
     await user.click(screen.getByRole('button', { name: t('claudeSettings.installation.check') }));
-    expect(await screen.findByText(t('session.error.claudeUnavailable'))).toBeVisible();
+    expect(await screen.findByText(t('session.error.agentUnavailable'))).toBeVisible();
   });
 
   it('saves and clears the override of a folder, and leaves it through the picker — S-38', async () => {
@@ -173,14 +174,14 @@ describe('Claude settings — what each section does when things are not well (p
 
   it('refuses an effort the new model does not take, with why, until it changes — S-60', async () => {
     const user = userEvent.setup();
-    backendAnswers();
+    backendAnswers(ENGINES);
     mountApp('/claude-settings?section=models');
 
     const form = await screen.findByRole('form', { name: t('claudeSettings.models.forUser') });
     const model = within(form).getByLabelText(t('claudeSettings.models.model'));
     await user.selectOptions(model, 'sonnet');
     await user.selectOptions(
-      within(form).getByLabelText(t('claudeSettings.models.effort')),
+      await within(form).findByLabelText(t('claudeSettings.models.effort')),
       'high',
     );
     await user.selectOptions(model, 'haiku');

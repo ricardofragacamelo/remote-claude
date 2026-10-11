@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { OWNER_VALUE, PROCESS_MARKER } from '@adapter/outbound/claude/process-marker';
+import { OWNER_VALUE, PROCESS_MARKER } from '@shared/process/process-marker';
 import { OrphanSweep } from '@infra/lifecycle/orphan-sweep';
 import { ProcfsProcessTable } from '@infra/lifecycle/process-table';
 import { SystemScheduler } from '@shared/time/system-scheduler';

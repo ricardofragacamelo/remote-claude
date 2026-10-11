@@ -8,7 +8,7 @@ import {
   SessionLimitReachedError,
   SessionNotFoundError,
 } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import {
   aConversation,
   aSession,
@@ -155,13 +155,13 @@ describe('SessionRegistry', () => {
 
   describe('by conversation — plan 04, S-24', () => {
     const SOURCE = '0f0e0d0c-0b0a-4908-8706-050403020100';
-    const conversation = (raw: string): ClaudeSessionId => ClaudeSessionId.create(raw);
+    const conversation = (raw: string): ConversationRef => ConversationRef.create('claude', raw);
 
     it('says which conversation a live session is', () => {
       const { registry, add } = build();
       add();
 
-      expect(registry.conversationOf(id())?.claudeSessionId.value).toBe(CONVERSATION_ID);
+      expect(registry.conversationOf(id())?.ref.id).toBe(CONVERSATION_ID);
       expect(registry.conversationOf(id('01J0ABCDEFGHJKMNPQRSTVWXY0'))).toBeNull();
     });
 

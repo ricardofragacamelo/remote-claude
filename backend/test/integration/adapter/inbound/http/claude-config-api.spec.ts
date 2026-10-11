@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -131,7 +131,8 @@ describe('the configuration of Claude over HTTP — plan 13, F1', () => {
     expect(response.body.models.map((model: { value: string }) => model.value)).toEqual(
       loadInitialization().initialization.models.map((model) => model.value),
     );
-    expect(response.body.permissionModes).toContain('plan');
+    // The canonical modes, and never the CLI's (plan 28, B-26).
+    expect(response.body.permissionModes).toEqual(['ask', 'acceptEdits', 'readOnly', 'allowAll']);
   });
 
   it('answers the models of the user’s first root when no folder is named — S-34', async () => {
@@ -163,7 +164,7 @@ describe('the configuration of Claude over HTTP — plan 13, F1', () => {
 
   it('saves the user default and answers what applies, with where it came from — S-37', async () => {
     const model = loadInitialization().initialization.models[1]?.value ?? 'default';
-    const saved = await put('/claude/defaults', { model, permissionMode: 'plan' });
+    const saved = await put('/claude/defaults', { model, permissionMode: 'readOnly' });
 
     expect(saved.status).toBe(200);
     expect(saved.body.effective.model).toEqual({ value: model, from: 'user' });
@@ -186,6 +187,25 @@ describe('the configuration of Claude over HTTP — plan 13, F1', () => {
     expect(bypass.status).toBe(422);
     expect(bypass.body.error.code).toBe('DEFAULT_MODE_NOT_ALLOWED');
   });
+
+  it.each(['default', 'plan'])(
+    'refuses the CLI`s name %s, which the canonical modes replaced — plan 28, S-77',
+    async (permissionMode) => {
+      const response = await put('/claude/defaults', { permissionMode });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('INVALID_INPUT');
+    },
+  );
+
+  it.each(['ask', 'acceptEdits', 'readOnly', 'allowAll'])(
+    'saves the canonical mode %s and reads it back — plan 28, S-77',
+    async (permissionMode) => {
+      expect((await put('/claude/defaults', { permissionMode })).status).toBe(200);
+
+      expect((await get('/claude/defaults')).body.user.permissionMode).toBe(permissionMode);
+    },
+  );
 
   it('lists every invalid field of a malformed body — S-42', async () => {
     const response = await put('/claude/defaults', { thinking: 'maybe', effort: 3, colour: 'red' });
@@ -215,14 +235,14 @@ describe('the configuration of Claude over HTTP — plan 13, F1', () => {
 
   it('leaves one of two saves at once, whole — S-45', async () => {
     const [first, second] = await Promise.all([
-      put('/claude/defaults', { thinking: 'on', permissionMode: 'plan' }),
+      put('/claude/defaults', { thinking: 'on', permissionMode: 'readOnly' }),
       put('/claude/defaults', { thinking: 'off', permissionMode: 'acceptEdits' }),
     ]);
     expect([first.status, second.status]).toEqual([200, 200]);
 
     const user = (await get('/claude/defaults')).body.user;
     expect([
-      { thinking: 'on', permissionMode: 'plan' },
+      { thinking: 'on', permissionMode: 'readOnly' },
       { thinking: 'off', permissionMode: 'acceptEdits' },
     ]).toContainEqual({ thinking: user.thinking, permissionMode: user.permissionMode });
   });

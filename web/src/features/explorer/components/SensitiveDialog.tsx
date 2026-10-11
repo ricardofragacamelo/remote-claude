@@ -10,9 +10,9 @@ export interface SensitiveDialogProps {
 }
 
 /**
- * The second step of a path that changes what Claude may do — `.claude/settings.json`, `.mcp.json` —
- * said before anything is sent: "this changes what Claude can do without asking" (07 · D-15). The way
- * out takes the focus.
+ * The second step of a path that changes what the agent may do — the agent's project settings,
+ * `.mcp.json` — said before anything is sent: "this changes what the agent can do without asking"
+ * (07 · D-15). The way out takes the focus.
  */
 export function SensitiveDialog({ runner }: SensitiveDialogProps): React.JSX.Element {
   const { t } = useTranslation();

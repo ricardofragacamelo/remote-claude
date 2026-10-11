@@ -17,12 +17,12 @@ export interface ExplorerContextMenuProps {
 }
 
 /** The groups of the menu, in order — separated, as the editor people know has them. */
-const GROUPS: readonly ActionGroup[] = ['new', 'open', 'transfer', 'edit', 'path', 'claude'];
+const GROUPS: readonly ActionGroup[] = ['new', 'open', 'transfer', 'edit', 'path', 'agent'];
 
 /**
  * The context menu of the tree — the right click, a long press, `Shift+F10` or the menu key on a row:
  * every action on what is selected, with the key that does the same (S-180). An action that cannot
- * act now is disabled; "Add to Claude's context" is not there at all while nobody takes files
+ * act now is disabled; "Add to the agent's context" is not there at all while nobody takes files
  * (S-276).
  */
 export function ExplorerContextMenu({
@@ -32,7 +32,7 @@ export function ExplorerContextMenu({
   const { t } = useTranslation();
   const groups = GROUPS.map((group) =>
     actions.filter(
-      (action) => action.group === group && (group !== 'claude' || explorer.claudeTakesFiles),
+      (action) => action.group === group && (group !== 'agent' || explorer.agentTakesFiles),
     ),
   ).filter((items) => items.length > 0);
 

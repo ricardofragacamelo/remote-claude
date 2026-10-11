@@ -16,11 +16,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/confirm_dialog.dart';
 import 'package:remote_claude/core/widgets/connection_line.dart';
@@ -36,10 +38,10 @@ import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The history of one conversation.
 class ConversationHistoryPage extends ConsumerStatefulWidget {
-  const ConversationHistoryPage({required this.conversationId, super.key});
+  const ConversationHistoryPage({required this.conversation, super.key});
 
-  /// Which conversation of Claude's store. It comes from the route, never from a provider.
-  final String conversationId;
+  /// Which conversation — its engine and its id. It comes from the route, never from a provider.
+  final ConversationKey conversation;
 
   @override
   ConsumerState<ConversationHistoryPage> createState() => _ConversationHistoryPageState();
@@ -54,7 +56,7 @@ class _ConversationHistoryPageState extends ConsumerState<ConversationHistoryPag
     super.initState();
     _lifecycle = AppLifecycleListener(
       onStateChange: (AppLifecycleState lifecycle) => ref
-          .read(conversationHistoryControllerProvider(widget.conversationId).notifier)
+          .read(conversationHistoryControllerProvider(widget.conversation).notifier)
           .lifecycleChanged(lifecycle),
     );
   }
@@ -67,24 +69,24 @@ class _ConversationHistoryPageState extends ConsumerState<ConversationHistoryPag
 
   @override
   Widget build(BuildContext context) {
-    final String conversationId = widget.conversationId;
+    final ConversationKey conversation = widget.conversation;
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ConversationHistoryControllerProvider provider = conversationHistoryControllerProvider(
-      conversationId,
+      conversation,
     );
     final AsyncValue<HistoryBoard> value = ref.watch(provider);
     final HistoryBoard? board = value.value;
 
     // The session that continues the conversation answers later, on the socket. Listening rather
     // than awaiting is what it takes — the same as opening one from the folder list (S-75).
-    ref.listen<ResumeState>(resumeControllerProvider(conversationId), (
+    ref.listen<ResumeState>(resumeControllerProvider(conversation), (
       ResumeState? previous,
       ResumeState next,
     ) {
       final String? sessionId = next.sessionId;
 
       if (sessionId != null) {
-        ref.read(resumeControllerProvider(conversationId).notifier).acknowledge();
+        ref.read(resumeControllerProvider(conversation).notifier).acknowledge();
         context.go(sessionRouteFor(sessionId));
       }
     });
@@ -111,7 +113,7 @@ class _ConversationHistoryPageState extends ConsumerState<ConversationHistoryPag
           ),
           // Resuming needs to know where the conversation ran, and only a page that was read
           // says so. An empty conversation can still be resumed, so it is not inside the content.
-          if (board != null) _ResumeBar(conversationId: conversationId, board: board),
+          if (board != null) _ResumeBar(conversation: conversation, board: board),
         ],
       ),
     );
@@ -157,7 +159,7 @@ class _History extends StatelessWidget {
         Expanded(
           child: ConversationView(
             conversation: board.conversation,
-            conversationId: board.latest.conversationId,
+            conversationKey: board.latest.conversation,
             countsUnseen: true,
           ),
         ),
@@ -168,15 +170,15 @@ class _History extends StatelessWidget {
 
 /// Continuing the conversation, and everything the person should know before they do.
 class _ResumeBar extends ConsumerWidget {
-  const _ResumeBar({required this.conversationId, required this.board});
+  const _ResumeBar({required this.conversation, required this.board});
 
-  final String conversationId;
+  final ConversationKey conversation;
   final HistoryBoard board;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ResumeState resume = ref.watch(resumeControllerProvider(conversationId));
+    final ResumeState resume = ref.watch(resumeControllerProvider(conversation));
     final bool connected =
         connectionOf(ref.watch(connectionStatusProvider)) == ConnectionStatus.ready;
     final Failure? failure = resume.failure;
@@ -193,7 +195,7 @@ class _ResumeBar extends ConsumerWidget {
             message: BannerMessage(
               icon: Icons.more_horiz,
               title: l10n.historyFollowWorking,
-              body: l10n.historyFollowWorkingHelp,
+              body: l10n.historyFollowWorkingHelp(agentNameIn(context, conversation.engine)),
             ),
           ),
         // The conversation stays readable; it just does not grow by itself (S-100).
@@ -229,7 +231,7 @@ class _ResumeBar extends ConsumerWidget {
             false);
 
     if (confirmed) {
-      ref.read(resumeControllerProvider(conversationId).notifier).resume(board.workspacePath);
+      ref.read(resumeControllerProvider(conversation).notifier).resume(board.workspacePath);
     }
   }
 }

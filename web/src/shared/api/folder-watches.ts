@@ -10,8 +10,14 @@ export interface FolderChange {
   readonly path: string;
   readonly kind: 'created' | 'changed' | 'deleted';
 
-  /** Who changed it, as far as the server can tell — a label, never a decision. */
-  readonly origin?: 'claude' | 'user' | 'external';
+  /**
+   * Who changed it, as far as the server can tell — a label, never a decision: the agent of a
+   * session, a person through the files routes, or anything else (plan 28, B-25).
+   */
+  readonly origin?: 'agent' | 'user' | 'external';
+
+  /** On `agent`: the engine whose agent wrote it — opaque, for naming the agent in the text. */
+  readonly engine?: string;
 }
 
 /** Why a subscription ended without anybody here asking. */

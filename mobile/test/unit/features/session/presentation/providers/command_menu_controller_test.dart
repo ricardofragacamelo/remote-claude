@@ -10,12 +10,14 @@ import 'package:remote_claude/features/session/domain/repositories/command_repos
 import 'package:remote_claude/features/session/presentation/providers/command_menu_controller.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/undo.dart';
 import '../../../../../support/fakes/fake_command_repository.dart';
 
 const Failure unavailable = ServerFailure(
-  code: 'CLAUDE_UNAVAILABLE',
-  messageKey: 'session.error.claudeUnavailable',
+  code: 'AGENT_UNAVAILABLE',
+  messageKey: 'session.error.agentUnavailable',
+  params: <String, String>{'engine': anEngine},
   traceId: 'trace-1',
 );
 

@@ -1,6 +1,6 @@
-import { matchedInput, patternForInvocation, readRulePattern } from './rule-pattern';
-import type { RulePatternKind } from './rule-pattern';
-import { commandsOf, SHELL_TOOLS } from './shell-syntax';
+import type { CanonicalTool } from '@domain/engine';
+import { isRuleKind, patternForInvocation } from './rule-pattern';
+import { commandsOf } from './shell-syntax';
 
 /** How far a rule left by an answer reaches. */
 export const RULE_REACHES = ['exact', 'prefix', 'tool'] as const;
@@ -21,7 +21,7 @@ export function isRuleReach(value: string): value is RuleReachKind {
 /**
  * Commands that never become a prefix: interpreters, launchers and elevation.
  *
- * `Bash(python:*)` is not "python", it is anything at all — the command is whatever comes after.
+ * `shell(python:*)` is not "python", it is anything at all — the command is whatever comes after.
  * The list is the one of [15 · D-09](../../../../../docs/plans/15-rules-management/decisions.md),
  * kept here so that plan reads it rather than writing a second one.
  */
@@ -94,59 +94,71 @@ export function commandPrefix(command: string): string | null {
   return unbounded(prefix) ? null : prefix;
 }
 
-/** Whether a pattern reads back as the kind it was built to be — the one rule a reach may not break. */
-function readsBackAs(pattern: string, kind: RulePatternKind): boolean {
-  // `null` is not a pattern at all — a tool name outside the grammar: the reach is not offered.
-  return readRulePattern(pattern)?.kind === kind;
-}
-
 /** The prefix reach of a shell line: a pattern per command, or `null` when any command has none. */
-function prefixReach(toolName: string, input: Readonly<Record<string, unknown>>): RuleReach | null {
-  const line = matchedInput(input);
-  const commands = line === null ? null : commandsOf(line);
+function prefixReach(line: string | undefined): RuleReach | null {
+  const commands = line === undefined ? null : commandsOf(line);
   const prefixes = commands?.map(commandPrefix) ?? [];
 
   if (prefixes.length === 0 || prefixes.some((prefix) => prefix === null)) {
     return null;
   }
 
-  const patterns = [...new Set(prefixes.map((prefix) => `${toolName}(${String(prefix)}:*)`))];
-
-  return patterns.every((pattern) => readsBackAs(pattern, 'prefix'))
-    ? { reach: 'prefix', patterns }
-    : null;
+  // No `)` can be in a prefix ({@link commandPrefix} refuses it), so each reads back as one.
+  return {
+    reach: 'prefix',
+    patterns: [...new Set(prefixes.map((prefix) => `shell(${String(prefix)}:*)`))],
+  };
 }
 
 /**
- * How far a rule left by answering this invocation may reach — computed here, never by a client.
+ * How far a rule left by answering this call may reach — computed here, never by a client, in the
+ * canonical grammar (plan 28, B-31):
  *
- * - `exact`: this very input, the pattern of before;
+ * - `exact`: this very subject — `shell(<command>)`, `file.edit(<path>)` (relative to [folder] when
+ *   inside it), `search(<path>)`, `web.fetch(domain:<host>)`, `mcp(<server>:<tool>)`;
  * - `prefix` (shell only): every command that starts like each command of this line;
- * - `tool` (never shell): every invocation of the tool. A whole shell is Permitir tudo by another
- *   name, and that is a mode, not a rule.
+ * - `tool` (never shell): every call of the kind. A whole shell is Permitir tudo by another name,
+ *   and that is a mode, not a rule.
  *
+ * A kind no rule can name — a question, a plan, `other` — has no reach at all: it always asks.
  * A pure rule: what the card offers, and what an answer is checked against, are the same call.
  */
 export function reachesFor(
-  toolName: string,
-  input: Readonly<Record<string, unknown>>,
+  tool: Pick<CanonicalTool, 'kind' | 'subject'>,
+  folder: string | null,
 ): readonly RuleReach[] {
-  const reaches: RuleReach[] = [];
-  const exact = patternForInvocation(toolName, input);
+  if (!isRuleKind(tool.kind)) {
+    return [];
+  }
 
-  if (exact !== null && readsBackAs(exact, 'exact')) {
+  const reaches: RuleReach[] = [];
+  const exact = patternForInvocation(tool, folder);
+
+  if (exact !== null) {
     reaches.push({ reach: 'exact', patterns: [exact] });
   }
 
-  if (SHELL_TOOLS.has(toolName)) {
-    const prefix = prefixReach(toolName, input);
+  if (tool.kind === 'shell') {
+    const prefix = prefixReach(tool.subject.command);
 
     if (prefix !== null) {
       reaches.push(prefix);
     }
-  } else if (readsBackAs(toolName, 'tool')) {
-    reaches.push({ reach: 'tool', patterns: [toolName] });
+  } else {
+    reaches.push({ reach: 'tool', patterns: [toolReachOf(tool)] });
   }
 
   return reaches;
+}
+
+/**
+ * The pattern of "the tool, whatever its input": the bare kind — but, for `mcp`, the server's tools
+ * (`mcp(<server>:*)`). A person who answers "always, for this tool" to one MCP tool has said nothing
+ * about every other server; the bare `mcp` would answer them all.
+ */
+function toolReachOf(tool: Pick<CanonicalTool, 'kind' | 'subject'>): string {
+  const server = tool.subject.server;
+  return tool.kind === 'mcp' && server !== undefined && server !== '' && !server.includes(')')
+    ? `mcp(${server}:*)`
+    : tool.kind;
 }

@@ -7,6 +7,7 @@
 library;
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/core/conversation/tool_call.dart';
 
 /// How a tool invocation ended, when it has.
 enum ToolStatus { running, succeeded, failed, denied }
@@ -195,29 +196,26 @@ class ThinkingEntry extends ConversationEntry {
 class ToolExecution extends ConversationEntry {
   const ToolExecution({
     required this.toolUseId,
-    required this.toolName,
-    required this.input,
+    required this.call,
     this.status = ToolStatus.running,
     this.output = '',
     this.summary,
-    this.taskId,
     this.isSubagent = false,
     this.title,
     this.question,
   });
 
   final String toolUseId;
-  final String toolName;
 
-  /// The question of an `AskUserQuestion`, as `tool.completed` carried it (plan 24, B-22).
+  /// What the call is: its kind and label, what it is about, and exactly what it was asked to do.
+  final ToolCall call;
+
+  /// The question of a call of kind `question`, as `tool.completed` carried it (plan 24, B-22).
   final Map<String, Object?>? question;
 
   /// What the model said the call is for — the `description` of a shell command —, when it said
   /// (plan 22, D-05).
   final String? title;
-
-  /// What the tool was asked to do, exactly as the contract carried it.
-  final Map<String, Object?> input;
 
   final ToolStatus status;
 
@@ -226,9 +224,6 @@ class ToolExecution extends ConversationEntry {
 
   /// What `tool.completed` said about it, when it said anything.
   final String? summary;
-
-  /// The task a `TaskCreate` made or a `TaskUpdate` changed, once the call ended.
-  final String? taskId;
 
   /// A subagent ran it, not the main conversation.
   final bool isSubagent;
@@ -241,16 +236,13 @@ class ToolExecution extends ConversationEntry {
     ToolStatus? status,
     String? output,
     String? summary,
-    String? taskId,
     Map<String, Object?>? question,
   }) => ToolExecution(
     toolUseId: toolUseId,
-    toolName: toolName,
-    input: input,
+    call: call,
     status: status ?? this.status,
     output: output ?? this.output,
     summary: summary ?? this.summary,
-    taskId: taskId ?? this.taskId,
     isSubagent: isSubagent,
     title: title,
     question: question ?? this.question,
@@ -259,12 +251,10 @@ class ToolExecution extends ConversationEntry {
   @override
   List<Object?> get props => <Object?>[
     toolUseId,
-    toolName,
-    input,
+    call,
     status,
     output,
     summary,
-    taskId,
     isSubagent,
     title,
     question,
@@ -273,12 +263,13 @@ class ToolExecution extends ConversationEntry {
 
 /// What a finished turn cost — the line that closes it in the conversation.
 class TurnSummary extends ConversationEntry {
-  const TurnSummary({required this.turnId, required this.costUsd, required this.durationMs});
+  const TurnSummary({required this.turnId, required this.durationMs, this.costUsd});
 
   final String turnId;
 
-  /// A string, not a double: money that goes through a binary float stops adding up.
-  final String costUsd;
+  /// A string, not a double: money that goes through a binary float stops adding up. `null` when
+  /// the engine reports no cost (plan 28, B-29) — which is not zero: zero is `"0.000000"`.
+  final String? costUsd;
 
   final int durationMs;
 
@@ -289,7 +280,7 @@ class TurnSummary extends ConversationEntry {
   List<Object?> get props => <Object?>[turnId, costUsd, durationMs];
 }
 
-/// The conversation was compacted here: what came before is now a summary Claude carries.
+/// The conversation was compacted here: what came before is now a summary the agent carries.
 class CompactionLine extends ConversationEntry {
   const CompactionLine({required this.seq, required this.trigger, this.preTokens});
 
@@ -299,7 +290,7 @@ class CompactionLine extends ConversationEntry {
   /// `manual` — somebody sent `/compact`; `auto` — the context was full.
   final String trigger;
 
-  /// How many tokens the context held before, when the SDK said.
+  /// How many tokens the context held before, when the engine said.
   final int? preTokens;
 
   /// Whether a person asked for it, rather than the context filling up.

@@ -16,6 +16,7 @@ export function toEntity(row: AuditRow): AuditEntry {
     sessionId: SessionId.create(row.sessionId),
     toolUseId: row.toolUseId,
     toolName: row.toolName,
+    toolKind: row.toolKind,
     input: ToolInput.restore(JSON.stringify(row.input)),
     decision: row.decision as AuditDecision,
     origin: { deviceId: row.deviceId, ip: row.ip },
@@ -64,6 +65,7 @@ export function toRow(entry: AuditEntry, traceId: string | null): AuditInsert {
     sessionId: snapshot.sessionId.value,
     toolUseId: snapshot.toolUseId,
     toolName: snapshot.toolName,
+    toolKind: snapshot.toolKind,
     // The exact input, whole. Truncation belongs to the log, never to the trail.
     input: snapshot.input.value,
     decision: snapshot.decision,

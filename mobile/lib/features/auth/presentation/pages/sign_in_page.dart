@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/error_view.dart';
 import 'package:remote_claude/core/widgets/loading_view.dart';
@@ -36,7 +37,10 @@ class SignInPage extends ConsumerWidget {
               children: <Widget>[
                 Text(l10n.authSignInTitle, style: theme.textTheme.headlineSmall),
                 const SizedBox(height: Tokens.spaceSm),
-                Text(l10n.authSignInDescription, style: theme.textTheme.bodyMedium),
+                Text(
+                  l10n.authSignInDescription(agentNameIn(context)),
+                  style: theme.textTheme.bodyMedium,
+                ),
                 const SizedBox(height: Tokens.spaceLg),
                 switch (session) {
                   AsyncLoading<AuthSession?>() => LoadingView(label: l10n.authSignInPending),

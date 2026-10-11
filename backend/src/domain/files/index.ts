@@ -15,7 +15,7 @@ export {
   markOf,
 } from './services/text-shape';
 export type { EndOfLine, MarkedEncoding } from './services/text-shape';
-export { SENSITIVE_FILES, isSensitive, touchesSensitive } from './services/sensitive-files';
+export { SensitiveFiles } from './services/sensitive-files';
 export {
   HIDDEN_NAMES,
   TREE_LISTING_LIMIT,
@@ -48,7 +48,7 @@ export type {
   NotKeptReason,
   StoredBlob,
 } from './services/local-history';
-export { needsHash, originOf } from './services/change-origin';
+export { needsHash, originOf, writerOf } from './services/change-origin';
 export type { ChangeOrigin, WriteMark, WriteOutcome, Writer } from './services/change-origin';
 export type {
   EntryKind,

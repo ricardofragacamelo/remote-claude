@@ -3,6 +3,7 @@ import { Controller, Get, Inject, Param, UseGuards } from '@nestjs/common';
 import { DescribePermissionUseCase } from '@application/permission';
 import type { PermissionState } from '@application/permission';
 import type { UserId } from '@domain/auth';
+import { previousToolFields } from '@shared/protocol/previous-tool-fields';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 
 /**
@@ -31,6 +32,12 @@ export class PermissionController {
     @Param('requestId') requestId: string,
     @CurrentUser() userId: UserId,
   ): PermissionState {
-    return this.describe.execute({ requestId, sessionId, userId });
+    const state = this.describe.execute({ requestId, sessionId, userId });
+
+    // The fields the previous protocol named the call by, beside the canonical ones: an answer over
+    // HTTP has no version to answer in, and an app on a store reads it (plan 28, D-22).
+    return state.status === 'pending'
+      ? { ...state, request: { ...state.request, ...previousToolFields(state.request) } }
+      : state;
   }
 }

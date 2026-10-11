@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.store';
 import type { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
 import { TurnFileCheckpoint, SessionId } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import {
   SNAPSHOT_PURGE_FIRST_RUN_DELAY_MS,
   SNAPSHOT_PURGE_INTERVAL_MS,
@@ -59,7 +59,7 @@ function job(
   journal.checkpoints.push(
     TurnFileCheckpoint.capture({
       sessionId: SessionId.create(EARLIER),
-      claudeSessionId: ClaudeSessionId.create(CONVERSATION_ID),
+      conversation: ConversationRef.create('claude', CONVERSATION_ID),
       promptId: 'p0',
       path: '/srv/a.md',
       existedBefore: 'present',

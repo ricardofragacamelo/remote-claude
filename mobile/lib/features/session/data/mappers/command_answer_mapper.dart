@@ -6,6 +6,7 @@ library;
 
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/network/contracts/protocol.g.dart';
+import 'package:remote_claude/core/network/conversation_wire.dart';
 import 'package:remote_claude/core/network/failure_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 
@@ -23,8 +24,8 @@ SessionJoined? sessionJoinedFrom(Envelope frame) {
 
   return SessionJoined(
     sessionId: sessionId,
-    claudeSessionId: _text(payload, 'claudeSessionId'),
-    resumedFrom: _text(payload, 'resumedFrom'),
+    conversation: conversationKeyFrom(payload['conversation']),
+    resumedFrom: conversationKeyFrom(payload['resumedFrom']),
   );
 }
 
@@ -65,8 +66,3 @@ SessionFailed? sessionFailedFrom(Envelope frame) {
 
 Failure _failureOf(Envelope frame) =>
     failureFromEnvelope(<String, Object?>{'error': frame.payload}, frame.traceId ?? frame.id);
-
-String? _text(Map<String, Object?> payload, String key) {
-  final Object? value = payload[key];
-  return value is String ? value : null;
-}

@@ -61,16 +61,16 @@ describe('where a default applies — plan 13, D-04', () => {
 
   it('puts the nearest folder over the user over the installation, field by field — S-37, S-38', () => {
     const effective = effectiveDefaults({
-      user: set({ model: 'haiku', permissionMode: 'plan' }),
+      user: set({ model: 'haiku', permissionMode: 'readOnly' }),
       overrides: [{ folder: '/srv/repo', values: set({ model: 'sonnet', effort: 'high' }) }],
       folder: '/srv/repo/pkg',
     });
 
     expect(effective.model).toEqual({ value: 'sonnet', from: 'folder', folder: '/srv/repo' });
-    expect(effective.permissionMode).toEqual({ value: 'plan', from: 'user' });
+    expect(effective.permissionMode).toEqual({ value: 'readOnly', from: 'user' });
     expect(effective.thinking).toEqual({ value: null, from: 'installation' });
     expect(valuesOf(effective)).toEqual(
-      set({ model: 'sonnet', permissionMode: 'plan', effort: 'high' }),
+      set({ model: 'sonnet', permissionMode: 'readOnly', effort: 'high' }),
     );
   });
 
@@ -94,7 +94,7 @@ describe('where a default applies — plan 13, D-04', () => {
 
 describe('what a default may set — plan 13, B-14', () => {
   it('needs the catalogue only for what names a model or an effort', () => {
-    expect(needsCatalogue(set({ permissionMode: 'plan', thinking: 'off' }))).toBe(false);
+    expect(needsCatalogue(set({ permissionMode: 'readOnly', thinking: 'off' }))).toBe(false);
     expect(needsCatalogue(set({ effort: 'low' }))).toBe(true);
     expect(needsCatalogue(set({ fallbackModel: 'haiku' }))).toBe(true);
   });
@@ -157,7 +157,7 @@ describe('what a session opens with — plan 13, B-15', () => {
 
   it('lets the client’s model, mode and effort win over every default — S-48', () => {
     const applied = defaultsForSession(
-      effectiveOf({ model: 'haiku', permissionMode: 'plan' }),
+      effectiveOf({ model: 'haiku', permissionMode: 'readOnly' }),
       offer,
       {
         model: 'sonnet',

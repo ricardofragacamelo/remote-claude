@@ -20,24 +20,41 @@ export type {
   RuleSubject,
 } from './entities/permission-rule.entity';
 export { classifyRisk } from './services/risk.classifier';
-export { interactionFor, normalizeQuestion, validateAnswers } from './services/question';
-export { QUESTION_LIMITS, QUESTION_TOOL } from './value-objects/question.value-object';
+export { validateAnswers } from './services/question';
+// The questions and the plan are what an agent asks, in the `engine` domain (plan 28, B-20); the
+// permission flow carries them, and re-exports them for its callers.
+export { QUESTION_LIMITS } from '@domain/engine';
 export type {
+  Interaction,
+  PlanInteraction,
   Question,
   QuestionAnswer,
   QuestionInteraction,
   QuestionOption,
-} from './value-objects/question.value-object';
-export { HUMAN_ONLY_TOOLS, answeredByMode, answeredByRule } from './services/mode-approval';
+} from '@domain/engine';
 export {
-  matchedInput,
+  HUMAN_ONLY_KINDS,
+  READ_ONLY_REFUSED_KINDS,
+  answeredByMode,
+  answeredByRule,
+  refusedByMode,
+} from './services/mode-approval';
+export {
+  RULE_KINDS,
+  hostOf,
+  isRuleKind,
   parseRulePattern,
   patternForInvocation,
   readRulePattern,
   ruleMatches,
 } from './services/rule-pattern';
-export type { RulePattern, RulePatternKind } from './services/rule-pattern';
-export { answeringRule, ignoredAllow } from './services/rule-precedence';
+export type {
+  RuleKind,
+  RulePattern,
+  RulePatternProblem,
+  RulePatternReach,
+} from './services/rule-pattern';
+export { answeringRule } from './services/rule-precedence';
 export {
   RULE_REACHES,
   UNBOUNDED_COMMANDS,

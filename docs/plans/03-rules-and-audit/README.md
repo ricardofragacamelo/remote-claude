@@ -83,11 +83,11 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Requisito | Tarefas | Documento normativo | Cenários |
 |---|---|---|---|
 | Regra persistida resolve sem incomodar ninguém | B-01, B-03 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) | S-01…S-04 |
-| Casamento de regra não é comparação ingênua de prefixo | B-01 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#a-ponte-de-permissão) | S-05…S-07, S-12 |
+| Casamento de regra não é comparação ingênua de prefixo | B-01 | [backend/04a-claude](../../architecture/backend/04a-claude.md#a-ponte-de-permissão) | S-05…S-07, S-12 |
 | `deny` de projeto continua sendo aplicado | B-06 | [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) | S-08 |
 | Regra é revogável, e a revogação vale na sessão viva | B-05 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) | S-09…S-11 |
 | Regra pertence a um usuário e nunca resolve o pedido de outro | B-01 | [08-authentication](../../architecture/shared/08-authentication.md#identidade-e-o-modelo-local) | S-13, S-14 |
-| "Sempre permitir" vira regra também do lado do Claude | B-04 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#a-ponte-de-permissão) | S-01, S-02 |
+| "Sempre permitir" vira regra também do lado do Claude | B-04 | [backend/04a-claude](../../architecture/backend/04a-claude.md#a-ponte-de-permissão) | S-01, S-02 |
 | Revogar regra é operação de uma tela, nas duas pontas | B-07…B-10 | [web/01](../../architecture/web/01-architecture.md), [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-15…S-22, S-63…S-69 |
 | A trilha é consultável, com filtro e paginação estável | B-11, B-14 | [backend/03-modules](../../architecture/backend/03-modules.md#audit) | S-23…S-25, S-28, S-29 |
 | A trilha de um usuário não vaza para outro, nem expõe conteúdo | B-12 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-26, S-27 |

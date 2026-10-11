@@ -1,5 +1,5 @@
 import { statusFor } from '@domain/session';
-import type { Session, SessionStatus } from '@domain/session';
+import type { ObservedStatus, Session } from '@domain/session';
 
 /**
  * Moves a session's status from an event, and says what — if anything — has to be announced.
@@ -17,7 +17,7 @@ import type { Session, SessionStatus } from '@domain/session';
  *
  * @returns the new status when it actually changed, and `null` when nothing has to be published
  */
-export function observedStatus(session: Session, eventType: string): SessionStatus | null {
+export function observedStatus(session: Session, eventType: string): ObservedStatus | null {
   const before = session.status;
   const next = statusFor(eventType);
 
@@ -27,5 +27,5 @@ export function observedStatus(session: Session, eventType: string): SessionStat
 
   session.observe(next);
 
-  return session.status === before ? null : session.status;
+  return session.status === before ? null : next;
 }

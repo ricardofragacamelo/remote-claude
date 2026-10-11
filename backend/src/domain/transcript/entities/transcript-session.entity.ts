@@ -1,4 +1,4 @@
-import type { ClaudeSessionId } from '../value-objects/claude-session-id.value-object';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * Where a conversation came from, as far as this product can prove.
@@ -17,7 +17,7 @@ export type TranscriptOrigin = 'ours' | 'external';
  * listing is cheap and reading is not (~30 MB of heap for the largest file measured).
  */
 export interface TranscriptSession {
-  readonly id: ClaudeSessionId;
+  readonly id: ConversationRef;
 
   /** The display title: a custom title, the SDK's summary, or the first prompt. */
   readonly summary: string;

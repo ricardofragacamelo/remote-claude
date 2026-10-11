@@ -1,14 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { RecordAuditEventUseCase } from '@application/audit';
-import { ModelCatalog, SessionRegistry, StartSessionUseCase } from '@application/session';
-import type {
-  ClaudeSessionHandle,
-  ClaudeSessionPort,
-  ClaudeSessionStart,
-  SessionConfigurationSource,
-  SessionEvent,
+import {
+  EngineRegistry,
+  ModelCatalog,
+  SessionRegistry,
+  StartSessionUseCase,
 } from '@application/session';
+import type { SessionConfigurationSource, StartSessionCommand } from '@application/session';
 import { UserId } from '@domain/auth';
 import {
   EffortUnsupportedError,
@@ -18,13 +17,18 @@ import {
   SessionNotFoundError,
 } from '@domain/session';
 import type { Session } from '@domain/session';
-import { ClaudeSessionId, InvalidClaudeSessionIdError } from '@domain/transcript';
+import { ConversationRef, InvalidConversationRefError } from '@domain/engine';
 import { WorkspaceNotAllowedError, WorkspacePath } from '@domain/workspace';
-import { RecordingHandle, aClock } from '../../../support/builders/session.builder';
+import {
+  ALL_CAPABILITIES,
+  aClock,
+  RecordingHandle,
+  anEvent,
+} from '../../../support/builders/session.builder';
+import { StubEngine } from '../../../support/fakes/stub-engine';
 import { RecordingBroadcaster } from '../../../support/fakes/recording-broadcaster';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
-import { SequentialUuids } from '../../../support/fakes/sequential-uuids';
 import { InMemoryResumableConversations } from '../../../support/fakes/in-memory-resumable-conversations';
 import { InMemorySessionOriginRepository } from '../../../support/fakes/in-memory-session-origin.repository';
 import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-events';
@@ -32,25 +36,10 @@ import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-eve
 const owner = UserId.create('auth|owner');
 const now = new Date('2026-09-18T12:00:00.000Z');
 
-const defaults = { model: 'claude-sonnet-5', permissionMode: 'default' } as const;
+const defaults = { model: 'claude-sonnet-5', permissionMode: 'ask' } as const;
 
-/** A port that hands back a recording handle and keeps the callbacks the use case installed. */
-class StubClaude implements ClaudeSessionPort {
-  readonly starts: ClaudeSessionStart[] = [];
-  readonly handle = new RecordingHandle();
-  failWith: Error | null = null;
-
-  start(input: ClaudeSessionStart): Promise<ClaudeSessionHandle> {
-    this.starts.push(input);
-
-    return this.failWith === null ? Promise.resolve(this.handle) : Promise.reject(this.failWith);
-  }
-
-  /** Replays an event as the runner would. */
-  emit(event: SessionEvent): void {
-    this.starts[0]?.onEvent(event);
-  }
-}
+/** The engine of these tests: the port of ADR-025, recording what it was asked. */
+class StubClaude extends StubEngine {}
 
 describe('StartSessionUseCase', () => {
   let claude: StubClaude;
@@ -93,12 +82,12 @@ describe('StartSessionUseCase', () => {
     new StartSessionUseCase(
       workspaces,
       registry,
-      claude,
+      new EngineRegistry([claude], 'claude'),
       broadcaster,
       clock,
       ids,
       defaults,
-      { ids: new SequentialUuids(), origins },
+      { origins },
       {
         conversations,
         trail: new RecordAuditEventUseCase(trail, new SequentialIds('01J0AUD0000000000000000')),
@@ -111,7 +100,7 @@ describe('StartSessionUseCase', () => {
         workspacePath,
         model: null,
         permissionMode: null,
-        resumeSessionId: null,
+        resumeFrom: null,
         userId: owner,
         openedFrom: 'web',
       })
@@ -132,15 +121,15 @@ describe('StartSessionUseCase', () => {
     const session = await start();
 
     expect(session.model).toBe('claude-sonnet-5');
-    expect(session.permissionMode).toBe('default');
+    expect(session.permissionMode).toBe('ask');
   });
 
   it('opens with what the client asked for when it asked', async () => {
     const { session } = await build().execute({
       workspacePath: '/srv/projects/app',
       model: 'claude-opus-5',
-      permissionMode: 'plan',
-      resumeSessionId: null,
+      permissionMode: 'readOnly',
+      resumeFrom: null,
       userId: owner,
       openedFrom: 'mobile',
     });
@@ -148,7 +137,7 @@ describe('StartSessionUseCase', () => {
     expect(session.model).toBe('claude-opus-5');
     // Plan 08, B-07: the list of live sessions says which client opened each one.
     expect(session.openedFrom).toBe('mobile');
-    expect(claude.starts[0]?.permissionMode).toBe('plan');
+    expect(claude.starts[0]?.permissionMode).toBe('readOnly');
   });
 
   describe('the provenance — plan 04, S-71', () => {
@@ -164,7 +153,7 @@ describe('StartSessionUseCase', () => {
         openedAt: now,
       });
       expect(
-        claude.starts[0]?.conversation.claudeSessionId.equals(ClaudeSessionId.create(FIRST)),
+        claude.starts[0]?.conversation.ref.equals(ConversationRef.create('claude', FIRST)),
       ).toBe(true);
       expect(claude.starts[0]?.conversation.resumedFrom).toBeNull();
     });
@@ -212,7 +201,7 @@ describe('StartSessionUseCase', () => {
         workspacePath: overrides.workspacePath ?? '/srv/projects/app',
         model: null,
         permissionMode: null,
-        resumeSessionId,
+        resumeFrom: { engine: 'claude', id: resumeSessionId },
         userId: overrides.userId ?? owner,
         openedFrom: 'web',
       });
@@ -226,8 +215,8 @@ describe('StartSessionUseCase', () => {
       const started = await resume(OURS);
 
       expect(started.joined).toBe(false);
-      expect(started.conversation.claudeSessionId.value).toBe(OURS);
-      expect(started.conversation.resumedFrom?.value).toBe(OURS);
+      expect(started.conversation.ref.id).toBe(OURS);
+      expect(started.conversation.resumedFrom?.id).toBe(OURS);
       expect(claude.starts[0]?.conversation).toEqual(started.conversation);
       // In place writes nothing new about where it came from: it was recorded when it was opened.
       expect(origins.rows.size).toBe(0);
@@ -243,8 +232,8 @@ describe('StartSessionUseCase', () => {
 
       const started = await resume(EDITOR);
 
-      expect(started.conversation.claudeSessionId.value).toBe(FIRST);
-      expect(started.conversation.resumedFrom?.value).toBe(EDITOR);
+      expect(started.conversation.ref.id).toBe(FIRST);
+      expect(started.conversation.resumedFrom?.id).toBe(EDITOR);
       expect(origins.rows.get(FIRST)?.openedBy).toEqual(owner);
       expect(recordedBeforeSpawn).toBe(true);
       // Nothing about the original is claimed as ours: it stays the editor's.
@@ -321,7 +310,7 @@ describe('StartSessionUseCase', () => {
     });
 
     it('refuses an id that is not a conversation id before asking the store', async () => {
-      await expect(resume('sdk-1')).rejects.toThrow(InvalidClaudeSessionIdError);
+      await expect(resume('sdk-1')).rejects.toThrow(InvalidConversationRefError);
       expect(conversations.lookups).toBe(0);
     });
 
@@ -345,7 +334,7 @@ describe('StartSessionUseCase', () => {
 
     it('joins a live session of ours that was opened here, not resumed', async () => {
       const opened = await start();
-      const conversation = claude.starts[0]?.conversation.claudeSessionId.value ?? '';
+      const conversation = claude.starts[0]?.conversation.ref.id ?? '';
       conversations.add({ id: conversation, openedBy: owner.value });
 
       const again = await resume(conversation);
@@ -438,21 +427,21 @@ describe('StartSessionUseCase', () => {
       const session = await start();
       clock.advance(90_000);
 
-      claude.emit({ type: 'message.delta', payload: { messageId: 'm1', delta: 'hi' } });
+      claude.emit(anEvent('message.delta', { messageId: 'm1', delta: 'hi' }));
 
       expect(session.lastActivityAt).toEqual(clock.now());
     });
 
     it('publishes every event to whoever is watching', async () => {
       await start();
-      claude.emit({ type: 'message.delta', payload: { messageId: 'm1', delta: 'hi' } });
+      claude.emit(anEvent('message.delta', { messageId: 'm1', delta: 'hi' }));
 
       expect(broadcaster.types).toContain('message.delta');
     });
 
     it('moves the machine and announces the new status', async () => {
       const session = await start();
-      claude.emit({ type: 'message.delta', payload: { messageId: 'm1', delta: 'hi' } });
+      claude.emit(anEvent('message.delta', { messageId: 'm1', delta: 'hi' }));
 
       expect(session.status).toBe('thinking');
       expect(broadcaster.types).toEqual(['message.delta', 'session.statusChanged']);
@@ -462,7 +451,7 @@ describe('StartSessionUseCase', () => {
       await start();
       broadcaster.events.length = 0;
 
-      claude.emit({ type: 'turn.completed', payload: {} });
+      claude.emit(anEvent('turn.completed'));
 
       // `turn.completed` means `idle`, and a session whose subprocess is up already was.
       expect(broadcaster.types).toEqual(['turn.completed']);
@@ -470,8 +459,8 @@ describe('StartSessionUseCase', () => {
 
     it('reaches `waitingPermission`, which is the one the UI cannot guess', async () => {
       const session = await start();
-      claude.emit({ type: 'message.delta', payload: {} });
-      claude.emit({ type: 'permission.requested', payload: {} });
+      claude.emit(anEvent('message.delta'));
+      claude.emit(anEvent('permission.requested'));
 
       expect(session.status).toBe('waitingPermission');
     });
@@ -479,7 +468,7 @@ describe('StartSessionUseCase', () => {
     it('publishes an event that implies no status without touching the machine', async () => {
       const session = await start();
 
-      claude.emit({ type: 'diag.pong', payload: {} });
+      claude.emit(anEvent('diag.pong'));
 
       expect(session.status).toBe('idle');
       expect(broadcaster.events).toHaveLength(1);
@@ -515,9 +504,7 @@ describe('StartSessionUseCase', () => {
       await start();
       close('failed');
 
-      expect((broadcaster.errors.at(-1)?.error as { code: string }).code).toBe(
-        'CLAUDE_UNAVAILABLE',
-      );
+      expect((broadcaster.errors.at(-1)?.error as { code: string }).code).toBe('AGENT_UNAVAILABLE');
     });
 
     it('says nothing of the sort when the stream simply ended', async () => {
@@ -559,12 +546,12 @@ describe('StartSessionUseCase', () => {
         preview: 'second',
       });
 
-      claude.emit({ type: 'turn.completed', payload: {} });
+      claude.emit(anEvent('turn.completed'));
 
       expect(claude.handle.prompts).toEqual(['second']);
       // It left the queue, and then it is said, as the prompt of the turn it opens — by its sender.
       expect(broadcaster.events.slice(-2).map((entry) => entry.event)).toEqual([
-        { type: 'prompt.dequeued', payload: { queueId: 'q2', reason: 'started' } },
+        anEvent('prompt.dequeued', { queueId: 'q2', reason: 'started' }),
         {
           type: 'message.completed',
           payload: {
@@ -576,7 +563,7 @@ describe('StartSessionUseCase', () => {
         },
       ]);
 
-      claude.emit({ type: 'turn.completed', payload: {} });
+      claude.emit(anEvent('turn.completed'));
       expect(claude.handle.prompts).toEqual(['second']);
       expect(session.prompts.turnOpen).toBe(false);
     });
@@ -592,7 +579,7 @@ describe('StartSessionUseCase', () => {
       });
       registry.remove(session.id);
 
-      claude.emit({ type: 'turn.completed', payload: {} });
+      claude.emit(anEvent('turn.completed'));
 
       expect(claude.handle.prompts).toEqual([]);
     });
@@ -605,7 +592,7 @@ describe('StartSessionUseCase', () => {
         asked.push(query);
         return Promise.resolve({
           model: query.client.model ?? 'claude-opus-5',
-          permissionMode: query.client.permissionMode ?? 'plan',
+          permissionMode: query.client.permissionMode ?? 'readOnly',
           effort: 'high',
           thinking: 'off',
           outputStyle: 'Concise',
@@ -618,12 +605,12 @@ describe('StartSessionUseCase', () => {
       new StartSessionUseCase(
         workspaces,
         registry,
-        claude,
+        new EngineRegistry([claude], 'claude'),
         broadcaster,
         clock,
         ids,
         defaults,
-        { ids: new SequentialUuids(), origins },
+        { origins },
         { conversations, trail: new RecordAuditEventUseCase(trail, new SequentialIds()) },
         null,
         configured,
@@ -638,13 +625,13 @@ describe('StartSessionUseCase', () => {
         workspacePath: '/srv/projects/app',
         model: null,
         permissionMode: null,
-        resumeSessionId: null,
+        resumeFrom: null,
         userId: owner,
         openedFrom: 'web',
       });
 
       expect(started.session.model).toBe('claude-opus-5');
-      expect(started.session.permissionMode).toBe('plan');
+      expect(started.session.permissionMode).toBe('readOnly');
       expect(claude.starts[0]).toMatchObject({
         model: 'claude-opus-5',
         effort: 'high',
@@ -670,12 +657,12 @@ describe('StartSessionUseCase', () => {
         workspacePath: '/srv/projects/app',
         model: 'claude-haiku-5',
         permissionMode: null,
-        resumeSessionId: '0f0e0d0c-0b0a-4908-8706-050403020100',
+        resumeFrom: { engine: 'claude', id: '0f0e0d0c-0b0a-4908-8706-050403020100' },
         userId: owner,
         openedFrom: 'web',
       });
 
-      expect(started.conversation.resumedFrom?.value).toBe('0f0e0d0c-0b0a-4908-8706-050403020100');
+      expect(started.conversation.resumedFrom?.id).toBe('0f0e0d0c-0b0a-4908-8706-050403020100');
       expect(claude.starts[0]).toMatchObject({
         model: 'claude-haiku-5',
         thinking: 'off',
@@ -689,7 +676,7 @@ describe('StartSessionUseCase', () => {
         workspacePath: '/srv/projects/app',
         model: 'claude-sonnet-5',
         permissionMode: null,
-        resumeSessionId: null,
+        resumeFrom: null,
         userId: owner,
         openedFrom: 'web',
       });
@@ -708,19 +695,19 @@ describe('StartSessionUseCase', () => {
       new StartSessionUseCase(
         workspaces,
         registry,
-        claude,
+        new EngineRegistry([claude], 'claude'),
         broadcaster,
         clock,
         ids,
         defaults,
-        { ids: new SequentialUuids(), origins },
+        { origins },
         { conversations, trail: new RecordAuditEventUseCase(trail, new SequentialIds()) },
         models,
       ).execute({
         workspacePath: '/srv/projects/app',
         model: null,
         permissionMode: null,
-        resumeSessionId: null,
+        resumeFrom: null,
         effort,
         userId: owner,
         openedFrom: 'web',
@@ -742,7 +729,6 @@ describe('StartSessionUseCase', () => {
           resolvedModel: null,
           displayName: 'Sonnet',
           description: '',
-          supportsEffort: true,
           supportedEffortLevels: ['low'],
         },
       ];
@@ -750,7 +736,7 @@ describe('StartSessionUseCase', () => {
         session: await start(),
         handle,
         conversation: {
-          claudeSessionId: ClaudeSessionId.create('6b41b192-a41b-46c2-b8d7-5098d8c825be'),
+          ref: ConversationRef.create('claude', '6b41b192-a41b-46c2-b8d7-5098d8c825be'),
           resumedFrom: null,
         },
       });
@@ -759,6 +745,123 @@ describe('StartSessionUseCase', () => {
       await expect(effortOf('max', catalog)).rejects.toThrow(EffortUnsupportedError);
       expect(claude.starts).toHaveLength(before);
       await expect(effortOf('low', catalog)).resolves.toBeDefined();
+    });
+
+    describe('the levels the engine announces — plan 28, S-84', () => {
+      const launch = (overrides: Partial<StartSessionCommand>) =>
+        build().execute({
+          workspacePath: '/srv/projects/app',
+          model: null,
+          permissionMode: null,
+          resumeFrom: null,
+          userId: owner,
+          openedFrom: 'web',
+          ...overrides,
+        });
+
+      it('refuses a level the engine does not announce, before anything is spawned', async () => {
+        claude.capabilities = { ...ALL_CAPABILITIES, effortLevels: ['low', 'medium', 'high'] };
+
+        const refusal = await launch({ effort: 'max' }).catch((error: unknown) => error);
+
+        expect(refusal).toBeInstanceOf(EffortUnsupportedError);
+        expect(refusal).toMatchObject({
+          code: 'INVALID_INPUT',
+          messageKey: 'session.error.effortUnsupported',
+          params: { level: 'max', model: 'claude-sonnet-5' },
+        });
+        expect(claude.starts).toEqual([]);
+      });
+
+      it('names the model the client chose in the refusal', async () => {
+        claude.capabilities = { ...ALL_CAPABILITIES, effortLevels: ['low'] };
+
+        await expect(launch({ effort: 'high', model: 'claude-opus-5' })).rejects.toMatchObject({
+          params: { level: 'high', model: 'claude-opus-5' },
+        });
+      });
+
+      it('refuses every level of an engine that has no effort at all', async () => {
+        claude.capabilities = { ...ALL_CAPABILITIES, effortLevels: [] };
+
+        await expect(launch({ effort: 'low' })).rejects.toThrow(EffortUnsupportedError);
+        expect(claude.starts).toEqual([]);
+      });
+
+      it('opens with no effort on an engine that has none', async () => {
+        claude.capabilities = { ...ALL_CAPABILITIES, effortLevels: [] };
+
+        await expect(launch({ effort: null })).resolves.toBeDefined();
+        await expect(launch({})).resolves.toBeDefined();
+      });
+
+      it('opens with a level at the edge of what the engine announces', async () => {
+        claude.capabilities = { ...ALL_CAPABILITIES, effortLevels: ['low', 'medium', 'high'] };
+
+        await launch({ effort: 'high' });
+
+        expect(claude.starts[0]?.effort).toBe('high');
+      });
+
+      it('reads the levels of the engine of the conversation it resumes', async () => {
+        const other = new StubEngine('other-engine');
+        other.capabilities = { ...ALL_CAPABILITIES, effortLevels: ['low'] };
+        const across = new StartSessionUseCase(
+          workspaces,
+          registry,
+          new EngineRegistry([claude, other], 'claude'),
+          broadcaster,
+          clock,
+          ids,
+          defaults,
+          { origins },
+          { conversations, trail: new RecordAuditEventUseCase(trail, new SequentialIds()) },
+        );
+
+        await expect(
+          across.execute({
+            workspacePath: '/srv/projects/app',
+            model: null,
+            permissionMode: null,
+            resumeFrom: { engine: 'other-engine', id: '11111111-1111-4111-8111-111111111111' },
+            effort: 'max',
+            userId: owner,
+            openedFrom: 'web',
+          }),
+        ).rejects.toThrow(EffortUnsupportedError);
+        expect(other.starts).toEqual([]);
+      });
+
+      it('reads the levels of the engine the client named', async () => {
+        const other = new StubEngine('other-engine');
+        other.capabilities = { ...ALL_CAPABILITIES, effortLevels: ['low'] };
+        const across = new StartSessionUseCase(
+          workspaces,
+          registry,
+          new EngineRegistry([claude, other], 'claude'),
+          broadcaster,
+          clock,
+          ids,
+          defaults,
+          { origins },
+          { conversations, trail: new RecordAuditEventUseCase(trail, new SequentialIds()) },
+        );
+        const named = (effort: 'low' | 'max') =>
+          across.execute({
+            workspacePath: '/srv/projects/app',
+            model: null,
+            permissionMode: null,
+            resumeFrom: null,
+            engine: 'other-engine',
+            effort,
+            userId: owner,
+            openedFrom: 'web',
+          });
+
+        await expect(named('max')).rejects.toThrow(EffortUnsupportedError);
+        await expect(named('low')).resolves.toBeDefined();
+        expect(other.starts).toHaveLength(1);
+      });
     });
   });
 
@@ -769,7 +872,7 @@ describe('StartSessionUseCase', () => {
         workspacePath: '/srv/projects/app',
         model: null,
         permissionMode: null,
-        resumeSessionId: CONVERSATION,
+        resumeFrom: { engine: 'claude', id: CONVERSATION },
         forkAt,
         userId: owner,
         openedFrom: 'web',
@@ -790,8 +893,8 @@ describe('StartSessionUseCase', () => {
     it('forks before the prompt, under a new id, and enters the trail — S-161', async () => {
       const started = await fork('u2');
 
-      expect(started.conversation.resumedFrom?.value).toBe(CONVERSATION);
-      expect(started.conversation.claudeSessionId.value).not.toBe(CONVERSATION);
+      expect(started.conversation.resumedFrom?.id).toBe(CONVERSATION);
+      expect(started.conversation.ref.key).not.toBe(CONVERSATION);
       expect(claude.starts[0]?.forkAt).toEqual({ keepUpTo: 'a1', dropsTurn: 'u2' });
       expect(trail.kinds).toContain('session.forked');
     });
@@ -808,7 +911,7 @@ describe('StartSessionUseCase', () => {
         workspacePath: '/srv/projects/app',
         model: null,
         permissionMode: null,
-        resumeSessionId: CONVERSATION,
+        resumeFrom: { engine: 'claude', id: CONVERSATION },
         userId: owner,
         openedFrom: 'web',
       });
@@ -823,7 +926,7 @@ describe('StartSessionUseCase', () => {
           workspacePath: '/srv/projects/app',
           model: null,
           permissionMode: null,
-          resumeSessionId: '22222222-2222-4222-8222-222222222222',
+          resumeFrom: { engine: 'claude', id: '22222222-2222-4222-8222-222222222222' },
           forkAt: 'u1',
           userId: owner,
           openedFrom: 'web',

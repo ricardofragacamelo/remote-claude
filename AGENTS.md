@@ -8,12 +8,16 @@ em documentos menores, carregados sob demanda.
 
 ## O que é este projeto
 
-Backend Node + front web React + app Flutter para operar, remotamente, o **Claude Code
-instalado na máquina local**. O backend fala com o Claude via Claude Agent SDK, recebe o
-stream de eventos e o distribui para os dois canais (web e mobile), que também aprovam
-permissões de tool e disparam prompts.
+Backend Node + front web React + app Flutter para operar, remotamente, o **agente de código
+instalado na máquina local** — hoje o Claude Code, pela porta de motor
+([ADR-025](docs/architecture/shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)).
+O backend fala com o agente pelo adapter do motor (no Claude, o Claude Agent SDK), recebe o
+stream de eventos, o traduz para o contrato canônico e o distribui para os dois canais (web e
+mobile), que também aprovam permissões de tool e disparam prompts.
 
 Stack fechada: NestJS · React + shadcn/ui + Tailwind · Flutter · PostgreSQL 18 · OIDC (Keycloak próprio — [ADR-010](docs/architecture/shared/00-decisions.md#adr-010--openid-connect-agnóstico-de-provedor-auth0-como-alvo-inicial)) · pnpm workspaces.
+O agente entra por uma porta de motor, com o núcleo neutro e uma extensão por motor em `engines/<motor>/`
+([12-engines](docs/architecture/shared/12-engines.md)).
 
 ---
 
@@ -81,6 +85,7 @@ Leia os dois no **início** da tarefa, não no fim.
    por arquivo. Ver [testing strategy](docs/architecture/shared/06-testing-strategy.md).
 6. **A Dependency Rule é inviolável.** Camada de dentro nunca importa camada de fora.
    Vale no backend (domain ← application ← adapter) e no web (Component → Hook → Service → api).
+   E o núcleo nunca importa `engines/`, em nenhuma das três pontas.
 7. **Status HTTP tem significado.** Nunca devolva 200 com erro no corpo, nem 500 para erro
    de validação. Ver [errors and HTTP](docs/architecture/shared/04-errors-and-http.md).
 8. **Autenticação é OIDC padrão.** Nenhum código conhece o nome do provedor; o backend
@@ -93,6 +98,10 @@ Leia os dois no **início** da tarefa, não no fim.
     crie o `.mjs`. Catálogo na seção **Comandos** do [README.md](README.md#comandos).
 11. **Antes de criar um arquivo, procure onde ele deveria estar.** A estrutura de pastas é
     normativa, não sugestão.
+12. **Núcleo neutro de agente.** Nenhum nome de motor, de ferramenta, de modo ou campo de input
+    cru fora de `engines/<motor>/`, nas três pontas. O cliente desenha pelo `kind`, e o contrato
+    é nosso. Verificado por `pnpm neutral:check` (portão 11, com um baseline que só encolhe) e
+    pelo lint de arquitetura. Ver [12-engines](docs/architecture/shared/12-engines.md).
 
 ---
 
@@ -109,7 +118,8 @@ abaixo tem o seu próprio roteador interno.
 | Mexer em qualquer coisa do app Flutter | [docs/architecture/mobile/README.md](docs/architecture/mobile/README.md) | sim |
 | Tocar em algo que atravessa as três pontas (log, i18n, erro, protocolo WS, teste, auth) | [docs/architecture/shared/README.md](docs/architecture/shared/README.md) | sim |
 | Mexer em login, token, device ou credencial | [docs/architecture/shared/08-authentication.md](docs/architecture/shared/08-authentication.md) | sim |
-| Entender **como** o backend conversa com o Claude local | [docs/discovery/01-descoberta-claude-agent-sdk.md](docs/discovery/01-descoberta-claude-agent-sdk.md) | sim |
+| Entender **como** o backend conversa com um agente de código (hoje, o Claude local) | [docs/architecture/backend/04-engine-integration.md](docs/architecture/backend/04-engine-integration.md), o anexo [04a-claude.md](docs/architecture/backend/04a-claude.md) e a [descoberta do SDK](docs/discovery/01-descoberta-claude-agent-sdk.md) | sim |
+| Mexer em algo que só um agente tem (tela, ferramenta, modo, configuração) | [docs/architecture/shared/12-engines.md](docs/architecture/shared/12-engines.md) | sim |
 | Saber **por que** uma tecnologia foi escolhida, ou propor trocá-la | [docs/architecture/shared/00-decisions.md](docs/architecture/shared/00-decisions.md) | sim |
 | Configurar ou suprimir lint, tipagem, duplicação ou quality gate | [docs/architecture/shared/09-code-quality.md](docs/architecture/shared/09-code-quality.md) | sim |
 | **Planejar uma fase/task, ou executar a validação** | [docs/architecture/shared/11-validation-protocol.md](docs/architecture/shared/11-validation-protocol.md) | sim |
@@ -121,7 +131,10 @@ abaixo tem o seu próprio roteador interno.
 
 - Vai **adicionar ou alterar um evento/comando WebSocket** → é uma mudança de contrato:
   leia [05-websocket-protocol.md](docs/architecture/shared/05-websocket-protocol.md) e atualize
-  backend, web e mobile na mesma mudança. Contrato quebrado em uma ponta só é bug.
+  backend, web e mobile na mesma mudança. Contrato quebrado em uma ponta só é bug. O evento é
+  canônico: `kind`, `origin` opaco, `messageKey` + `params` ([12-engines](docs/architecture/shared/12-engines.md#o-kind-e-as-convenções-canônicas)).
+- Vai **mostrar algo que vem de uma ferramenta do agente** → pelo `kind` e pelo rótulo que o
+  backend manda, nunca pelo nome da ferramenta nem pelo input cru.
 - Vai **criar um módulo novo no backend** → leia `backend/01`, `backend/02` e `backend/03` juntos.
 - Vai **escrever uma tela** → leia `web/01` (ou `mobile/01`) **e** `shared/02-i18n.md`.
 - Vai **mexer em banco** → leia [backend/05-persistence.md](docs/architecture/backend/05-persistence.md).
@@ -145,7 +158,12 @@ abaixo tem o seu próprio roteador interno.
 - Decisão tomada sem registro no `decisions.md` do plano — decisão sem rastro é decisão que se toma de novo.
 - Entrega sem os três níveis de teste, ou com cenários só de caminho feliz.
 - Retomar a validação do portão que falhou, em vez de reiniciar do primeiro.
-- `query()` do Agent SDK sem `settingSources: ['project']` ou sem o hook `PreToolUse`.
+- Sessão de motor aberta sem a asserção de segurança do motor (no Claude: `query()` do Agent SDK
+  sem `settingSources: ['project']` ou sem o hook `PreToolUse`).
+- Nome de ferramenta, modo ou campo de input de um agente fora de `engines/<motor>/`.
+- Cliente decidindo por `engine`, `origin.native` ou `toolName`.
+- `Claude*`/`claudeSessionId` em identificador, rota, tabela ou chave do núcleo.
+- Nome de motor escrito numa string de i18n do núcleo (é `{agent}`).
 - Orquestrar à mão uma sequência que já é (ou deveria ser) um script de `scripts/`.
 - Bloco de código duplicado acima do limiar.
 - Regra de lint desativada, teste em `skip` ou limiar reduzido para o CI passar.

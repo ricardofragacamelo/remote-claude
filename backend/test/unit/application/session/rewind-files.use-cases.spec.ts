@@ -19,7 +19,7 @@ import {
   TurnFileCheckpoint,
 } from '@domain/session';
 import type { Session, TurnFileCheckpointSnapshot } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import {
   aRegistry,
   aSession,
@@ -43,7 +43,7 @@ const EARLIER = SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXY0');
 function checkpoint(overrides: Partial<TurnFileCheckpointSnapshot> = {}): TurnFileCheckpoint {
   return TurnFileCheckpoint.capture({
     sessionId: SessionId.create(SESSION_ID),
-    claudeSessionId: ClaudeSessionId.create(CONVERSATION_ID),
+    conversation: ConversationRef.create('claude', CONVERSATION_ID),
     promptId: 'p1',
     path: '/srv/projects/app/a.md',
     existedBefore: 'present',
@@ -60,7 +60,7 @@ function checkpoint(overrides: Partial<TurnFileCheckpointSnapshot> = {}): TurnFi
 function leftAs(path: string, hash: string | null, sessionId = SESSION_ID): SessionFileState {
   return SessionFileState.record({
     sessionId: SessionId.create(sessionId),
-    claudeSessionId: ClaudeSessionId.create(CONVERSATION_ID),
+    conversation: ConversationRef.create('claude', CONVERSATION_ID),
     path,
     hash,
     mtime: at(5),
@@ -169,7 +169,7 @@ describe('undoing what a session wrote', () => {
       journal.checkpoints.push(
         checkpoint({
           sessionId: EARLIER,
-          claudeSessionId: ClaudeSessionId.create('1f1e1d1c-1b1a-4918-9716-151413121110'),
+          conversation: ConversationRef.create('claude', '1f1e1d1c-1b1a-4918-9716-151413121110'),
           promptId: 'theirs',
         }),
       );
@@ -258,7 +258,7 @@ describe('undoing what a session wrote', () => {
         at: now,
         details: {
           sessionId: SESSION_ID,
-          claudeSessionId: CONVERSATION_ID,
+          conversation: CONVERSATION_ID,
           files: [
             { path: '/srv/projects/app/a.md', outcome: 'revert', action: 'restore' },
             {

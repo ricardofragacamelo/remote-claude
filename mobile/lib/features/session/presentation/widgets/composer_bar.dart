@@ -73,14 +73,15 @@ class ComposerChoice {
 /// The bar.
 class ComposerBar extends StatelessWidget {
   const ComposerBar({
-    required this.mode,
     required this.choices,
     required this.actions,
     super.key,
+    this.mode,
     this.onSlash,
   });
 
-  final ComposerChoice mode;
+  /// The mode — absent when the engine announced nothing to choose (plan 28, B-27).
+  final ComposerChoice? mode;
 
   /// What may go to the overflow: the model, the effort and the context.
   final List<ComposerChoice> choices;
@@ -102,7 +103,7 @@ class ComposerBar extends StatelessWidget {
         final bool fits = barFits(
           width: constraints.maxWidth,
           fixed: 1 + actions.length,
-          chips: <ComposerChoice>[mode, ...choices],
+          chips: <ComposerChoice>[?mode, ...choices],
           style: style,
           scaler: scaler,
         );
@@ -122,7 +123,8 @@ class ComposerBar extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: <Widget>[
-                    Flexible(child: ChoiceChipButton(choice: mode)),
+                    if (mode case final ComposerChoice mode)
+                      Flexible(child: ChoiceChipButton(choice: mode)),
                     if (fits)
                       for (final ComposerChoice choice in choices)
                         Padding(

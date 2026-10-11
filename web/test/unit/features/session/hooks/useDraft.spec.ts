@@ -3,10 +3,10 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useDraft } from '@/features/session/hooks/useDraft';
 import {
-  claudePanelStore,
+  agentPanelStore,
   DEFAULT_CHOICES,
-  forgetClaudePanel,
-} from '@/features/session/store/claude-panel.store';
+  forgetAgentPanel,
+} from '@/features/session/store/agent-panel.store';
 import { forgetFolderTabs } from '@/features/workbench';
 import { aLiveSocket } from '../../../../support/live-socket';
 import type { LiveSocket } from '../../../../support/live-socket';
@@ -24,13 +24,13 @@ beforeEach(() => {
 
 afterEach(() => {
   live.close();
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
   forgetFolderTabs();
 });
 
 /** The hook of a draft the panel has open. */
 function aDraft() {
-  const key = claudePanelStore(FOLDER).getState().openDraft();
+  const key = agentPanelStore(FOLDER).getState().openDraft();
   return { key, hook: renderHook(() => useDraft(FOLDER, key, FOLDER), { wrapper: providers() }) };
 }
 
@@ -96,7 +96,7 @@ describe('a draft of the panel — plan 08, B-33', () => {
     );
 
     expect(hook.result.current.refusals).toBe(1);
-    expect(claudePanelStore(FOLDER).getState().drafts[key]).toBe('go');
+    expect(agentPanelStore(FOLDER).getState().drafts[key]).toBe('go');
     expect(hook.result.current.error?.code).toBe('SESSION_LIMIT_REACHED');
   });
 
@@ -138,12 +138,12 @@ describe('a draft of the panel — plan 08, B-33', () => {
       });
     });
     expect(
-      claudePanelStore(FOLDER)
+      agentPanelStore(FOLDER)
         .getState()
         .tabs.map((tab) => tab.key),
     ).toEqual([`session:${SESSION}`]);
     expect(
-      claudePanelStore(FOLDER)
+      agentPanelStore(FOLDER)
         .getState()
         .tabs.some((tab) => tab.key === key),
     ).toBe(false);
@@ -178,12 +178,12 @@ describe('a draft of the panel — plan 08, B-33', () => {
       });
     });
     expect(
-      claudePanelStore(FOLDER)
+      agentPanelStore(FOLDER)
         .getState()
         .tabs.map((tab) => tab.key),
     ).toEqual([`session:${SESSION}`]);
     expect(
-      claudePanelStore(FOLDER)
+      agentPanelStore(FOLDER)
         .getState()
         .tabs.some((tab) => tab.key === key),
     ).toBe(false);

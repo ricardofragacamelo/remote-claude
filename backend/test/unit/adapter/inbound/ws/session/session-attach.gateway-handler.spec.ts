@@ -99,7 +99,7 @@ describe('SessionAttachHandler', () => {
         replayed: 0,
         oldestAvailableSeq: 1,
         gap: false,
-        claudeSessionId: CONVERSATION_ID,
+        conversation: { engine: 'claude', id: CONVERSATION_ID },
       },
     });
   });
@@ -120,8 +120,8 @@ describe('SessionAttachHandler', () => {
     const outcome = await resumed.handle(contextFor({ sessionId: SESSION }));
 
     expect(outcome.ack.payload).toMatchObject({
-      claudeSessionId: CONVERSATION_ID,
-      resumedFrom: SOURCE,
+      conversation: { engine: 'claude', id: CONVERSATION_ID },
+      resumedFrom: { engine: 'claude', id: SOURCE },
     });
   });
 

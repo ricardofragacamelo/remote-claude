@@ -1,6 +1,7 @@
 import type { UserId } from '@domain/auth';
 import { pageFromTail, TranscriptNotFoundError } from '@domain/transcript';
-import type { ClaudeSessionId, Page, TranscriptMessage } from '@domain/transcript';
+import type { Page, TranscriptMessage } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 import type { TranscriptStore } from './ports/transcript-store.port';
 import type { QuestionHistory } from './question-history';
 import { readableTranscript } from './readable-transcript';
@@ -9,7 +10,7 @@ import type { ListedTranscript, TranscriptAudience } from './transcript-audience
 /** Which page of which conversation, for whom. */
 export interface ReadTranscriptQuery {
   readonly userId: UserId;
-  readonly sessionId: ClaudeSessionId;
+  readonly sessionId: ConversationRef;
 
   /** The cursor the previous page handed out, or `null` for the latest messages. */
   readonly before: string | null;
@@ -53,7 +54,7 @@ export class ReadTranscriptUseCase {
   async execute(query: ReadTranscriptQuery): Promise<TranscriptPage> {
     const session = await this.visible(query);
     const messages = await this.store.messages(session);
-    const page = pageFromTail(session.id.value, messages, query.before, query.limit);
+    const page = pageFromTail(session.id.key, messages, query.before, query.limit);
 
     return {
       session,
@@ -78,10 +79,10 @@ export class ReadTranscriptUseCase {
     const messages = await this.store.subagentMessages(session, query.toolUseId);
 
     if (messages === null) {
-      throw new TranscriptNotFoundError(query.sessionId.value);
+      throw new TranscriptNotFoundError(query.sessionId.id);
     }
 
-    return pageFromTail(session.id.value, messages, query.before, query.limit);
+    return pageFromTail(session.id.key, messages, query.before, query.limit);
   }
 
   /** The conversation, when it exists and this caller may read it — the same answer otherwise. */

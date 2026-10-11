@@ -1,10 +1,9 @@
-import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 
-import { parseEnvironment } from '@remote-claude/config';
+import { ConfigurationError, parseEnvironment } from '@remote-claude/config';
 import { AUDIT_RETENTION_FLOOR_DAYS } from '@domain/audit';
-import { PERMISSION_MODES } from '@domain/session';
+import { PERMISSION_MODES, canonicalPermissionMode } from '@domain/session';
 import type { PermissionMode } from '@domain/session';
 import type { FileLimits, HistoryLimits, TransferLimits, WatchSettings } from '@application/files';
 import type { AttachmentLimits, ComposerLimits } from '@application/session';
@@ -116,9 +115,17 @@ export const environmentSchema = z.object({
   RC_WS_MAX_ATTACHED_SESSIONS: z.coerce.number().int().min(1),
   RC_SESSION_MAX_TURNS: z.coerce.number().int().min(1),
   RC_SESSION_MAX_BUDGET_USD: z.coerce.number().positive(),
-  RC_MODEL_CHECK_MAX_BUDGET_USD: z.coerce.number().positive().max(1),
-  RC_SESSION_DEFAULT_MODEL: z.string().min(1),
-  RC_SESSION_DEFAULT_PERMISSION_MODE: z.enum(PERMISSION_MODES),
+  // The coding agents this installation drives, by name, comma-separated — every registered one when
+  // empty — and the one a session opens on when the client names none (plan 28, B-09). A name no
+  // adapter registers refuses the boot, in the composition that knows the adapters.
+  RC_ENGINES_ENABLED: z.string().optional(),
+  RC_ENGINE_DEFAULT: z.string().optional(),
+  // The canonical modes, and the names before them (`default`, `plan`) read as theirs (plan 28, B-26).
+  RC_SESSION_DEFAULT_PERMISSION_MODE: z
+    .string()
+    .transform((value) => canonicalPermissionMode(value))
+    .refine((mode) => mode !== null, { message: `must be one of ${PERMISSION_MODES.join(', ')}` })
+    .transform((mode) => mode as PermissionMode),
   RC_PERMISSION_TIMEOUT_MS: z.coerce.number().int().positive(),
   RC_QUESTION_TIMEOUT_MS: z.coerce.number().int().positive(),
   RC_PERMISSION_EXTENSION_MS: z.coerce.number().int().positive(),
@@ -235,8 +242,31 @@ const consistentEnvironment = environmentSchema
     message: 'must not be greater than RC_TRANSCRIPT_FOLLOW_MAX',
   });
 
-/** The shape the schema accepts, before validation. */
-export type RawEnvironment = Record<keyof z.infer<typeof environmentSchema>, string | undefined>;
+/**
+ * The shape the schema accepts, before validation: every variable of the core, and whatever the
+ * engines' extensions read beside them ({@link EngineEnvironment}).
+ */
+export type RawEnvironment = Record<keyof z.infer<typeof environmentSchema>, string | undefined> &
+  Readonly<Partial<Record<string, string | undefined>>>;
+
+/** What the core reads of one engine's own variables. */
+export interface EngineSettings {
+  /** The model a session of the engine opens with when nobody chose one — `null` for its own. */
+  readonly defaultModel: string | null;
+}
+
+/**
+ * The variables of one engine's extension, validated at boot with the core's (plan 28, B-37): each
+ * extension declares its own — the core knows none of them by name — and the composition hands them
+ * to {@link loadConfig}. A model is an engine's word, so the default model is one per engine.
+ */
+export interface EngineEnvironment {
+  /** The engine, by the name its port registers. */
+  readonly engine: string;
+
+  /** @throws {ConfigurationError} listing every problem of the engine's variables */
+  load(source: RawEnvironment): EngineSettings;
+}
 
 /** The validated configuration, in the vocabulary of the code rather than of the shell. */
 export interface AppConfig {
@@ -250,10 +280,6 @@ export interface AppConfig {
   readonly workspaceAllowlistFile: string;
   /** Absolute path the process writes its pid to, or `null` when it writes none. */
   readonly pidFile: string | null;
-  /** The configuration of Claude (plan 13): the ceiling of the test of the connection. */
-  readonly claudeConfig: {
-    readonly modelCheck: { readonly maxBudgetUsd: number; readonly cwd: string };
-  };
   /** What a session may cost this installation, and what it opens with. */
   readonly session: {
     /**
@@ -274,8 +300,22 @@ export interface AppConfig {
     /** How long a session may sit with nothing happening before it is closed (D-02). */
     readonly idleTtlMs: number;
     readonly limits: { readonly maxBudgetUsd: number; readonly maxTurns: number };
-    readonly defaults: { readonly model: string; readonly permissionMode: PermissionMode };
+
+    /**
+     * What a session opens with when nobody chose: the model of each engine that configures one
+     * (plan 28, B-37), and the mode, canonical and every engine's.
+     */
+    readonly defaults: {
+      readonly models: Readonly<Record<string, string>>;
+      readonly permissionMode: PermissionMode;
+    };
   };
+
+  /**
+   * Which coding agents this installation drives (ADR-025): the names enabled — empty for every
+   * engine an adapter registers — and the default, `null` for the first one enabled.
+   */
+  readonly engines: { readonly enabled: readonly string[]; readonly default: string | null };
 
   /**
    * What one WebSocket connection may send, announced in `connection.ready`.
@@ -419,10 +459,32 @@ export interface AppConfig {
  *
  * @param source the variables as read from the process — passed in, so the test does not have to
  *   mutate the real environment to exercise a missing variable
- * @throws {import('@remote-claude/config').ConfigurationError} listing every problem at once
+ * @param engines the variables of each engine's extension, validated with the core's
+ * @throws {import('@remote-claude/config').ConfigurationError} listing every problem at once — the
+ *   core's and every engine's
  */
-export function loadConfig(source: RawEnvironment): AppConfig {
-  const env = parseEnvironment(consistentEnvironment, source);
+export function loadConfig(
+  source: RawEnvironment,
+  engines: readonly EngineEnvironment[] = [],
+): AppConfig {
+  const problems: string[] = [];
+  const attempt = <T>(read: () => T): T | null => {
+    try {
+      return read();
+    } catch (error) {
+      if (!(error instanceof ConfigurationError)) throw error;
+      problems.push(...error.problems);
+      return null;
+    }
+  };
+  const env = attempt(() => parseEnvironment(consistentEnvironment, source));
+  const models = engines.flatMap((engine) => {
+    const settings = attempt(() => engine.load(source));
+    return settings?.defaultModel == null ? [] : [[engine.engine, settings.defaultModel] as const];
+  });
+  if (env === null || problems.length > 0) {
+    throw new ConfigurationError(problems);
+  }
 
   return {
     nodeEnv: env.NODE_ENV,
@@ -432,10 +494,6 @@ export function loadConfig(source: RawEnvironment): AppConfig {
     databaseUrl: env.DATABASE_URL,
     workspaceAllowlistFile: resolve(env.RC_WORKSPACE_ALLOWLIST_FILE),
     pidFile: env.RC_PID_FILE === 'off' ? null : resolve(env.RC_PID_FILE),
-    claudeConfig: {
-      // A folder of nobody's: the test reads no project and writes no transcript.
-      modelCheck: { maxBudgetUsd: env.RC_MODEL_CHECK_MAX_BUDGET_USD, cwd: tmpdir() },
-    },
     session: {
       capacity: {
         floor: env.RC_SESSION_MIN_CONCURRENT,
@@ -449,9 +507,16 @@ export function loadConfig(source: RawEnvironment): AppConfig {
         maxTurns: env.RC_SESSION_MAX_TURNS,
       },
       defaults: {
-        model: env.RC_SESSION_DEFAULT_MODEL,
+        models: Object.fromEntries(models),
         permissionMode: env.RC_SESSION_DEFAULT_PERMISSION_MODE,
       },
+    },
+    engines: {
+      enabled: (env.RC_ENGINES_ENABLED ?? '')
+        .split(',')
+        .map((name) => name.trim())
+        .filter((name) => name !== ''),
+      default: env.RC_ENGINE_DEFAULT?.trim() || null,
     },
     websocket: {
       maxFramesPerSecond: env.RC_WS_MAX_FRAMES_PER_SECOND,

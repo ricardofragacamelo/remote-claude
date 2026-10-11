@@ -11,6 +11,9 @@ import 'package:remote_claude/features/session/domain/entities/conversation.dart
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
+import '../../../../../support/builders/conversations.dart';
+import '../../../../../support/builders/tools.dart';
+
 /// Every event in order, from nothing.
 Conversation applyAll(List<SessionEvent> events) =>
     events.fold(const Conversation(), (Conversation state, SessionEvent e) => state.apply(e));
@@ -94,7 +97,7 @@ void main() {
     test('a message, a tool and a message are three entries in the order of the seq', () {
       final Conversation after = applyAll(<SessionEvent>[
         const MessageFinished(1, messageId: 'm1', text: 'let me look', isFromUser: false),
-        const ToolInvoked(2, toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+        ToolInvoked(2, toolUseId: 't1', call: shellLs),
         const MessageFinished(3, messageId: 'm2', text: 'found it', isFromUser: false),
       ]);
 
@@ -222,10 +225,10 @@ void main() {
 
     test('S-78 · a tool invoked again by the replay starts over, in its place', () {
       final Conversation after = applyAll(<SessionEvent>[
-        const ToolInvoked(1, toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+        ToolInvoked(1, toolUseId: 't1', call: shellLs),
         const ToolOutput(2, toolUseId: 't1', chunk: 'output'),
         const MessageFinished(3, messageId: 'm1', text: 'meanwhile', isFromUser: false),
-        const ToolInvoked(4, toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+        ToolInvoked(4, toolUseId: 't1', call: shellLs),
       ]);
 
       expect(idsOf(after), <String>['tool:t1', 'message:m1']);
@@ -234,7 +237,7 @@ void main() {
 
     test('collects a tool from its invocation to its outcome', () {
       final Conversation after = applyAll(<SessionEvent>[
-        const ToolInvoked(1, toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+        ToolInvoked(1, toolUseId: 't1', call: shellLs),
         const ToolOutput(2, toolUseId: 't1', chunk: 'one '),
         const ToolOutput(3, toolUseId: 't1', chunk: 'two'),
         const ToolFinished(4, toolUseId: 't1', status: ToolStatus.succeeded, summary: 'done'),
@@ -248,12 +251,7 @@ void main() {
     test('S-103 · keeps on the tool the question its end carried', () {
       const Map<String, Object?> question = <String, Object?>{'outcome': 'declined'};
       final Conversation after = applyAll(<SessionEvent>[
-        const ToolInvoked(
-          1,
-          toolUseId: 't1',
-          toolName: 'AskUserQuestion',
-          input: <String, Object?>{},
-        ),
+        ToolInvoked(1, toolUseId: 't1', call: questionCall()),
         const ToolFinished(2, toolUseId: 't1', status: ToolStatus.denied, question: question),
       ]);
 
@@ -325,9 +323,9 @@ void main() {
     test('S-60 · three thinkings between two tools are five entries in the order they came', () {
       final Conversation after = applyAll(<SessionEvent>[
         const ThinkingFragment(1, messageId: 'm1', delta: 'one'),
-        const ToolInvoked(2, toolUseId: 't1', toolName: 'Read', input: <String, Object?>{}),
+        ToolInvoked(2, toolUseId: 't1', call: readA),
         const ThinkingFragment(3, messageId: 'm2', delta: 'two'),
-        const ToolInvoked(4, toolUseId: 't2', toolName: 'Read', input: <String, Object?>{}),
+        ToolInvoked(4, toolUseId: 't2', call: readA),
         const ThinkingFragment(5, messageId: 'm3', delta: 'three'),
       ]);
 
@@ -391,26 +389,41 @@ void main() {
   group('the session around the conversation', () {
     test('a session opening means idle, and says where it runs and what it started with', () {
       final Conversation after = const Conversation().apply(
-        const SessionOpened(
+        SessionOpened(
           1,
           'session-1',
-          claudeSessionId: 'conv-1',
+          conversation: conversationOf('conv-1'),
           workspacePath: '/home/someone/project',
           model: 'sonnet',
-          permissionMode: 'plan',
+          permissionMode: 'readOnly',
+          engine: anEngine,
+          capabilities: someCapabilities,
         ),
       );
 
       expect(after.status, SessionStatus.idle);
+      // S-39 · the conversation is its engine and its id, and what the engine can do is kept.
       expect(
         after.facts,
-        const SessionFacts(
+        SessionFacts(
           workspacePath: '/home/someone/project',
-          conversationId: 'conv-1',
+          conversation: conversationOf('conv-1'),
           model: 'sonnet',
-          permissionMode: 'plan',
+          permissionMode: 'readOnly',
+          engine: anEngine,
+          capabilities: someCapabilities,
         ),
       );
+    });
+
+    test('an opening that names no engine keeps the engine and capabilities already known', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const SessionOpened(1, 'session-1', engine: anEngine, capabilities: someCapabilities),
+        const SessionOpened(2, 'session-1'),
+      ]);
+
+      expect(after.facts.engine, anEngine);
+      expect(after.facts.capabilities, someCapabilities);
     });
 
     test('an opening that says less keeps what an earlier one said', () {
@@ -512,7 +525,7 @@ void main() {
         isFromUser: false,
         thoughts: <Thought>[Thought('look at the log')],
       ),
-      ToolInvoked(0, toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{'command': 'ls'}),
+      ToolInvoked(0, toolUseId: 't1', call: shellLs),
       ToolFinished(0, toolUseId: 't1', status: ToolStatus.succeeded),
     ];
 
@@ -549,7 +562,7 @@ void main() {
     test('S-15 · a live entry with a historical id replaces it in place, never twice', () {
       final Conversation shown = applyAll(<SessionEvent>[
         const MessageFinished(7, messageId: 'h2', text: 'the build, again', isFromUser: false),
-        const ToolInvoked(8, toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+        ToolInvoked(8, toolUseId: 't1', call: shellLs),
       ]).withHistory(history);
 
       expect(idsOf(shown), <String>['message:h1', 'thinking:h2:0', 'message:h2', 'tool:t1']);
@@ -595,6 +608,15 @@ void main() {
     });
   });
 
+  test('plan 28 · S-89 · a message that brought no thinking leaves no room for one', () {
+    final Conversation conversation = applyAll(<SessionEvent>[
+      const MessageFinished(1, messageId: 'm1', text: 'Hi', isFromUser: false),
+    ]);
+
+    expect(conversation.entries.whereType<ThinkingEntry>(), isEmpty);
+    expect(conversation.entries, hasLength(1));
+  });
+
   group('what the session cost — S-47', () {
     test('adds each turn once, as decimals', () {
       final Conversation conversation = applyAll(<SessionEvent>[
@@ -609,8 +631,29 @@ void main() {
     });
 
     test('nothing ended is no cost, and a whole number has no point', () {
-      expect(const Conversation().costUsd, '0');
+      expect(const Conversation().costUsd, isNull);
       expect(addUsd(<String>['1.50', '2.5']), '4');
+    });
+
+    test('plan 28 · S-86 · turns that said no cost are no cost — not zero', () {
+      final Conversation conversation = applyAll(<SessionEvent>[
+        const TurnFinished(1, TurnSummary(turnId: 't1', durationMs: 1)),
+        const TurnFinished(2, TurnSummary(turnId: 't2', durationMs: 1)),
+      ]);
+
+      expect(conversation.turns, hasLength(2));
+      expect(conversation.costedTurns, isEmpty);
+      expect(conversation.costUsd, isNull);
+    });
+
+    test('plan 28 · S-87 · a turn that cost zero is a cost of zero', () {
+      final Conversation conversation = applyAll(<SessionEvent>[
+        const TurnFinished(1, TurnSummary(turnId: 't1', costUsd: '0.000000', durationMs: 1)),
+        const TurnFinished(2, TurnSummary(turnId: 't2', durationMs: 1)),
+      ]);
+
+      expect(conversation.costedTurns, hasLength(1));
+      expect(conversation.costUsd, '0');
     });
 
     test('keeps what a fraction of a cent carries, and drops what is not money', () {
@@ -656,29 +699,38 @@ void main() {
 
     test('S-55 · the tool running is the last of the main conversation not ended', () {
       final Conversation conversation = applyAll(<SessionEvent>[
-        const ToolInvoked(1, toolUseId: 'a', toolName: 'Read', input: <String, Object?>{}),
+        ToolInvoked(1, toolUseId: 'a', call: readA),
         const ToolFinished(2, toolUseId: 'a', status: ToolStatus.succeeded),
-        const ToolInvoked(3, toolUseId: 'b', toolName: 'Bash', input: <String, Object?>{}),
-        const ToolInvoked(
+        ToolInvoked(3, toolUseId: 'b', call: shellLs),
+        ToolInvoked(
           4,
           toolUseId: 'c',
-          toolName: 'Grep',
-          input: <String, Object?>{},
+          call: aToolCall(
+            kind: 'search',
+            messageKey: 'sessions.tool.search',
+            params: const <String, Object>{'pattern': 'x'},
+          ),
           isSubagent: true,
         ),
       ]);
 
-      expect(conversation.runningTool?.toolName, 'Bash');
+      expect(conversation.runningTool?.call.kind, 'shell');
       expect(const Conversation().runningTool, isNull);
     });
 
-    test('B-23 · the task a call ended with is kept on the tool', () {
+    test('B-23 · a task call ends like any tool — its row keeps its label', () {
       final Conversation conversation = applyAll(<SessionEvent>[
-        const ToolInvoked(1, toolUseId: 'a', toolName: 'TaskCreate', input: <String, Object?>{}),
-        const ToolFinished(2, toolUseId: 'a', status: ToolStatus.succeeded, taskId: '7'),
+        ToolInvoked(
+          1,
+          toolUseId: 'a',
+          call: tasksCall('sessions.tool.taskCreate', <String, Object?>{}),
+        ),
+        const ToolFinished(2, toolUseId: 'a', status: ToolStatus.succeeded),
       ]);
 
-      expect(conversation.tools.single.taskId, '7');
+      expect(conversation.tools.single.status, ToolStatus.succeeded);
+      expect(conversation.tools.single.call.label.messageKey, 'sessions.tool.taskCreate');
+      expect(conversation.tasks, isNull);
     });
 
     test('S-79 · a partial replay starts with the line that says so', () {
@@ -688,11 +740,16 @@ void main() {
 
     test('S-82 · what a session continues is part of what it said about itself', () {
       final Conversation opened = const Conversation().apply(
-        const SessionOpened(1, 's-2', claudeSessionId: 'c-2', resumedFrom: 'c-1'),
+        SessionOpened(
+          1,
+          's-2',
+          conversation: conversationOf('c-2'),
+          resumedFrom: conversationOf('c-1'),
+        ),
       );
 
-      expect(opened.facts.resumedFrom, 'c-1');
-      expect(opened.apply(const SessionOpened(2, 's-2')).facts.resumedFrom, 'c-1');
+      expect(opened.facts.resumedFrom, conversationOf('c-1'));
+      expect(opened.apply(const SessionOpened(2, 's-2')).facts.resumedFrom, conversationOf('c-1'));
     });
   });
 
@@ -815,6 +872,102 @@ void main() {
 
       expect(after.messages.single.text, 'AB');
       expect(after.messages.single.blockIds, <String>['u1:0', 'u2:0']);
+    });
+  });
+
+  group('plan 28, B-22 · the task list, as the last event left it', () {
+    const SessionTask read = SessionTask(id: '1', title: 'Read', status: TaskStatus.completed);
+    const SessionTask testing = SessionTask(
+      id: '2',
+      title: 'Test',
+      status: TaskStatus.inProgress,
+      activeTitle: 'Testing',
+    );
+    const SessionTask ship = SessionTask(id: '3', title: 'Ship', status: TaskStatus.pending);
+
+    test('S-66 · no list until one arrives; then each one replaces the one before, whole', () {
+      expect(const Conversation().tasks, isNull);
+
+      final Conversation first = applyAll(<SessionEvent>[
+        const TasksChanged(1, <SessionTask>[read, testing]),
+      ]);
+      expect(first.tasks, <SessionTask>[read, testing]);
+
+      final Conversation next = first.apply(const TasksChanged(2, <SessionTask>[ship]));
+      expect(next.tasks, <SessionTask>[ship]);
+
+      // Emptied by the agent: a list of nothing, not "no list".
+      expect(next.apply(const TasksChanged(3, <SessionTask>[])).tasks, isEmpty);
+    });
+
+    test('S-67 · a replay of a list already applied changes nothing', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const TasksChanged(1, <SessionTask>[read]),
+        const TasksChanged(2, <SessionTask>[read, ship]),
+      ]);
+
+      expect(after.apply(const TasksChanged(1, <SessionTask>[read])).tasks, <SessionTask>[
+        read,
+        ship,
+      ]);
+      expect(after.apply(const TasksChanged(2, <SessionTask>[read, ship])), after);
+    });
+
+    test('the list survives the session moving', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const TasksChanged(1, <SessionTask>[testing]),
+        const SessionStatusReported(2, SessionStatus.thinking),
+        const SessionStatusReported(3, SessionStatus.idle),
+      ]);
+
+      expect(after.tasks, <SessionTask>[testing]);
+    });
+
+    test(
+      'S-67 · the history gives its last list; once the stream sends one, the live one wins',
+      () {
+        const List<SessionEvent> history = <SessionEvent>[
+          TasksChanged(0, <SessionTask>[read]),
+          TasksChanged(0, <SessionTask>[read, ship]),
+        ];
+
+        expect(const Conversation().withHistory(history).tasks, <SessionTask>[read, ship]);
+        expect(
+          applyAll(<SessionEvent>[
+            const TasksChanged(1, <SessionTask>[testing]),
+          ]).withHistory(history).tasks,
+          <SessionTask>[testing],
+        );
+        expect(const Conversation().withHistory(const <SessionEvent>[]).tasks, isNull);
+      },
+    );
+
+    test('a task is said by its active title while it runs, and by its title otherwise', () {
+      expect(testing.shownTitle, 'Testing');
+      expect(read.shownTitle, 'Read');
+      expect(
+        const SessionTask(id: '4', title: 'Lint', status: TaskStatus.inProgress).shownTitle,
+        'Lint',
+      );
+      expect(
+        const SessionTask(
+          id: '5',
+          title: 'Docs',
+          status: TaskStatus.pending,
+          activeTitle: 'Writing',
+        ).shownTitle,
+        'Docs',
+      );
+      expect(
+        testing,
+        const SessionTask(
+          id: '2',
+          title: 'Test',
+          status: TaskStatus.inProgress,
+          activeTitle: 'Testing',
+        ),
+      );
+      expect(testing, isNot(read));
     });
   });
 }

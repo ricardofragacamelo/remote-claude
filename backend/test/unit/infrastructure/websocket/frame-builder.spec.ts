@@ -15,7 +15,7 @@ describe('FrameBuilder', () => {
   it('stamps the version, an id and the instant on every frame', () => {
     const frame = builder().build({ kind: 'ack', type: 'command.accepted', payload: {} });
 
-    expect(frame.v).toBe(1);
+    expect(frame.v).toBe(2);
     expect(frame.id).toMatch(/^01J/);
     expect(frame.ts).toBe('2026-09-13T12:00:00.000Z');
   });

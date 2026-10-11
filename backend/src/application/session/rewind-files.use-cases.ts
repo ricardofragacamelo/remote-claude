@@ -288,7 +288,7 @@ export class UndoPlanner {
     await this.journal.recordBaseline(
       SessionFileState.record({
         sessionId: live.session.id,
-        claudeSessionId: live.conversation.claudeSessionId,
+        conversation: live.conversation.ref,
         path: verdict.path,
         ...left,
         updatedAt: this.clock.now(),
@@ -338,7 +338,7 @@ export async function recordFilesRewound(
     subjectLabel: live.session.workspace.value,
     details: {
       sessionId: live.session.id.value,
-      claudeSessionId: live.conversation.claudeSessionId.value,
+      conversation: live.conversation.ref.id,
       ...details,
     },
     at: writing.clock.now(),
@@ -347,7 +347,7 @@ export async function recordFilesRewound(
 
 /** What a live session reaches: itself, and the conversation it is. */
 export function reachOf(live: LiveSession): UndoReach {
-  return { sessionId: live.session.id, claudeSessionId: live.conversation.claudeSessionId };
+  return { sessionId: live.session.id, conversation: live.conversation.ref };
 }
 
 /**

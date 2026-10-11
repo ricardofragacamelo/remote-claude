@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/error/failure_messages.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 void main() {
@@ -30,16 +31,18 @@ void main() {
       'auth.error.deviceRevoked',
       'auth.error.deviceNotFound',
       'auth.error.deviceApprovalForbidden',
-      'session.error.claudeUnavailable',
+      'session.error.agentUnavailable',
       'workspace.error.forbidden',
       // Plan 10, F7: the folder screens' refusals.
       'workspace.error.notFound',
       'workspace.error.notADirectory',
       'transcript.error.notFound',
-      'transcript.error.claudeUnavailable',
-      'transcript.error.claudeTimeout',
+      'transcript.error.agentUnavailable',
+      'transcript.error.agentTimeout',
       'transcript.error.cursorStale',
-      'session.error.claudeTimeout',
+      'session.error.agentTimeout',
+      // Plan 28, B-13: the engine named by the server, and what it cannot do.
+      'engine.error.capabilityUnavailable',
       'session.error.locked',
       'session.error.rewindTargetUnknown',
       // Plan 22, B-04: following a conversation, and the image of a prompt (S-05, S-81, S-100).
@@ -169,13 +172,84 @@ void main() {
       translateFailure(
         en,
         const ServerFailure(
-          code: 'CLAUDE_UNAVAILABLE',
-          messageKey: 'transcript.error.claudeUnavailable',
+          code: 'AGENT_UNAVAILABLE',
+          messageKey: 'transcript.error.agentUnavailable',
           traceId: 't',
+          params: <String, String>{'engine': 'engine-a'},
         ),
+        agents: const AgentNames(names: <String, String>{'engine-a': 'Agent A'}),
       ),
-      en.transcriptErrorClaudeUnavailable,
+      en.transcriptErrorAgentUnavailable('Agent A'),
     );
+  });
+
+  group('S-40 · a refusal about the engine names it by its display name', () {
+    const AgentNames agents = AgentNames(
+      names: <String, String>{'engine-a': 'Agent A', 'engine-b': 'Agent B'},
+      defaultEngine: 'engine-a',
+    );
+
+    ServerFailure refusal(String key, {String? engine}) => ServerFailure(
+      code: 'X',
+      messageKey: key,
+      traceId: 't',
+      params: <String, String>{'engine': ?engine},
+    );
+
+    test('each key fills {agent} with the name of the engine it carries, in both languages', () {
+      final Map<String, String Function(AppLocalizations, String)> sentences =
+          <String, String Function(AppLocalizations, String)>{
+            'session.error.agentUnavailable': (AppLocalizations l10n, String agent) =>
+                l10n.sessionErrorAgentUnavailable(agent),
+            'session.error.agentTimeout': (AppLocalizations l10n, String agent) =>
+                l10n.sessionErrorAgentTimeout(agent),
+            'transcript.error.agentUnavailable': (AppLocalizations l10n, String agent) =>
+                l10n.transcriptErrorAgentUnavailable(agent),
+            'transcript.error.agentTimeout': (AppLocalizations l10n, String agent) =>
+                l10n.transcriptErrorAgentTimeout(agent),
+            'engine.error.capabilityUnavailable': (AppLocalizations l10n, String agent) =>
+                l10n.engineErrorCapabilityUnavailable(agent),
+          };
+
+      for (final MapEntry<String, String Function(AppLocalizations, String)> each
+          in sentences.entries) {
+        for (final AppLocalizations l10n in <AppLocalizations>[en, pt]) {
+          final String said = translateFailure(
+            l10n,
+            refusal(each.key, engine: 'engine-b'),
+            agents: agents,
+          );
+
+          expect(said, each.value(l10n, 'Agent B'), reason: each.key);
+          expect(said, contains('Agent B'), reason: each.key);
+        }
+      }
+    });
+
+    test('an engine the list does not know is named by its id — never an empty gap', () {
+      expect(
+        translateFailure(
+          en,
+          refusal('session.error.agentTimeout', engine: 'engine-z'),
+          agents: agents,
+        ),
+        en.sessionErrorAgentTimeout('engine-z'),
+      );
+    });
+
+    test('a refusal that names no engine is said with the default one', () {
+      expect(
+        translateFailure(en, refusal('session.error.agentUnavailable'), agents: agents),
+        en.sessionErrorAgentUnavailable('Agent A'),
+      );
+    });
+
+    test('with no names known yet, the id the server sent is the name', () {
+      expect(
+        translateFailure(en, refusal('engine.error.capabilityUnavailable', engine: 'engine-a')),
+        en.engineErrorCapabilityUnavailable('engine-a'),
+      );
+    });
   });
 
   test('a param the server forgot does not crash the screen', () {

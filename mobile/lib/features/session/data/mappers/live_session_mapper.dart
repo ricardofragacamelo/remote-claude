@@ -2,6 +2,7 @@
 library;
 
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
+import 'package:remote_claude/features/session/domain/entities/engine.dart';
 import 'package:remote_claude/features/session/domain/entities/live_session_summary.dart';
 
 SessionStatus? _statusFrom(Object? raw) {
@@ -44,7 +45,7 @@ LiveSessionSummary? liveSessionFrom(Object? entry) {
     workspacePath: workspacePath,
     status: _statusFrom(entry['status']),
     model: model is String ? model : '',
-    permissionMode: mode is String ? mode : '',
+    permissionMode: _modeFrom(mode),
     startedAt: started.toUtc(),
     openedFrom: _originFrom(entry['openedFrom']),
     pendingPermissions: pending is int && pending > 0 ? pending : 0,
@@ -62,3 +63,7 @@ List<LiveSessionSummary>? liveSessionsFrom(Object? payload) {
 
   return sessions.map(liveSessionFrom).whereType<LiveSessionSummary>().toList(growable: false);
 }
+
+/// The canonical mode [mode] names — one of the previous protocol read as the one it became —, or
+/// empty when it names none (plan 28, B-27).
+String _modeFrom(Object? mode) => canonicalPermissionMode(mode is String ? mode : null) ?? '';

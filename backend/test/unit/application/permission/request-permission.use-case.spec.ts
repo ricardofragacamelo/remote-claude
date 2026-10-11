@@ -41,10 +41,16 @@ describe('RequestPermissionUseCase', () => {
     expect(harness.broadcaster.last('permission.requested')).toMatchObject({
       requestId: 'request-1',
       toolUseId: 'toolu-1',
-      toolName: 'Bash',
-      // A key, never prose: the server does not send sentences, and the detail is the command
-      // itself rather than a description of it.
-      title: 'permission.tool.Bash',
+      // The canonical call (plan 28, B-15): no `toolName`, no `input`.
+      kind: 'shell',
+      label: { messageKey: 'sessions.tool.shell', params: { command: 'rm -rf build/' } },
+      subject: { command: 'rm -rf build/' },
+      changes: [],
+      origin: { engine: 'claude', native: 'Bash' },
+      rawInput: { command: 'rm -rf build/' },
+      // A key, never prose, and by the kind: the server does not send sentences, and the detail is
+      // the command itself rather than a description of it.
+      title: 'permission.tool.shell',
       description: 'rm -rf build/',
       riskHint: 'destructive',
       defaultToNo: true,
@@ -54,17 +60,20 @@ describe('RequestPermissionUseCase', () => {
         {
           scope: 'project',
           labelKey: 'permission.scope.project',
-          pattern: 'Bash(rm -rf build/)',
+          pattern: 'shell(rm -rf build/)',
           lifetimeMs: 3_600_000,
         },
         {
           scope: 'always',
           labelKey: 'permission.scope.always',
-          pattern: 'Bash(rm -rf build/)',
+          pattern: 'shell(rm -rf build/)',
           lifetimeMs: 3_600_000,
         },
       ],
     });
+    const payload = harness.broadcaster.last('permission.requested');
+    expect(payload).not.toHaveProperty('toolName');
+    expect(payload).not.toHaveProperty('input');
   });
 
   describe('the scopes it offers — plan 03, D-12', () => {
@@ -81,8 +90,8 @@ describe('RequestPermissionUseCase', () => {
         'always',
       ]);
       expect(offered.slice(2)).toEqual([
-        expect.objectContaining({ pattern: 'Bash(git status)', lifetimeMs: 3_600_000 }),
-        expect.objectContaining({ pattern: 'Bash(git status)', lifetimeMs: 3_600_000 }),
+        expect.objectContaining({ pattern: 'shell(git status)', lifetimeMs: 3_600_000 }),
+        expect.objectContaining({ pattern: 'shell(git status)', lifetimeMs: 3_600_000 }),
       ]);
       // The ephemeral ones say nothing about a rule, because they leave none that outlives them.
       expect(offered[0]).not.toHaveProperty('pattern');
@@ -115,7 +124,7 @@ describe('RequestPermissionUseCase', () => {
       ]);
       expect(offered[3]).not.toHaveProperty('pattern');
       expect(harness.broadcaster.last('permission.requested')).toMatchObject({
-        reaches: [{ reach: 'prefix', patterns: ['Bash(echo:*)'] }],
+        reaches: [{ reach: 'prefix', patterns: ['shell(echo:*)'] }],
       });
     });
 
@@ -126,8 +135,8 @@ describe('RequestPermissionUseCase', () => {
 
       expect(harness.broadcaster.last('permission.requested')).toMatchObject({
         reaches: [
-          { reach: 'exact', patterns: ['Bash(git push 2>&1 | tail -5)'] },
-          { reach: 'prefix', patterns: ['Bash(git push:*)', 'Bash(tail:*)'] },
+          { reach: 'exact', patterns: ['shell(git push 2>&1 | tail -5)'] },
+          { reach: 'prefix', patterns: ['shell(git push:*)', 'shell(tail:*)'] },
         ],
       });
     });
@@ -144,7 +153,7 @@ describe('RequestPermissionUseCase', () => {
         'always',
       ]);
       expect(harness.broadcaster.last('permission.requested')).toMatchObject({
-        reaches: [{ reach: 'tool', patterns: ['WebSearch'] }],
+        reaches: [{ reach: 'tool', patterns: ['web.search'] }],
       });
     });
 

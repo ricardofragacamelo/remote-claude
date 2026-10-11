@@ -153,7 +153,7 @@ void main() {
     test('refuses to draw a card from a body it cannot read', () async {
       api.answer = <String, Object?>{
         'status': 'pending',
-        'request': permissionRequestedPayload(const <String, Object?>{'toolName': null}),
+        'request': permissionRequestedPayload(const <String, Object?>{'kind': null}),
       };
 
       await expectLater(

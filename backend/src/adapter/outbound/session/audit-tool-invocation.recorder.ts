@@ -57,6 +57,7 @@ export class AuditToolInvocationRecorder implements ToolInvocationRecorder {
       sessionId: invocation.sessionId,
       toolUseId: invocation.toolUseId,
       toolName: invocation.toolName,
+      toolKind: invocation.tool.kind,
       input: invocation.input,
       // `recorded` and not `allowed`: the hook fires before anybody has voted, and calling this
       // an approval would make the trail claim a decision that has not been taken.
@@ -66,13 +67,12 @@ export class AuditToolInvocationRecorder implements ToolInvocationRecorder {
     });
 
     if (outcome === 'recorded') {
-      // Remembered once it is on the trail: the diff of a tool is made of the input the trail holds,
+      // Remembered once it is on the trail: the diff of a tool is made of the change the trail holds,
       // and the trail is write-only to everybody else (plan 08, B-25).
       if (live !== null && invocation.toolUseId !== null) {
         this.changes.rememberTool(live.session, {
           toolUseId: invocation.toolUseId,
-          toolName: invocation.toolName,
-          input: invocation.input,
+          tool: invocation.tool,
           promptId: invocation.promptId,
         });
       }

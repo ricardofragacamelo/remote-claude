@@ -9,6 +9,6 @@
     "fixture": "text-turn",
     "idleTtlSeconds": 20,
     "reason": "because it sat idle too long — resume it from the history.",
-    "resumes": "Sending a prompt resumes it, in a new process of Claude on this machine."
+    "resumes": "Sending a prompt resumes it, in a new process of Claude Code on this machine."
   }
 }

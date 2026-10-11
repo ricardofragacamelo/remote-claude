@@ -12,7 +12,7 @@
     "turns": 8,
     "model": "sonnet",
     "modelLabel": "Sonnet",
-    "mode": "plan",
+    "mode": "readOnly",
     "effort": "high",
     "inlineTurn": "long-tool-turn",
     "thoughtTurn": "tool-turn",

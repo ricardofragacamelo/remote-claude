@@ -10,6 +10,7 @@ import 'package:remote_claude/features/session/presentation/widgets/tool_card.da
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import '../../../support/pump_app.dart';
+import '../../../support/builders/tools.dart';
 
 /// A conversation of [count] answers, one after the other.
 Conversation longConversation(int count, {String last = 'answer'}) => Conversation(
@@ -37,7 +38,7 @@ void main() {
         conversation: Conversation(
           entries: <ConversationEntry>[
             StreamMessage(messageId: 'm1', blocks: <String>['let me look']),
-            ToolExecution(toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+            ToolExecution(toolUseId: 't1', call: shellLs),
             StreamMessage(messageId: 'm2', blocks: <String>['found it']),
           ],
         ),
@@ -96,6 +97,25 @@ void main() {
     expect(find.text(l10n.sessionCompactedManualTokens('9,000')), findsOneWidget);
     expect(find.text(l10n.sessionCompactedAuto), findsOneWidget);
   });
+
+  testWidgets(
+    'plan 28 · S-86, S-87 · a turn with no cost says none; one that cost zero says zero',
+    (WidgetTester tester) async {
+      await tester.pumpApp(
+        const ConversationView(
+          conversation: Conversation(
+            entries: <ConversationEntry>[
+              TurnSummary(turnId: 'turn-1', durationMs: 4200),
+              TurnSummary(turnId: 'turn-2', costUsd: '0.000000', durationMs: 1000),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text(l10n.sessionTurnLineNoCost('4.2')), findsOneWidget);
+      expect(find.text(l10n.sessionTurnLine('0.000000', '1.0')), findsOneWidget);
+    },
+  );
 
   testWidgets('a header scrolls with the conversation, above its first entry', (
     WidgetTester tester,
@@ -250,8 +270,8 @@ void main() {
               ...longConversation(60).entries,
               const ThinkingEntry(messageId: 'r1', index: 0, isComplete: true),
               const StreamMessage(messageId: 'r1', blocks: <String>['one reply']),
-              const ToolExecution(toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
-              const ToolExecution(toolUseId: 't2', toolName: 'Read', input: <String, Object?>{}),
+              const ToolExecution(toolUseId: 't1', call: shellLs),
+              const ToolExecution(toolUseId: 't2', call: readA),
             ],
           ),
           countsUnseen: true,
@@ -295,7 +315,7 @@ void main() {
         ThinkingEntry(messageId: 'a1', index: 0),
         StreamMessage(messageId: 'a1', streaming: 'look'),
         StreamMessage(messageId: 'a2'),
-        ToolExecution(toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
+        ToolExecution(toolUseId: 't1', call: shellLs),
         StreamMessage(
           messageId: 'u2',
           isFromUser: true,
@@ -334,8 +354,8 @@ void main() {
         conversation: Conversation(
           entries: <ConversationEntry>[
             ThinkingEntry(messageId: 'm1', index: 0, text: 'hm'),
-            ToolExecution(toolUseId: 't1', toolName: 'Bash', input: <String, Object?>{}),
-            ToolExecution(toolUseId: 't2', toolName: 'Read', input: <String, Object?>{}),
+            ToolExecution(toolUseId: 't1', call: shellLs),
+            ToolExecution(toolUseId: 't2', call: readA),
           ],
         ),
       ),

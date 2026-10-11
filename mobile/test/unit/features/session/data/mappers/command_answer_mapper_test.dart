@@ -8,6 +8,7 @@ import 'package:remote_claude/core/network/contracts/protocol.g.dart';
 import 'package:remote_claude/features/session/data/mappers/command_answer_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
 
 Envelope envelope(String raw) => decodeEnvelope(raw)!;
@@ -17,9 +18,13 @@ void main() {
     test('S-24 · names the session joined, its conversation and the one it continues', () {
       expect(
         sessionJoinedFrom(
-          envelope(sessionAttached(sessionId: 's-1', claudeSessionId: 'c-2', resumedFrom: 'c-1')),
+          envelope(sessionAttached(sessionId: 's-1', conversation: 'c-2', resumedFrom: 'c-1')),
         ),
-        const SessionJoined(sessionId: 's-1', claudeSessionId: 'c-2', resumedFrom: 'c-1'),
+        SessionJoined(
+          sessionId: 's-1',
+          conversation: conversationOf('c-2'),
+          resumedFrom: conversationOf('c-1'),
+        ),
       );
     });
 

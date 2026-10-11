@@ -8,7 +8,7 @@ export interface PendingPillProps {
   /** The card of one of them is not in view. */
   readonly outOfView: boolean;
 
-  /** Every one of them is a question of Claude — "Claude asked you something (n)" (plan 24, B-16). */
+  /** Each one is the agent's question — "the agent asked you something (n)" (24 · B-16). */
   readonly questionsOnly?: boolean;
 
   /** Takes the person to the oldest. */
@@ -16,9 +16,9 @@ export interface PendingPillProps {
 }
 
 /**
- * "Claude is waiting for your answer (n)", above the box, whenever a question's card is out of view —
- * scrolled away, or the changes on screen instead of the conversation (plan 09, B-25, R-02). Pressing
- * it brings the conversation back and takes the focus to the oldest question.
+ * "the agent is waiting for your answer (n)", above the box, whenever a question's card is out of
+ * view — scrolled away, or the changes on screen instead of the conversation (plan 09, B-25, R-02).
+ * Pressing it brings the conversation back and takes the focus to the oldest question.
  *
  * It is how a question that arrives while somebody writes is said without taking their focus
  * ([D-13](../../../../../docs/plans/09-chat-layout/decisions.md#f4--inline)): the live region

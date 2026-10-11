@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
@@ -23,6 +24,7 @@ import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/builders/frames.dart';
 import '../../../support/fakes/fake_history_repository.dart';
 import '../../../support/fakes/fake_session_repository.dart';
@@ -33,8 +35,9 @@ import '../../../support/pump_app.dart';
 const String workspace = '/home/someone/project';
 
 const Failure unavailable = ServerFailure(
-  code: 'CLAUDE_UNAVAILABLE',
-  messageKey: 'transcript.error.claudeUnavailable',
+  code: 'AGENT_UNAVAILABLE',
+  messageKey: 'transcript.error.agentUnavailable',
+  params: <String, String>{'engine': anEngine},
   traceId: 'trace-17',
 );
 
@@ -44,7 +47,7 @@ HistoryPage latest({
   ConversationActivity? activity,
   int answers = 0,
 }) => HistoryPage(
-  conversationId: 'conv-1',
+  conversation: conversationOf('conv-1'),
   workspacePath: workspace,
   beganElsewhere: beganElsewhere,
   summary: 'Fix the build',
@@ -74,7 +77,7 @@ FollowAppended appendedOf(
   bool working = false,
 }) => FollowAppended(
   followId: 't-1',
-  conversationId: 'conv-1',
+  conversation: conversationOf('conv-1'),
   seq: seq,
   events: historyOf(lines),
   lastMessageId: 'u-${50 + seq}',
@@ -121,9 +124,13 @@ void main() {
               const Scaffold(body: Text('elsewhere')),
         ),
         GoRoute(
-          path: '$historyRoute/:conversationId',
-          builder: (BuildContext context, GoRouterState state) =>
-              ConversationHistoryPage(conversationId: state.pathParameters['conversationId']!),
+          path: '$historyRoute/:engine/:conversationId',
+          builder: (BuildContext context, GoRouterState state) => ConversationHistoryPage(
+            conversation: conversationOf(
+              state.pathParameters['conversationId']!,
+              engine: state.pathParameters['engine']!,
+            ),
+          ),
         ),
         GoRoute(
           path: '/sessions/:sessionId',
@@ -131,7 +138,7 @@ void main() {
               Scaffold(body: Text('continued in ${state.pathParameters['sessionId']}')),
         ),
       ],
-      initialLocation: conversationRouteFor('conv-1', workspace),
+      initialLocation: conversationRouteFor(conversationOf('conv-1'), workspace),
       overrides: <Override>[
         historyRepositoryProvider.overrideWithValue(history as HistoryRepository),
         sessionRepositoryProvider.overrideWithValue(sessions),
@@ -174,7 +181,7 @@ void main() {
     ) async {
       await pumpHistory(tester, failure: unavailable);
 
-      expect(find.text(l10n.transcriptErrorClaudeUnavailable), findsOneWidget);
+      expect(find.text(l10n.transcriptErrorAgentUnavailable(anEngine)), findsOneWidget);
       expect(find.textContaining('trace-17'), findsOneWidget);
 
       history.failure = null;
@@ -190,7 +197,7 @@ void main() {
     ) async {
       await pumpHistory(
         tester,
-        page: const HistoryPage(conversationId: 'conv-1', workspacePath: workspace),
+        page: HistoryPage(conversation: conversationOf('conv-1'), workspacePath: workspace),
       );
 
       expect(find.text(l10n.historyConversationEmptyTitle), findsOneWidget);
@@ -221,7 +228,7 @@ void main() {
       await pumpHistory(tester, page: latest(nextCursor: 'm3'));
       history.answer(
         HistoryPage(
-          conversationId: 'conv-1',
+          conversation: conversationOf('conv-1'),
           workspacePath: workspace,
           events: historyOf(<String>[messageCompleted(messageId: 'm1', text: 'first', seq: 1)]),
         ),
@@ -231,7 +238,7 @@ void main() {
       await tester.tap(find.text(l10n.historyLoadEarlier));
       await tester.pumpAndSettle();
 
-      expect(history.reads.last, ('conv-1', 'm3'));
+      expect(history.reads.last, (conversationOf('conv-1'), 'm3'));
       expect(
         tester.getTopLeft(find.text('first')).dy,
         lessThan(tester.getTopLeft(find.text('what broke?')).dy),
@@ -250,7 +257,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('the build'), findsOneWidget);
-      expect(find.text(l10n.transcriptErrorClaudeUnavailable), findsOneWidget);
+      expect(find.text(l10n.transcriptErrorAgentUnavailable(anEngine)), findsOneWidget);
       expect(find.text(l10n.historyLoadEarlier), findsOneWidget);
       await leave(tester);
     });
@@ -285,7 +292,7 @@ void main() {
     router.go('/');
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 5));
-    router.go(conversationRouteFor('conv-1', workspace));
+    router.go(conversationRouteFor(conversationOf('conv-1'), workspace));
     await tester.pumpAndSettle();
 
     expect(find.text('the build'), findsOneWidget);
@@ -305,7 +312,10 @@ void main() {
       expect(sessions.commands.single.$1, 'session.start');
       expect(
         sessions.commands.single.$2,
-        equals(<String, Object?>{'workspacePath': workspace, 'resumeSessionId': 'conv-1'}),
+        equals(<String, Object?>{
+          'workspacePath': workspace,
+          'resumeFrom': conversationJson('conv-1'),
+        }),
       );
       expect(find.text(l10n.historyResumePending), findsOneWidget);
       await leave(tester);
@@ -320,7 +330,7 @@ void main() {
       await tester.pump();
       sessions.emit(
         arrivalOf(
-          sessionStarted(sessionId: 'session-5', claudeSessionId: 'conv-1', resumedFrom: 'conv-1'),
+          sessionStarted(sessionId: 'session-5', conversation: 'conv-1', resumedFrom: 'conv-1'),
         ),
       );
       await tester.pumpAndSettle();
@@ -336,7 +346,7 @@ void main() {
 
       await tester.tap(find.text(l10n.historyResumeAction));
       await tester.pump();
-      sessions.emit(const SessionJoined(sessionId: 'session-2', claudeSessionId: 'conv-1'));
+      sessions.emit(SessionJoined(sessionId: 'session-2', conversation: conversationOf('conv-1')));
       await tester.pumpAndSettle();
 
       expect(find.text('continued in session-2'), findsOneWidget);
@@ -417,7 +427,7 @@ void main() {
     /// The page open on [page], followed, and the follow answered as `t-1`.
     Future<void> pumpFollowed(WidgetTester tester, {HistoryPage? page}) async {
       await pumpHistory(tester, page: page);
-      expect(follows.follows.single, ('follow-1', 'conv-1', 'u-41'));
+      expect(follows.follows.single, ('follow-1', conversationOf('conv-1'), 'u-41'));
       follows.ack('t-1', activity: page?.activity);
       await tester.pumpAndSettle();
     }
@@ -483,7 +493,7 @@ void main() {
         await tester.pump();
 
         expect(sessions.commands.single.$1, 'session.start');
-        expect(sessions.commands.single.$2['resumeSessionId'], 'conv-1');
+        expect(sessions.commands.single.$2['resumeFrom'], conversationJson('conv-1'));
         await leave(tester);
       },
     );
@@ -525,7 +535,7 @@ void main() {
 
         await tester.tap(find.text(l10n.historyFollowWorking));
         await tester.pumpAndSettle();
-        expect(find.text(l10n.historyFollowWorkingHelp), findsOneWidget);
+        expect(find.text(l10n.historyFollowWorkingHelp(anEngine)), findsOneWidget);
         await tester.tapAt(const Offset(10, 10));
         await tester.pumpAndSettle();
 
@@ -617,7 +627,7 @@ void main() {
         tester.binding.handleAppLifecycleStateChanged(step);
       }
       await tester.pump();
-      expect(follows.follows.last, ('follow-2', 'conv-1', 'u-51'));
+      expect(follows.follows.last, ('follow-2', conversationOf('conv-1'), 'u-51'));
       await leave(tester);
     });
 
@@ -638,7 +648,7 @@ void main() {
     await pumpHistory(
       tester,
       page: HistoryPage(
-        conversationId: 'conv-1',
+        conversation: conversationOf('conv-1'),
         workspacePath: workspace,
         events: historyOf(<String>[
           toolStarted(toolUseId: 't1', seq: 1),
@@ -647,10 +657,10 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Bash'));
+    await tester.tap(find.text('Shell: ls'));
     await tester.pumpAndSettle();
 
-    expect(content.toolReads, <(String, String)>[('conv-1', 't1')]);
+    expect(content.toolReads, <(ConversationKey, String)>[(conversationOf('conv-1'), 't1')]);
     await leave(tester);
   });
 

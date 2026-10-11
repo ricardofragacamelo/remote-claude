@@ -11,6 +11,7 @@ import {
   aSession,
   CONVERSATION_ID,
   SESSION_ID,
+  ALL_CAPABILITIES,
 } from '../../../../../support/builders/session.builder';
 import { aWsContext } from '../../../../../support/builders/ws-context.builder';
 
@@ -79,6 +80,7 @@ describe('SessionStartHandler', () => {
     const result = await run({
       session: aSession(),
       conversation: aConversation(),
+      capabilities: ALL_CAPABILITIES,
       joined: false,
       applied: NOTHING_APPLIED,
     });
@@ -94,8 +96,10 @@ describe('SessionStartHandler', () => {
             sessionId: SESSION_ID,
             workspacePath: '/srv/projects/app',
             model: 'claude-sonnet-5',
-            permissionMode: 'default',
-            claudeSessionId: CONVERSATION_ID,
+            permissionMode: 'ask',
+            conversation: { engine: 'claude', id: CONVERSATION_ID },
+            engine: 'claude',
+            capabilities: ALL_CAPABILITIES,
             defaultsFrom: 'installation',
           },
           correlationId: 'cmd-1',
@@ -109,6 +113,7 @@ describe('SessionStartHandler', () => {
     const result = await run({
       session: aSession(),
       conversation: aConversation(),
+      capabilities: ALL_CAPABILITIES,
       joined: false,
       applied: { effort: 'high', outputStyle: 'Explanatory', defaultsFrom: 'folder' },
     });
@@ -124,13 +129,14 @@ describe('SessionStartHandler', () => {
     const result = await run({
       session: aSession(),
       conversation: aConversation(CONVERSATION_ID, SOURCE),
+      capabilities: ALL_CAPABILITIES,
       joined: false,
       applied: NOTHING_APPLIED,
     });
 
     expect(result.published[0]?.event.payload).toMatchObject({
-      claudeSessionId: CONVERSATION_ID,
-      resumedFrom: SOURCE,
+      conversation: { engine: 'claude', id: CONVERSATION_ID },
+      resumedFrom: { engine: 'claude', id: SOURCE },
     });
   });
 
@@ -139,10 +145,11 @@ describe('SessionStartHandler', () => {
       {
         session: aSession(),
         conversation: aConversation(CONVERSATION_ID, SOURCE),
+        capabilities: ALL_CAPABILITIES,
         joined: true,
         applied: NOTHING_APPLIED,
       },
-      { workspacePath: '/srv/projects/app', resumeSessionId: SOURCE },
+      { workspacePath: '/srv/projects/app', resumeFrom: { engine: 'claude', id: SOURCE } },
     );
 
     expect(result.ack).toEqual({
@@ -152,8 +159,8 @@ describe('SessionStartHandler', () => {
         replayed: 0,
         oldestAvailableSeq: 4,
         gap: false,
-        claudeSessionId: CONVERSATION_ID,
-        resumedFrom: SOURCE,
+        conversation: { engine: 'claude', id: CONVERSATION_ID },
+        resumedFrom: { engine: 'claude', id: SOURCE },
       },
     });
     expect(result.attached).toEqual([SESSION_ID]);
@@ -165,17 +172,24 @@ describe('SessionStartHandler', () => {
       {
         session: aSession(),
         conversation: aConversation(),
+        capabilities: ALL_CAPABILITIES,
         joined: false,
         applied: NOTHING_APPLIED,
       },
-      { workspacePath: '/srv/projects/app', model: 'claude-opus-5', resumeSessionId: SOURCE },
+      {
+        workspacePath: '/srv/projects/app',
+        model: 'claude-opus-5',
+        engine: 'claude',
+        resumeFrom: { engine: 'claude', id: SOURCE },
+      },
     );
 
     expect(result.commands[0]).toMatchObject({
       workspacePath: '/srv/projects/app',
       model: 'claude-opus-5',
       permissionMode: null,
-      resumeSessionId: SOURCE,
+      engine: 'claude',
+      resumeFrom: { engine: 'claude', id: SOURCE },
     });
   });
 
@@ -183,6 +197,7 @@ describe('SessionStartHandler', () => {
     const started = {
       session: aSession(),
       conversation: aConversation(),
+      capabilities: ALL_CAPABILITIES,
       joined: false,
       applied: NOTHING_APPLIED,
     };
@@ -196,7 +211,15 @@ describe('SessionStartHandler', () => {
 
   it.each([
     ['no workspace', {}],
-    ['an empty resume id', { workspacePath: '/srv/projects/app', resumeSessionId: '' }],
+    [
+      'an empty resume id',
+      { workspacePath: '/srv/projects/app', resumeFrom: { engine: 'claude', id: '' } },
+    ],
+    [
+      'a resume without its engine',
+      { workspacePath: '/srv/projects/app', resumeFrom: { id: 'abc' } },
+    ],
+    ['a fork point without a resume', { workspacePath: '/srv/projects/app', forkAt: 'm1' }],
     ['an unknown permission mode', { workspacePath: '/srv/projects/app', permissionMode: 'yolo' }],
   ])('refuses a frame with %s', async (_case, payload) => {
     await expect(
@@ -204,6 +227,7 @@ describe('SessionStartHandler', () => {
         {
           session: aSession(),
           conversation: aConversation(),
+          capabilities: ALL_CAPABILITIES,
           joined: false,
           applied: NOTHING_APPLIED,
         },

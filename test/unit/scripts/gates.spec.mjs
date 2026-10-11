@@ -33,7 +33,7 @@ describe('repositoryGates', () => {
       repositoryGates(true)
         .slice(7)
         .map((gate) => gate.name),
-    ).toEqual(['integration', 'e2e', 'security', 'contracts and i18n']);
+    ).toEqual(['integration', 'e2e', 'security', 'contracts, i18n and neutrality']);
   });
 
   it('the short list is a prefix of the long one — the same gates, not similar ones', () => {

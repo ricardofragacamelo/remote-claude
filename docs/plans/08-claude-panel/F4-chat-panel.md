@@ -88,7 +88,7 @@ No cabeçalho do composer:
   atual e o composer segue. No rascunho, pela D-13.
 - **Modo** — padrão, aceitar edições e plan, com o que cada um significa por extenso; **nunca**
   `bypassPermissions`: ele existe no contrato, mas `allowDangerouslySkipPermissions` é `false` sempre
-  ([options](../../architecture/backend/04-claude-integration.md#options--o-que-amarramos)), então
+  ([options](../../architecture/backend/04a-claude.md#options--o-que-amarramos)), então
   oferecê-lo seria prometer o que não existe. "Aceitar edições" avisa que Edit/Write deixarão de pedir
   aprovação — e de mostrar a prévia da B-29. Troca por `session.setPermissionMode`.
 - **Esforço** — pela D-16, só para modelo com `supportsEffort`, com os níveis dele; nível fora da lista

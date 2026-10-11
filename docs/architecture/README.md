@@ -123,3 +123,16 @@ carregar só o necessário.
   do código, e propague para as três pontas na mesma mudança.
 - Decisão técnica relevante → registre em [shared/00-decisions.md](shared/00-decisions.md).
   Decisão não registrada volta a ser discutida daqui a três meses.
+
+---
+
+## Alvo do plano 28 — a porta de motor e os três anéis
+
+> **Alvo do [plano 28](../plans/28-agent-neutral-core/README.md)** ([ADR-025](shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)).
+> As regras já valem desde a F0; o desenho chega fase a fase.
+
+O backend fala com o agente de código por uma **porta de motor**, e o Claude é o único adapter
+registrado. O adapter interpreta o motor e entrega ao núcleo, e aos clientes, o contrato canônico: o
+`kind` da ferramenta, o rótulo pronto, as tarefas, o plano, a pergunta e o uso. Em cada ponta, o
+**núcleo** é neutro, a **extensão** de cada motor mora em `engines/<motor>/`, e a **composição** é o
+único ponto que conhece as extensões. Ver [shared/12-engines](shared/12-engines.md).

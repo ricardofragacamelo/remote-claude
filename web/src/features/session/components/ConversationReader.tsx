@@ -9,8 +9,9 @@ import { useResumeSession } from '../hooks/useResumeSession';
 import type { ResumeControl } from '../hooks/useResumeSession';
 import type { ConversationSummary } from '../types/history';
 import { useScrollKeeper } from '../hooks/useScrollKeeper';
-import { taskListOf } from '../lib/task-list';
-import { tabKeyOf } from '../store/claude-panel.store';
+import { capabilitiesIn, ifCan } from '../lib/capabilities';
+import { useKnownEngines } from '../hooks/useEngines';
+import { conversationTabKey } from '../store/agent-panel.store';
 import { TaskStrip } from './composer/TaskStrip';
 import { Conversation } from './Conversation';
 import { ChatFrame } from './frame/ChatFrame';
@@ -22,10 +23,12 @@ import { IconButton } from '@/shared/components/IconButton';
 import { LoadMore } from '@/shared/components/LoadMore';
 import { Button } from '@/shared/components/ui/button';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { useStableConversation } from '@/shared/hooks/useStableConversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 
 export interface ConversationReaderProps {
-  /** The conversation the panel reads — its id in Claude's store. */
-  readonly conversationId: string;
+  /** The conversation the panel reads — its engine, and its id in that engine's store. */
+  readonly conversation: ConversationRef;
 
   /**
    * Called with the live session a resume became. Stable across renders, and the workbench's to act
@@ -47,8 +50,8 @@ export interface ConversationReaderProps {
  *
  * The four states are the first page's; after it, "load earlier" reaches back a page at a time and
  * a failure there leaves what is already on screen, with the reason beside the button. The page is
- * read-only by construction: the transcript is Claude's file, shared with the editor, and nothing
- * here writes to it.
+ * read-only by construction: the transcript is the agent's file, shared with the editor, and
+ * nothing here writes to it.
  *
  * A conversation begun elsewhere continues **under a new id**, and the screen says so before the
  * button is pressed: the editor will not see what is answered here. The promise is editor → phone,
@@ -65,25 +68,28 @@ export interface ConversationReaderProps {
  * It imports hooks, and nothing else: no service, no `api.ts`.
  */
 export function ConversationReader({
-  conversationId,
+  conversation: asked,
   onResumed,
   onClose,
   folder = '',
 }: ConversationReaderProps): React.JSX.Element {
   const { t } = useTranslation();
-  const history = useConversationHistory(conversationId);
+  const read = useStableConversation(asked);
+  const history = useConversationHistory(read);
   const { summary, conversation } = history;
-  const keeper = useScrollKeeper(folder, tabKeyOf('conversation', conversationId));
+  const keeper = useScrollKeeper(folder, conversationTabKey(read));
   const title =
     summary === null || summary.summary === '' ? t('history.screen.title') : summary.summary;
 
   const target = useMemo(
-    () => (summary === null ? null : { conversationId, workspacePath: summary.cwd }),
-    [conversationId, summary],
+    () => (summary === null ? null : { conversation: read, workspacePath: summary.cwd }),
+    [read, summary],
   );
   const resume = useResumeSession(target, onResumed);
-  const follow = useConversationFollow(conversationId, history, resume.error);
-  const taskList = useMemo(() => taskListOf(conversation.tools), [conversation.tools]);
+  const follow = useConversationFollow(read, history, resume.error);
+  const directory = useKnownEngines();
+  // Read with no live session: what its engine can do is what `GET /engines` lists (plan 28, S-68).
+  const taskList = ifCan(capabilitiesIn(directory, read.engine), 'taskList', conversation.taskList);
   const control: ResumeControl = {
     ...resume,
     resume: () => {
@@ -142,7 +148,7 @@ export function ConversationReader({
 
           <Transcript
             conversation={conversation}
-            conversationId={conversationId}
+            reference={read}
             folder={summary.cwd}
             onSearchEverything={history.hasEarlier ? history.loadEverything : undefined}
           />
@@ -241,12 +247,12 @@ function ResumeControls({
 /** What was said, or that nothing was. */
 function Transcript({
   conversation,
-  conversationId,
+  reference,
   folder,
   onSearchEverything,
 }: {
   readonly conversation: ConversationHistory['conversation'];
-  readonly conversationId: string;
+  readonly reference: ConversationRef;
   readonly folder: string;
   readonly onSearchEverything: (() => void) | undefined;
 }): React.JSX.Element {
@@ -262,7 +268,7 @@ function Transcript({
       conversation={conversation}
       isPartial={false}
       folder={folder}
-      conversationId={conversationId}
+      reference={reference}
       {...(onSearchEverything === undefined ? {} : { onSearchEverything })}
     />
   );

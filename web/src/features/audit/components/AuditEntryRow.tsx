@@ -44,9 +44,9 @@ export function AuditEntryRow({
     dateStyle: 'medium',
     timeStyle: 'medium',
   }).format(new Date(entry.at));
-  const tool = t(`permission.tool.${entry.toolName}`, {
-    defaultValue: t('permission.tool.unknown', { tool: entry.toolName }),
-  });
+  // The trail keeps the engine's own name of the tool (plan 28, F7): shown as written, never looked
+  // up as a key — the titles of a request are by kind now.
+  const tool = entry.toolName;
   const verdict = entry.verdict;
 
   return (

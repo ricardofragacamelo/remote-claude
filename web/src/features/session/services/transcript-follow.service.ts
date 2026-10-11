@@ -10,14 +10,15 @@ import type { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import { routeFrames, watchReadiness } from '@/shared/api/socket-subscriptions';
 import type { SubscriptionTransport } from '@/shared/api/socket-subscriptions';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { logger } from '@/shared/logging/logger';
 import { toHistoryEvents } from './history.service';
 import type { ConversationActivity, TranscriptUpdate } from '../types/history';
 
-/** One update of a followed conversation: what it gained, and whether Claude seems to be working. */
+/** One update of a followed conversation: what it gained, and whether the agent seems to be working. */
 export interface FollowUpdate extends TranscriptUpdate {
   /**
-   * Whether Claude seems to be working on it in another client — an **inference** from the last
+   * Whether the agent seems to be working on it in another client — an **inference** from the last
    * entry, never a fact the transcript records (plan 22, D-12).
    */
   readonly working: boolean;
@@ -54,13 +55,13 @@ export type FollowTransport = SubscriptionTransport;
 /** The followed conversations of one socket client. */
 export interface TranscriptFollows {
   /**
-   * Follows `conversationId` for `subscriber` from `afterMessageId` — the `lastMessageId` of the page
+   * Follows `conversation` for `subscriber` from `afterMessageId` — the `lastMessageId` of the page
    * it read, `null` for a conversation with no entry — until the release.
    *
    * @returns the release — idempotent
    */
   follow(
-    conversationId: string,
+    conversation: ConversationRef,
     afterMessageId: string | null,
     subscriber: TranscriptFollowSubscriber,
   ): () => void;
@@ -68,7 +69,7 @@ export interface TranscriptFollows {
 
 /** One subscription, and where it stands. */
 interface Followed {
-  readonly conversationId: string;
+  readonly conversation: ConversationRef;
   readonly subscriber: TranscriptFollowSubscriber;
 
   /** The last entry it has — what the follow is sent again from after a reconnect. */
@@ -102,11 +103,11 @@ export function createTranscriptFollows(transport: FollowTransport): TranscriptF
 
   function send(entry: Followed): void {
     entry.pending = transport.issue('transcript.follow', {
-      conversationId: entry.conversationId,
+      conversation: { engine: entry.conversation.engine, id: entry.conversation.id },
       ...(entry.after === null ? {} : { afterMessageId: entry.after }),
     });
     logger.debug(
-      { op: 'transcript.follow', conversationId: entry.conversationId, after: entry.after },
+      { op: 'transcript.follow', conversation: entry.conversation, after: entry.after },
       'conversation follow requested',
     );
   }
@@ -152,7 +153,7 @@ export function createTranscriptFollows(transport: FollowTransport): TranscriptF
     entry.followId = payload.followId;
     entry.lastSeq = 0;
     logger.debug(
-      { op: 'transcript.follow', conversationId: entry.conversationId, followId: payload.followId },
+      { op: 'transcript.follow', conversation: entry.conversation, followId: payload.followId },
       'conversation followed',
     );
     entry.subscriber.onFollowing(payload.activity);
@@ -164,7 +165,7 @@ export function createTranscriptFollows(transport: FollowTransport): TranscriptF
 
     if (seq > entry.lastSeq + 1) {
       logger.warn(
-        { op: 'transcript.follow', conversationId: entry.conversationId, seq, last: entry.lastSeq },
+        { op: 'transcript.follow', conversation: entry.conversation, seq, last: entry.lastSeq },
         'conversation follow lost a frame',
       );
       end(entry, true);
@@ -195,7 +196,7 @@ export function createTranscriptFollows(transport: FollowTransport): TranscriptF
     logger.debug(
       {
         op: 'transcript.follow',
-        conversationId: entry.conversationId,
+        conversation: entry.conversation,
         seq: frame.seq,
         events: payload.events.length,
         activity: payload.activity,
@@ -225,7 +226,7 @@ export function createTranscriptFollows(transport: FollowTransport): TranscriptF
     }
 
     logger.info(
-      { op: 'transcript.follow', conversationId: entry.conversationId, reason: payload.reason },
+      { op: 'transcript.follow', conversation: entry.conversation, reason: payload.reason },
       'conversation follow reset',
     );
     // The reset is the last frame of the subscription: the server holds nothing to unfollow.
@@ -247,7 +248,7 @@ export function createTranscriptFollows(transport: FollowTransport): TranscriptF
 
     const error = toAppError({ error: frame.payload }, frame.traceId ?? frame.id);
     logger.warn(
-      { op: 'transcript.follow', conversationId: entry.conversationId, code: error.code },
+      { op: 'transcript.follow', conversation: entry.conversation, code: error.code },
       'conversation follow refused',
     );
     end(entry, false);
@@ -288,9 +289,9 @@ export function createTranscriptFollows(transport: FollowTransport): TranscriptF
   });
 
   return {
-    follow(conversationId, afterMessageId, subscriber) {
+    follow(conversation, afterMessageId, subscriber) {
       const entry: Followed = {
-        conversationId,
+        conversation,
         subscriber,
         after: afterMessageId,
         pending: null,
@@ -315,7 +316,7 @@ export function createTranscriptFollows(transport: FollowTransport): TranscriptF
         }
 
         end(entry, true);
-        logger.debug({ op: 'transcript.follow', conversationId }, 'conversation follow released');
+        logger.debug({ op: 'transcript.follow', conversation }, 'conversation follow released');
       };
     },
   };
@@ -332,10 +333,10 @@ let shared: TranscriptFollows | null = null;
  * @returns the release — idempotent
  */
 export function followTranscript(
-  conversationId: string,
+  conversation: ConversationRef,
   afterMessageId: string | null,
   subscriber: TranscriptFollowSubscriber,
 ): () => void {
   shared ??= createTranscriptFollows(wsClient);
-  return shared.follow(conversationId, afterMessageId, subscriber);
+  return shared.follow(conversation, afterMessageId, subscriber);
 }

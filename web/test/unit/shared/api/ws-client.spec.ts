@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PROTOCOL_VERSION } from '@remote-claude/contracts';
 import type { Envelope } from '@remote-claude/contracts';
 
 import {
@@ -64,7 +65,7 @@ describe('WsClient', () => {
     it('opens on the protocol version this build speaks', () => {
       client.connect();
 
-      expect(sockets.latest.url).toBe('ws://backend.test/ws?v=1');
+      expect(sockets.latest.url).toBe(`ws://backend.test/ws?v=${String(PROTOCOL_VERSION)}`);
     });
 
     it('sends the token in the frame body, never in the query string', () => {
@@ -501,12 +502,38 @@ describe('WsClient', () => {
             replayed: 0,
             oldestAvailableSeq: 900,
             gap: true,
+            conversation: { engine: 'claude', id: '6b41b192-a41b-46c2-b8d7-5098d8c825be' },
+          },
+        }),
+      );
+
+      // `{ engine, id }`, the ack's — plan 28, S-39.
+      expect(gaps).toHaveBeenCalledWith({
+        engine: 'claude',
+        id: '6b41b192-a41b-46c2-b8d7-5098d8c825be',
+      });
+    });
+
+    it('reloads from nothing when the ack names the conversation by its id alone — plan 28, B-13', () => {
+      const gaps = vi.fn();
+      const socket = connectAndReady();
+      client.attach('s1', { onEvent: () => undefined, onGap: gaps, lastSeq: () => 1 });
+
+      socket.receive(
+        serverFrame({
+          kind: 'ack',
+          type: 'session.attached',
+          payload: {
+            sessionId: 's1',
+            replayed: 0,
+            oldestAvailableSeq: 900,
+            gap: true,
             claudeSessionId: '6b41b192-a41b-46c2-b8d7-5098d8c825be',
           },
         }),
       );
 
-      expect(gaps).toHaveBeenCalledWith('6b41b192-a41b-46c2-b8d7-5098d8c825be');
+      expect(gaps).toHaveBeenCalledWith(null);
     });
 
     it('offers an attach nobody here asked for to the observers — a resume that joined, S-24', () => {
@@ -563,7 +590,10 @@ describe('WsClient', () => {
     it.each([
       ['text that is not JSON', '{not json'],
       ['a frame with no envelope fields', JSON.stringify({ hello: true })],
-      ['a frame of the wrong protocol version', JSON.stringify(serverFrame({ v: 2 as never }))],
+      [
+        'a frame of the wrong protocol version',
+        JSON.stringify(serverFrame({ v: (PROTOCOL_VERSION + 98) as never })),
+      ],
     ])('drops %s without throwing', (_case, raw) => {
       const socket = connectAndReady();
 

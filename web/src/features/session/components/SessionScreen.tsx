@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import type { PermissionRequest, PlanMode } from '@/features/permission';
 import { Button } from '@/shared/components/ui/button';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import type { ConversationRef } from '@/shared/lib/conversation';
+import { toolLabelText } from '@/shared/lib/tool-label';
 
 import { useComposerSend } from '../hooks/useComposerSend';
 import { useSessionSettings } from '../hooks/useSessionSettings';
@@ -21,9 +23,9 @@ import { usePanelDraft } from '../hooks/usePanelTabs';
 import { useResumeAndSend } from '../hooks/useResumeAndSend';
 import type { ResumeAndSend } from '../hooks/useResumeAndSend';
 import { useScrollKeeper } from '../hooks/useScrollKeeper';
-import { taskListOf } from '../lib/task-list';
+import { ifCan } from '../lib/capabilities';
 import { isTurnRunning } from '../lib/turn';
-import { tabKeyOf } from '../store/claude-panel.store';
+import { tabKeyOf } from '../store/agent-panel.store';
 import type { LiveSession } from '../hooks/useLiveSession';
 import type { ToolExecution } from '../types/live-session';
 import { EditBanner } from './panel/EditBanner';
@@ -50,7 +52,7 @@ export interface SessionScreenProps {
    * Opens the whole conversation this session is, on the history screen. The route's to perform:
    * the feature never learns the router exists.
    */
-  onOpenHistory?(conversationId: string): void;
+  onOpenHistory?(conversation: ConversationRef): void;
 
   /** What was being written in the prompt box — kept by whoever hosts the screen. */
   readonly draft?: string | undefined;
@@ -115,7 +117,7 @@ export function SessionScreen({
   const session = useLiveSession(sessionId);
   const key = tabKeyOf('session', sessionId);
   const composer = useComposerSend(folder, key, sessionId);
-  const resume = useResumeAndSend(folder, sessionId, session.history.conversationId);
+  const resume = useResumeAndSend(folder, sessionId, session.history.conversation);
   const keeper = useScrollKeeper(folder, changes === undefined ? key : null);
   // What is being written is the tab's, kept by the panel — given back there after a refusal.
   const written = usePanelDraft(folder, key);
@@ -126,9 +128,15 @@ export function SessionScreen({
     requests.pending.map((request) => request.requestId),
     onShowChat,
   );
-  const taskList = useMemo(() => taskListOf(session.tools), [session.tools]);
   const [undoAt, setUndoAt] = useState<string | null>(null);
-  const inline: InlineContext = { requests, folder, onOpenRules, onPlanApproved };
+  const inline: InlineContext = {
+    requests,
+    sessionId,
+    folder,
+    onOpenRules,
+    onPlanApproved,
+    planModes: session.capabilities?.permissionModes ?? null,
+  };
 
   return (
     <ContextDropZone folder={folder} context={composer.context} fill>
@@ -148,7 +156,7 @@ export function SessionScreen({
             <AnswerRefusal requests={requests} />
             <EndedStrip session={session} resume={resume} />
             <QueueList sessionId={sessionId} />
-            <TaskStrip list={taskList} />
+            <TaskStrip list={ifCan(session.capabilities, 'taskList', session.taskList)} />
             {edit !== undefined && <EditArea edit={edit} />}
             <Composer
               session={session}
@@ -171,7 +179,7 @@ export function SessionScreen({
               isPartial={session.isPartial}
               folder={folder}
               sessionId={sessionId}
-              conversationId={session.history.conversationId}
+              reference={session.history.conversation}
               prompts={promptActionsOf(session, edit, setUndoAt, t)}
               inline={inline}
             />
@@ -223,8 +231,8 @@ function promptActionsOf(
 }
 
 /**
- * The last line of the conversation while the turn runs (plan 09, B-21): what Claude does, the tool
- * of the main conversation it runs, and — with a question open — the way to it.
+ * The last line of the conversation while the turn runs (plan 09, B-21): what the agent does, the
+ * tool of the main conversation it runs, and — with a question open — the way to it.
  */
 function Working({
   session,
@@ -235,6 +243,7 @@ function Working({
   readonly requests: InlineRequests;
   readonly finder: RequestsInView;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const running = session.tools.findLast(
     (tool) => tool.status === 'running' && tool.parentToolUseId === null,
   );
@@ -244,7 +253,8 @@ function Working({
       status={session.status}
       turnSince={session.turnSince}
       turn={`${session.sessionId ?? ''}:${String(session.turns.length)}`}
-      tool={running?.toolName ?? null}
+      // What the tool does, by its label — never the engine's name of it (plan 28, S-60).
+      tool={running === undefined ? null : toolLabelText(running, t)}
       waiting={requests.pending.length}
       questionsOnly={onlyQuestions(requests.pending)}
       onGoToRequest={finder.goToOldest}
@@ -322,7 +332,7 @@ function HistoryState({
   readonly onOpenHistory: SessionScreenProps['onOpenHistory'];
 }): React.JSX.Element {
   const { t } = useTranslation();
-  const conversationId = history.conversationId;
+  const conversation = history.conversation;
 
   return (
     <>
@@ -347,12 +357,12 @@ function HistoryState({
         </StateStrip>
       )}
 
-      {conversationId !== null && onOpenHistory !== undefined && (
+      {conversation !== null && onOpenHistory !== undefined && (
         <Button
           variant="outline"
           className="self-start"
           onClick={() => {
-            onOpenHistory(conversationId);
+            onOpenHistory(conversation);
           }}
         >
           {t('session.history.open')}
@@ -455,16 +465,14 @@ function useSessionComposer({ session, folder }: ComposerProps): {
   const live = session.ending === null;
   const settings = useSessionSettings(folder, sessionId, live);
   const running = isTurnRunning(session.status);
-  const compact = (): void => {
-    session.prompt('/compact');
-  };
+  const engine = { capabilities: session.capabilities, onCompact: session.compact };
 
   return {
     shared: {
       folder,
       queued: running,
       onStop: running ? stop : undefined,
-      bar: live ? sessionBarOf(sessionId, settings, compact, t) : undefined,
+      bar: live ? sessionBarOf(sessionId, settings, engine, t) : undefined,
     },
     refusal: settings.refusal,
     stop,
@@ -525,7 +533,7 @@ function useInterruptOnce(session: LiveSession): () => void {
   };
 }
 
-/** Whether everything waiting on the person is a question of Claude — none a permission. */
+/** Whether everything waiting on the person is a question of the agent — none a permission. */
 function onlyQuestions(pending: readonly PermissionRequest[]): boolean {
-  return pending.length > 0 && pending.every((request) => request.interaction !== null);
+  return pending.length > 0 && pending.every((request) => request.interaction?.kind === 'question');
 }

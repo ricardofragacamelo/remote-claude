@@ -6,10 +6,15 @@
   "x-kind": "event",
   "x-type": "transcript.reset",
   "type": "object",
-  "required": ["followId", "conversationId", "reason"],
+  "required": ["followId", "conversation", "reason"],
   "properties": {
-    "followId": { "type": "string" },
-    "conversationId": { "type": "string" },
+    "followId": {
+      "type": "string"
+    },
+    "conversation": {
+      "$ref": "../definitions/conversation-ref.schema.json",
+      "description": "The conversation that was reset."
+    },
     "reason": {
       "type": "string",
       "enum": ["rewritten", "gone"],

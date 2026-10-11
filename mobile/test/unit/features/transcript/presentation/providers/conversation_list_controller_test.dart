@@ -11,14 +11,16 @@ import 'package:remote_claude/features/transcript/domain/repositories/transcript
 import 'package:remote_claude/features/transcript/transcript.dart';
 import 'package:remote_claude/features/transcript/transcript_providers.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/transcripts.dart';
 import '../../../../../support/fakes/fake_transcript_repository.dart';
 
 const String workspace = '/home/someone/project';
 
 const Failure unavailable = ServerFailure(
-  code: 'CLAUDE_UNAVAILABLE',
-  messageKey: 'transcript.error.claudeUnavailable',
+  code: 'AGENT_UNAVAILABLE',
+  messageKey: 'transcript.error.agentUnavailable',
+  params: <String, String>{'engine': anEngine},
   traceId: 'trace-2',
 );
 
@@ -65,7 +67,7 @@ void main() {
       container.read(conversationListControllerProvider(workspace).future);
 
   List<String> ids() => value().value!.conversations
-      .map((ConversationSummary c) => c.conversationId)
+      .map((ConversationSummary c) => c.conversation.id)
       .toList(growable: false);
 
   test('S-12 · reads the first page of exactly the workspace it is keyed by', () async {

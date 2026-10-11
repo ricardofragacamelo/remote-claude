@@ -25,6 +25,7 @@ import 'package:remote_claude/features/transcript/transcript_providers.dart';
 import 'package:remote_claude/features/workspace/workspace.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/builders/files.dart';
 import '../../../support/fakes/fake_files_repository.dart';
 import '../../../support/fakes/fake_transcript_repository.dart';
@@ -63,7 +64,7 @@ LiveSessionSummary aLive({
   workspacePath: path,
   status: status,
   model: 'opus',
-  permissionMode: 'default',
+  permissionMode: 'ask',
   startedAt: DateTime.utc(2026, 10, 4, 9),
   openedFrom: from,
   pendingPermissions: pending,
@@ -71,7 +72,7 @@ LiveSessionSummary aLive({
 
 ConversationSummary aConversation(String id, {String summary = 'fix the build'}) =>
     ConversationSummary(
-      conversationId: id,
+      conversation: conversationOf(id),
       origin: ConversationOrigin.ours,
       cwd: folder,
       lastModified: DateTime.utc(2026, 10, 3),
@@ -93,7 +94,7 @@ void main() {
   GoRoute marker(String path, String said) => GoRoute(
     path: path,
     builder: (BuildContext context, GoRouterState state) =>
-        Scaffold(body: Text('$said ${state.pathParameters.values.join()}${state.uri.query}')),
+        Scaffold(body: Text('$said ${state.pathParameters.values.join('/')}${state.uri.query}')),
   );
 
   Future<void> pumpFolder(
@@ -121,7 +122,7 @@ void main() {
           path: historyRoute,
           builder: (BuildContext context, GoRouterState state) =>
               Scaffold(body: Text('history ${state.uri.query}')),
-          routes: <RouteBase>[marker(':conversationId', 'conversation')],
+          routes: <RouteBase>[marker(':engine/:conversationId', 'conversation')],
         ),
       ],
       initialLocation: folderRouteFor(folder),
@@ -221,8 +222,8 @@ void main() {
 
     await tester.tap(find.text('fix the build'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('conversation c-1'), findsOneWidget);
-    GoRouter.of(tester.element(find.textContaining('conversation c-1'))).pop();
+    expect(find.textContaining('conversation $anEngine/c-1'), findsOneWidget);
+    GoRouter.of(tester.element(find.textContaining('conversation $anEngine/c-1'))).pop();
     await tester.pumpAndSettle();
 
     await tester.tap(find.text(l10n.folderHistorySeeAll));
@@ -279,7 +280,7 @@ void main() {
     await tester.tap(find.byTooltip(l10n.folderHelpOpen));
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.folderHelpBody), findsOneWidget);
+    expect(find.text(l10n.folderHelpBody(l10n.engineNameFallback)), findsOneWidget);
   });
 
   // S-155 · a folder that cannot be asked about says why, in words, where its sessions would be.

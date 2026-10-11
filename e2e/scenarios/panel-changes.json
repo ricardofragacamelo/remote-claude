@@ -22,7 +22,7 @@
     "planFiles": { "index.js": "console.log('tally');\n" },
     "planQuestion": "Describe only what's true (Recommended)",
     "planAsksAfter": ["Write", "Bash"],
-    "planMode": "Plan",
+    "planMode": "Read only",
     "approvedMode": "Ask me",
     "goOn": "asking before each edit",
     "planHeading": "Add a two-line README.md",

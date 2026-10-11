@@ -4,6 +4,7 @@
 /// first prompt, and the screen moves there.
 library;
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/presentation/providers/first_prompts.dart';
 import 'package:remote_claude/features/session/presentation/providers/resume_controller.dart';
@@ -26,13 +27,13 @@ class ForkController extends _$ForkController with FollowsStart {
     return const ResumeState();
   }
 
-  /// Opens a new conversation that continues [conversationId] from before [messageId], in
+  /// Opens a new conversation that continues [conversation] from before [messageId], in
   /// [workspacePath], and sends it [text]. One start, however many taps.
   ///
   /// @returns whether the start left
   bool fork({
     required String workspacePath,
-    required String conversationId,
+    required ConversationKey conversation,
     required String messageId,
     required String text,
   }) {
@@ -41,7 +42,7 @@ class ForkController extends _$ForkController with FollowsStart {
     }
 
     _text = text;
-    startId = ref.read(driveSessionProvider).fork(workspacePath, conversationId, messageId);
+    startId = ref.read(driveSessionProvider).fork(workspacePath, conversation, messageId);
     state = startId == null
         ? const ResumeState(wasNotSent: true)
         : const ResumeState(isPending: true);

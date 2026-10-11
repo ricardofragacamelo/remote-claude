@@ -74,7 +74,7 @@ function lookOf(tab: Tab, active: boolean, deleted: boolean): string {
 
 /**
  * A drag of a tab carries the tab — for the strips — and, for a file, the file itself as the typed
- * payload towards Claude and as text (S-272, 07 · D-20).
+ * payload towards the agent and as text (S-272, 07 · D-20).
  */
 function startDrag(event: DragEvent<HTMLElement>, folder: string, group: string, tab: Tab): void {
   event.dataTransfer.effectAllowed = 'copyMove';
@@ -129,7 +129,7 @@ function handlersOf(folder: string, group: string, tab: Tab) {
  * One editor tab, as the editor people know draws it: italic while it is the preview (S-209), a dot
  * in the place of the close while dirty (S-210), struck through when the file was deleted on disk,
  * and saying so to a screen reader. It is reordered by dragging **and** from the keyboard, carried
- * to another group by dragging, and dragged towards Claude as the file it shows (S-272).
+ * to another group by dragging, and dragged towards the agent as the file it shows (S-272).
  */
 export function EditorTab({
   folder,

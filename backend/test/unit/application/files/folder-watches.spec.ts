@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ChangeOrigins, ClaudeWrites, FolderWatches, UserWrites } from '@application/files';
+import { ChangeOrigins, AgentWrites, FolderWatches, UserWrites } from '@application/files';
 import type {
   FolderWatcher,
   FolderWatchListener,
@@ -115,7 +115,7 @@ describe('FolderWatches — the subscriptions and their watchers — B-21', () =
       },
       watcher,
       new ChangeOrigins(
-        new ClaudeWrites(),
+        new AgentWrites(),
         new UserWrites(new FixedClock(new Date(0))),
         { version: () => Promise.reject(new Error('never read')) },
         new FixedClock(new Date(0)),

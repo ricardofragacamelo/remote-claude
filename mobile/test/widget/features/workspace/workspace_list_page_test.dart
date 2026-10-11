@@ -113,7 +113,7 @@ void main() {
       await pumpList(tester);
 
       expect(find.text(l10n.folderPickerTitle), findsOneWidget);
-      expect(find.text(l10n.folderPickerRoots), findsOneWidget);
+      expect(find.text(l10n.folderPickerRoots(l10n.engineNameFallback)), findsOneWidget);
       expect(find.text('project'), findsOneWidget);
       expect(find.text('/home/someone/project'), findsOneWidget);
     });

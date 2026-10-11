@@ -10,6 +10,7 @@ import {
   toRequest,
 } from '@/features/permission/services/permission.service';
 import type { WsClient } from '@/shared/api/ws-client';
+import { aToolCall } from '../../../../support/canonical-tool';
 
 /** A client that records what was sent, instead of owning a socket. */
 function aClient() {
@@ -236,16 +237,35 @@ describe('reading the permission frames', () => {
         type: 'permission.requested',
         payload: {
           requestId: 'req-1',
-          toolName: 'Read',
-          title: 'permission.tool.Read',
-          input: { file_path: '/srv/app/main.ts' },
+          ...aToolCall('Read', { file_path: '/srv/app/main.ts' }),
+          title: 'permission.tool.fileRead',
           riskHint: 'read',
           expiresAt: '2026-09-19T12:02:00.000Z',
         },
       }),
     );
 
-    expect(read).toMatchObject({ suggestions: [], toolUseId: '', description: null, input: {} });
+    expect(read).toMatchObject({
+      suggestions: [],
+      toolUseId: '',
+      description: null,
+      kind: 'file.read',
+      label: { messageKey: 'sessions.tool.fileRead', params: { path: '/srv/app/main.ts' } },
+      rawInput: { file_path: '/srv/app/main.ts' },
+    });
+  });
+
+  it('drops a request with no kind — not a frame of this protocol — plan 28 B-18', () => {
+    const payload: Record<string, unknown> = {
+      requestId: 'req-1',
+      ...aToolCall('Read'),
+      title: 'permission.tool.fileRead',
+      riskHint: 'read',
+      expiresAt: '2026-09-19T12:02:00.000Z',
+    };
+    delete payload['kind'];
+
+    expect(toRequest(frame({ kind: 'request', type: 'permission.requested', payload }))).toBeNull();
   });
 
   it('keeps an input it can read, and reads a missing one as empty', () => {
@@ -255,16 +275,16 @@ describe('reading the permission frames', () => {
         type: 'permission.requested',
         payload: {
           requestId: 'req-1',
-          toolName: 'Read',
-          title: 'permission.tool.Read',
-          input: 'not an object',
+          ...aToolCall('Read'),
+          title: 'permission.tool.fileRead',
+          rawInput: 'not an object',
           riskHint: 'read',
           expiresAt: '2026-09-19T12:02:00.000Z',
         },
       }),
     );
 
-    expect(read?.input).toEqual({});
+    expect(read?.rawInput).toEqual({});
   });
 });
 
@@ -277,9 +297,8 @@ describe('the scopes a question offers — plan 03, D-12', () => {
         type: 'permission.requested',
         payload: {
           requestId: 'req-1',
-          toolName: 'Bash',
-          title: 'permission.tool.Bash',
-          input: { command: 'git status' },
+          ...aToolCall('Bash', { command: 'git status' }),
+          title: 'permission.tool.shell',
           riskHint: 'read',
           expiresAt: '2026-09-19T12:02:00.000Z',
           suggestions,
@@ -296,7 +315,7 @@ describe('the scopes a question offers — plan 03, D-12', () => {
       {
         scope: 'always',
         labelKey: 'permission.scope.always',
-        pattern: 'Bash(git status)',
+        pattern: 'shell(git status)',
         lifetimeMs: ONE_DAY,
       },
     ]);
@@ -306,7 +325,7 @@ describe('the scopes a question offers — plan 03, D-12', () => {
       {
         scope: 'always',
         labelKey: 'permission.scope.always',
-        rule: { pattern: 'Bash(git status)', lifetimeMs: ONE_DAY },
+        rule: { pattern: 'shell(git status)', lifetimeMs: ONE_DAY },
       },
     ]);
   });
@@ -314,7 +333,12 @@ describe('the scopes a question offers — plan 03, D-12', () => {
   it('says nothing about a rule on the scopes that die with the session', () => {
     // A pattern sent beside `session` by mistake is not a rule this screen should describe.
     const read = offering([
-      { scope: 'session', labelKey: 'permission.scope.session', pattern: 'Bash(x)', lifetimeMs: 1 },
+      {
+        scope: 'session',
+        labelKey: 'permission.scope.session',
+        pattern: 'shell(x)',
+        lifetimeMs: 1,
+      },
     ]);
 
     expect(read?.suggestions).toEqual([
@@ -324,10 +348,10 @@ describe('the scopes a question offers — plan 03, D-12', () => {
 
   it.each([
     ['no pattern', { lifetimeMs: ONE_DAY }],
-    ['no lifetime', { pattern: 'Bash(git status)' }],
-    ['a lifetime that is not a number', { pattern: 'Bash(git status)', lifetimeMs: '90d' }],
-    ['a fractional lifetime', { pattern: 'Bash(git status)', lifetimeMs: 1.5 }],
-    ['a lifetime of zero', { pattern: 'Bash(git status)', lifetimeMs: 0 }],
+    ['no lifetime', { pattern: 'shell(git status)' }],
+    ['a lifetime that is not a number', { pattern: 'shell(git status)', lifetimeMs: '90d' }],
+    ['a fractional lifetime', { pattern: 'shell(git status)', lifetimeMs: 1.5 }],
+    ['a lifetime of zero', { pattern: 'shell(git status)', lifetimeMs: 0 }],
   ])('does not offer a persisted scope with %s — S-67', (_case, rule) => {
     // "Don't ask again" without saying about what, or for how long, is the button R-02 is about.
     const read = offering([
@@ -353,11 +377,10 @@ describe('the reach of an answer — plan 23, B-13', () => {
         type: 'permission.requested',
         payload: {
           requestId: 'req-1',
-          toolName: 'Bash',
-          title: 'permission.tool.Bash',
+          ...aToolCall('Bash', { command: 'git push | tail -5' }),
+          title: 'permission.tool.shell',
           expiresAt: '2026-09-19T12:01:00.000Z',
           riskHint: 'write',
-          input: { command: 'git push | tail -5' },
           ...payload,
         },
       }),
@@ -366,8 +389,8 @@ describe('the reach of an answer — plan 23, B-13', () => {
   it('reads the reaches it knows, and drops the ones it does not or cannot read', () => {
     const request = asked({
       reaches: [
-        { reach: 'prefix', patterns: ['Bash(git push:*)', 'Bash(tail:*)'] },
-        { reach: 'glob', patterns: ['Bash(*)'] },
+        { reach: 'prefix', patterns: ['shell(git push:*)', 'shell(tail:*)'] },
+        { reach: 'glob', patterns: ['file.read(src/**)'] },
         { reach: 'exact', patterns: [] },
         { reach: 'tool', patterns: [3] },
         'exact',
@@ -375,14 +398,14 @@ describe('the reach of an answer — plan 23, B-13', () => {
     });
 
     expect(request?.reaches).toEqual([
-      { reach: 'prefix', patterns: ['Bash(git push:*)', 'Bash(tail:*)'] },
+      { reach: 'prefix', patterns: ['shell(git push:*)', 'shell(tail:*)'] },
     ]);
   });
 
   it('offers a persisted scope with no exact pattern when the server sends reaches', () => {
     const request = asked({
       suggestions: [{ scope: 'always', labelKey: 'permission.scope.always', lifetimeMs: 1_000 }],
-      reaches: [{ reach: 'prefix', patterns: ['Bash(git push:*)'] }],
+      reaches: [{ reach: 'prefix', patterns: ['shell(git push:*)'] }],
     });
 
     expect(request?.suggestions).toEqual([

@@ -17,8 +17,12 @@ void main() {
       isNot(InstallationCatalog(models: <InstallationModel>[InstallationModel(value: 'a')])),
     );
     expect(
-      ContextCategory(id: 'a', name: 'A', tokens: 1),
-      ContextCategory(id: 'a', name: 'A', tokens: 1),
+      ContextCategory(id: 'a', messageKey: 'k', tokens: 1),
+      ContextCategory(id: 'a', messageKey: 'k', tokens: 1),
+    );
+    expect(
+      ContextCategory(id: 'a', text: 'A', tokens: 1),
+      isNot(ContextCategory(id: 'a', tokens: 1)),
     );
     expect(
       ContextUse(totalTokens: 1, maxTokens: 2, percentage: 50),

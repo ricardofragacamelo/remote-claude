@@ -1,5 +1,5 @@
 import type { SessionId } from '@domain/session';
-import type { SessionEvent } from './claude-session.port';
+import type { SessionEvent } from './agent-engine.port';
 
 /**
  * How an event reaches the connections watching a session.

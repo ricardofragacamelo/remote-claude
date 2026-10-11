@@ -1,6 +1,6 @@
 import type { UserId } from '@domain/auth';
 import type { ChainEntry } from '@domain/session';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * A conversation in Claude's store, as much of it as deciding a resume needs — and not a message.
@@ -9,7 +9,7 @@ import type { ClaudeSessionId } from '@domain/transcript';
  * and is read by `transcript` alone, and a resume does not need a line of it to decide.
  */
 export interface ResumableConversation {
-  readonly id: ClaudeSessionId;
+  readonly id: ConversationRef;
 
   /** The working directory the SDK recorded, raw; `null` when it recorded none. */
   readonly cwd: string | null;
@@ -32,7 +32,7 @@ export interface ResumableConversationSource {
    * @throws {import('@domain/transcript').TranscriptUnavailableError} the SDK failed
    * @throws {import('@domain/transcript').TranscriptTimeoutError} the SDK did not answer in time
    */
-  find(id: ClaudeSessionId): Promise<ResumableConversation | null>;
+  find(id: ConversationRef): Promise<ResumableConversation | null>;
 
   /**
    * The entries of the conversation, oldest first, each said to be a prompt or not — what an
@@ -41,7 +41,7 @@ export interface ResumableConversationSource {
    *
    * @throws as {@link find}
    */
-  chainOf(id: ClaudeSessionId): Promise<readonly ChainEntry[]>;
+  chainOf(id: ConversationRef): Promise<readonly ChainEntry[]>;
 }
 
 export const RESUMABLE_CONVERSATION_SOURCE = Symbol('ResumableConversationSource');

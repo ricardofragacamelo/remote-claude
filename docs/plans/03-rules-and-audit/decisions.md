@@ -158,7 +158,7 @@ A regra só vale onde o `canUseTool` é chamado. Dentro disso:
   planejamento não quis que uma regra antiga executasse por ele (S-56);
 - o `deny` das settings de projeto é aplicado pelo CLI **antes** de nós, e nenhuma regra nossa o
   desfaz: não devolvemos `updatedPermissions` (D-09) nem usamos `allowedTools`
-  ([04-claude-integration](../../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido)) (S-08).
+  ([04a-claude](../../architecture/backend/04a-claude.md#diretório-confiado-fura-o-canusetool--medido)) (S-08).
 
 **O que fica de fora, declarado:** em `acceptEdits`, o CLI aprova edição de arquivo **sem** chamar
 o `canUseTool`, e uma regra `deny` sobre `Edit` não é consultada. Fechar isso exigiria decidir no
@@ -564,7 +564,7 @@ Decisão registrada só aqui é decisão que o resto do repositório não conhec
 
 | Decisão | Onde virou regra |
 |---|---|
-| D-01 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#a-regra-fala-a-gramática-do-claude-não-uma-nossa) — a gramática, a validação na criação e a fronteira de token |
+| D-01 | [backend/04a-claude](../../architecture/backend/04a-claude.md#a-regra-fala-a-gramática-canônica-e-o-dialeto-do-claude-só-traduz-o-passado) — a gramática, a validação na criação e a fronteira de token |
 | D-01, D-02, D-03 | [backend/03-modules](../../architecture/backend/03-modules.md#permission) — `PermissionRule` com padrão validado, `expiresAt` e `userId` no casamento |
 | D-01, D-02 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio) — `PERMISSION_RULE_PATTERN_INVALID` e `PERMISSION_RULE_EXPIRY_TOO_LONG` |
 | D-02, D-07 | [07-repository-layout](../../architecture/shared/07-repository-layout.md#configuração-que-carrega-decisão-de-segurança-falha-fechada) — teto de validade, piso de retenção e o job |

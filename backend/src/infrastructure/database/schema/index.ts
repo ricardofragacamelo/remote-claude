@@ -3,14 +3,10 @@ export { auditEntries } from './audit.schema';
 export { auditEvents } from './audit-events.schema';
 export { auditPurges } from './audit-purges.schema';
 export { devices } from './auth.schema';
-export {
-  claudeDefaults,
-  claudePlugins,
-  claudeSkillPreferences,
-  mcpProjectApprovals,
-  mcpServerSecrets,
-  mcpServers,
-} from './claude-config.schema';
+export { agentDefaults } from './agent-settings.schema';
+export { mcpProjectApprovals, mcpServerSecrets, mcpServers } from './mcp.schema';
+// The tables of the engines' extensions, each under its prefix.
+export * from './engines/claude.schema';
 export { fileHistoryEntries } from './file-history.schema';
 export { notifications } from './notifications.schema';
 export { diagSessions } from './diag.schema';

@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/foundation.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/data/datasources/history_api_data_source.dart';
 import 'package:remote_claude/features/session/data/mappers/history_mapper.dart';
@@ -26,8 +27,8 @@ class HistoryRepositoryImpl implements HistoryRepository {
   final HistoryParser _parse;
 
   @override
-  Future<HistoryPage> page(String conversationId, {String? cursor}) async {
-    final HistoryPage? page = await _parse(await _api.messages(conversationId, cursor: cursor));
+  Future<HistoryPage> page(ConversationKey conversation, {String? cursor}) async {
+    final HistoryPage? page = await _parse(await _api.messages(conversation, cursor: cursor));
 
     // An answer that does not say which conversation it is a page of is not one this build can
     // show — and the screen still owes the person a sentence, so it becomes a failure.

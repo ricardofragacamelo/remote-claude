@@ -7,6 +7,7 @@ import {
   PERMISSION_OWNER,
   PERMISSION_SESSION,
 } from '../../../../../support/builders/permission.builder';
+import { claudeTool } from '../../../../../support/builders/tool.builder';
 
 const written = new Date('2026-09-19T12:00:05.000Z');
 
@@ -19,6 +20,7 @@ function aRequest(): PermissionRequest {
     toolUseId: 'toolu-1',
     toolName: 'Bash',
     input: { command: 'rm -rf build/' },
+    tool: claudeTool('Bash', { command: 'rm -rf build/' }),
     riskHint: 'destructive',
     requestedAt: PERMISSION_NOW,
     expiresAt: new Date(PERMISSION_NOW.getTime() + 1_000),
@@ -40,6 +42,7 @@ describe('the permission request mapper', () => {
       sessionId: PERMISSION_SESSION.value,
       toolUseId: 'toolu-1',
       toolName: 'Bash',
+      toolKind: 'shell',
       input: { command: 'rm -rf build/' },
       riskHint: 'destructive',
       status: 'pending',

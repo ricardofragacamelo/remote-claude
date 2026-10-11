@@ -5,9 +5,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { ClaudeWrites } from '@application/files';
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
+import { AgentWrites } from '@application/files';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
 import type { ScriptOptions } from '../../../../fakes/agent-sdk/scripted-query';
 import { startPostgres } from '../../../../support/containers/postgres';
@@ -159,9 +159,13 @@ describe('the files of a folder and the session working in it', () => {
     expect(readFileSync(summary(), 'utf8')).toBe('edited by the person\n');
   });
 
-  it("hears of Claude's write on the bus, without importing the session — S-126", async () => {
+  it("hears of the agent's write on the bus, with its engine, without importing the session — S-126, S-73", async () => {
     await sessionThatWrote();
+    const writes = harness.app.get(AgentWrites);
 
-    expect(harness.app.get(ClaudeWrites).wrote(summary(), sha256(WRITTEN), new Date())).toBe(true);
+    expect(writes.wrote(summary(), sha256(WRITTEN), new Date())).toBe(true);
+    expect(writes.marksFor(summary(), new Date())).toEqual([
+      expect.objectContaining({ by: 'agent', engine: 'claude' }),
+    ]);
   });
 });

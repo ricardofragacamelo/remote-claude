@@ -1,6 +1,7 @@
 import type { UserId } from '@domain/auth';
+import type { ConversationRef } from '@domain/engine';
 import { clipOutput, TranscriptNotFoundError } from '@domain/transcript';
-import type { ClaudeSessionId, ToolOutput } from '@domain/transcript';
+import type { ToolOutput } from '@domain/transcript';
 import type { TranscriptStore } from './ports/transcript-store.port';
 import { readableTranscript } from './readable-transcript';
 import type { TranscriptAudience } from './transcript-audience';
@@ -8,7 +9,7 @@ import type { TranscriptAudience } from './transcript-audience';
 /** Which tool of which conversation, for whom. */
 export interface ReadToolResultQuery {
   readonly userId: UserId;
-  readonly sessionId: ClaudeSessionId;
+  readonly sessionId: ConversationRef;
   readonly toolUseId: string;
 }
 
@@ -39,7 +40,7 @@ export class ReadToolResultUseCase {
     const text = await this.store.toolResult(session, query.toolUseId);
 
     if (text === null) {
-      throw new TranscriptNotFoundError(query.sessionId.value);
+      throw new TranscriptNotFoundError(query.sessionId.id);
     }
 
     return clipOutput(text, this.maxBytes);

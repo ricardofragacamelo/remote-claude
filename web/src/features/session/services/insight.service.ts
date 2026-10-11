@@ -1,6 +1,5 @@
 import { api } from '@/shared/api/api';
 import { isRecord, readText } from '@/shared/lib/json';
-import type { EffortLevel } from '../store/claude-panel.store';
 import type {
   ContextCategory,
   ContextUse,
@@ -9,7 +8,6 @@ import type {
   SessionModels,
 } from '../types/insight';
 
-const EFFORTS = new Set<string>(['low', 'medium', 'high', 'xhigh', 'max']);
 const KINDS = new Set<string>(['used', 'free', 'buffer', 'deferred']);
 const STATUSES = new Set<string>(['connected', 'failed', 'needs-auth', 'pending', 'disabled']);
 
@@ -23,7 +21,7 @@ const numberOf = (value: unknown): number =>
  * The models of the session's installation — from `supportedModels()`, never a list of ours
  * (plan 08, B-36).
  *
- * @throws {import('@/shared/api/errors').AppError} `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`, …
+ * @throws {import('@/shared/api/errors').AppError} `AGENT_UNAVAILABLE`, `AGENT_TIMEOUT`, …
  */
 export async function fetchModels(sessionId: string): Promise<SessionModels> {
   const body = await api.get<unknown>(`${sessionPath(sessionId)}/models`);
@@ -35,7 +33,12 @@ export async function fetchModels(sessionId: string): Promise<SessionModels> {
   };
 }
 
-/** The use of the session's context window, by category (B-37). */
+/**
+ * The use of the session's context window, by category (B-37; plan 28, B-24).
+ *
+ * @throws {import('@/shared/api/errors').AppError} `ENGINE_CAPABILITY_UNAVAILABLE` (409) for an
+ *   engine without `contextUse`, `AGENT_UNAVAILABLE`, …
+ */
 export async function fetchContext(sessionId: string): Promise<ContextUse> {
   const body = await api.get<unknown>(`${sessionPath(sessionId)}/context`);
   const record = isRecord(body) ? body : {};
@@ -70,9 +73,11 @@ export function modelOf(model: Readonly<Record<string, unknown>>): InstallationM
     return [];
   }
 
+  // The model's own levels, as text: which of them a conversation offers is what its engine
+  // announces (plan 28, B-28), never a list of this build.
   const levels = (
     Array.isArray(model['supportedEffortLevels']) ? model['supportedEffortLevels'] : []
-  ).filter((level): level is EffortLevel => typeof level === 'string' && EFFORTS.has(level));
+  ).filter((level): level is string => typeof level === 'string');
 
   return [
     {
@@ -86,15 +91,23 @@ export function modelOf(model: Readonly<Record<string, unknown>>): InstallationM
   ];
 }
 
+/**
+ * One category of the window, or none when it is not one this build can draw: a canonical one with
+ * its key, any other with the engine's text — `name` is kept only for the previous protocol.
+ */
 function categoryOf(category: Readonly<Record<string, unknown>>): ContextCategory[] {
   const id = readText(category, 'id');
   const kind = readText(category, 'kind');
+  const messageKey = readText(category, 'messageKey');
+  const text = readText(category, 'text');
 
   return id === null || kind === null || !KINDS.has(kind)
     ? []
     : [
         {
           id,
+          ...(messageKey === null ? {} : { messageKey }),
+          ...(text === null ? {} : { text }),
           name: readText(category, 'name') ?? id,
           tokens: numberOf(category['tokens']),
           kind: kind as ContextCategory['kind'],

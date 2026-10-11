@@ -148,7 +148,7 @@ async function aLongConversation(page: Page): Promise<void> {
 async function aPhoneSession(page: Page, size: { width: number; height: number }): Promise<void> {
   await page.setViewportSize(size);
   await aFolderTab(page);
-  await viewBar(page).getByRole('button', { name: 'Claude' }).click();
+  await viewBar(page).getByRole('button', { name: 'Claude Code' }).click();
   opened(await openFromDraft(page));
 }
 
@@ -234,7 +234,7 @@ test(`${layout.id} — crossing md both ways keeps the text, the scroll and the 
   await promptBox(page).fill(expected.written);
 
   await page.setViewportSize(expected.phone);
-  await viewBar(page).getByRole('button', { name: 'Claude' }).click();
+  await viewBar(page).getByRole('button', { name: 'Claude Code' }).click();
   await expect(promptBox(page)).toHaveValue(expected.written);
   expect(await openedSessionOf(page)).toBe(sessionId);
 
@@ -290,7 +290,7 @@ test(`${layout.id} — the history of the folder is a click away, and the conver
 
   await historyButton(page).click();
 
-  const sessions = page.getByRole('button', { name: 'Claude sessions', exact: true });
+  const sessions = page.getByRole('button', { name: 'Claude Code sessions', exact: true });
   await expect(sessions).toHaveAttribute('aria-pressed', 'true');
   // The conversation of the session is listed, and opening it brings the same tab back.
   await page
@@ -357,7 +357,7 @@ for (const [name, size] of [
     await page.setViewportSize(size);
     await aFolderTab(page);
     if (name === 'phone') {
-      await viewBar(page).getByRole('button', { name: 'Claude' }).click();
+      await viewBar(page).getByRole('button', { name: 'Claude Code' }).click();
     }
     if (name === 'short') {
       const aside = await panelOf(page).boundingBox();

@@ -1,31 +1,55 @@
-import type { PanelMode } from '../store/claude-panel.store';
+import type { PanelMode } from '../store/agent-panel.store';
+import type { EngineCapabilities } from '../types/engine';
 
 /**
- * The modes the panel offers — Permitir tudo last, and never `bypassPermissions`, which this product
- * never allows (S-170, ADR-022).
+ * How a mode this browser kept reads now — the one translation of a value written by an older build
+ * (plan 28, B-27, S-82): the canonical names as they are, the names of the protocol before them
+ * (`default`, `plan`) as the canonical ones they became, and anything else as nothing.
  */
-export const PANEL_MODES: readonly PanelMode[] = ['default', 'acceptEdits', 'plan', 'allowAll'];
+const KEPT_MODES: ReadonlyMap<string, PanelMode> = new Map<string, PanelMode>([
+  ['ask', 'ask'],
+  ['acceptEdits', 'acceptEdits'],
+  ['readOnly', 'readOnly'],
+  ['allowAll', 'allowAll'],
+  ['default', 'ask'],
+  ['plan', 'readOnly'],
+]);
 
-/** The mode a value names — any other is the default, which asks the most. */
-export function panelModeOf(current: string | null): PanelMode {
-  return PANEL_MODES.find((each) => each === current) ?? 'default';
+/** The mode a kept value names, read once through the translation — `null` for one it does not. */
+export function keptMode(value: unknown): PanelMode | null {
+  return typeof value === 'string' ? (KEPT_MODES.get(value) ?? null) : null;
 }
 
 /**
- * Each mode's next, in the order of the menu — and from the last, the first again.
+ * The modes a conversation offers: exactly what its engine announces, in its order — none while the
+ * capabilities are not known (plan 28, B-27, S-81).
+ */
+export function offeredModes(capabilities: EngineCapabilities | null): readonly PanelMode[] {
+  return capabilities?.permissionModes ?? [];
+}
+
+/**
+ * The mode a picker shows and a draft starts with: `current` when the engine offers it, its first
+ * mode when it does not — a draft kept with a mode another engine had — and `null` with none known.
+ */
+export function shownMode(offered: readonly PanelMode[], current: string | null): PanelMode | null {
+  return offered.find((each) => each === current) ?? offered[0] ?? null;
+}
+
+/**
+ * The mode after `current`, in the order the engine announces them, and from the last the first
+ * again — what "Switch the mode" moves to (plan 09, D-09). `null` when there is nowhere to move.
  *
  * Permitir tudo is never a next: a shortcut cycling modes must not switch every question off by
  * accident, so it is only chosen from the menu, with its warning in sight. From it, the shortcut
- * goes back to the mode that asks the most (plan 23, D-10).
+ * goes back to the first mode (plan 23, D-10).
  */
-const NEXT: Readonly<Record<PanelMode, PanelMode>> = {
-  default: 'acceptEdits',
-  acceptEdits: 'plan',
-  plan: 'default',
-  allowAll: 'default',
-};
+export function nextPanelMode(
+  offered: readonly PanelMode[],
+  current: string | null,
+): PanelMode | null {
+  const cycle = offered.filter((each) => each !== 'allowAll');
+  const next = cycle[(cycle.findIndex((each) => each === current) + 1) % cycle.length];
 
-/** The mode after `current` — what "Switch the mode" moves to (D-09). */
-export function nextPanelMode(current: string | null): PanelMode {
-  return NEXT[panelModeOf(current)];
+  return next === undefined || next === current ? null : next;
 }

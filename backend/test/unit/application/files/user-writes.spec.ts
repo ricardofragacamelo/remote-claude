@@ -24,6 +24,7 @@ import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-eve
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
 import { aHistoryKeeper } from '../../../support/fakes/in-memory-file-history';
 import { stubFolderDisk } from '../../../support/fakes/stub-folder-disk';
+import { PRODUCT_SENSITIVE_FILES } from '../../../support/files/sensitive-files';
 
 const owner = UserId.create('auth|42');
 const folder = WorkspacePath.create('/srv/app');
@@ -50,7 +51,7 @@ describe('RecentWrites — what one writer wrote lately — B-22', () => {
   });
 
   it('forgets a write once it is older than its memory', () => {
-    const writes = new RecentWrites('claude', 1_000);
+    const writes = new RecentWrites('agent', 1_000);
     writes.remember({ path: '/a', left: { kind: 'removed' }, subtree: false, at: now });
 
     expect(writes.marksFor('/a', later(1_000))).toHaveLength(1);
@@ -99,6 +100,7 @@ function writing(disk: FolderDisk): { writes: UserWrites; bundle: FileWriting } 
       ),
       limits: { maxEditBytes: 1_000 },
       writes,
+      sensitive: PRODUCT_SENSITIVE_FILES,
     },
   };
 }

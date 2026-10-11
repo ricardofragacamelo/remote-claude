@@ -2,7 +2,7 @@
 // `pnpm contracts:check` fails when this file and the schema disagree.
 
 /** The protocol version this build speaks. */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 /** Every `type` the generated frames cover, for exhaustiveness at the call site. */
 export const FRAME_TYPES = [
@@ -18,6 +18,7 @@ export const FRAME_TYPES = [
   'session.attach',
   'session.cancelQueuedPrompt',
   'session.close',
+  'session.compact',
   'session.detach',
   'session.interrupt',
   'session.prompt',
@@ -49,6 +50,7 @@ export const FRAME_TYPES = [
   'session.rewound',
   'session.started',
   'session.statusChanged',
+  'session.tasksChanged',
   'tool.completed',
   'tool.progress',
   'tool.started',
@@ -62,8 +64,8 @@ export const FRAME_TYPES = [
 
 /** Shape shared by every frame, in both directions. See docs/architecture/shared/05-websocket-protocol.md. */
 export interface Envelope {
-  /** Protocol version. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does. */
-  readonly v: 1;
+  /** Protocol version — `x-protocol-version` is the one this build speaks. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does. The server also accepts the version before it, during the window of deprecation, and answers each connection in the version it speaks (plan 28, D-08). */
+  readonly v: number;
   /** ULID unique to this frame. */
   readonly id: string;
   /** What the frame is. `request` travels server to client and demands an answer — that is the case the whole protocol is designed around. */
@@ -84,6 +86,133 @@ export interface Envelope {
   readonly payload?: Readonly<Record<string, unknown>>;
 }
 
+/** Which conversation of which coding agent: the engine, and the id the conversation has in that engine's own store. It is not the `sessionId` of a live session, which names a subprocess and ends with it; this one outlives every session that ever continued it, and is what the history reads and a resume takes (ADR-025). */
+export interface ConversationRef {
+  /** The engine — an `id` of `GET /engines`. Opaque to the client, which never decides by it. */
+  readonly engine: string;
+  /** The id of the conversation in the engine's store, in the engine's own form — opaque. */
+  readonly id: string;
+}
+
+/** What the engine of a session can do, declared and never supposed (ADR-025). The client hides the controls of what the engine does not have, rather than disabling them: the engine will never have it. Per session, since the version of the binary or the model can change what holds; `GET /engines` gives the engine's before a session exists. */
+export interface EngineCapabilities {
+  /** A conversation can be continued where it stopped. */
+  readonly resume: boolean;
+  /** A conversation can be forked at a message (edit-and-resend), whole, or not at all. */
+  readonly fork: 'atMessage' | 'whole' | 'none';
+  /** The conversations of a folder can be listed and read back. */
+  readonly history: boolean;
+  /** A prompt can carry images. */
+  readonly images: boolean;
+  /** A prompt sent while a turn runs is queued. */
+  readonly promptWhileBusy: boolean;
+  /** The agent asks the person a structured question. */
+  readonly questions: boolean;
+  /** The agent asks for a plan to be approved before it acts. */
+  readonly planApproval: boolean;
+  /** The agent keeps a list of tasks the person can follow. */
+  readonly taskList: boolean;
+  /** The agent delegates to subagents, whose work nests under the call. */
+  readonly subagents: boolean;
+  /** The agent's reasoning streams as its own block. */
+  readonly thinking: boolean;
+  /** The installation offers commands the composer lists. */
+  readonly slashCommands: boolean;
+  /** The model can be switched while the session lives. */
+  readonly modelSwitch: boolean;
+  /** The levels of effort the engine takes, in order — empty when it takes none. */
+  readonly effortLevels: readonly string[];
+  /** The use of the context window can be asked, by category. */
+  readonly contextUse: boolean;
+  /** MCP servers can be given to the session and their status read. */
+  readonly mcp: boolean;
+  /** The conversation can be compacted on request. */
+  readonly compaction: boolean;
+  /** What a turn costs is reported, and in which unit — or not at all. */
+  readonly cost: 'usd' | 'none';
+  /** The canonical modes the engine runs in — what the clients offer, and nothing else. One mode only hides the selector. */
+  readonly permissionModes: readonly ('ask' | 'acceptEdits' | 'readOnly' | 'allowAll')[];
+}
+
+/** Which engine a call came from, and the engine's own name for it. Opaque text, for diagnosis and for the dialect of the rules: no client decides by it — it decides by the `kind` (ADR-025). */
+export interface EngineOrigin {
+  /** An `id` of `GET /engines`. */
+  readonly engine: string;
+  /** The name the engine gave the tool, exactly. */
+  readonly native: string;
+}
+
+/** A file a tool call changes, and how. It is what the backend's undo snapshots and what turns on the diff of a row and of a pending request: the diff itself comes from `GET /sessions/:sessionId/tools/:toolUseId/diff`, never computed by the client, so the text being replaced never travels here (plan 28, D-28). */
+export interface FileChange {
+  /** The file, absolute. A call that names a relative path has no change: it would resolve against the wrong folder. */
+  readonly path: string;
+  /** `edit` changes part of the file, `write` replaces it whole or creates it, `delete` removes it, `move` renames it to `to`. */
+  readonly op: 'edit' | 'write' | 'delete' | 'move';
+  /** Where a `move` takes the file. Absent on every other operation. */
+  readonly to?: string;
+}
+
+export interface InteractionQuestionsItemOptionsItem {
+  /** Shown and answered exactly as it is — a label ending in "(Recommended)" keeps it, and a screen may highlight it but never pre-select it. */
+  readonly label: string;
+  readonly description: string;
+  /** A mockup or a snippet, in markdown, rendered with the safe renderer — never HTML. Absent when the option has none. */
+  readonly preview?: string;
+}
+
+export interface InteractionQuestionsItem {
+  /** `q1`…`q4`, by position — stable within the request, and what an answer names. */
+  readonly id: string;
+  /** The short chip of the question (engines ask for a short one; the model does not always obey). Cut, never refused. */
+  readonly header: string;
+  /** The question itself, as the agent wrote it. Text to show, never markup. Cut, never refused. */
+  readonly prompt: string;
+  /** Several options may be chosen. A single choice is one label, or the free answer (`other`). */
+  readonly multiSelect: boolean;
+  /** What the agent offers. The free answer ("Other") is not here: the screen offers it. */
+  readonly options: readonly InteractionQuestionsItemOptionsItem[];
+}
+
+/** What a permission request asks of the person beyond leave to run a tool, normalised by the adapter of the engine (plan 24; plan 28, B-20): a `question` — the questions the agent asks, with their options — or a `plan` to approve before the agent changes anything. A client renders this and never reads the raw input. */
+export interface Interaction {
+  /** `question` — the agent asks something and waits for the answers; `plan` — the agent presents a plan, approved or refused with a reason. A client that meets another value shows the generic card. */
+  readonly kind: 'question' | 'plan';
+  /** On `question`: the input could not be read safely — no questions or more than four, fewer than two or more than four options, an option with no label, a question with no options, a question repeated, a label repeated within a question. `questions` is then empty, the card offers only a refusal, and an `allow` is refused with `PERMISSION_ANSWERS_INVALID`. */
+  readonly malformed?: boolean;
+  /** One to four, in the order the agent asked them; empty when `malformed`. */
+  readonly questions?: readonly InteractionQuestionsItem[];
+  /** The plan, in markdown, on `plan`. Text to render safely, never markup to trust. */
+  readonly markdown?: string;
+  /** The file the agent saved the plan to, on `plan`, when it says. */
+  readonly path?: string;
+}
+
+/** One conversation of the history, as a listing shows it: the conversation, where it ran, and what it is doing now. */
+export interface ListedTranscript {
+  /** The conversation — what `session.start` takes as `resumeFrom`. */
+  readonly conversation: ConversationRef;
+  /** The id of the conversation alone, for the published app of the previous protocol — gone when its window closes (plan 28, D-08). */
+  readonly sessionId: string;
+  /** What the conversation is about, as the engine summarises it. */
+  readonly summary: string;
+  /** `ours` — opened here, by the caller — or `external`: begun elsewhere on the machine. */
+  readonly origin: 'ours' | 'external';
+  /** The folder it ran in. */
+  readonly cwd: string;
+  /** The branch it ran on, when the engine recorded one. */
+  readonly gitBranch: string | null;
+  /** When it began, ISO 8601, when the engine recorded it. */
+  readonly createdAt: string | null;
+  /** When it was last written, ISO 8601. */
+  readonly lastModified: string;
+  /** `liveHere` · `activeElsewhere` · `idle` — the last an estimate, said to be one. */
+  readonly activity: 'liveHere' | 'activeElsewhere' | 'idle';
+  /** The caller's live session that holds it, when it is `liveHere`. */
+  readonly liveSessionId: string | null;
+  /** How long ago it was last written, in whole seconds. */
+  readonly writtenAgoSeconds: number;
+}
+
 /** The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the SDK's joined string. */
 export interface QuestionAnswer {
   /** The `id` of the question in the request's `interaction`. */
@@ -94,35 +223,40 @@ export interface QuestionAnswer {
   readonly other?: string;
 }
 
-export interface QuestionInteractionQuestionsItemOptionsItem {
-  /** Shown and answered exactly as it is — a label ending in "(Recommended)" keeps it, and a screen may highlight it but never pre-select it. */
-  readonly label: string;
-  readonly description: string;
-  /** A mockup or a snippet, in markdown, rendered with the safe renderer — never HTML. Absent when the option has none. */
-  readonly preview?: string;
+/** The label of a tool call, built by the backend from what the engine sent, which the client translates and never builds (plan 28, D-02). The adapter of the engine is the one that reads the call; a client that met an unknown `messageKey` shows the generic line. */
+export interface ToolLabel {
+  /** An i18n key of `sessions.tool.*`, one per way of labelling a kind — `sessions.tool.fileEdit`, `sessions.tool.searchIn`, `sessions.tool.other`. */
+  readonly messageKey: string;
+  /** The values the key interpolates, strings and numbers only: a path relative to the session's folder, the lines added and removed, the first line of a command, a pattern, a host, a query, a server and its tool, the engine's own name for a tool of kind `other`. */
+  readonly params: Readonly<Record<string, unknown>>;
 }
 
-export interface QuestionInteractionQuestionsItem {
-  /** `q1`…`q4`, by position — stable within the request, and what an answer names. */
-  readonly id: string;
-  /** The short chip of the question (the SDK asks for 12 characters; the model does not always obey). Cut, never refused. */
-  readonly header: string;
-  /** The question itself, as Claude wrote it. Text to show, never markup. Cut, never refused. */
-  readonly prompt: string;
-  /** Several options may be chosen. A single choice is one label, or the free answer (`other`). */
-  readonly multiSelect: boolean;
-  /** What Claude offers. The free answer ("Other") is not here: the screen offers it. */
-  readonly options: readonly QuestionInteractionQuestionsItemOptionsItem[];
+/** What a tool call is about, normalised by the adapter of the engine so that a client reads it the same whatever engine made the call. Every field is optional, and a kind sets the ones it has: the paths of a `file.*`, the command of a `shell`, the pattern of a `search`, the URL of a `web.fetch`. */
+export interface ToolSubject {
+  /** The files the call reads or writes, absolute, as the engine gave them. */
+  readonly paths?: readonly string[];
+  /** The whole command line of a `shell` — what the IN of the row shows. */
+  readonly command?: string;
+  /** What a `search` looks for: the text or the glob. */
+  readonly pattern?: string;
+  /** The address a `web.fetch` reads. */
+  readonly url?: string;
+  /** What a `web.search` asks. */
+  readonly query?: string;
+  /** The MCP server of an `mcp` call. */
+  readonly server?: string;
+  /** The tool of that MCP server. */
+  readonly tool?: string;
+  /** What an `agent` was sent to do, in the words the model gave. */
+  readonly description?: string;
 }
 
-/** Claude asking the person something (`AskUserQuestion`) rather than asking leave to run a tool, with the questions the backend normalised out of the SDK's input. A client renders this and never reads the SDK's `input` (plan 24). */
-export interface QuestionInteraction {
-  /** The only variant for now. `plan` (for `ExitPlanMode`) would be the second, and the generator has no `oneOf` yet. */
-  readonly kind: 'question';
-  /** The SDK's input could not be read safely — no questions or more than four, fewer than two or more than four options, an option with no label, a question with no options, a question repeated, a label repeated within a question. `questions` is then empty, the card offers only a refusal, and an `allow` is refused with `PERMISSION_ANSWERS_INVALID`. */
-  readonly malformed: boolean;
-  /** One to four, in the order Claude asked them; empty when `malformed`. */
-  readonly questions: readonly QuestionInteractionQuestionsItem[];
+/** One event of the history: a frame of the live contract without its envelope — `{ type, payload }`, exactly as `message.completed`, `tool.started` and `tool.completed` arrive on the socket — so a client feeds the history and the live stream through one reducer. */
+export interface TranscriptEvent {
+  /** A `type` of the live contract. */
+  readonly type: string;
+  /** The payload that `type` carries on the socket. */
+  readonly payload: Readonly<Record<string, unknown>>;
 }
 
 /** A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream. */
@@ -150,7 +284,7 @@ export interface ConnectionReadyPayload {
   readonly limits: ConnectionReadyPayloadLimits;
 }
 
-/** Answer to `session.attach` — and to a `session.start` whose `resumeSessionId` names a conversation already live for the caller. Says what was replayed and whether anything was lost. */
+/** Answer to `session.attach` — and to a `session.start` whose `resumeFrom` names a conversation already live for the caller. Says what was replayed and whether anything was lost. */
 export interface SessionAttachedPayload {
   readonly sessionId: string;
   /** How many buffered events follow this ack. */
@@ -159,10 +293,10 @@ export interface SessionAttachedPayload {
   readonly oldestAvailableSeq: number;
   /** The requested sequence had already fallen out of the buffer. The client drops its local state and reloads over HTTP — it never stitches a partial hole. */
   readonly gap: boolean;
-  /** The conversation of a live session of Claude — where a client reloads from after a `gap`, which is exactly when the buffer no longer holds the `session.started` that named it. Absent for a stream that is not a conversation, such as the diagnostic round trip. */
-  readonly claudeSessionId?: string;
+  /** The conversation of a live session — where a client reloads from after a `gap`, which is exactly when the buffer no longer holds the `session.started` that named it. Absent for a stream that is not a conversation, such as the diagnostic round trip. */
+  readonly conversation?: ConversationRef;
   /** The conversation this session continues, when it is a resume. Present on the ack a `session.start` answers with when the conversation it asked to resume was already live for the caller: resuming what is live is an attach, never a second subprocess. */
-  readonly resumedFrom?: string;
+  readonly resumedFrom?: ConversationRef;
 }
 
 /** Answer to `transcript.follow`: the subscription exists, and what the conversation gains will arrive as `transcript.appended` with this `followId`. Nothing of the subscription arrives before this ack. */
@@ -170,7 +304,7 @@ export interface TranscriptFollowingPayload {
   /** The subscription. Its events carry it, and `seq` is monotonic per `followId`, from 1. */
   readonly followId: string;
   /** The conversation being followed. */
-  readonly conversationId: string;
+  readonly conversation: ConversationRef;
   /** What the conversation is doing now, by the rule of the listing: `activeElsewhere` is an estimate — something wrote to it recently —, never a fact about which client has it open. */
   readonly activity: 'liveHere' | 'activeElsewhere' | 'idle';
 }
@@ -254,6 +388,11 @@ export interface SessionCancelQueuedPromptPayload {
 
 /** Ends the session and releases its subprocess. Unlike every other command of the session, only the owner may send it. */
 export interface SessionClosePayload {
+  readonly sessionId: string;
+}
+
+/** Compacts the conversation of a live session (plan 28, B-23). The backend sends the engine's own prompt for it through the queue, so it waits for a running turn and is acknowledged before its turn starts; `session.compacted` says when it happened. Refused with `ENGINE_CAPABILITY_UNAVAILABLE` (409) when the engine has no `compaction`. A slash command the person types still goes as a `session.prompt`: it is the engine that reads it, not us. */
+export interface SessionCompactPayload {
   readonly sessionId: string;
 }
 
@@ -352,8 +491,8 @@ export interface SessionSetModelPayload {
 /** Changes the permission mode of a running session. */
 export interface SessionSetPermissionModePayload {
   readonly sessionId: string;
-  /** The mode to switch to. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured. */
-  readonly mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'allowAll';
+  /** The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused. */
+  readonly mode: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll';
 }
 
 /** Opens a session on a workspace. The path is checked against the allowlist before anything else happens — it is the first line of defence, not a hint. */
@@ -362,13 +501,15 @@ export interface SessionStartPayload {
   readonly workspacePath: string;
   /** Model to open with. Absent means the server default. */
   readonly model?: string;
-  /** Permission mode to open with. Absent means the server default. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured. */
-  readonly permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'allowAll';
-  /** How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client. */
+  /** The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused. */
+  readonly permissionMode?: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll';
+  /** How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client. Only a level the engine announces in `capabilities.effortLevels` — any other is `INVALID_INPUT`. */
   readonly effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
-  /** Session of the Agent SDK to resume instead of starting fresh. */
-  readonly resumeSessionId?: string;
-  /** Edit and resend: the `messageId` of the user prompt to rewrite. The conversation `resumeSessionId` names continues from **just before** it, always in a new id — the original stays as it was (plan 08, D-19). A point the conversation does not have is `INVALID_INPUT` (`session.error.forkPointUnknown`); one the CLI refuses is `SESSION_FORK_REJECTED`. */
+  /** The engine to open on — an `id` of `GET /engines`. Absent for the installation's default. Ignored by a resume, which opens on the engine of the conversation it continues. */
+  readonly engine?: string;
+  /** The conversation to continue instead of starting fresh. Checked by the engine's own rule before anything is spawned: an engine that is not enabled, or an id it never hands out, is `INVALID_INPUT`. */
+  readonly resumeFrom?: ConversationRef;
+  /** Edit and resend: the `messageId` of the user prompt to rewrite. The conversation `resumeFrom` names continues from **just before** it, always in a new id — the original stays as it was (plan 08, D-19). A point the conversation does not have is `INVALID_INPUT` (`session.error.forkPointUnknown`); one the CLI refuses is `SESSION_FORK_REJECTED`. */
   readonly forkAt?: string;
 }
 
@@ -382,8 +523,8 @@ export interface SessionToggleMcpServerPayload {
 
 /** Starts following a conversation of the history that this backend does not run — begun in the editor or the terminal, and maybe still being written there. Answered with `transcript.following`, which names the subscription; what the transcript gains then arrives as `transcript.appended`, with a `seq` of its own that starts at 1. The first `transcript.appended` carries **everything** after `afterMessageId`, even what was written between the page the client read and this command, so there is no hole between the two. There is **no replay**: after a reconnect the client follows again with the last `lastMessageId` it has. Refused with `INVALID_INPUT` (every invalid field in `details[]`), `NOT_FOUND` for a conversation that does not exist **or** that the caller does not read — the same answer on purpose —, `TRANSCRIPT_FOLLOW_LIVE_HERE` for a conversation a live session of the caller holds (`session.attach` shows it), and `TRANSCRIPT_FOLLOW_LIMIT` past the ceiling of the connection or of the server. */
 export interface TranscriptFollowPayload {
-  /** The conversation in Claude's store, a canonical UUID — the `sessionId` of `GET /transcripts/:sessionId/messages`. */
-  readonly conversationId: string;
+  /** The conversation to follow — the `engine` and `id` of `GET /transcripts/:engine/:id/messages`. */
+  readonly conversation: ConversationRef;
   /** The last entry the client has: the `lastMessageId` of the page it read, or of the last `transcript.appended`. Absent when the conversation it read was empty — then everything is new. */
   readonly afterMessageId?: string;
 }
@@ -439,7 +580,7 @@ export interface ErrorPayload {
 }
 
 export interface MessageCompletedPayloadContentItem {
-  /** Block kind — `text`, `thinking`, `redacted_thinking`, `tool_use`, `tool_result`, `image` and whatever the SDK adds next. Not an enum on purpose: a published app has to survive a kind added after it shipped. */
+  /** Block kind, in our names (plan 28, B-30) — `text`, `thinking` (only from an engine with the `thinking` capability), `redactedThinking`, `toolUse`, `toolResult`, `image` — and whatever comes next. Not an enum on purpose: a published app has to survive a kind added after it shipped, and shows it as text it does not know rather than dropping it. */
   readonly type: string;
   /** The text of a `text` block. */
   readonly text?: string;
@@ -493,16 +634,16 @@ export interface PermissionRequestedPayloadSuggestionsItem {
   readonly scope: 'once' | 'session' | 'project' | 'always';
   /** An i18n key. The server never sends prose. */
   readonly labelKey: string;
-  /** What a rule granted with the `exact` reach would match, in the grammar of the Claude Code settings. Kept for clients that do not read `reaches`; absent when there is no `exact` reach. */
+  /** What a rule granted with the `exact` reach would match, in the canonical grammar (`<kind>(<matcher>)`, plan 28, B-31). Kept for clients that do not read `reaches`; absent when there is no `exact` reach. */
   readonly pattern?: string;
   /** How long a rule granted by this suggestion would live, counted from the answer. Present on `project` and `always`; the number is the installation's, never the client's. */
   readonly lifetimeMs?: number;
 }
 
 export interface PermissionRequestedPayloadReachesItem {
-  /** `exact` is this very input; `prefix` (shell only) covers every command that starts like each command of this line; `tool` (never shell) is every invocation of the tool. */
+  /** `exact` is this very call; `prefix` (`shell` only) covers every command that starts like each command of this line; `tool` (never `shell`) is every call of the kind. */
   readonly reach: 'exact' | 'prefix' | 'tool';
-  /** The rules this reach would leave, one per pattern, in the grammar of the Claude Code settings. Shown in full before anybody confirms. */
+  /** The rules this reach would leave, one per pattern, in the canonical grammar — `shell(git status:*)`, `file.edit(src/a.ts)`, `web.fetch(domain:example.com)`, `mcp(srv:tool)`, or the bare kind. Shown in full before anybody confirms; the client treats them as text and never builds one. */
   readonly patterns: readonly string[];
 }
 
@@ -512,14 +653,23 @@ export interface PermissionRequestedPayload {
   readonly requestId: string;
   /** The invocation this request is about, tying it to the `tool.started` already on screen. */
   readonly toolUseId: string;
-  readonly toolName: string;
-  /** Short label of what is being asked, derived by the backend. */
+  /** The canonical kind of the call being asked about, exactly as its `tool.started` carries it — open: an unknown kind is drawn as the generic card. */
+  readonly kind: string;
+  /** The label of the call, as its `tool.started` carries it. */
+  readonly label: ToolLabel;
+  /** What the call is about — the command, the paths, the URL. */
+  readonly subject: ToolSubject;
+  /** The files the call would change: a non-empty list turns on the preview, which the diff route serves while the request is pending (B-17). */
+  readonly changes: readonly FileChange[];
+  /** The engine and its own name for the tool — opaque, as on `tool.started`. */
+  readonly origin: EngineOrigin;
+  /** The exact input the call would run with — what is shown is what executes. Opaque: drawn whole, never read field by field (plan 28, D-04). */
+  readonly rawInput: Readonly<Record<string, unknown>>;
+  /** An i18n key naming what is being asked, by kind — `permission.tool.<kind>` with the dots of the kind removed and the next letter upper-cased (`permission.tool.fileEdit`). A client without the key shows the translated `label`. */
   readonly title: string;
   /** The detail a human needs to decide — the command line, the path being written. */
   readonly description?: string;
-  /** The exact input the tool would run with. What is shown is what executes. */
-  readonly input: Readonly<Record<string, unknown>>;
-  /** Derived in the backend, by a per-tool list **plus** a heuristic over the input, and it fails closed: a command the heuristic does not recognise is marked `destructive`. A false positive is an annoyance; a false negative is the accident. */
+  /** Derived in the backend, by the `kind` **plus** a heuristic over a `shell` command, and it fails closed: a command the heuristic does not recognise, and every kind outside the read and write lists, is `destructive`. A false positive is an annoyance; a false negative is the accident. */
   readonly riskHint: 'read' | 'write' | 'destructive';
   /** The UI pre-selects refusal. Silence never authorises. `false` only on a question (`interaction`), where the focus goes to the first option. */
   readonly defaultToNo: boolean;
@@ -530,7 +680,7 @@ export interface PermissionRequestedPayload {
   /** How far a rule left by this answer may reach, computed by the server from the invocation. The client picks one and answers with its `reach`, never with a pattern: the server computes the patterns again and refuses a reach it did not offer. Applies to `session`, `project` and `always`. Empty on a question. */
   readonly reaches?: readonly PermissionRequestedPayloadReachesItem[];
   /** Set when the request is a question rather than a permission. Absent on every other request. */
-  readonly interaction?: QuestionInteraction;
+  readonly interaction?: Interaction;
 }
 
 /** A permission request is settled. It reaches **every** connection, including the one that answered — that is how a second client learns it lost the race, and who won it. */
@@ -547,8 +697,8 @@ export interface PermissionResolvedPayload {
   readonly resolvedFrom?: 'web' | 'mobile';
   /** The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`. */
   readonly toolUseId?: string;
-  /** Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), or the session running in Permitir tudo (`allowAll`). Absent when a human answered or the deadline passed. */
-  readonly via?: 'rule' | 'allowAll';
+  /** Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), the session running in Permitir tudo (`allowAll`), or a call that changes something refused because the session is read-only (`readOnly`, plan 28, B-26). Absent when a human answered or the deadline passed. */
+  readonly via?: 'rule' | 'allowAll' | 'readOnly';
   /** What the person answered, when the request was a question and the decision `allow` — what lets another screen show the question answered, and the tool's line say what was chosen. */
   readonly answers?: readonly QuestionAnswer[];
 }
@@ -640,18 +790,22 @@ export interface SessionRewoundPayload {
   readonly hunkId?: string;
 }
 
-/** The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006). */
+/** The session is open and its engine has initialised. Normalised by the adapter of the engine — the engine's own message is never emitted raw (ADR-006, ADR-025). */
 export interface SessionStartedPayload {
   readonly sessionId: string;
   /** The workspace the session runs in, already normalised and already inside the allowlist. */
   readonly workspacePath: string;
   readonly model: string;
-  /** The permission mode. `allowAll` is Permitir tudo, a mode of ours: the SDK runs in `default` and the server approves every tool nobody's rule refuses, except the ones that are questions (ADR-022). `bypassPermissions` is the SDK's, and is never honoured. */
-  readonly permissionMode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'allowAll';
-  /** The id of the conversation in Claude's store, which is not ours: it is what `GET /transcripts/:sessionId/messages` reads and what a later `session.start` takes as `resumeSessionId`. Equal to `resumedFrom` when one of our own conversations is continued in place; new when a conversation begun elsewhere is forked. */
-  readonly claudeSessionId: string;
+  /** The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused. */
+  readonly permissionMode: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll';
+  /** The engine the session runs on — an `id` of `GET /engines`, whose `displayName` is how a screen names it. The client never decides by it. */
+  readonly engine: string;
+  /** The conversation the session is: what `GET /transcripts/:engine/:id/messages` reads, and what a later `session.start` takes as `resumeFrom`. Equal to `resumedFrom` when one of our own conversations is continued in place; new when a conversation begun elsewhere is forked. */
+  readonly conversation: ConversationRef;
   /** The conversation this session continues, when it is a resume. Absent for a fresh session. The history before the first turn of this session is read from it, over HTTP — the replay buffer only ever holds what this session said. */
-  readonly resumedFrom?: string;
+  readonly resumedFrom?: ConversationRef;
+  /** What this session can do. The client hides what it cannot. */
+  readonly capabilities: EngineCapabilities;
   /** How hard the model thinks for the life of the session, when one was chosen — by the client, a folder's default or the user's. Absent for the model's own default. */
   readonly effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
   /** The output style the session was opened with, when a default chose one. Absent for the installation's. */
@@ -666,10 +820,28 @@ export interface SessionStatusChangedPayload {
   readonly status: 'idle' | 'thinking' | 'running' | 'waitingPermission' | 'closed';
 }
 
+export interface SessionTasksChangedPayloadTasksItem {
+  /** Opaque and stable for the life of the task — what a client keys a task by between two lists. */
+  readonly id: string;
+  /** What the task is. */
+  readonly title: string;
+  /** What the task is called while it runs ("Running the tests"). Absent when the agent gave none: the client shows the `title`. */
+  readonly activeTitle?: string;
+  readonly status: 'pending' | 'inProgress' | 'completed';
+}
+
+/** The agent's task list changed: the whole list, as it is now, after a call of the main conversation that changed it ended well (plan 28, B-22). Read by the adapter of the engine from its own tools — a client draws it and never rebuilds it. A session event with its `seq`, so it is replayed; in the history (`transcript.appended`, `GET /transcripts/…/messages`) it follows the `tool.completed` of the call, by the same function as live. Only for an engine with the `taskList` capability. */
+export interface SessionTasksChangedPayload {
+  /** Every task, in the agent's order. Empty when the agent cleared the list. */
+  readonly tasks: readonly SessionTasksChangedPayloadTasksItem[];
+  /** When the call that changed the list was written, ISO 8601 — on the history only, like the `at` of the `tool.completed` it follows. Absent live, where the frame's `ts` is the clock. */
+  readonly at?: string;
+}
+
 /** On an `AskUserQuestion` of the **history** (`transcript.appended`, the follower): the questions, normalised, and how they ended — joined by `toolUseId` with what the backend recorded. Live, a screen already has the `permission.requested` and `permission.resolved`, and this is absent. */
 export interface ToolCompletedPayloadQuestion {
   /** The questions, normalised as the request carried them. */
-  readonly interaction: QuestionInteraction;
+  readonly interaction: Interaction;
   /** Absent when the backend has no record of it — a session answered in another client — and the line shows the questions and the `summary`. */
   readonly outcome?: 'answered' | 'declined' | 'expired';
   /** What was answered, on `answered`. */
@@ -678,16 +850,16 @@ export interface ToolCompletedPayloadQuestion {
   readonly reason?: string;
 }
 
-/** A tool invocation ended, from the `tool_result` the SDK reports on a `user` message. */
+/** A tool invocation ended, from the result the engine reported. It carries no `kind` nor `label`: the `tool.started` of the same `toolUseId` always came first, live and in the history, and the client has them from it (plan 28, D-28). */
 export interface ToolCompletedPayload {
   readonly toolUseId: string;
   /** `denied` is not a failure of the tool: it is a human having said no, and the UI reads the two differently. */
   readonly status: 'succeeded' | 'failed' | 'denied';
   /** A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:sessionId/tools/:toolUseId/result`. */
   readonly summary?: string;
-  /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
+  /** Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation. */
   readonly parentToolUseId?: string;
-  /** The task of the list a `TaskCreate` made or a `TaskUpdate` changed — taken from the tool's structured result live, and from its result in the history. Absent for every other tool. The `summary` is the CLI's text, cut, and never carries it reliably (plan 08, B-20). */
+  /** The task a call that creates or changes one made or changed, taken from the call's result. Kept for the previous protocol, whose clients rebuild the list themselves; the list is `session.tasksChanged` now (plan 28, B-22), and this goes with the window, in F7 (B-47). */
   readonly taskId?: string;
   /** When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for. */
   readonly at?: string;
@@ -695,25 +867,36 @@ export interface ToolCompletedPayload {
   readonly question?: ToolCompletedPayloadQuestion;
 }
 
-/** Output of a tool while it is still running, from the SDK's `tool_progress`. */
+/** A tool is still running: how long it has been at it, from the engine. The text of the row is the client's, from the `label` of the `tool.started` with the same `toolUseId`. */
 export interface ToolProgressPayload {
   readonly toolUseId: string;
-  /** This fragment of the output, and only this one. */
+  /** The elapsed time, as `<seconds>s` — never the tool's name, which the client already has as the `label` of the `tool.started` (plan 28, S-48). */
   readonly chunk: string;
-  /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
+  /** Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation. */
   readonly parentToolUseId?: string;
 }
 
 /** A tool invocation began. Emitted for **every** tool, including the ones no human was asked about — the audit trail is anchored on the same hook, for exactly that reason (ADR-011). */
 export interface ToolStartedPayload {
-  /** The SDK's id for this invocation. It is what ties started, progress and completed together. */
+  /** The engine's id for this invocation. It is what ties started, progress and completed together. */
   readonly toolUseId: string;
-  readonly toolName: string;
-  /** The exact input the tool was called with. */
-  readonly input: Readonly<Record<string, unknown>>;
-  /** A short human label for the invocation, already derived by the backend: the `description` the model gave the call (`Bash` always carries one), when it is non-blank text. Absent otherwise, and the client labels the tool as it did before. */
+  /** The canonical kind of the tool, decided by the adapter of the engine: `file.read`, `file.edit`, `file.write`, `file.delete`, `file.move`, `search`, `shell`, `shell.output`, `web.fetch`, `web.search`, `mcp`, `agent`, `question`, `plan`, `tasks`, `other`. **Open**: a kind the client does not know is drawn as the generic line, never an error (ADR-025). */
+  readonly kind: string;
+  /** The label of the row, built by the backend. */
+  readonly label: ToolLabel;
+  /** What the call is about, normalised. */
+  readonly subject: ToolSubject;
+  /** The files the call changes — what turns on the diff. Empty for a kind that changes no file. */
+  readonly changes: readonly FileChange[];
+  /** The engine and its own name for the tool — opaque. */
+  readonly origin: EngineOrigin;
+  /** The exact input the tool was called with, **opaque**: shown whole as the exact input and exported, and no client reads a field of it (plan 28, D-04). Everything a client draws comes from `label`, `subject` and `changes`. */
+  readonly rawInput: Readonly<Record<string, unknown>>;
+  /** On a `question` or a `plan`: what it asks, normalised by the adapter — the same the `permission.requested` of the call carries, so the history draws it without the raw input (plan 28, B-21). Absent on every other kind. */
+  readonly interaction?: Interaction;
+  /** A short human label for the invocation, already derived by the backend: the description the model gave the call, when it is non-blank text. Absent otherwise, and the client shows the `label` alone. */
   readonly title?: string;
-  /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
+  /** Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation. */
   readonly parentToolUseId?: string;
   /** When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for. */
   readonly at?: string;
@@ -727,7 +910,8 @@ export interface TranscriptAppendedPayloadEventsItem {
 /** What a followed conversation gained since the last frame of the subscription — or, on the first one, since the `afterMessageId` it was followed from. The frame's `seq` belongs to the subscription, not to any session: monotonic per `followId`, from 1, and never replayed. A hole in it is a lost frame, and the client reads the conversation again rather than patching. It also goes out with no `events` when only `activity` or `working` changed, so the screen never says the conversation is busy after it stopped. */
 export interface TranscriptAppendedPayload {
   readonly followId: string;
-  readonly conversationId: string;
+  /** The conversation the entries are of. */
+  readonly conversation: ConversationRef;
   /** The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:sessionId/messages` carries, oldest first, in the order of the SDK's chain and never of the clock. A client folds them with the same reducer as the page. */
   readonly events: readonly TranscriptAppendedPayloadEventsItem[];
   /** The last entry of the conversation now — what a reconnect follows again from. Absent while the conversation has no entry. */
@@ -741,20 +925,37 @@ export interface TranscriptAppendedPayload {
 /** The subscription cannot go on from where the client is, and has ended: nothing more arrives for this `followId`. It carries the next `seq` of the subscription. On `rewritten` the client reads the latest page again and follows from its `lastMessageId`; on `gone` it says the conversation is no longer there. */
 export interface TranscriptResetPayload {
   readonly followId: string;
-  readonly conversationId: string;
+  /** The conversation that was reset. */
+  readonly conversation: ConversationRef;
   /** `rewritten` — the entry the client had is no longer in the chain: a rewind, a compaction or a fork rebuilt it; `gone` — the store no longer has the conversation. */
   readonly reason: 'rewritten' | 'gone';
 }
 
-/** A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost. */
+/** What the turn used, in our names (plan 28, B-29) — each count present only when the engine reports it; an empty object when it reports none. */
+export interface TurnCompletedPayloadUsage {
+  /** Tokens read as new input. */
+  readonly inputTokens?: number;
+  /** Tokens written. */
+  readonly outputTokens?: number;
+  /** Input tokens read from the cache. */
+  readonly cacheReadTokens?: number;
+  /** Input tokens written to the cache. */
+  readonly cacheWriteTokens?: number;
+  /** Tokens spent reasoning, when the engine counts them apart (plan 28, D-17). */
+  readonly reasoningTokens?: number;
+  /** Web searches the turn made, when the engine counts them (D-17). */
+  readonly webSearches?: number;
+}
+
+/** A turn finished. It is what closes the turn in the UI and what carries what it used and, when the engine says, what it cost. */
 export interface TurnCompletedPayload {
   readonly turnId: string;
   /** Who sent the prompt this turn answered. */
   readonly promptedBy?: string;
-  /** Token counts as the SDK reports them. An open map on purpose — the SDK adds fields to it, and a closed shape here would drop them. */
-  readonly usage: Readonly<Record<string, unknown>>;
-  /** Cost of the turn, as a decimal string. A string and not a number because money through a float is money that rounds where nobody looked. */
-  readonly costUsd: string;
+  /** What the turn used, in our names (plan 28, B-29) — each count present only when the engine reports it; an empty object when it reports none. */
+  readonly usage: TurnCompletedPayloadUsage;
+  /** Cost of the turn in US dollars, as a decimal string — absent when the engine reports no cost (`capabilities.cost: none`). Zero is `"0.000000"`, never absent. A string and not a number because money through a float is money that rounds where nobody looked. */
+  readonly costUsd?: string;
   readonly durationMs: number;
 }
 
@@ -762,8 +963,10 @@ export interface WorkspaceFilesChangedPayloadChangesItem {
   /** Relative to the folder, POSIX. */
   readonly path: string;
   readonly kind: 'created' | 'changed' | 'deleted';
-  /** Who changed it, as far as the server can tell: a write of Claude's, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say. */
-  readonly origin?: 'claude' | 'user' | 'external';
+  /** Who changed it, as far as the server can tell: a write of the agent of a session, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say. (`claude` until plan 28, B-25; a connection of the previous protocol still reads that.) */
+  readonly origin?: 'agent' | 'user' | 'external';
+  /** On `agent`: the engine whose agent wrote it — an `id` of `GET /engines`, opaque, for naming the agent in the text. Absent on every other origin. */
+  readonly engine?: string;
 }
 
 /** What changed on disk in a folder being followed, coalesced. The frame's `seq` belongs to the subscription, not to any session: monotonic per `watchId`, from 1, and never replayed. A client that is not following this `watchId` — the mobile app never asks to — ignores it, and never lets its `seq` move the resume point of a session. */
@@ -782,6 +985,152 @@ export interface WorkspaceWatchStoppedPayload {
   readonly reason: 'allowlistChanged' | 'folderDeleted' | 'systemLimit';
 }
 
+export interface ContextUsePayloadCategoriesItem {
+  /** `system`, `tools`, `messages`, `memory`, `free` or `reserved` — the canonical categories, each with a `messageKey` — or an id of the engine's own, opaque, for what only it counts apart. */
+  readonly id: string;
+  /** The key that names a canonical category, `sessions.context.<id>`. Absent otherwise: the client shows `text`. */
+  readonly messageKey?: string;
+  /** The engine's own name for a category with no key — its words, shown as they are. Absent on a canonical one. */
+  readonly text?: string;
+  /** The engine's own name, always — kept for the clients of the previous protocol, which read it for an id they do not know (plan 28, D-22). Goes with the window, in F7. */
+  readonly name: string;
+  readonly tokens: number;
+  /** What the category is: in use, free, kept aside, or deferred until needed. */
+  readonly kind: 'used' | 'free' | 'buffer' | 'deferred';
+}
+
+/** `GET /sessions/:sessionId/context`: how full the context window of a live session is, by category, against the window of its model (plan 08, B-37; plan 28, B-24). `409 ENGINE_CAPABILITY_UNAVAILABLE` when the engine has no `contextUse`. */
+export interface ContextUsePayload {
+  /** The model whose window this is. */
+  readonly model: string;
+  /** What the conversation takes now. */
+  readonly totalTokens: number;
+  /** The size of the window. */
+  readonly maxTokens: number;
+  /** How full it is, 0 to 100. */
+  readonly percentage: number;
+  /** What the window holds, by category. */
+  readonly categories: readonly ContextUsePayloadCategoriesItem[];
+}
+
+export interface EngineListPayloadEnginesItem {
+  /** The name the contract carries in `engine` and in every `ConversationRef`. */
+  readonly id: string;
+  /** How a screen names the engine: a proper noun, never translated — the `{agent}` of a string. */
+  readonly displayName: string;
+  /** Whether it can open a session now. */
+  readonly state: 'available' | 'unavailable';
+  /** Why it is unavailable, as a key the client translates; `null` when available. */
+  readonly reason: string | null;
+  /** The version of the binary the engine drives, or `null` when it could not tell. */
+  readonly version: string | null;
+  /** What the engine can do. */
+  readonly capabilities: EngineCapabilities;
+}
+
+/** What `GET /engines` answers: the coding agents this installation drives, the default first, and what each can do — before a session exists (plan 28, B-12; ADR-025). Nothing is spawned, no quota is spent, and no credential is part of it. */
+export interface EngineListPayload {
+  /** The engine a session opens on when the client names none. */
+  readonly defaultEngine: string;
+  /** The engines enabled, in the order the configuration lists them. */
+  readonly engines: readonly EngineListPayloadEnginesItem[];
+}
+
+/** What `GET /transcripts/:engine/:id/subagents/:toolUseId/messages` answers: a page of what a subagent said, from the tail (plan 28, B-12). */
+export interface SubagentPagePayload {
+  /** What the subagent said in this page, oldest first — the same frames as a page of its parent. */
+  readonly events: readonly TranscriptEvent[];
+  /** The message the earlier page of the subagent starts from; `null` once its first message is in. */
+  readonly nextCursor: string | null;
+}
+
+/** What is known of the file before the call. */
+export interface ToolDiffPayloadBefore {
+  readonly state: 'content' | 'absent' | 'unavailable' | 'notRestorable';
+  /** The text, on `content`. */
+  readonly content?: string;
+  /** Why it is not known: on `unavailable`, `laterTouch` (an earlier write of the same turn reached the file) or `noSnapshot`; on `notRestorable`, `tooLarge` or `unreadable`. */
+  readonly reason?: 'laterTouch' | 'noSnapshot' | 'tooLarge' | 'unreadable';
+}
+
+/** What is known of the file after the call — or after it would run. */
+export interface ToolDiffPayloadAfter {
+  readonly state: 'content' | 'unavailable';
+  /** The text, on `content`. */
+  readonly content?: string;
+  /** Why it is not known, on `unavailable`: the session wrote the file again (`laterWrite`), somebody else did (`changedSince`), or — pending — a replacement would not apply, its text not there (`editMissing`) or there more than once (`editAmbiguous`). */
+  readonly reason?: 'laterWrite' | 'changedSince' | 'editMissing' | 'editAmbiguous';
+  /** Which replacement would not apply, from 0 — on `editMissing` and `editAmbiguous`. */
+  readonly edit?: number;
+}
+
+export interface ToolDiffPayloadHunksItemLinesItem {
+  readonly kind: 'context' | 'added' | 'removed';
+  /** Without its line break. */
+  readonly text: string;
+}
+
+export interface ToolDiffPayloadHunksItem {
+  /** Names the hunk for a rejection; the same texts give the same ids. */
+  readonly id: string;
+  /** The first line of the hunk on the old side, from 1 — or where it inserts. */
+  readonly oldStart: number;
+  readonly oldLines: number;
+  readonly newStart: number;
+  readonly newLines: number;
+  readonly lines: readonly ToolDiffPayloadHunksItemLinesItem[];
+}
+
+/** `GET /sessions/:sessionId/tools/:toolUseId/diff`: the diff of one tool call of a live session — of what it did, or, while its permission request is pending, of what it would do, the disk now against the disk with the change applied (plan 28, B-17). Served for a call whose `changes` write one file; any other is `422 DIFF_NOT_APPLICABLE`. One side may be unknown, and the answer says which and why rather than inventing it. */
+export interface ToolDiffPayload {
+  /** The file, absolute. */
+  readonly path: string;
+  /** The kind of the call — `file.edit` or `file.write`. */
+  readonly kind: string;
+  /** The call is still waiting for an answer: `before` is the disk now, `after` the disk with the change applied. */
+  readonly pending: boolean;
+  /** `file` — the hunks are of the whole file, before against after; `edit` — they are of the strings the call replaces, because one side of the file is not known. */
+  readonly scope: 'file' | 'edit';
+  /** What is known of the file before the call. */
+  readonly before: ToolDiffPayloadBefore;
+  /** What is known of the file after the call — or after it would run. */
+  readonly after: ToolDiffPayloadAfter;
+  /** The changes, in order. */
+  readonly hunks: readonly ToolDiffPayloadHunksItem[];
+}
+
+/** What `GET /transcripts?workspacePath=…` answers: a page of the conversations of a folder, of every engine enabled, newest first (plan 28, B-12). */
+export interface TranscriptListPayload {
+  /** The conversations of the page. */
+  readonly sessions: readonly ListedTranscript[];
+  /** Opaque: sent back as `cursor` for the next page. `null` on the last one. */
+  readonly nextCursor: string | null;
+}
+
+/** What `GET /transcripts/:engine/:id/messages` answers: a page of a conversation, newest page first and oldest first within it (plan 28, B-12). The route of the previous protocol, `GET /transcripts/:sessionId/messages`, answers the same during its window. */
+export interface TranscriptPagePayload {
+  /** The conversation the page is of. */
+  readonly session: ListedTranscript;
+  /** The events of the page. */
+  readonly events: readonly TranscriptEvent[];
+  /** The id of the message the next page — what came before — starts from, or `null` at the first message. */
+  readonly nextCursor: string | null;
+  /** The last entry of the conversation, `null` when it has none — what `transcript.follow` takes as `afterMessageId`. */
+  readonly lastMessageId: string | null;
+}
+
+/** What `GET /transcripts/:engine/:id/tools/:toolUseId/result` answers: the whole output of one tool of a conversation, read from the transcript when a client unfolds the tool — never on the stream, whose `tool.completed.summary` is short on purpose. Over HTTP, but one contract in three languages all the same. An output above the ceiling is not an error: it comes cut, its beginning and its end, with `truncated: true`. */
+export interface TranscriptToolResultPayload {
+  /** The output as text — a result made of blocks is their text joined. Cut in the middle when `truncated`. */
+  readonly text: string;
+  /** Whether the output was above the ceiling, and `text` holds only its first and its last part. */
+  readonly truncated: boolean;
+  /** The size of the whole output, in bytes of UTF-8 — what the screen says was there when it shows a cut. */
+  readonly bytes: number;
+  /** Where in `text` the first part ends and the last begins, in characters — present only when `truncated`, so the screen can say there what was left out. */
+  readonly cutAt?: number;
+}
+
 /** The answer to `permission.requested`, carrying its `id` in `correlationId`. Resolving the same `requestId` twice is a silent ack and **one** execution, never an error and never a double run — several clients watch one session, and a client may resend after reconnecting. */
 export interface PermissionResolvePayload {
   /** The request being answered. Idempotency keys on it, so resending after a reconnect costs nothing. */
@@ -798,17 +1147,50 @@ export interface PermissionResolvePayload {
   readonly answers?: readonly QuestionAnswer[];
 }
 
-/** What `GET /transcripts/:sessionId/tools/:toolUseId/result` answers: the whole output of one tool of a conversation, read from the transcript when a client unfolds the tool — never on the stream, whose `tool.completed.summary` is short on purpose. Over HTTP, but one contract in three languages all the same. An output above the ceiling is not an error: it comes cut, its beginning and its end, with `truncated: true`. */
-export interface TranscriptToolResultPayload {
-  /** The output as text — a result made of blocks is their text joined. Cut in the middle when `truncated`. */
-  readonly text: string;
-  /** Whether the output was above the ceiling, and `text` holds only its first and its last part. */
-  readonly truncated: boolean;
-  /** The size of the whole output, in bytes of UTF-8 — what the screen says was there when it shows a cut. */
-  readonly bytes: number;
-  /** Where in `text` the first part ends and the last begins, in characters — present only when `truncated`, so the screen can say there what was left out. */
-  readonly cutAt?: number;
-}
+/** The bounds the schema gives the fields of {@link Envelope}. */
+export const ENVELOPE_LIMITS = {
+  v: { minimum: 1 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ConversationRef}. */
+export const CONVERSATION_REF_LIMITS = {
+  engine: { maxLength: 32 },
+  id: { maxLength: 256 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link EngineCapabilities}. */
+export const ENGINE_CAPABILITIES_LIMITS = {
+  effortLevels: { maxItems: 16 },
+  permissionModes: { maxItems: 16 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link EngineOrigin}. */
+export const ENGINE_ORIGIN_LIMITS = {
+  engine: { maxLength: 32 },
+  native: { maxLength: 256 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link InteractionQuestionsItemOptionsItem}. */
+export const INTERACTION_QUESTIONS_ITEM_OPTIONS_ITEM_LIMITS = {
+  label: { maxLength: 200 },
+  description: { maxLength: 1000 },
+  preview: { maxLength: 20000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link InteractionQuestionsItem}. */
+export const INTERACTION_QUESTIONS_ITEM_LIMITS = {
+  id: { maxLength: 8 },
+  header: { maxLength: 60 },
+  prompt: { maxLength: 2000 },
+  options: { maxItems: 4, minItems: 2 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link Interaction}. */
+export const INTERACTION_LIMITS = {
+  questions: { maxItems: 4 },
+  markdown: { maxLength: 200000 },
+  path: { maxLength: 4096 },
+} as const;
 
 /** The bounds the schema gives the fields of {@link QuestionAnswer}. */
 export const QUESTION_ANSWER_LIMITS = {
@@ -817,24 +1199,14 @@ export const QUESTION_ANSWER_LIMITS = {
   other: { maxLength: 2000 },
 } as const;
 
-/** The bounds the schema gives the fields of {@link QuestionInteractionQuestionsItemOptionsItem}. */
-export const QUESTION_INTERACTION_QUESTIONS_ITEM_OPTIONS_ITEM_LIMITS = {
-  label: { maxLength: 200 },
-  description: { maxLength: 1000 },
-  preview: { maxLength: 20000 },
+/** The bounds the schema gives the fields of {@link ToolLabel}. */
+export const TOOL_LABEL_LIMITS = {
+  messageKey: { maxLength: 128 },
 } as const;
 
-/** The bounds the schema gives the fields of {@link QuestionInteractionQuestionsItem}. */
-export const QUESTION_INTERACTION_QUESTIONS_ITEM_LIMITS = {
-  id: { maxLength: 8 },
-  header: { maxLength: 60 },
-  prompt: { maxLength: 2000 },
-  options: { maxItems: 4, minItems: 2 },
-} as const;
-
-/** The bounds the schema gives the fields of {@link QuestionInteraction}. */
-export const QUESTION_INTERACTION_LIMITS = {
-  questions: { maxItems: 4 },
+/** The bounds the schema gives the fields of {@link ToolSubject}. */
+export const TOOL_SUBJECT_LIMITS = {
+  paths: { maxItems: 256 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link SessionPromptPayloadAttachmentsItemRange}. */
@@ -859,9 +1231,20 @@ export const SESSION_RECONNECT_MCP_SERVER_PAYLOAD_LIMITS = {
   name: { maxLength: 64 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link SessionStartPayload}. */
+export const SESSION_START_PAYLOAD_LIMITS = {
+  engine: { maxLength: 32 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link SessionToggleMcpServerPayload}. */
 export const SESSION_TOGGLE_MCP_SERVER_PAYLOAD_LIMITS = {
   name: { maxLength: 64 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRequestedPayload}. */
+export const PERMISSION_REQUESTED_PAYLOAD_LIMITS = {
+  kind: { maxLength: 64 },
+  changes: { maxItems: 256 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link PermissionResolvedPayload}. */
@@ -885,15 +1268,72 @@ export const SESSION_STARTED_PAYLOAD_LIMITS = {
   outputStyle: { maxLength: 128 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link SessionTasksChangedPayloadTasksItem}. */
+export const SESSION_TASKS_CHANGED_PAYLOAD_TASKS_ITEM_LIMITS = {
+  id: { maxLength: 2000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SessionTasksChangedPayload}. */
+export const SESSION_TASKS_CHANGED_PAYLOAD_LIMITS = {
+  tasks: { maxItems: 500 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link ToolCompletedPayloadQuestion}. */
 export const TOOL_COMPLETED_PAYLOAD_QUESTION_LIMITS = {
   answers: { maxItems: 4 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ToolStartedPayload}. */
+export const TOOL_STARTED_PAYLOAD_LIMITS = {
+  kind: { maxLength: 64 },
+  changes: { maxItems: 256 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link TurnCompletedPayloadUsage}. */
+export const TURN_COMPLETED_PAYLOAD_USAGE_LIMITS = {
+  inputTokens: { minimum: 0 },
+  outputTokens: { minimum: 0 },
+  cacheReadTokens: { minimum: 0 },
+  cacheWriteTokens: { minimum: 0 },
+  reasoningTokens: { minimum: 0 },
+  webSearches: { minimum: 0 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link WorkspaceFilesChangedPayloadChangesItem}. */
+export const WORKSPACE_FILES_CHANGED_PAYLOAD_CHANGES_ITEM_LIMITS = {
+  engine: { maxLength: 32 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ContextUsePayloadCategoriesItem}. */
+export const CONTEXT_USE_PAYLOAD_CATEGORIES_ITEM_LIMITS = {
+  id: { maxLength: 128 },
+  messageKey: { maxLength: 128 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ContextUsePayload}. */
+export const CONTEXT_USE_PAYLOAD_LIMITS = {
+  categories: { maxItems: 64 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ToolDiffPayloadAfter}. */
+export const TOOL_DIFF_PAYLOAD_AFTER_LIMITS = {
+  edit: { minimum: 0 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ToolDiffPayload}. */
+export const TOOL_DIFF_PAYLOAD_LIMITS = {
+  kind: { maxLength: 64 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link PermissionResolvePayload}. */
 export const PERMISSION_RESOLVE_PAYLOAD_LIMITS = {
   answers: { maxItems: 4 },
 } as const;
+
+/** Whether a field that may be `null` is, or passed its own check. */
+function nullOr(value: unknown, passed: boolean): boolean {
+  return value === null || passed;
+}
 
 /** Whether `value` is an object and not `null` — the one case `typeof` alone gets wrong. */
 function isNonNullObject(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -938,12 +1378,194 @@ export function isEnvelope(value: unknown): value is Envelope {
   const record = value as Readonly<Record<string, unknown>>;
 
   return [
-    record['v'] === 1,
+    typeof record['v'] === 'number',
     typeof record['id'] === 'string',
     typeof record['kind'] === 'string',
     typeof record['type'] === 'string',
     typeof record['ts'] === 'string',
     requiredWhen(record['kind'] === 'event', typeof record['seq'] === 'number'),
+    atLeast(record['v'], 1),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ConversationRef}. Unknown fields are accepted.
+ */
+export function isConversationRef(value: unknown): value is ConversationRef {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['engine'] === 'string',
+    typeof record['id'] === 'string',
+    withinMaxLength(record['engine'], 32),
+    withinMaxLength(record['id'], 256),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link EngineCapabilities}. Unknown fields are accepted.
+ */
+export function isEngineCapabilities(value: unknown): value is EngineCapabilities {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['resume'] === 'boolean',
+    typeof record['fork'] === 'string',
+    typeof record['history'] === 'boolean',
+    typeof record['images'] === 'boolean',
+    typeof record['promptWhileBusy'] === 'boolean',
+    typeof record['questions'] === 'boolean',
+    typeof record['planApproval'] === 'boolean',
+    typeof record['taskList'] === 'boolean',
+    typeof record['subagents'] === 'boolean',
+    typeof record['thinking'] === 'boolean',
+    typeof record['slashCommands'] === 'boolean',
+    typeof record['modelSwitch'] === 'boolean',
+    Array.isArray(record['effortLevels']),
+    typeof record['contextUse'] === 'boolean',
+    typeof record['mcp'] === 'boolean',
+    typeof record['compaction'] === 'boolean',
+    typeof record['cost'] === 'string',
+    Array.isArray(record['permissionModes']),
+    withinMaxItems(record['effortLevels'], 16),
+    withinMaxItems(record['permissionModes'], 16),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link EngineOrigin}. Unknown fields are accepted.
+ */
+export function isEngineOrigin(value: unknown): value is EngineOrigin {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['engine'] === 'string',
+    typeof record['native'] === 'string',
+    withinMaxLength(record['engine'], 32),
+    withinMaxLength(record['native'], 256),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link FileChange}. Unknown fields are accepted.
+ */
+export function isFileChange(value: unknown): value is FileChange {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['op'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link InteractionQuestionsItemOptionsItem}. Unknown fields are accepted.
+ */
+export function isInteractionQuestionsItemOptionsItem(value: unknown): value is InteractionQuestionsItemOptionsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['label'] === 'string',
+    typeof record['description'] === 'string',
+    withinMaxLength(record['label'], 200),
+    withinMaxLength(record['description'], 1000),
+    withinMaxLength(record['preview'], 20000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link InteractionQuestionsItem}. Unknown fields are accepted.
+ */
+export function isInteractionQuestionsItem(value: unknown): value is InteractionQuestionsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['header'] === 'string',
+    typeof record['prompt'] === 'string',
+    typeof record['multiSelect'] === 'boolean',
+    Array.isArray(record['options']),
+    withinMaxLength(record['id'], 8),
+    withinMaxLength(record['header'], 60),
+    withinMaxLength(record['prompt'], 2000),
+    withinMaxItems(record['options'], 4),
+    withMinItems(record['options'], 2),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link Interaction}. Unknown fields are accepted.
+ *
+ * `malformed` is also required when `kind` is `question` — a question says whether it could be read, so a screen never offers half of what was asked.
+ *
+ * `questions` is also required when `kind` is `question` — a question is its questions — empty only when malformed.
+ *
+ * `markdown` is also required when `kind` is `plan` — a plan to approve is its text; approving one nobody could read is what the card exists to prevent.
+ */
+export function isInteraction(value: unknown): value is Interaction {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['kind'] === 'string',
+    requiredWhen(record['kind'] === 'question', typeof record['malformed'] === 'boolean'),
+    requiredWhen(record['kind'] === 'question', Array.isArray(record['questions'])),
+    requiredWhen(record['kind'] === 'plan', typeof record['markdown'] === 'string'),
+    withinMaxItems(record['questions'], 4),
+    withinMaxLength(record['markdown'], 200000),
+    withinMaxLength(record['path'], 4096),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ListedTranscript}. Unknown fields are accepted.
+ */
+export function isListedTranscript(value: unknown): value is ListedTranscript {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isConversationRef(record['conversation']),
+    typeof record['sessionId'] === 'string',
+    typeof record['summary'] === 'string',
+    typeof record['origin'] === 'string',
+    typeof record['cwd'] === 'string',
+    nullOr(record['gitBranch'], typeof record['gitBranch'] === 'string'),
+    nullOr(record['createdAt'], typeof record['createdAt'] === 'string'),
+    typeof record['lastModified'] === 'string',
+    typeof record['activity'] === 'string',
+    nullOr(record['liveSessionId'], typeof record['liveSessionId'] === 'string'),
+    typeof record['writtenAgoSeconds'] === 'number',
   ].every(Boolean);
 }
 
@@ -967,9 +1589,9 @@ export function isQuestionAnswer(value: unknown): value is QuestionAnswer {
 }
 
 /**
- * Whether `value` carries every required field of {@link QuestionInteractionQuestionsItemOptionsItem}. Unknown fields are accepted.
+ * Whether `value` carries every required field of {@link ToolLabel}. Unknown fields are accepted.
  */
-export function isQuestionInteractionQuestionsItemOptionsItem(value: unknown): value is QuestionInteractionQuestionsItemOptionsItem {
+export function isToolLabel(value: unknown): value is ToolLabel {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -977,18 +1599,16 @@ export function isQuestionInteractionQuestionsItemOptionsItem(value: unknown): v
   const record = value as Readonly<Record<string, unknown>>;
 
   return [
-    typeof record['label'] === 'string',
-    typeof record['description'] === 'string',
-    withinMaxLength(record['label'], 200),
-    withinMaxLength(record['description'], 1000),
-    withinMaxLength(record['preview'], 20000),
+    typeof record['messageKey'] === 'string',
+    isNonNullObject(record['params']),
+    withinMaxLength(record['messageKey'], 128),
   ].every(Boolean);
 }
 
 /**
- * Whether `value` carries every required field of {@link QuestionInteractionQuestionsItem}. Unknown fields are accepted.
+ * Whether `value` carries every required field of {@link ToolSubject}. Unknown fields are accepted.
  */
-export function isQuestionInteractionQuestionsItem(value: unknown): value is QuestionInteractionQuestionsItem {
+export function isToolSubject(value: unknown): value is ToolSubject {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -996,23 +1616,14 @@ export function isQuestionInteractionQuestionsItem(value: unknown): value is Que
   const record = value as Readonly<Record<string, unknown>>;
 
   return [
-    typeof record['id'] === 'string',
-    typeof record['header'] === 'string',
-    typeof record['prompt'] === 'string',
-    typeof record['multiSelect'] === 'boolean',
-    Array.isArray(record['options']),
-    withinMaxLength(record['id'], 8),
-    withinMaxLength(record['header'], 60),
-    withinMaxLength(record['prompt'], 2000),
-    withinMaxItems(record['options'], 4),
-    withMinItems(record['options'], 2),
+    withinMaxItems(record['paths'], 256),
   ].every(Boolean);
 }
 
 /**
- * Whether `value` carries every required field of {@link QuestionInteraction}. Unknown fields are accepted.
+ * Whether `value` carries every required field of {@link TranscriptEvent}. Unknown fields are accepted.
  */
-export function isQuestionInteraction(value: unknown): value is QuestionInteraction {
+export function isTranscriptEvent(value: unknown): value is TranscriptEvent {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -1020,10 +1631,8 @@ export function isQuestionInteraction(value: unknown): value is QuestionInteract
   const record = value as Readonly<Record<string, unknown>>;
 
   return [
-    record['kind'] === 'question',
-    typeof record['malformed'] === 'boolean',
-    Array.isArray(record['questions']),
-    withinMaxItems(record['questions'], 4),
+    typeof record['type'] === 'string',
+    isNonNullObject(record['payload']),
   ].every(Boolean);
 }
 
@@ -1107,7 +1716,7 @@ export function isTranscriptFollowingPayload(value: unknown): value is Transcrip
 
   return [
     typeof record['followId'] === 'string',
-    typeof record['conversationId'] === 'string',
+    isConversationRef(record['conversation']),
     typeof record['activity'] === 'string',
   ].every(Boolean);
 }
@@ -1259,6 +1868,21 @@ export function isSessionCancelQueuedPromptPayload(value: unknown): value is Ses
  * Whether `value` carries every required field of {@link SessionClosePayload}. Unknown fields are accepted.
  */
 export function isSessionClosePayload(value: unknown): value is SessionClosePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['sessionId'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionCompactPayload}. Unknown fields are accepted.
+ */
+export function isSessionCompactPayload(value: unknown): value is SessionCompactPayload {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -1489,7 +2113,7 @@ export function isSessionSetPermissionModePayload(value: unknown): value is Sess
 /**
  * Whether `value` carries every required field of {@link SessionStartPayload}. Unknown fields are accepted.
  *
- * `resumeSessionId` is also required when `forkAt` is present — a fork point is a message of a conversation, and only a resumed conversation has one.
+ * `resumeFrom` is also required when `forkAt` is present — a fork point is a message of a conversation, and only a resumed conversation has one.
  */
 export function isSessionStartPayload(value: unknown): value is SessionStartPayload {
   if (typeof value !== 'object' || value === null) {
@@ -1500,7 +2124,8 @@ export function isSessionStartPayload(value: unknown): value is SessionStartPayl
 
   return [
     typeof record['workspacePath'] === 'string',
-    requiredWhen(record['forkAt'] !== undefined, typeof record['resumeSessionId'] === 'string'),
+    requiredWhen(record['forkAt'] !== undefined, isConversationRef(record['resumeFrom'])),
+    withinMaxLength(record['engine'], 32),
   ].every(Boolean);
 }
 
@@ -1533,7 +2158,7 @@ export function isTranscriptFollowPayload(value: unknown): value is TranscriptFo
   const record = value as Readonly<Record<string, unknown>>;
 
   return [
-    typeof record['conversationId'] === 'string',
+    isConversationRef(record['conversation']),
   ].every(Boolean);
 }
 
@@ -1743,12 +2368,18 @@ export function isPermissionRequestedPayload(value: unknown): value is Permissio
   return [
     typeof record['requestId'] === 'string',
     typeof record['toolUseId'] === 'string',
-    typeof record['toolName'] === 'string',
+    typeof record['kind'] === 'string',
+    isToolLabel(record['label']),
+    isToolSubject(record['subject']),
+    Array.isArray(record['changes']),
+    isEngineOrigin(record['origin']),
+    isNonNullObject(record['rawInput']),
     typeof record['title'] === 'string',
-    isNonNullObject(record['input']),
     typeof record['riskHint'] === 'string',
     typeof record['defaultToNo'] === 'boolean',
     typeof record['expiresAt'] === 'string',
+    withinMaxLength(record['kind'], 64),
+    withinMaxItems(record['changes'], 256),
   ].every(Boolean);
 }
 
@@ -1970,7 +2601,9 @@ export function isSessionStartedPayload(value: unknown): value is SessionStarted
     typeof record['workspacePath'] === 'string',
     typeof record['model'] === 'string',
     typeof record['permissionMode'] === 'string',
-    typeof record['claudeSessionId'] === 'string',
+    typeof record['engine'] === 'string',
+    isConversationRef(record['conversation']),
+    isEngineCapabilities(record['capabilities']),
     withinMaxLength(record['outputStyle'], 128),
   ].every(Boolean);
 }
@@ -1991,6 +2624,40 @@ export function isSessionStatusChangedPayload(value: unknown): value is SessionS
 }
 
 /**
+ * Whether `value` carries every required field of {@link SessionTasksChangedPayloadTasksItem}. Unknown fields are accepted.
+ */
+export function isSessionTasksChangedPayloadTasksItem(value: unknown): value is SessionTasksChangedPayloadTasksItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['title'] === 'string',
+    typeof record['status'] === 'string',
+    withinMaxLength(record['id'], 2000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionTasksChangedPayload}. Unknown fields are accepted.
+ */
+export function isSessionTasksChangedPayload(value: unknown): value is SessionTasksChangedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['tasks']),
+    withinMaxItems(record['tasks'], 500),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link ToolCompletedPayloadQuestion}. Unknown fields are accepted.
  */
 export function isToolCompletedPayloadQuestion(value: unknown): value is ToolCompletedPayloadQuestion {
@@ -2001,7 +2668,7 @@ export function isToolCompletedPayloadQuestion(value: unknown): value is ToolCom
   const record = value as Readonly<Record<string, unknown>>;
 
   return [
-    isQuestionInteraction(record['interaction']),
+    isInteraction(record['interaction']),
     withinMaxItems(record['answers'], 4),
   ].every(Boolean);
 }
@@ -2050,8 +2717,14 @@ export function isToolStartedPayload(value: unknown): value is ToolStartedPayloa
 
   return [
     typeof record['toolUseId'] === 'string',
-    typeof record['toolName'] === 'string',
-    isNonNullObject(record['input']),
+    typeof record['kind'] === 'string',
+    isToolLabel(record['label']),
+    isToolSubject(record['subject']),
+    Array.isArray(record['changes']),
+    isEngineOrigin(record['origin']),
+    isNonNullObject(record['rawInput']),
+    withinMaxLength(record['kind'], 64),
+    withinMaxItems(record['changes'], 256),
   ].every(Boolean);
 }
 
@@ -2083,7 +2756,7 @@ export function isTranscriptAppendedPayload(value: unknown): value is Transcript
 
   return [
     typeof record['followId'] === 'string',
-    typeof record['conversationId'] === 'string',
+    isConversationRef(record['conversation']),
     Array.isArray(record['events']),
     typeof record['activity'] === 'string',
     typeof record['working'] === 'boolean',
@@ -2102,8 +2775,28 @@ export function isTranscriptResetPayload(value: unknown): value is TranscriptRes
 
   return [
     typeof record['followId'] === 'string',
-    typeof record['conversationId'] === 'string',
+    isConversationRef(record['conversation']),
     typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link TurnCompletedPayloadUsage}. Unknown fields are accepted.
+ */
+export function isTurnCompletedPayloadUsage(value: unknown): value is TurnCompletedPayloadUsage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    atLeast(record['inputTokens'], 0),
+    atLeast(record['outputTokens'], 0),
+    atLeast(record['cacheReadTokens'], 0),
+    atLeast(record['cacheWriteTokens'], 0),
+    atLeast(record['reasoningTokens'], 0),
+    atLeast(record['webSearches'], 0),
   ].every(Boolean);
 }
 
@@ -2119,8 +2812,7 @@ export function isTurnCompletedPayload(value: unknown): value is TurnCompletedPa
 
   return [
     typeof record['turnId'] === 'string',
-    isNonNullObject(record['usage']),
-    typeof record['costUsd'] === 'string',
+    isTurnCompletedPayloadUsage(record['usage']),
     typeof record['durationMs'] === 'number',
   ].every(Boolean);
 }
@@ -2138,6 +2830,7 @@ export function isWorkspaceFilesChangedPayloadChangesItem(value: unknown): value
   return [
     typeof record['path'] === 'string',
     typeof record['kind'] === 'string',
+    withinMaxLength(record['engine'], 32),
   ].every(Boolean);
 }
 
@@ -2174,11 +2867,9 @@ export function isWorkspaceWatchStoppedPayload(value: unknown): value is Workspa
 }
 
 /**
- * Whether `value` carries every required field of {@link PermissionResolvePayload}. Unknown fields are accepted.
- *
- * `reason` is also required when `decision` is `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
+ * Whether `value` carries every required field of {@link ContextUsePayloadCategoriesItem}. Unknown fields are accepted.
  */
-export function isPermissionResolvePayload(value: unknown): value is PermissionResolvePayload {
+export function isContextUsePayloadCategoriesItem(value: unknown): value is ContextUsePayloadCategoriesItem {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -2186,10 +2877,207 @@ export function isPermissionResolvePayload(value: unknown): value is PermissionR
   const record = value as Readonly<Record<string, unknown>>;
 
   return [
-    typeof record['requestId'] === 'string',
-    typeof record['decision'] === 'string',
-    requiredWhen(record['decision'] === 'deny', typeof record['reason'] === 'string'),
-    withinMaxItems(record['answers'], 4),
+    typeof record['id'] === 'string',
+    typeof record['name'] === 'string',
+    typeof record['tokens'] === 'number',
+    typeof record['kind'] === 'string',
+    withinMaxLength(record['id'], 128),
+    withinMaxLength(record['messageKey'], 128),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ContextUsePayload}. Unknown fields are accepted.
+ */
+export function isContextUsePayload(value: unknown): value is ContextUsePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['model'] === 'string',
+    typeof record['totalTokens'] === 'number',
+    typeof record['maxTokens'] === 'number',
+    typeof record['percentage'] === 'number',
+    Array.isArray(record['categories']),
+    withinMaxItems(record['categories'], 64),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link EngineListPayloadEnginesItem}. Unknown fields are accepted.
+ */
+export function isEngineListPayloadEnginesItem(value: unknown): value is EngineListPayloadEnginesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['displayName'] === 'string',
+    typeof record['state'] === 'string',
+    nullOr(record['reason'], typeof record['reason'] === 'string'),
+    nullOr(record['version'], typeof record['version'] === 'string'),
+    isEngineCapabilities(record['capabilities']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link EngineListPayload}. Unknown fields are accepted.
+ */
+export function isEngineListPayload(value: unknown): value is EngineListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['defaultEngine'] === 'string',
+    Array.isArray(record['engines']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SubagentPagePayload}. Unknown fields are accepted.
+ */
+export function isSubagentPagePayload(value: unknown): value is SubagentPagePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['events']),
+    nullOr(record['nextCursor'], typeof record['nextCursor'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ToolDiffPayloadBefore}. Unknown fields are accepted.
+ */
+export function isToolDiffPayloadBefore(value: unknown): value is ToolDiffPayloadBefore {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['state'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ToolDiffPayloadAfter}. Unknown fields are accepted.
+ */
+export function isToolDiffPayloadAfter(value: unknown): value is ToolDiffPayloadAfter {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['state'] === 'string',
+    atLeast(record['edit'], 0),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ToolDiffPayloadHunksItemLinesItem}. Unknown fields are accepted.
+ */
+export function isToolDiffPayloadHunksItemLinesItem(value: unknown): value is ToolDiffPayloadHunksItemLinesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['kind'] === 'string',
+    typeof record['text'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ToolDiffPayloadHunksItem}. Unknown fields are accepted.
+ */
+export function isToolDiffPayloadHunksItem(value: unknown): value is ToolDiffPayloadHunksItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['oldStart'] === 'number',
+    typeof record['oldLines'] === 'number',
+    typeof record['newStart'] === 'number',
+    typeof record['newLines'] === 'number',
+    Array.isArray(record['lines']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ToolDiffPayload}. Unknown fields are accepted.
+ */
+export function isToolDiffPayload(value: unknown): value is ToolDiffPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['kind'] === 'string',
+    typeof record['pending'] === 'boolean',
+    typeof record['scope'] === 'string',
+    isToolDiffPayloadBefore(record['before']),
+    isToolDiffPayloadAfter(record['after']),
+    Array.isArray(record['hunks']),
+    withinMaxLength(record['kind'], 64),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link TranscriptListPayload}. Unknown fields are accepted.
+ */
+export function isTranscriptListPayload(value: unknown): value is TranscriptListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['sessions']),
+    nullOr(record['nextCursor'], typeof record['nextCursor'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link TranscriptPagePayload}. Unknown fields are accepted.
+ */
+export function isTranscriptPagePayload(value: unknown): value is TranscriptPagePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isListedTranscript(record['session']),
+    Array.isArray(record['events']),
+    nullOr(record['nextCursor'], typeof record['nextCursor'] === 'string'),
+    nullOr(record['lastMessageId'], typeof record['lastMessageId'] === 'string'),
   ].every(Boolean);
 }
 
@@ -2207,6 +3095,26 @@ export function isTranscriptToolResultPayload(value: unknown): value is Transcri
     typeof record['text'] === 'string',
     typeof record['truncated'] === 'boolean',
     typeof record['bytes'] === 'number',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionResolvePayload}. Unknown fields are accepted.
+ *
+ * `reason` is also required when `decision` is `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
+ */
+export function isPermissionResolvePayload(value: unknown): value is PermissionResolvePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['requestId'] === 'string',
+    typeof record['decision'] === 'string',
+    requiredWhen(record['decision'] === 'deny', typeof record['reason'] === 'string'),
+    withinMaxItems(record['answers'], 4),
   ].every(Boolean);
 }
 
@@ -2250,7 +3158,7 @@ export function isConnectionReadyFrame(value: unknown): value is ConnectionReady
   );
 }
 
-/** Answer to `session.attach` — and to a `session.start` whose `resumeSessionId` names a conversation already live for the caller. Says what was replayed and whether anything was lost. */
+/** Answer to `session.attach` — and to a `session.start` whose `resumeFrom` names a conversation already live for the caller. Says what was replayed and whether anything was lost. */
 export interface SessionAttachedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'ack';
   readonly type: 'session.attached';
@@ -2447,6 +3355,26 @@ export function isSessionCloseFrame(value: unknown): value is SessionCloseFrame 
     value.kind === 'command' &&
     value.type === 'session.close' &&
     isSessionClosePayload(value.payload)
+  );
+}
+
+/** Compacts the conversation of a live session (plan 28, B-23). The backend sends the engine's own prompt for it through the queue, so it waits for a running turn and is acknowledged before its turn starts; `session.compacted` says when it happened. Refused with `ENGINE_CAPABILITY_UNAVAILABLE` (409) when the engine has no `compaction`. A slash command the person types still goes as a `session.prompt`: it is the engine that reads it, not us. */
+export interface SessionCompactFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'command';
+  readonly type: 'session.compact';
+  readonly payload: SessionCompactPayload;
+}
+
+/** Whether `value` is a {@link SessionCompactFrame}. */
+export function isSessionCompactFrame(value: unknown): value is SessionCompactFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'command' &&
+    value.type === 'session.compact' &&
+    isSessionCompactPayload(value.payload)
   );
 }
 
@@ -3030,7 +3958,7 @@ export function isSessionRewoundFrame(value: unknown): value is SessionRewoundFr
   );
 }
 
-/** The session is open and the Agent SDK has initialised. Normalised from the SDK's `system:init` — an SDKMessage is never emitted raw (ADR-006). */
+/** The session is open and its engine has initialised. Normalised by the adapter of the engine — the engine's own message is never emitted raw (ADR-006, ADR-025). */
 export interface SessionStartedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
   readonly type: 'session.started';
@@ -3070,7 +3998,27 @@ export function isSessionStatusChangedFrame(value: unknown): value is SessionSta
   );
 }
 
-/** A tool invocation ended, from the `tool_result` the SDK reports on a `user` message. */
+/** The agent's task list changed: the whole list, as it is now, after a call of the main conversation that changed it ended well (plan 28, B-22). Read by the adapter of the engine from its own tools — a client draws it and never rebuilds it. A session event with its `seq`, so it is replayed; in the history (`transcript.appended`, `GET /transcripts/…/messages`) it follows the `tool.completed` of the call, by the same function as live. Only for an engine with the `taskList` capability. */
+export interface SessionTasksChangedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.tasksChanged';
+  readonly payload: SessionTasksChangedPayload;
+}
+
+/** Whether `value` is a {@link SessionTasksChangedFrame}. */
+export function isSessionTasksChangedFrame(value: unknown): value is SessionTasksChangedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.tasksChanged' &&
+    isSessionTasksChangedPayload(value.payload)
+  );
+}
+
+/** A tool invocation ended, from the result the engine reported. It carries no `kind` nor `label`: the `tool.started` of the same `toolUseId` always came first, live and in the history, and the client has them from it (plan 28, D-28). */
 export interface ToolCompletedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
   readonly type: 'tool.completed';
@@ -3090,7 +4038,7 @@ export function isToolCompletedFrame(value: unknown): value is ToolCompletedFram
   );
 }
 
-/** Output of a tool while it is still running, from the SDK's `tool_progress`. */
+/** A tool is still running: how long it has been at it, from the engine. The text of the row is the client's, from the `label` of the `tool.started` with the same `toolUseId`. */
 export interface ToolProgressFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
   readonly type: 'tool.progress';
@@ -3170,7 +4118,7 @@ export function isTranscriptResetFrame(value: unknown): value is TranscriptReset
   );
 }
 
-/** A turn finished, from the SDK's `result`. It is what closes the turn in the UI and what carries its cost. */
+/** A turn finished. It is what closes the turn in the UI and what carries what it used and, when the engine says, what it cost. */
 export interface TurnCompletedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
   readonly type: 'turn.completed';
@@ -3248,4 +4196,30 @@ export function isPermissionResolveFrame(value: unknown): value is PermissionRes
     value.type === 'permission.resolve' &&
     isPermissionResolvePayload(value.payload)
   );
+}
+
+/** The payload of every event of the contract, by its `type`. */
+export interface EventPayloads {
+  'diag.pong': DiagPongPayload;
+  'message.completed': MessageCompletedPayload;
+  'message.delta': MessageDeltaPayload;
+  'permission.extended': PermissionExtendedPayload;
+  'permission.resolved': PermissionResolvedPayload;
+  'prompt.dequeued': PromptDequeuedPayload;
+  'prompt.queued': PromptQueuedPayload;
+  'session.closed': SessionClosedPayload;
+  'session.compacted': SessionCompactedPayload;
+  'session.mcpStatusChanged': SessionMcpStatusChangedPayload;
+  'session.rewound': SessionRewoundPayload;
+  'session.started': SessionStartedPayload;
+  'session.statusChanged': SessionStatusChangedPayload;
+  'session.tasksChanged': SessionTasksChangedPayload;
+  'tool.completed': ToolCompletedPayload;
+  'tool.progress': ToolProgressPayload;
+  'tool.started': ToolStartedPayload;
+  'transcript.appended': TranscriptAppendedPayload;
+  'transcript.reset': TranscriptResetPayload;
+  'turn.completed': TurnCompletedPayload;
+  'workspace.filesChanged': WorkspaceFilesChangedPayload;
+  'workspace.watchStopped': WorkspaceWatchStoppedPayload;
 }

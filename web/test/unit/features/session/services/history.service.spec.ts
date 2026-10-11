@@ -3,11 +3,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   fetchHistoryPage,
   toConversationSummary,
+  transcriptPath,
 } from '@/features/session/services/history.service';
 import { api } from '@/shared/api/api';
 import {
   aConversationDto,
   aHistoryPage,
+  conversationRef,
+  ENGINE,
   OURS,
   said,
   WORKSPACE,
@@ -18,29 +21,31 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const REF = conversationRef(OURS);
+
 describe('fetchHistoryPage — plan 04, B-07', () => {
   it('asks for the latest messages when given no cursor', async () => {
     const get = vi.spyOn(api, 'get').mockResolvedValue(aHistoryPage([]));
 
-    await fetchHistoryPage(OURS, null);
+    await fetchHistoryPage(REF, null);
 
-    expect(get).toHaveBeenCalledWith(`/transcripts/${OURS}/messages`);
+    expect(get).toHaveBeenCalledWith(`/transcripts/${ENGINE}/${OURS}/messages`);
   });
 
   it('asks for the page before a cursor, exactly as the server handed it out', async () => {
     const get = vi.spyOn(api, 'get').mockResolvedValue(aHistoryPage([]));
 
-    await fetchHistoryPage(OURS, 'a/b c');
+    await fetchHistoryPage(REF, 'a/b c');
 
-    expect(get).toHaveBeenCalledWith(`/transcripts/${OURS}/messages?cursor=a%2Fb%20c`);
+    expect(get).toHaveBeenCalledWith(`/transcripts/${ENGINE}/${OURS}/messages?cursor=a%2Fb%20c`);
   });
 
   it('answers the conversation, its events and the cursor of the page before', async () => {
     vi.spyOn(api, 'get').mockResolvedValue(aHistoryPage([said('m1', 'hi')], { nextCursor: 'm0' }));
 
-    expect(await fetchHistoryPage(OURS, null)).toEqual({
+    expect(await fetchHistoryPage(REF, null)).toEqual({
       conversation: {
-        conversationId: OURS,
+        conversation: { engine: ENGINE, id: OURS },
         summary: 'Fix the flaky test',
         origin: 'ours',
         cwd: WORKSPACE,
@@ -64,7 +69,7 @@ describe('fetchHistoryPage — plan 04, B-07', () => {
       lastMessageId: 'u-41',
     });
 
-    expect((await fetchHistoryPage(OURS, null)).lastMessageId).toBe('u-41');
+    expect((await fetchHistoryPage(REF, null)).lastMessageId).toBe('u-41');
   });
 
   it('drops an event it cannot read, and keeps the rest', async () => {
@@ -77,23 +82,39 @@ describe('fetchHistoryPage — plan 04, B-07', () => {
       ]),
     );
 
-    expect((await fetchHistoryPage(OURS, null)).events).toEqual([said('m1', 'kept')]);
+    expect((await fetchHistoryPage(REF, null)).events).toEqual([said('m1', 'kept')]);
   });
 
   it('reads a page with no events and no cursor as the whole of a silent conversation', async () => {
     vi.spyOn(api, 'get').mockResolvedValue({ session: aConversationDto(), events: 'nope' });
 
-    expect(await fetchHistoryPage(OURS, null)).toMatchObject({ events: [], nextCursor: null });
+    expect(await fetchHistoryPage(REF, null)).toMatchObject({ events: [], nextCursor: null });
   });
 
   it('refuses a page that does not say which conversation it is', async () => {
     vi.spyOn(api, 'get').mockResolvedValue({ events: [] });
 
-    await expect(fetchHistoryPage(OURS, null)).rejects.toThrow(TypeError);
+    await expect(fetchHistoryPage(REF, null)).rejects.toThrow(TypeError);
+  });
+});
+
+describe('transcriptPath — plan 28, B-13', () => {
+  it('names the engine and the id of the conversation, then the rest, every part escaped', () => {
+    expect(transcriptPath({ engine: 'en/g', id: 'a b' }, 'tools', 't?1', 'result')).toBe(
+      '/transcripts/en%2Fg/a%20b/tools/t%3F1/result',
+    );
   });
 });
 
 describe('toConversationSummary', () => {
+  it('keeps the two fields of the conversation, and nothing else the server adds to it', () => {
+    expect(
+      toConversationSummary(
+        aConversationDto({ conversation: { engine: ENGINE, id: OURS, extra: true } }),
+      )?.conversation,
+    ).toEqual({ engine: ENGINE, id: OURS });
+  });
+
   it('reads what the backend describes, empty summary included', () => {
     expect(
       toConversationSummary(
@@ -108,7 +129,10 @@ describe('toConversationSummary', () => {
 
   it.each([
     ['not an object', 'nope'],
-    ['no id', aConversationDto({ sessionId: undefined })],
+    ['no conversation', aConversationDto({ conversation: undefined })],
+    ['the id alone of the previous protocol', aConversationDto({ conversation: OURS })],
+    ['a conversation with no engine', aConversationDto({ conversation: { engine: '', id: OURS } })],
+    ['a conversation with no id', aConversationDto({ conversation: { engine: ENGINE, id: '' } })],
     ['no working directory', aConversationDto({ cwd: '' })],
     ['no date', aConversationDto({ lastModified: 3 })],
     ['an origin nobody said', aConversationDto({ origin: 'vscode' })],
@@ -129,7 +153,7 @@ describe('what a conversation is doing — plan 08, B-08', () => {
       }),
     );
 
-    expect((await fetchHistoryPage(OURS, null)).conversation).toMatchObject({
+    expect((await fetchHistoryPage(REF, null)).conversation).toMatchObject({
       activity: 'liveHere',
       liveSessionId: 'live-1',
       writtenAgoSeconds: 12,
@@ -141,6 +165,6 @@ describe('what a conversation is doing — plan 08, B-08', () => {
       aHistoryPage([], { session: aConversationDto({ activity: 'dreaming' }) }),
     );
 
-    expect((await fetchHistoryPage(OURS, null)).conversation.activity).toBe('idle');
+    expect((await fetchHistoryPage(REF, null)).conversation.activity).toBe('idle');
   });
 });

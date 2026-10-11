@@ -41,7 +41,7 @@ describe('what a reload gives a tab back — plan 06, S-134', () => {
         sideBarOpen: true,
         secondaryOpen: true,
         panelOpen: true,
-        mobileView: 'claude',
+        mobileView: 'agent',
         sizes: { ...INITIAL_LAYOUT, sideBar: 30 },
       },
     });
@@ -101,6 +101,73 @@ describe('what a reload gives a tab back — plan 06, S-134', () => {
   });
 });
 
+describe('what a part kept under the id it had before — plan 28, B-39', () => {
+  /** A part renamed: kept as `old.part` by an older build, `new.part` from now on. */
+  function renamedPart() {
+    let applied: string | null = null;
+    let changed = (): void => undefined;
+    const restorer: TabRestorer<string> = {
+      id: 'new.part',
+      formerIds: ['old.part'],
+      position: 1,
+      version: 1,
+      parse: (value) => (typeof value === 'string' ? value : undefined),
+      capture: () => applied ?? 'nothing',
+      apply: (_, value) => {
+        applied = value;
+      },
+      subscribe: (_, listener) => {
+        changed = listener;
+        return () => undefined;
+      },
+    };
+    return { restorer, applied: () => applied, changed: () => changed() };
+  }
+
+  it('is given back, and kept under the new id from then on — read once', () => {
+    keep({ [A]: { 'old.part': { version: 1, state: 'kept' } } });
+    const part = renamedPart();
+
+    restoreTab(A, [part.restorer as TabRestorer]);
+    expect(part.applied()).toBe('kept');
+
+    part.changed();
+    expect(kept().tabs[A]).toEqual({ 'new.part': { version: 1, state: 'kept' } });
+    forgetTab(A, { kept: false });
+  });
+
+  it('gives way to what is kept under the new id', () => {
+    keep({
+      [A]: {
+        'old.part': { version: 1, state: 'older' },
+        'new.part': { version: 1, state: 'newer' },
+      },
+    });
+    const part = renamedPart();
+
+    restoreTab(A, [part.restorer as TabRestorer]);
+
+    expect(part.applied()).toBe('newer');
+    forgetTab(A, { kept: false });
+  });
+
+  it('is nothing when neither id kept anything', () => {
+    keep({ [A]: { 'other.part': { version: 1, state: 'x' } } });
+    const part = renamedPart();
+
+    restoreTab(A, [part.restorer as TabRestorer]);
+
+    expect(part.applied()).toBeNull();
+    forgetTab(A, { kept: false });
+  });
+
+  it('reads the view of the one-view layout an older build named after one engine as the agent’s', () => {
+    expect(keptLayoutFrom({ mobileView: 'claude' })?.mobileView).toBe('agent');
+    expect(keptLayoutFrom({ mobileView: 'agent' })?.mobileView).toBe('agent');
+    expect(keptLayoutFrom({ mobileView: 'editor' })?.mobileView).toBe('editor');
+  });
+});
+
 describe('what cannot be trusted — plan 06, S-135', () => {
   it.each([
     [
@@ -142,7 +209,7 @@ describe('what cannot be trusted — plan 06, S-135', () => {
       sideBarOpen: true,
       secondaryOpen: true,
       panelOpen: true,
-      mobileView: 'claude',
+      mobileView: 'agent',
       sizes: INITIAL_LAYOUT,
     });
     expect(keptLayoutFrom('wide')).toBeUndefined();

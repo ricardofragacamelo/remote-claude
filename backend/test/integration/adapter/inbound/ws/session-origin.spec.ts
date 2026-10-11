@@ -3,9 +3,9 @@ import { sql } from 'drizzle-orm';
 import request from 'supertest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
-import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
+import { TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';

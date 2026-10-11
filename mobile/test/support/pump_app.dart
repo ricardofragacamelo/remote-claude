@@ -27,11 +27,13 @@ extension PumpApp on WidgetTester {
     Locale locale = const Locale('en'),
     ThemeData? theme,
     bool pumpOnce = true,
+    TransitionBuilder? builder,
   }) async {
     await pumpWidget(
       ProviderScope(
         overrides: overrides,
         child: MaterialApp(
+          builder: builder,
           locale: locale,
           theme: theme ?? AppTheme.light(),
           localizationsDelegates: const <LocalizationsDelegate<Object>>[
@@ -62,6 +64,7 @@ extension PumpApp on WidgetTester {
     List<Override> overrides = const <Override>[],
     Locale locale = const Locale('en'),
     bool pumpOnce = true,
+    TransitionBuilder? builder,
   }) async {
     final GoRouter router = GoRouter(
       initialLocation: initialLocation,
@@ -75,6 +78,7 @@ extension PumpApp on WidgetTester {
       ProviderScope(
         overrides: overrides,
         child: MaterialApp.router(
+          builder: builder,
           locale: locale,
           theme: AppTheme.light(),
           localizationsDelegates: const <LocalizationsDelegate<Object>>[

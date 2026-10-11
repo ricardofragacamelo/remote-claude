@@ -96,7 +96,7 @@ function withMoved(order: readonly string[], path: string, index: number): reado
  *
  * - A folder the address names that the server does not have yet shows as a tab at the end — it is
  *   being opened (S-103), or the server refused to keep it (S-183), and it is on screen either way.
- * - Closing asks first, and says the folder's Claude sessions carry on: they live in the backend
+ * - Closing asks first, and says the folder's agent sessions carry on: they live in the backend
  *   (S-101). Closing the active tab puts its neighbour on screen, and the last one the welcome
  *   screen (S-102). A second click on "close" while the first is on its way closes nothing more
  *   (S-109).

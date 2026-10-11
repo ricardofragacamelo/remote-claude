@@ -6,9 +6,9 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { AttachmentStore } from '@application/session';
 import { MENTION_GUARD } from '@domain/session';
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
-import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
+import { TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
 import type { ScriptOptions, ScriptRecord } from '../../../../fakes/agent-sdk/scripted-query';
 import { ScriptedTranscripts } from '../../../../fakes/agent-sdk/scripted-transcripts';
@@ -195,7 +195,9 @@ describe('the composer of the panel', () => {
       socket.send(commandFrame('session.start', { workspacePath: workspace }));
       const opened = await until(socket, ofType('session.started'));
       const sessionId = String(opened.payload?.['sessionId']);
-      const conversationId = String(opened.payload?.['claudeSessionId']);
+      const conversationId = String(
+        (opened.payload?.['conversation'] as { id?: string } | undefined)?.id,
+      );
 
       await prompted(socket, sessionId, 'what does it say?', [{ path: 'notes.md' }]);
       const said = await until(socket, ofType('message.completed'));

@@ -2,7 +2,7 @@ import { FileDiff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { StatusBarButton } from '@/shared/components/StatusBarButton';
-import { useClaudePanel } from '../../hooks/useClaudePanel';
+import { useAgentPanel } from '../../hooks/useAgentPanel';
 import { useSessionChanges } from '../../hooks/useSessionChanges';
 import { sessionStatusItem } from '../session-status-item';
 import type { SessionItemProps } from '../session-status-item';
@@ -16,7 +16,7 @@ export const ChangesStatusItem = sessionStatusItem(Count);
 function Count({ folder, sessionId }: SessionItemProps): React.JSX.Element | null {
   const { t } = useTranslation();
   const changes = useSessionChanges(folder, sessionId);
-  const { showPane } = useClaudePanel(folder);
+  const { showPane } = useAgentPanel(folder);
 
   if (changes.all.length === 0) {
     return null;

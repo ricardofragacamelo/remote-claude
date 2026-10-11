@@ -5,11 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 
+import '../../../../../support/builders/conversations.dart';
+
 void main() {
   test('two updates that say the same thing are equal, and differ by what they say', () {
-    const FollowAppended appended = FollowAppended(
+    final FollowAppended appended = FollowAppended(
       followId: 't-1',
-      conversationId: 'conv-1',
+      conversation: conversationOf('conv-1'),
       seq: 1,
       working: true,
       lastMessageId: 'u-44',
@@ -23,9 +25,9 @@ void main() {
 
     expect(
       appended,
-      const FollowAppended(
+      FollowAppended(
         followId: 't-1',
-        conversationId: 'conv-1',
+        conversation: conversationOf('conv-1'),
         seq: 1,
         working: true,
         lastMessageId: 'u-44',
@@ -35,7 +37,12 @@ void main() {
     expect(
       appended,
       isNot(
-        const FollowAppended(followId: 't-1', conversationId: 'conv-1', seq: 1, working: false),
+        FollowAppended(
+          followId: 't-1',
+          conversation: conversationOf('conv-1'),
+          seq: 1,
+          working: false,
+        ),
       ),
     );
     expect(
@@ -47,27 +54,27 @@ void main() {
       isNot(const FollowRefused(commandId: 'c-2', failure: limit)),
     );
     expect(
-      const FollowStarted(commandId: 'c', followId: 't', conversationId: 'conv'),
+      FollowStarted(commandId: 'c', followId: 't', conversation: conversationOf('conv')),
       isNot(
-        const FollowStarted(
+        FollowStarted(
           commandId: 'c',
           followId: 't',
-          conversationId: 'conv',
+          conversation: conversationOf('conv'),
           activity: ConversationActivity.idle,
         ),
       ),
     );
     expect(
-      const FollowReset(
+      FollowReset(
         followId: 't',
-        conversationId: 'conv',
+        conversation: conversationOf('conv'),
         seq: 2,
         reason: FollowResetReason.gone,
       ),
       isNot(
-        const FollowReset(
+        FollowReset(
           followId: 't',
-          conversationId: 'conv',
+          conversation: conversationOf('conv'),
           seq: 2,
           reason: FollowResetReason.rewritten,
         ),

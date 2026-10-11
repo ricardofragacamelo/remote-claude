@@ -5,9 +5,11 @@ import request from 'supertest';
 import type { Envelope } from '@remote-claude/contracts';
 import type { Options } from '@anthropic-ai/claude-agent-sdk';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
-import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
+import { TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
+import { SessionRegistry } from '@application/session';
+import { SessionId } from '@domain/session';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
 import type { ScriptOptions, ScriptRecord } from '../../../../fakes/agent-sdk/scripted-query';
 import { ScriptedTranscripts } from '../../../../fakes/agent-sdk/scripted-transcripts';
@@ -243,7 +245,9 @@ describe('the panel of Claude', () => {
         socket.send(commandFrame('session.prompt', { sessionId, text }));
         await turnEnds(socket);
       }
-      const conversation = String(frame.payload?.['claudeSessionId']);
+      const conversation = String(
+        (frame.payload?.['conversation'] as { id?: string } | undefined)?.id,
+      );
       const prompts = (await store.getSessionMessages(conversation))
         .filter((message) => message.type === 'user' && message.parent_tool_use_id === null)
         .filter((message) => {
@@ -263,10 +267,15 @@ describe('the panel of Claude', () => {
       const { conversation, prompts } = await twoTurns(socket);
       const before = (await store.getSessionMessages(conversation)).length;
 
-      const fork = await started(socket, { resumeSessionId: conversation, forkAt: prompts[1] });
+      const fork = await started(socket, {
+        resumeFrom: { engine: 'claude', id: conversation },
+        forkAt: prompts[1],
+      });
 
-      expect(fork.payload).toMatchObject({ resumedFrom: conversation });
-      expect(fork.payload?.['claudeSessionId']).not.toBe(conversation);
+      expect(fork.payload).toMatchObject({ resumedFrom: { engine: 'claude', id: conversation } });
+      expect((fork.payload?.['conversation'] as { id?: string } | undefined)?.id).not.toBe(
+        conversation,
+      );
       const options = records.at(-1)?.options as Options;
       expect(options).toMatchObject({
         resume: conversation,
@@ -281,7 +290,10 @@ describe('the panel of Claude', () => {
       const socket = await connect();
       const { conversation, prompts } = await twoTurns(socket);
 
-      const fork = await started(socket, { resumeSessionId: conversation, forkAt: prompts[0] });
+      const fork = await started(socket, {
+        resumeFrom: { engine: 'claude', id: conversation },
+        forkAt: prompts[0],
+      });
 
       expect(fork.payload?.['resumedFrom']).toBeUndefined();
       expect(records.at(-1)?.options?.resume).toBeUndefined();
@@ -291,7 +303,10 @@ describe('the panel of Claude', () => {
       const socket = await connect();
       const { conversation } = await twoTurns(socket);
 
-      const refused = await started(socket, { resumeSessionId: conversation, forkAt: 'nowhere' });
+      const refused = await started(socket, {
+        resumeFrom: { engine: 'claude', id: conversation },
+        forkAt: 'nowhere',
+      });
 
       expect(refused.payload).toMatchObject({
         code: 'INVALID_INPUT',
@@ -304,7 +319,10 @@ describe('the panel of Claude', () => {
       const { conversation, prompts } = await twoTurns(socket);
       script = { fixture: 'text-turn', refuseFork: true };
 
-      const fork = await started(socket, { resumeSessionId: conversation, forkAt: prompts[1] });
+      const fork = await started(socket, {
+        resumeFrom: { engine: 'claude', id: conversation },
+        forkAt: prompts[1],
+      });
       socket.send(commandFrame('session.prompt', { sessionId: sessionOf(fork), text: 'edited' }));
       const refusal = await until(socket, (frame) => frame.kind === 'error');
 
@@ -337,19 +355,50 @@ describe('the panel of Claude', () => {
 
       for (const route of ['models', 'context', 'mcp-servers']) {
         const failed = await get(`/sessions/${sessionId}/${route}`);
-        expect([failed.status, failed.body.error.code]).toEqual([502, 'CLAUDE_UNAVAILABLE']);
+        expect([failed.status, failed.body.error.code]).toEqual([502, 'AGENT_UNAVAILABLE']);
       }
     });
 
-    it('measures the context by category, against the window of the model — S-173', async () => {
+    it('measures the context by category, against the window of the model — S-173, S-71', async () => {
       const sessionId = sessionOf(await started(await connect()));
 
       const context = await get(`/sessions/${sessionId}/context`);
 
+      expect(context.status).toBe(200);
       expect(context.body).toMatchObject({ maxTokens: 1_000_000, percentage: 3 });
+      expect(Number.isInteger(context.body.percentage)).toBe(true);
+      // A canonical category goes with its key; one only Claude Code counts, with its own words.
+      expect(context.body.categories).toContainEqual({
+        id: 'free',
+        messageKey: 'sessions.context.free',
+        name: 'Free space',
+        tokens: expect.any(Number),
+        kind: 'free',
+      });
       expect(context.body.categories).toContainEqual(
-        expect.objectContaining({ id: 'freeSpace', kind: 'free' }),
+        expect.objectContaining({ id: 'skills', text: 'Skills', name: 'Skills' }),
       );
+      for (const category of context.body.categories as Record<string, unknown>[]) {
+        expect('messageKey' in category !== 'text' in category, String(category['id'])).toBe(true);
+      }
+    });
+
+    it('refuses the context of a session whose engine does not measure it — S-72', async () => {
+      const sessionId = sessionOf(await started(await connect()));
+      const live = harness.app.get(SessionRegistry).find(SessionId.create(sessionId));
+      if (live === null) throw new Error('the session just started is not live');
+      // The engine of this session, as one without the capability would describe itself.
+      Object.defineProperty(live.handle, 'capabilities', {
+        value: { ...live.handle.capabilities, contextUse: false },
+      });
+
+      const refused = await get(`/sessions/${sessionId}/context`);
+
+      expect(refused.status).toBe(409);
+      expect(refused.body.error).toMatchObject({
+        code: 'ENGINE_CAPABILITY_UNAVAILABLE',
+        params: { capability: 'contextUse' },
+      });
     });
 
     it('lists the MCP servers with their status, never their configuration — S-176, S-177', async () => {

@@ -6,10 +6,11 @@ import {
   toAuditEntryDto,
   toAuditTrailPageDto,
 } from '@adapter/inbound/http/audit/audit.dto';
-import { AuditEntry } from '@domain/audit';
+import { AuditEntry, disclosedInput } from '@domain/audit';
 import type { AuditEntryDraft } from '@domain/audit';
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
+import { claudeTool } from '../../../../../support/builders/tool.builder';
 
 const at = new Date('2026-09-24T12:00:00.000Z');
 const owner = UserId.create('auth|owner');
@@ -26,11 +27,19 @@ const draft: AuditEntryDraft = {
   at,
 };
 
-const record = (overrides: Partial<AuditEntryDraft> = {}, traceId: string | null = 'trace-1') => ({
-  seq: 7,
-  entry: AuditEntry.record({ ...draft, ...overrides }),
-  traceId,
-});
+/** An entry of the trail, with the input the query discloses — as the use case hands it over. */
+const record = (overrides: Partial<AuditEntryDraft> = {}, traceId: string | null = 'trace-1') => {
+  const entry = AuditEntry.record({ ...draft, ...overrides });
+  const input = entry.input.value;
+
+  return {
+    seq: 7,
+    entry,
+    traceId,
+    disclosed: disclosedInput(claudeTool(entry.toolName, input), input),
+    kind: entry.toolKind ?? claudeTool(entry.toolName, input).kind,
+  };
+};
 
 describe('the audit trail query', () => {
   const parse = (query: Record<string, unknown>) => auditTrailQuerySchema.safeParse(query);
@@ -89,6 +98,14 @@ describe('the audit trail query', () => {
     expect(parsed.error?.issues.map((issue) => issue.path.join('.'))).toContain(field);
   });
 
+  it.each(['shell', 'file.edit', 'web.fetch'])('accepts the kind %s — plan 28, B-33', (kind) => {
+    expect(parse({ kind })).toMatchObject({ success: true, data: { kind } });
+  });
+
+  it.each(['', 'Shell', 'file.', 'shell(x)', 'a'.repeat(65)])('refuses the kind %j', (kind) => {
+    expect(parse({ kind }).success).toBe(false);
+  });
+
   it('accepts a page at the ceiling and a page of one — S-70', () => {
     expect(parse({ limit: String(MAX_PAGE_SIZE) }).success).toBe(true);
     expect(parse({ limit: '1' }).success).toBe(true);
@@ -102,6 +119,7 @@ describe('the audit entry, as the client sees it', () => {
       sessionId: '01J0ABCDEFGHJKMNPQRSTVWXYZ',
       toolUseId: 'tu-1',
       toolName: 'Bash',
+      kind: 'shell',
       input: { command: 'git status' },
       decision: 'recorded',
       at: '2026-09-24T12:00:00.000Z',
@@ -110,12 +128,19 @@ describe('the audit entry, as the client sees it', () => {
     });
   });
 
-  it('never hands back what a `Read` read — S-27', () => {
+  it('says the kind the trail kept, beside the engine name — plan 28, B-33', () => {
+    expect(toAuditEntryDto(record({ toolName: 'Edit', toolKind: 'file.edit' }))).toMatchObject({
+      toolName: 'Edit',
+      kind: 'file.edit',
+    });
+  });
+
+  it('never hands back what a `file.read` read, only its path and window — S-27, plan 28 S-52', () => {
     const dto = toAuditEntryDto(
       record({ toolName: 'Read', input: { file_path: '/srv/.env', limit: 5, content: 'SECRET' } }),
     );
 
-    expect(dto.input).toEqual({ file_path: '/srv/.env', limit: 5 });
+    expect(dto.input).toEqual({ paths: ['/srv/.env'], window: { limit: 5 } });
     expect(JSON.stringify(dto)).not.toContain('SECRET');
   });
 

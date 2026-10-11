@@ -233,7 +233,10 @@ void main() {
       browser.prompt(sessionId, scenario.text('askingFixture'));
       await pumpUntil(
         tester,
-        () => find.text(app.l10n.fileViewerClaudeWaiting(1)).evaluate().isNotEmpty,
+        () => find
+            .text(app.l10n.fileViewerAgentWaiting(app.robot(tester).agent, 1))
+            .evaluate()
+            .isNotEmpty,
       );
       await tester.tap(find.text(app.l10n.fileViewerBackToSession));
       await pumpUntil(tester, () => files.viewer.evaluate().isEmpty);

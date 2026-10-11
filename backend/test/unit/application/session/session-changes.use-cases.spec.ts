@@ -11,7 +11,13 @@ import {
   ShowToolDiffUseCase,
   UndoPlanner,
 } from '@application/session';
-import type { ChangeStores, ChangeWriting, SessionRegistry } from '@application/session';
+import type {
+  ChangeStores,
+  ChangeWriting,
+  PendingPermissions,
+  SessionRegistry,
+} from '@application/session';
+import type { CanonicalTool } from '@domain/engine';
 import { UserId } from '@domain/auth';
 import { FileNotTextError } from '@domain/files';
 import {
@@ -28,7 +34,7 @@ import {
   TurnFileCheckpoint,
 } from '@domain/session';
 import type { Session, TurnFileCheckpointSnapshot } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { WorkspaceNotAllowedError } from '@domain/workspace';
 import { InMemoryPathLock } from '@shared/concurrency/in-memory-path-lock';
 import {
@@ -41,6 +47,7 @@ import { FixedClock } from '../../../support/fakes/fixed-clock';
 import { FakeUndoDisk, hashOf, InMemoryUndoJournal } from '../../../support/fakes/in-memory-undo';
 import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-events';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
+import { claudeTool } from '../../../support/builders/tool.builder';
 
 const owner = UserId.create('auth|owner');
 const stranger = UserId.create('auth|stranger');
@@ -59,7 +66,7 @@ const encode = (text: string): Uint8Array => new TextEncoder().encode(text);
 function checkpoint(overrides: Partial<TurnFileCheckpointSnapshot> = {}): TurnFileCheckpoint {
   return TurnFileCheckpoint.capture({
     sessionId: SessionId.create(SESSION_ID),
-    claudeSessionId: ClaudeSessionId.create(CONVERSATION_ID),
+    conversation: ConversationRef.create('claude', CONVERSATION_ID),
     promptId: 'p1',
     path: APP,
     existedBefore: 'present',
@@ -76,7 +83,7 @@ function checkpoint(overrides: Partial<TurnFileCheckpointSnapshot> = {}): TurnFi
 function leftAs(path: string, hash: string | null): SessionFileState {
   return SessionFileState.record({
     sessionId: SessionId.create(SESSION_ID),
-    claudeSessionId: ClaudeSessionId.create(CONVERSATION_ID),
+    conversation: ConversationRef.create('claude', CONVERSATION_ID),
     path,
     hash,
     mtime: now,
@@ -119,14 +126,35 @@ describe('what a session changed on disk', () => {
   }
 
   const remember = (toolUseId: string, toolName: string, input: Record<string, unknown>) => {
-    memory.rememberTool(session, { toolUseId, toolName, input, promptId: 'p1' });
+    memory.rememberTool(session, {
+      toolUseId,
+      tool: claudeTool(toolName, input),
+      promptId: 'p1',
+    });
   };
+
+  /** The questions the session is waiting on, by the call each one is about. */
+  class PendingCalls implements PendingPermissions {
+    readonly calls = new Map<string, CanonicalTool>();
+    readonly asked: string[] = [];
+
+    countFor(): number {
+      return this.calls.size;
+    }
+
+    toolOf(sessionId: SessionId, toolUseId: string): CanonicalTool | null {
+      this.asked.push(`${sessionId.value}/${toolUseId}`);
+      return this.calls.get(toolUseId) ?? null;
+    }
+  }
 
   describe('the diff of a tool — B-25', () => {
     let diff: ShowToolDiffUseCase;
+    let pending: PendingCalls;
 
     beforeEach(() => {
-      diff = new ShowToolDiffUseCase(registry, memory, stores);
+      pending = new PendingCalls();
+      diff = new ShowToolDiffUseCase(registry, memory, stores, pending);
     });
 
     it('of an edit, is the whole file against the snapshot of its turn — S-103', async () => {
@@ -137,6 +165,8 @@ describe('what a session changed on disk', () => {
 
       expect(shown).toMatchObject({
         path: APP,
+        kind: 'file.edit',
+        pending: false,
         scope: 'file',
         before: { state: 'content', content: BEFORE },
         after: { state: 'content', content: AFTER },
@@ -209,12 +239,122 @@ describe('what a session changed on disk', () => {
       remember('toolu_1', 'Bash', { command: 'ls' });
       remember('toolu_2', 'Edit', { file_path: 'relative.js' });
 
-      await expect(diff.execute(SESSION_ID, 'toolu_1', owner)).rejects.toBeInstanceOf(
-        DiffNotApplicableError,
-      );
+      await expect(diff.execute(SESSION_ID, 'toolu_1', owner)).rejects.toMatchObject({
+        code: 'DIFF_NOT_APPLICABLE',
+        params: { kind: 'shell' },
+      });
       await expect(diff.execute(SESSION_ID, 'toolu_2', owner)).rejects.toBeInstanceOf(
         DiffNotApplicableError,
       );
+    });
+
+    describe('of a call still waiting for an answer — plan 28, B-17 / S-53, S-54', () => {
+      const ask = (toolUseId: string, toolName: string, input: Record<string, unknown>) => {
+        pending.calls.set(toolUseId, claudeTool(toolName, input));
+      };
+
+      it('is the disk now against the disk with the edit applied', async () => {
+        disk.put(APP, BEFORE);
+        ask('toolu_p', 'Edit', { file_path: APP, old_string: "'hello'", new_string: "'hi'" });
+
+        const shown = await diff.execute(SESSION_ID, 'toolu_p', owner);
+
+        expect(shown).toMatchObject({
+          path: APP,
+          kind: 'file.edit',
+          pending: true,
+          scope: 'file',
+          before: { state: 'content', content: BEFORE },
+          after: { state: 'content', content: BEFORE.replace("'hello'", "'hi'") },
+        });
+        expect(shown.hunks).toHaveLength(1);
+        expect(pending.asked).toEqual([`${SESSION_ID}/toolu_p`]);
+      });
+
+      it('is asked of the pending call before anything the session remembers', async () => {
+        // The same id remembered with another change: the question is the call that has not run.
+        remember('toolu_p', 'Write', { file_path: APP, content: 'remembered' });
+        ask('toolu_p', 'Write', { file_path: NEW, content: 'pending\n' });
+
+        const shown = await diff.execute(SESSION_ID, 'toolu_p', owner);
+
+        expect(shown).toMatchObject({
+          path: NEW,
+          kind: 'file.write',
+          pending: true,
+          before: { state: 'absent' },
+          after: { state: 'content', content: 'pending\n' },
+        });
+        expect(shown.hunks[0]?.lines).toEqual([{ kind: 'added', text: 'pending' }]);
+      });
+
+      it('of an edit whose text is not on disk, says which replacement would not apply', async () => {
+        disk.put(APP, BEFORE);
+        ask('toolu_p', 'Edit', { file_path: APP, old_string: 'nowhere', new_string: 'x' });
+
+        expect(await diff.execute(SESSION_ID, 'toolu_p', owner)).toMatchObject({
+          pending: true,
+          scope: 'edit',
+          after: { state: 'unavailable', reason: 'editMissing', edit: 0 },
+        });
+      });
+
+      it('of a file too large to read, or not a regular file, says why there is no before', async () => {
+        disk.files.set(APP, { kind: 'file', hash: 'h' });
+        disk.contents.set(APP, encode('x'.repeat(10_001)));
+        ask('toolu_p', 'Edit', { file_path: APP, old_string: 'x', new_string: 'y' });
+
+        expect(await diff.execute(SESSION_ID, 'toolu_p', owner)).toMatchObject({
+          pending: true,
+          scope: 'edit',
+          before: { state: 'notRestorable', reason: 'tooLarge' },
+          after: { state: 'unavailable', reason: 'changedSince' },
+          hunks: [expect.objectContaining({ lines: expect.any(Array) })],
+        });
+
+        disk.files.set(APP, { kind: 'unsafe' });
+        expect((await diff.execute(SESSION_ID, 'toolu_p', owner)).before).toEqual({
+          state: 'notRestorable',
+          reason: 'unreadable',
+        });
+      });
+
+      it('refuses a file on disk that is not text, as an applied call does — S-111', async () => {
+        disk.files.set(APP, { kind: 'file', hash: 'h' });
+        disk.contents.set(APP, Uint8Array.from([0x61, 0x00, 0x62]));
+        ask('toolu_p', 'Write', { file_path: APP, content: 'x' });
+
+        await expect(diff.execute(SESSION_ID, 'toolu_p', owner)).rejects.toMatchObject({
+          code: 'FILE_NOT_TEXT',
+        });
+      });
+
+      it('refuses a pending shell call, which changes no file — S-54', async () => {
+        ask('toolu_p', 'Bash', { command: 'rm -rf build' });
+
+        await expect(diff.execute(SESSION_ID, 'toolu_p', owner)).rejects.toMatchObject({
+          code: 'DIFF_NOT_APPLICABLE',
+          params: { kind: 'shell' },
+        });
+      });
+
+      it('refuses a pending cell of a notebook, an edit with no replacements — S-54', async () => {
+        ask('toolu_p', 'NotebookEdit', { notebook_path: '/srv/projects/app/n.ipynb' });
+
+        const refusal = diff.execute(SESSION_ID, 'toolu_p', owner);
+
+        await expect(refusal).rejects.toBeInstanceOf(DiffNotApplicableError);
+        await expect(refusal).rejects.toMatchObject({ params: { kind: 'file.edit' } });
+      });
+
+      it("refuses somebody else's session before asking about its pending calls", async () => {
+        ask('toolu_p', 'Write', { file_path: NEW, content: 'x' });
+
+        await expect(diff.execute(SESSION_ID, 'toolu_p', stranger)).rejects.toBeInstanceOf(
+          SessionForbiddenError,
+        );
+        expect(pending.asked).toEqual([]);
+      });
     });
 
     it("refuses somebody else's session, and one that is not live — S-110", async () => {

@@ -170,7 +170,7 @@ describe('what the disk changed — plan 07, B-35', () => {
     }));
 
     disk.write('a.ts', 'claude');
-    await diskChanged(FOLDER, [{ path: 'a.ts', kind: 'changed', origin: 'claude' }], false);
+    await diskChanged(FOLDER, [{ path: 'a.ts', kind: 'changed', origin: 'agent' }], false);
 
     expect(model.getValue()).toBe('claude');
     expect(model.canUndo()).toBe(false);
@@ -191,15 +191,15 @@ describe('what the disk changed — plan 07, B-35', () => {
     await diskChanged(
       FOLDER,
       [
-        { path: 'a.ts', kind: 'changed', origin: 'claude' },
+        { path: 'a.ts', kind: 'changed', origin: 'agent' },
         { path: 'b.ts', kind: 'changed' },
         { path: 'not-open.ts', kind: 'created' },
       ],
       false,
     );
 
-    expect(doc('a.ts')?.external).toEqual({ origin: 'claude' });
-    expect(doc('b.ts')?.external).toEqual({ origin: null });
+    expect(doc('a.ts')?.external).toEqual({ origin: 'agent', engine: null });
+    expect(doc('b.ts')?.external).toEqual({ origin: null, engine: null });
     expect(model.getValue()).toBe('mine');
   });
 
@@ -231,7 +231,7 @@ describe('what the disk changed — plan 07, B-35', () => {
     await openedModel('a.ts');
 
     disk.remove('a.ts');
-    await diskChanged(FOLDER, [{ path: 'a.ts', kind: 'deleted', origin: 'claude' }], false);
+    await diskChanged(FOLDER, [{ path: 'a.ts', kind: 'deleted', origin: 'agent' }], false);
     expect(doc('a.ts')?.deleted).toBe(true);
 
     disk.write('a.ts', 'one');

@@ -15,7 +15,7 @@ import {
   offerChoice,
 } from '@/features/editor/hooks/choices';
 import {
-  addFileToClaude,
+  addFileToAgent,
   announce,
   changeEol,
   changeIndentation,
@@ -26,7 +26,7 @@ import {
 import { usePalette } from '@/features/commands';
 import { editorStoreOf, isDirty, updateDoc } from '@/features/editor/store/editor.store';
 import { useEditorChoice } from '@/features/editor/store/choice.store';
-import { claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentContextTargets } from '@/shared/lib/files-drag';
 import { FOLDER, editorState, openedModel } from '../../../../support/editor';
 import { fakeDisk, refused } from '../../../../support/editor-disk';
 import { translator } from '../../../../support/render';
@@ -165,12 +165,12 @@ describe('the status bar actions — plan 07, B-37', () => {
 describe('adding to Claude’s context — plan 07, B-42', () => {
   it('hands the file, or the selection with its range, to whoever takes it, and says so (S-275, S-277)', () => {
     const add = vi.fn();
-    const unregister = claudeContextTargets.register({ id: 'chat', position: 1, add });
+    const unregister = agentContextTargets.register({ id: 'chat', position: 1, add });
     const range = { startLine: 1, startColumn: 1, endLine: 2, endColumn: 3 };
 
-    addFileToClaude(FOLDER, 'src/a.ts', []);
-    addFileToClaude(FOLDER, 'src/a.ts', [range]);
-    addFileToClaude(FOLDER, 'src/a.ts', []);
+    addFileToAgent(FOLDER, 'src/a.ts', []);
+    addFileToAgent(FOLDER, 'src/a.ts', [range]);
+    addFileToAgent(FOLDER, 'src/a.ts', []);
 
     expect(add.mock.calls).toEqual([
       [{ folder: FOLDER, entries: [{ path: 'src/a.ts', kind: 'file' }] }],
@@ -179,7 +179,7 @@ describe('adding to Claude’s context — plan 07, B-42', () => {
       [{ folder: FOLDER, entries: [{ path: 'src/a.ts', kind: 'file' }] }],
     ]);
     expect(editorState().announcement).toMatchObject({
-      key: 'editor.claude.added',
+      key: 'editor.agent.added',
       params: { path: 'src/a.ts' },
     });
     unregister();
@@ -187,11 +187,11 @@ describe('adding to Claude’s context — plan 07, B-42', () => {
 
   it('hands one range for each cursor that selects something — plan 08, S-251', () => {
     const add = vi.fn();
-    const unregister = claudeContextTargets.register({ id: 'chat', position: 1, add });
+    const unregister = agentContextTargets.register({ id: 'chat', position: 1, add });
     const first = { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 };
     const second = { startLine: 5, startColumn: 1, endLine: 7, endColumn: 2 };
 
-    addFileToClaude(FOLDER, 'src/a.ts', [first, second]);
+    addFileToAgent(FOLDER, 'src/a.ts', [first, second]);
 
     expect(add.mock.calls).toEqual([
       [{ folder: FOLDER, entries: [], selection: { path: 'src/a.ts', range: first } }],
@@ -201,9 +201,9 @@ describe('adding to Claude’s context — plan 07, B-42', () => {
   });
 
   it('says nothing took it when nobody does (S-276)', () => {
-    addFileToClaude(FOLDER, 'a.ts', []);
-    expect(editorState().announcement?.key).toBe('editor.claude.unavailable');
-    announce(FOLDER, 'editor.claude.added');
+    addFileToAgent(FOLDER, 'a.ts', []);
+    expect(editorState().announcement?.key).toBe('editor.agent.unavailable');
+    announce(FOLDER, 'editor.agent.added');
     expect(editorState().announcement?.params).toEqual({});
   });
 });
@@ -222,7 +222,7 @@ describe('the answers to the questions of a file', () => {
 
     updateDoc(store, 'a.ts', () => ({
       conflict: null,
-      external: { origin: 'claude' },
+      external: { origin: 'agent', engine: 'claude' },
       saveError: refused('X', 'x'),
     }));
     postponeConflict(FOLDER, 'a.ts');

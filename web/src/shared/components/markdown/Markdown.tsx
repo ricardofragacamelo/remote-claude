@@ -245,7 +245,7 @@ const COMPONENTS: Components = {
 
 /**
  * Markdown, rendered safely — the one renderer of the product (plan 07 · B-50, plan 08 · D-04): the
- * previews of the editor, Claude's answers, the plans to approve.
+ * previews of the editor, the agent's answers, the plans to approve.
  *
  * - **raw HTML never becomes DOM**: no `rehype-raw`, and `skipHtml` drops what the text writes as a
  *   tag — a `<script>`, an `<img onerror>`, an `<iframe>` are not there at all;

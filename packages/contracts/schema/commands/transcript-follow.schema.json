@@ -6,11 +6,11 @@
   "x-kind": "command",
   "x-type": "transcript.follow",
   "type": "object",
-  "required": ["conversationId"],
+  "required": ["conversation"],
   "properties": {
-    "conversationId": {
-      "type": "string",
-      "description": "The conversation in Claude's store, a canonical UUID — the `sessionId` of `GET /transcripts/:sessionId/messages`."
+    "conversation": {
+      "$ref": "../definitions/conversation-ref.schema.json",
+      "description": "The conversation to follow — the `engine` and `id` of `GET /transcripts/:engine/:id/messages`."
     },
     "afterMessageId": {
       "type": "string",

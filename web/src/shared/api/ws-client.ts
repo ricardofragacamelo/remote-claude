@@ -1,6 +1,8 @@
 import { isEnvelope, PROTOCOL_VERSION } from '@remote-claude/contracts';
 import type { Envelope } from '@remote-claude/contracts';
 
+import { readConversation } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { newTraceId } from '@/shared/lib/trace';
 import { logger } from '@/shared/logging/logger';
 
@@ -40,11 +42,11 @@ export interface SessionSubscriber {
   /**
    * The buffer no longer holds what this subscriber missed: drop local state and reload.
    *
-   * @param claudeSessionId the conversation to reload the history from, as the ack named it — the
+   * @param conversation the conversation to reload the history from, as the ack named it — the
    *   only place left that says so once the buffer has lost the `session.started` that did. `null`
    *   for a stream that is not a conversation.
    */
-  onGap(claudeSessionId: string | null): void;
+  onGap(conversation: ConversationRef | null): void;
 
   /** The highest `seq` the subscriber has applied, so a reconnect can resume from it. */
   lastSeq(): number;
@@ -468,8 +470,7 @@ export class WsClient {
   }
 
   private attached(frame: Envelope): void {
-    const payload = frame.payload as
-      { sessionId?: unknown; gap?: unknown; claudeSessionId?: unknown } | undefined;
+    const payload = frame.payload as { sessionId?: unknown; gap?: unknown } | undefined;
     const sessionId = typeof payload?.sessionId === 'string' ? payload.sessionId : null;
     const watching = sessionId === null ? undefined : this.subscribers.get(sessionId);
 
@@ -485,11 +486,10 @@ export class WsClient {
     }
 
     logger.warn({ op: 'ws.connection', sessionId }, 'replay gap — reloading the transcript');
-    const claudeSessionId =
-      typeof payload.claudeSessionId === 'string' ? payload.claudeSessionId : null;
+    const conversation = readConversation(payload, 'conversation');
 
     for (const subscriber of watching) {
-      subscriber.onGap(claudeSessionId);
+      subscriber.onGap(conversation);
     }
   }
 

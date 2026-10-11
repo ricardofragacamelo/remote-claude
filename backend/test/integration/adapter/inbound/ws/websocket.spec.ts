@@ -72,7 +72,7 @@ describe('the WebSocket gateway', () => {
       expect(ready).toMatchObject({ kind: 'ack', type: 'connection.ready' });
       expect(ready.payload).toMatchObject({
         connectionId: expect.any(String),
-        serverVersion: '1',
+        serverVersion: '2',
         limits: { maxFrameBytes: 65_536, replayBufferSize: 1_000 },
       });
     });
@@ -108,7 +108,7 @@ describe('the WebSocket gateway', () => {
     it('closes with 4426 for a protocol version it does not speak', async () => {
       const socket = await connect();
 
-      socket.send(commandFrame('connection.authenticate', {}, { v: 2 as never }));
+      socket.send(commandFrame('connection.authenticate', {}, { v: 3 as never }));
 
       await expect(socket.closed()).resolves.toMatchObject({ code: 4426 });
     });
@@ -116,14 +116,14 @@ describe('the WebSocket gateway', () => {
     it('says which versions it speaks before closing, so the client can tell its user', async () => {
       const socket = await connect();
 
-      socket.send(commandFrame('connection.authenticate', {}, { v: 2 as never }));
+      socket.send(commandFrame('connection.authenticate', {}, { v: 3 as never }));
       const answer = await socket.next();
 
       expect(answer).toMatchObject({ kind: 'error', type: 'error' });
       expect(answer.payload).toMatchObject({
         code: 'INVALID_INPUT',
         messageKey: 'connection.error.unsupportedVersion',
-        params: { supportedVersions: [1] },
+        params: { supportedVersions: [2, 1] },
       });
     });
 

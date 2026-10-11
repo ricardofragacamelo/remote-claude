@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { OWNER_VALUE, PROCESS_MARKER } from '@adapter/outbound/claude/process-marker';
+import { OWNER_VALUE, PROCESS_MARKER } from '@shared/process/process-marker';
 import { ORPHAN_GRACE_MS, OrphanSweep, orphansIn } from '@infra/lifecycle/orphan-sweep';
 import type { ProcessEntry, ProcessTable } from '@infra/lifecycle/process-table';
 import { RecordingLogger } from '../../../support/fakes/recording-logger';

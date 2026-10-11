@@ -16,11 +16,15 @@ import { permissionQueueOf } from '@/features/permission';
 import type { PermissionRequest } from '@/features/permission';
 import { folderTabStore } from '@/features/workbench';
 import { wsClient } from '@/shared/api/ws';
-import { nextPanelMode } from '../lib/panel-modes';
+import { capabilitiesIn } from '../lib/capabilities';
+import { formerCommandIdsOf } from '../lib/former-ids';
+import { nextPanelMode, offeredModes, shownMode } from '../lib/panel-modes';
 import { goToCard } from '../lib/request-finder';
 import { interruptSession, setSessionPermissionMode } from '../services/live-session.service';
-import { claudePanelStore } from '../store/claude-panel.store';
+import { agentPanelStore } from '../store/agent-panel.store';
 import { liveSessionStoreOf } from '../store/live-session.store';
+import type { EngineDirectory } from '../types/engine';
+import { useEngines } from './useEngines';
 import { sessionShownIn } from './usePanelTabs';
 import type { PanelTabs } from './usePanelTabs';
 
@@ -39,28 +43,44 @@ export function focusComposerOf(folder: string): void {
 /** Puts the panel on screen and the focus in its prompt box, once it is there. */
 function focusComposer(folder: string): void {
   folderTabStore(folder).getState().showSecondary();
-  claudePanelStore(folder).getState().showPane('chat');
+  agentPanelStore(folder).getState().showPane('chat');
   focusComposerOf(folder);
 }
 
 /**
- * The mode of the conversation on screen moves to the next one, as the chip of the bar would
- * (plan 09, D-09): a session's is sent — and shown at once, as its chip does —, a draft's is what it
- * will start with. A conversation of the history has none.
+ * The mode of the conversation on screen moves to the next one its engine announces, as the chip of
+ * the bar would (plan 09, D-09; plan 28, B-27): a session's is sent — and shown at once, as its chip
+ * does —, a draft's is what it will start with. A conversation of the history has none, and an
+ * engine with one mode has nowhere to move.
  */
-function cycleMode(folder: string, tabs: PanelTabs): void {
+function cycleMode(folder: string, tabs: PanelTabs, directory: EngineDirectory | null): void {
   const active = tabs.active;
 
   if (active?.kind === 'session') {
-    const live = liveSessionStoreOf(active.sessionId);
-    const next = nextPanelMode(live.getState().permissionMode);
-    if (setSessionPermissionMode(wsClient, active.sessionId, next) !== null) {
-      live.getState().noteMode(next);
-    }
+    cycleSessionMode(active.sessionId, directory);
   } else if (active?.kind === 'draft') {
-    claudePanelStore(folder)
-      .getState()
-      .setChoices(active.key, { ...active.choices, mode: nextPanelMode(active.choices.mode) });
+    const modes = offeredModes(capabilitiesIn(directory, null));
+    const next = nextPanelMode(modes, shownMode(modes, active.choices.mode));
+    if (next !== null) {
+      agentPanelStore(folder)
+        .getState()
+        .setChoices(active.key, { ...active.choices, mode: next });
+    }
+  }
+}
+
+/** A live session's mode, to the next its engine announces — as its `session.started` said, or listed. */
+function cycleSessionMode(sessionId: string, directory: EngineDirectory | null): void {
+  const live = liveSessionStoreOf(sessionId);
+  const { capabilities, conversation, permissionMode } = live.getState();
+  const modes = offeredModes(
+    capabilities ?? capabilitiesIn(directory, conversation?.engine ?? null),
+  );
+  // From the mode its chip shows: before the stream says one, the first the engine announces.
+  const next = nextPanelMode(modes, shownMode(modes, permissionMode));
+
+  if (next !== null && setSessionPermissionMode(wsClient, sessionId, next) !== null) {
+    live.getState().noteMode(next);
   }
 }
 
@@ -84,7 +104,7 @@ function usePendingOf(sessionId: string | null): readonly PermissionRequest[] {
  */
 function goToRequest(folder: string, oldest: string | undefined): void {
   folderTabStore(folder).getState().showSecondary();
-  claudePanelStore(folder).getState().showPane('chat');
+  agentPanelStore(folder).getState().showPane('chat');
 
   if (oldest === undefined) {
     focusComposerOf(folder);
@@ -94,7 +114,7 @@ function goToRequest(folder: string, oldest: string | undefined): void {
 }
 
 /**
- * The commands of the panel of Claude, live while its folder tab is on screen (plan 08, B-40): a new
+ * The commands of the panel of the agent, live while its folder tab is on screen (plan 08, B-40): a new
  * conversation, the prompt box, the interrupt, the next and previous conversation and the changes —
  * each with its shortcut, in the palette, working with the focus anywhere in the tab (S-185). The
  * panel itself opens and closes with the workbench's own `Mod+Alt+B`. Since plan 09 (B-25), the way
@@ -103,11 +123,12 @@ function goToRequest(folder: string, oldest: string | undefined): void {
 export function usePanelCommands(folder: string, tabs: PanelTabs): void {
   const activeSession = (): string | null => sessionShownIn(tabs);
   const pending = usePendingOf(sessionShownIn(tabs));
+  const { directory } = useEngines();
 
   const declarations: CommandDeclaration[] = [
     {
-      id: 'claude.newConversation',
-      labelKey: 'command.claude.newConversation',
+      id: 'agent.newConversation',
+      labelKey: 'command.agent.newConversation',
       category: 'file',
       icon: MessageSquarePlus,
       run: () => {
@@ -117,8 +138,8 @@ export function usePanelCommands(folder: string, tabs: PanelTabs): void {
       keys: [{ key: 'Mod+Alt+N', context: 'workbench' }],
     },
     {
-      id: 'claude.focusComposer',
-      labelKey: 'command.claude.focusComposer',
+      id: 'agent.focusComposer',
+      labelKey: 'command.agent.focusComposer',
       category: 'go',
       icon: Focus,
       run: () => {
@@ -127,8 +148,8 @@ export function usePanelCommands(folder: string, tabs: PanelTabs): void {
       keys: [{ key: 'Mod+Alt+L', context: 'workbench' }],
     },
     {
-      id: 'claude.interrupt',
-      labelKey: 'command.claude.interrupt',
+      id: 'agent.interrupt',
+      labelKey: 'command.agent.interrupt',
       category: 'go',
       icon: Octagon,
       when: () => activeSession() !== null,
@@ -139,9 +160,9 @@ export function usePanelCommands(folder: string, tabs: PanelTabs): void {
       keys: [{ key: 'Mod+Alt+I', context: 'workbench' }],
     },
     {
-      id: 'claude.goToRequest',
+      id: 'agent.goToRequest',
       labelKey:
-        pending.length === 0 ? 'command.claude.goToRequestNone' : 'command.claude.goToRequest',
+        pending.length === 0 ? 'command.agent.goToRequestNone' : 'command.agent.goToRequest',
       labelParams: { count: pending.length },
       category: 'go',
       icon: MessageCircleQuestion,
@@ -154,20 +175,20 @@ export function usePanelCommands(folder: string, tabs: PanelTabs): void {
       keys: [{ key: 'Mod+Alt+P', context: 'workbench', allowInInput: true }],
     },
     {
-      id: 'claude.cycleMode',
-      labelKey: 'command.claude.cycleMode',
+      id: 'agent.cycleMode',
+      labelKey: 'command.agent.cycleMode',
       category: 'go',
       icon: ShieldCheck,
       when: () => tabs.active !== null && tabs.active.kind !== 'conversation',
       run: () => {
-        cycleMode(folder, tabs);
+        cycleMode(folder, tabs, directory);
       },
       // Not Shift+Tab, as the CLI: in a browser it is the way back through the focus (D-09).
       keys: [{ key: 'Mod+Shift+M', context: 'workbench' }],
     },
     {
-      id: 'claude.nextConversation',
-      labelKey: 'command.claude.nextConversation',
+      id: 'agent.nextConversation',
+      labelKey: 'command.agent.nextConversation',
       category: 'go',
       icon: SkipForward,
       when: () => tabs.tabs.length > 1,
@@ -177,8 +198,8 @@ export function usePanelCommands(folder: string, tabs: PanelTabs): void {
       keys: [{ key: 'Mod+Alt+]', context: 'workbench' }],
     },
     {
-      id: 'claude.previousConversation',
-      labelKey: 'command.claude.previousConversation',
+      id: 'agent.previousConversation',
+      labelKey: 'command.agent.previousConversation',
       category: 'go',
       icon: SkipBack,
       when: () => tabs.tabs.length > 1,
@@ -195,11 +216,11 @@ export function usePanelCommands(folder: string, tabs: PanelTabs): void {
       when: () => activeSession() !== null,
       run: () => {
         folderTabStore(folder).getState().showSecondary();
-        claudePanelStore(folder).getState().showPane('changes');
+        agentPanelStore(folder).getState().showPane('changes');
       },
       keys: [{ key: 'Mod+Alt+G', context: 'workbench' }],
     },
   ];
 
-  useCommands(declarations);
+  useCommands(declarations.map((each) => ({ ...each, formerIds: formerCommandIdsOf(each.id) })));
 }

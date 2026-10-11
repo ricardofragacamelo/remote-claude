@@ -97,7 +97,7 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
-| 2026-09-24 | [D-09](decisions.md#d-09--a-regra-nossa-é-a-única-autoridade) — não se devolve `updatedPermissions` | regra entregue ao SDK é aplicada pelo CLI sem `canUseTool`, e não sai de uma sessão viva: B-05 e B-03 quebrariam. Decidido pelo dono do produto | B-04 revista; [backend/04](../../architecture/backend/04-claude-integration.md#a-ponte-de-permissão) |
+| 2026-09-24 | [D-09](decisions.md#d-09--a-regra-nossa-é-a-única-autoridade) — não se devolve `updatedPermissions` | regra entregue ao SDK é aplicada pelo CLI sem `canUseTool`, e não sai de uma sessão viva: B-05 e B-03 quebrariam. Decidido pelo dono do produto | B-04 revista; [backend/04](../../architecture/backend/04a-claude.md#a-ponte-de-permissão) |
 | 2026-09-24 | [D-10](decisions.md#d-10--dois-caminhos-para-nascer-uma-rotina) — `permission.resolve` e `POST /permission-rules` pela mesma rotina | os códigos 400/422 da D-01 e D-02 pressupõem um pedido com padrão e validade | API `/permission-rules`, `PERMISSION_RULE_NOT_FOUND`, duas variáveis de ambiente |
 | 2026-09-24 | [D-11](decisions.md#d-11--o-mais-restritivo-até-onde-o-canusetool-alcança) — `deny` sempre nega; `allow` não auto-aprova em `plan` | "o mais restritivo" só alcança o que passa pelo `canUseTool` | B-06; limitação de `acceptEdits` declarada abaixo |
 | 2026-09-24 | Regra que resolve **publica** `permission.resolved` com `auto: true` | a B-03 pede; antes a regra de `session` resolvia sem anunciar | muda o S-60 do [plano 01](../01-live-session/scenarios.md), cujo teste foi atualizado para o comportamento novo |

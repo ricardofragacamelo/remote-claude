@@ -1,4 +1,5 @@
 import type { UserId } from '@domain/auth';
+import type { ToolKind } from '@domain/engine';
 import type { PermissionOrigin, PermissionScope } from '@domain/permission';
 import type { SessionId } from '@domain/session';
 import { ToolInput } from '../value-objects/tool-input.value-object';
@@ -59,6 +60,13 @@ export interface AuditEntryDraft {
   readonly sessionId: SessionId;
   readonly toolUseId: string | null;
   readonly toolName: string;
+
+  /**
+   * The canonical kind of the call, as the engine's adapter read it — beside the engine's name of
+   * the tool, which stays. Absent or `null` on an entry written before the trail kept it, until the
+   * data step at boot gives it one (plan 28, B-33).
+   */
+  readonly toolKind?: ToolKind | null;
   readonly input: Readonly<Record<string, unknown>>;
   readonly decision: AuditDecision;
   readonly origin: AuditOrigin;
@@ -75,9 +83,10 @@ export interface AuditEntryDraft {
  * has been captured, and the verdict is always stated, `null` when there is none — and restating
  * the other eight is how they come to disagree.
  */
-export type AuditEntrySnapshot = Omit<AuditEntryDraft, 'input' | 'verdict'> & {
+export type AuditEntrySnapshot = Omit<AuditEntryDraft, 'input' | 'verdict' | 'toolKind'> & {
   readonly input: ToolInput;
   readonly verdict: AuditVerdict | null;
+  readonly toolKind: ToolKind | null;
 };
 
 /**
@@ -98,6 +107,7 @@ export class AuditEntry {
     readonly sessionId: SessionId,
     readonly toolUseId: string | null,
     readonly toolName: string,
+    readonly toolKind: ToolKind | null,
     readonly input: ToolInput,
     readonly decision: AuditDecision,
     readonly origin: AuditOrigin,
@@ -113,6 +123,7 @@ export class AuditEntry {
       draft.sessionId,
       draft.toolUseId,
       draft.toolName,
+      draft.toolKind ?? null,
       ToolInput.capture(draft.input),
       draft.decision,
       { deviceId: draft.origin.deviceId, ip: draft.origin.ip },
@@ -129,6 +140,7 @@ export class AuditEntry {
       snapshot.sessionId,
       snapshot.toolUseId,
       snapshot.toolName,
+      snapshot.toolKind,
       snapshot.input,
       snapshot.decision,
       snapshot.origin,
@@ -144,6 +156,7 @@ export class AuditEntry {
       sessionId: this.sessionId,
       toolUseId: this.toolUseId,
       toolName: this.toolName,
+      toolKind: this.toolKind,
       input: this.input,
       decision: this.decision,
       origin: this.origin,

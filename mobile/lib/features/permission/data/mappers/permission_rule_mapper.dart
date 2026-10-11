@@ -17,7 +17,6 @@ PermissionRule? permissionRuleFrom(Object? payload) {
   }
 
   final String? id = wireText(payload, 'id');
-  final String? toolName = wireText(payload, 'toolName');
   final String? pattern = wireText(payload, 'pattern');
   final String? grantedBy = wireText(payload, 'grantedBy');
   final DateTime? grantedAt = wireInstant(payload, 'grantedAt');
@@ -30,7 +29,6 @@ PermissionRule? permissionRuleFrom(Object? payload) {
   final PermissionDecision? decision = wireDecision(payload, 'decision');
 
   if (id == null ||
-      toolName == null ||
       pattern == null ||
       grantedBy == null ||
       grantedAt == null ||
@@ -43,7 +41,9 @@ PermissionRule? permissionRuleFrom(Object? payload) {
   return PermissionRule(
     id: id,
     scope: scope,
-    toolName: toolName,
+    // The kind, and never the `toolName` the server keeps beside it for older builds: a rule is named
+    // by what it answers, not by the engine's name for a tool (plan 28, F5).
+    kind: wireText(payload, 'kind'),
     pattern: pattern,
     decision: decision,
     projectPath: wireText(payload, 'projectPath'),
@@ -55,10 +55,20 @@ PermissionRule? permissionRuleFrom(Object? payload) {
     status: switch (wireText(payload, 'status')) {
       'active' => RuleStatus.active,
       'expired' => RuleStatus.expired,
+      'disabled' => RuleStatus.disabled,
       _ => RuleStatus.unknown,
     },
+    engine: wireText(payload, 'engine'),
+    disabledReason: _disabledReason(payload['disabled']),
   );
 }
+
+/// The reason of a `disabled: { reason }`, or `null` when the rule was not disabled. A disabled
+/// without a readable reason still says it was disabled, under a reason of its own.
+String? _disabledReason(Object? disabled) => switch (disabled) {
+  final Map<String, Object?> body => wireText(body, 'reason') ?? 'unknown',
+  _ => null,
+};
 
 /// Every rule in a `GET /permission-rules` body, or `null` when the body is not that listing.
 List<PermissionRule>? permissionRulesIn(Object? body) {

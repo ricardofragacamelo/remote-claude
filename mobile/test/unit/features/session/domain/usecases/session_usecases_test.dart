@@ -9,6 +9,7 @@ import 'package:remote_claude/features/session/domain/usecases/list_checkpoints.
 import 'package:remote_claude/features/session/domain/usecases/list_commands.dart';
 import 'package:remote_claude/features/session/domain/usecases/read_insight.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/undo.dart';
 import '../../../../../support/fakes/fake_checkpoint_repository.dart';
 import '../../../../../support/fakes/fake_command_repository.dart';
@@ -62,7 +63,7 @@ void main() {
     });
 
     test('S-81 · a fork continues the conversation from before the prompt, with an id', () {
-      final String? id = DriveSession(sessions).fork('/work', 'conv-1', 'u1');
+      final String? id = DriveSession(sessions).fork('/work', conversationOf('conv-1'), 'u1');
 
       expect(id, isNotNull);
       expect(sessions.commands.single.$1, 'session.start');
@@ -70,17 +71,26 @@ void main() {
         sessions.commands.single.$2,
         equals(<String, Object?>{
           'workspacePath': '/work',
-          'resumeSessionId': 'conv-1',
+          'resumeFrom': conversationJson('conv-1'),
           'forkAt': 'u1',
         }),
       );
     });
 
-    test('a socket that is not ready answers no id for either', () {
+    test('a socket that is not ready answers no id for any', () {
       sessions.accepts = false;
 
       expect(DriveSession(sessions).prompt('s-1', '/init'), isNull);
       expect(DriveSession(sessions).rewindFiles('s-1', 'p'), isNull);
+      expect(DriveSession(sessions).compact('s-1'), isNull);
+    });
+
+    test('plan 28 · S-69 · compacting is a command of its own, with an id, never a prompt', () {
+      final String? id = DriveSession(sessions).compact('s-1');
+
+      expect(id, isNotNull);
+      expect(sessions.commands.single.$1, 'session.compact');
+      expect(sessions.commands.single.$2, <String, Object?>{'sessionId': 's-1'});
     });
 
     test('S-19 · a draft opens its session with what was chosen, and nothing it left alone', () {
@@ -88,14 +98,14 @@ void main() {
 
       drive.start(
         '/w',
-        choices: const SessionChoices(model: 'opus', permissionMode: 'plan', effort: 'high'),
+        choices: const SessionChoices(model: 'opus', permissionMode: 'readOnly', effort: 'high'),
       );
       drive.start('/w');
 
       expect(sessions.commands.first.$2, <String, Object?>{
         'workspacePath': '/w',
         'model': 'opus',
-        'permissionMode': 'plan',
+        'permissionMode': 'readOnly',
         'effort': 'high',
       });
       expect(sessions.commands.last.$2, <String, Object?>{'workspacePath': '/w'});

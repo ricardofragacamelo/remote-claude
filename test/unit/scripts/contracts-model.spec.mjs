@@ -8,6 +8,7 @@ function envelope(schema = {}) {
     source: 'envelope.schema.json',
     schema: {
       title: 'Envelope',
+      'x-protocol-version': 1,
       type: 'object',
       required: ['v', 'kind', 'type'],
       properties: {

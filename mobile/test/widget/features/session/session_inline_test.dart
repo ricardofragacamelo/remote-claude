@@ -20,8 +20,10 @@ import 'package:remote_claude/features/session/presentation/widgets/working_indi
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/builders/frames.dart';
 import '../../../support/builders/permissions.dart';
+import '../../../support/builders/tools.dart';
 import '../../../support/builders/undo.dart';
 import '../../../support/pump_app.dart';
 import '../../../support/session_screen.dart';
@@ -72,7 +74,7 @@ void main() {
     toolUseId: toolUseId,
     riskHint: RiskHint.read,
     defaultToNo: false,
-    input: const <String, Object?>{'command': 'cat notes.txt'},
+    call: shellCall('cat notes.txt'),
     description: 'cat notes.txt',
   );
 
@@ -151,10 +153,25 @@ void main() {
         ..devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await screen.pump(tester);
-      await emit(tester, toolStarted(toolUseId: 'toolu-1', seq: 2, toolName: 'Grep'));
+      await emit(
+        tester,
+        toolStarted(
+          toolUseId: 'toolu-1',
+          seq: 2,
+          call: aToolCall(
+            kind: 'search',
+            messageKey: 'sessions.tool.search',
+            params: const <String, Object>{'pattern': 'TODO'},
+            rawInput: const <String, Object?>{'pattern': 'TODO'},
+          ),
+          title: 'Find the leftovers',
+        ),
+      );
       await emit(tester, sessionStatusChanged(status: 'running', seq: 3));
 
-      expect(find.text(l10n.sessionWorkingRunningTool('Grep')), findsOneWidget);
+      // S-60 · the label of the call — never the engine's own name for the tool.
+      expect(find.text(l10n.sessionWorkingRunningTool('Search for “TODO”')), findsOneWidget);
+      expect(find.textContaining('NativeTool'), findsNothing);
 
       await ask(tester, about('toolu-1'));
       await emit(tester, sessionStatusChanged(status: 'waitingPermission', seq: 4));
@@ -317,11 +334,7 @@ void main() {
 
       await ask(
         tester,
-        aPermissionRequest(
-          toolUseId: 'toolu-1',
-          input: const <String, Object?>{'command': long},
-          description: long,
-        ),
+        aPermissionRequest(toolUseId: 'toolu-1', call: shellCall(long), description: long),
       );
 
       expect(find.text(long), findsOneWidget);
@@ -412,9 +425,10 @@ void main() {
   group('the plan — B-21', () {
     PermissionRequest plan() => aPermissionRequest(
       toolUseId: 'toolu-plan',
-      toolName: 'ExitPlanMode',
+      call: planCall(),
+      plan: const PlanInteraction(markdown: '1. Read the code\n2. Fix the bug'),
+      titleKey: 'permission.tool.plan',
       riskHint: RiskHint.read,
-      input: const <String, Object?>{'plan': '1. Read the code\n2. Fix the bug'},
       description: null,
     );
 
@@ -426,7 +440,7 @@ void main() {
         ..devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await screen.pump(tester);
-      await emit(tester, toolStarted(toolUseId: 'toolu-plan', seq: 2, toolName: 'ExitPlanMode'));
+      await emit(tester, toolStarted(toolUseId: 'toolu-plan', seq: 2, call: planCall()));
       await ask(tester, plan());
 
       expect(find.text('1. Read the code\n2. Fix the bug'), findsOneWidget);
@@ -442,6 +456,56 @@ void main() {
         'mode': 'acceptEdits',
       });
     });
+
+    testWidgets(
+      'plan 28 · S-81 · the plan offers the modes the session announced, and only those',
+      (WidgetTester tester) async {
+        tester.view
+          ..physicalSize = const Size(600, 2400)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await screen.pump(
+          tester,
+          capabilities: capabilitiesJson(<String, Object?>{
+            'permissionModes': <Object?>['readOnly', 'ask'],
+          }),
+        );
+        await ask(tester, plan());
+
+        expect(find.text(l10n.permissionPlanModeAcceptEdits), findsNothing);
+        await tester.tap(find.text(l10n.permissionPlanApprove));
+        await tester.pumpAndSettle();
+
+        expect(screen.permissions.feed.answers.single.decision, PermissionDecision.allow);
+        expect(screen.sessions.commands.single.$2, <String, Object?>{
+          'sessionId': 'session-1',
+          'mode': 'ask',
+        });
+      },
+    );
+
+    testWidgets(
+      'plan 28 · S-81 · with no mode to go on in, the plan is approved and the mode stays',
+      (WidgetTester tester) async {
+        tester.view
+          ..physicalSize = const Size(600, 2400)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await screen.pump(
+          tester,
+          capabilities: capabilitiesJson(<String, Object?>{
+            'permissionModes': <Object?>['readOnly'],
+          }),
+        );
+        await ask(tester, plan());
+
+        await tester.tap(find.text(l10n.permissionPlanApprove));
+        await tester.pumpAndSettle();
+
+        expect(screen.permissions.feed.answers.single.decision, PermissionDecision.allow);
+        expect(screen.sessions.commands, isEmpty);
+      },
+    );
 
     testWidgets('S-70 · sent back: refused, with what to change as the reason', (
       WidgetTester tester,
@@ -485,7 +549,7 @@ void main() {
     ) async {
       await longConversation(tester);
 
-      final Finder pill = find.text(l10n.sessionPendingPill('1'));
+      final Finder pill = find.text(l10n.sessionPendingPill(anEngine, '1'));
       expect(pill, findsOneWidget);
 
       await tester.tap(pill);
@@ -499,7 +563,7 @@ void main() {
     testWidgets('S-71 · away again, past what the list keeps drawn: the pill comes back, and the '
         'card the list let go of is not measured', (WidgetTester tester) async {
       await longConversation(tester);
-      await tester.tap(find.text(l10n.sessionPendingPill('1')));
+      await tester.tap(find.text(l10n.sessionPendingPill(anEngine, '1')));
       await tester.pumpAndSettle();
       expect(find.byType(PermissionPanel), findsOneWidget);
 
@@ -514,7 +578,7 @@ void main() {
 
       expect(find.byType(PermissionPanel), findsNothing);
       expect(tester.takeException(), isNull);
-      expect(find.text(l10n.sessionPendingPill('1')), findsOneWidget);
+      expect(find.text(l10n.sessionPendingPill(anEngine, '1')), findsOneWidget);
     });
 
     testWidgets('S-73 · sending, scrolling and the pill never answer the question', (
@@ -524,7 +588,7 @@ void main() {
 
       await tester.drag(find.byType(ConversationView), const Offset(0, 300));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.sessionPendingPill('1')));
+      await tester.tap(find.text(l10n.sessionPendingPill(anEngine, '1')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).last, 'meanwhile');
       await tester.pump();
@@ -588,32 +652,24 @@ void main() {
   });
 
   group('the tasks and the quiet lines — B-23', () {
-    String todos(List<Map<String, String>> items, {required String id, required int seq}) =>
-        toolStarted(
-          toolUseId: id,
-          seq: seq,
-          toolName: 'TodoWrite',
-          input: <String, Object?>{'todos': items},
-        );
+    /// The list as the agent left it: the whole of it, in one event (plan 28, B-22).
+    String tasks(List<Map<String, Object?>> items, {required int seq}) =>
+        sessionTasksChanged(seq: seq, tasks: items);
 
     testWidgets('S-77 · one line over the box — "done/total · what is being done" — that opens', (
       WidgetTester tester,
     ) async {
       await screen.pump(tester);
       expect(find.byType(TaskStrip), findsOneWidget);
-      expect(find.text(l10n.sessionTasksLabel), findsNothing);
+      expect(find.text(l10n.sessionTasksLabel(l10n.engineNameFallback)), findsNothing);
 
       await emit(
         tester,
-        todos(
-          <Map<String, String>>[
-            <String, String>{'content': 'Read', 'status': 'completed', 'activeForm': 'Reading'},
-            <String, String>{'content': 'Test', 'status': 'in_progress', 'activeForm': 'Testing'},
-            <String, String>{'content': 'Ship', 'status': 'pending', 'activeForm': 'Shipping'},
-          ],
-          id: 'td1',
-          seq: 2,
-        ),
+        tasks(<Map<String, Object?>>[
+          taskJson('1', 'Read', status: 'completed', activeTitle: 'Reading'),
+          taskJson('2', 'Test', status: 'inProgress', activeTitle: 'Testing'),
+          taskJson('3', 'Ship', activeTitle: 'Shipping'),
+        ], seq: 2),
       );
 
       expect(find.text(l10n.sessionTasksHeadline('1', '3', 'Testing')), findsOneWidget);
@@ -630,18 +686,60 @@ void main() {
       await screen.pump(tester);
       await emit(
         tester,
-        todos(
-          <Map<String, String>>[
-            <String, String>{'content': 'Read', 'status': 'completed', 'activeForm': 'Reading'},
-          ],
-          id: 'td1',
-          seq: 2,
-        ),
+        tasks(<Map<String, Object?>>[
+          taskJson('1', 'Read', status: 'completed', activeTitle: 'Reading'),
+        ], seq: 2),
       );
       expect(find.text(l10n.sessionTasksAllDone('1', '1')), findsOneWidget);
 
-      await emit(tester, todos(<Map<String, String>>[], id: 'td2', seq: 3));
+      await emit(tester, tasks(<Map<String, Object?>>[], seq: 3));
       expect(find.text(l10n.sessionTasksAllDone('1', '1')), findsNothing);
+    });
+
+    testWidgets(
+      'S-77 · the rows of the task calls keep their label; the list is not read from them',
+      (WidgetTester tester) async {
+        await screen.pump(tester);
+        await emit(
+          tester,
+          toolStarted(
+            toolUseId: 'td1',
+            seq: 2,
+            call: aToolCall(
+              kind: 'tasks',
+              messageKey: 'sessions.tool.tasksWrite',
+              params: const <String, Object>{'count': 1},
+              rawInput: <String, Object?>{
+                'items': <Object?>[
+                  <String, Object?>{'title': 'Read', 'state': 'pending'},
+                ],
+              },
+            ),
+          ),
+        );
+
+        // A call is not the list: until the event comes, there is none.
+        expect(find.text(l10n.sessionTasksHeadline('0', '1', 'Read')), findsNothing);
+        expect(find.text(l10n.sessionToolTasksWrite('1')), findsOneWidget);
+      },
+    );
+
+    testWidgets('S-68 · an engine with no task list: no strip, whatever arrives', (
+      WidgetTester tester,
+    ) async {
+      await screen.pump(
+        tester,
+        capabilities: capabilitiesJson(<String, Object?>{'taskList': false}),
+      );
+      await emit(
+        tester,
+        tasks(<Map<String, Object?>>[
+          taskJson('1', 'Test', status: 'inProgress', activeTitle: 'Testing'),
+        ], seq: 2),
+      );
+
+      expect(find.byType(TaskStrip), findsNothing);
+      expect(find.text(l10n.sessionTasksHeadline('0', '1', 'Testing')), findsNothing);
     });
 
     testWidgets('S-78 · the list changing never moves what is being read', (
@@ -671,23 +769,15 @@ void main() {
 
       await emit(
         tester,
-        todos(
-          <Map<String, String>>[
-            <String, String>{'content': 'Test', 'status': 'in_progress', 'activeForm': 'Testing'},
-          ],
-          id: 'td1',
-          seq: 40,
-        ),
+        tasks(<Map<String, Object?>>[
+          taskJson('1', 'Test', status: 'inProgress', activeTitle: 'Testing'),
+        ], seq: 40),
       );
       await emit(
         tester,
-        todos(
-          <Map<String, String>>[
-            <String, String>{'content': 'Test', 'status': 'completed', 'activeForm': 'Testing'},
-          ],
-          id: 'td2',
-          seq: 41,
-        ),
+        tasks(<Map<String, Object?>>[
+          taskJson('1', 'Test', status: 'completed', activeTitle: 'Testing'),
+        ], seq: 41),
       );
 
       expect(tester.getTopLeft(reading).dy, before);
@@ -720,7 +810,7 @@ void main() {
   group('from a prompt — B-24', () {
     Future<void> withPrompt(WidgetTester tester, {bool routed = false}) async {
       await screen.pump(tester, routed: routed);
-      await emit(tester, sessionStarted(sessionId: 'session-1', claudeSessionId: 'conv-1', seq: 2));
+      await emit(tester, sessionStarted(sessionId: 'session-1', conversation: 'conv-1', seq: 2));
       await emit(tester, messageCompleted(messageId: 'u1', text: 'fix it', role: 'user', seq: 3));
     }
 
@@ -767,7 +857,7 @@ void main() {
       expect(screen.sessions.commands.single.$1, 'session.start');
       expect(screen.sessions.commands.single.$2, <String, Object?>{
         'workspacePath': '/tmp/work',
-        'resumeSessionId': 'conv-1',
+        'resumeFrom': conversationJson('conv-1'),
         'forkAt': 'u1',
       });
 
@@ -832,7 +922,7 @@ void main() {
         tester,
         sessionStarted(
           sessionId: 'session-1',
-          claudeSessionId: 'conv-2',
+          conversation: 'conv-2',
           resumedFrom: 'conv-1',
           seq: 2,
         ),
@@ -850,7 +940,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.sessionErrorForkRejected), findsOneWidget);
+      expect(find.text(l10n.sessionErrorForkRejected(l10n.engineNameFallback)), findsOneWidget);
 
       await tester.tap(find.text(l10n.sessionEditResumeInstead));
       await tester.pumpAndSettle();
@@ -858,7 +948,7 @@ void main() {
       expect(screen.sessions.commands.single.$1, 'session.start');
       expect(screen.sessions.commands.single.$2, <String, Object?>{
         'workspacePath': '/tmp/work',
-        'resumeSessionId': 'conv-1',
+        'resumeFrom': conversationJson('conv-1'),
       });
     });
 
@@ -871,7 +961,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        tester.widget<ListTile>(find.widgetWithText(ListTile, l10n.sessionMessageUndoBusy)).enabled,
+        tester
+            .widget<ListTile>(find.widgetWithText(ListTile, l10n.sessionMessageUndoBusy(anEngine)))
+            .enabled,
         isFalse,
       );
 
@@ -882,7 +974,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.sessionMessageUndo), findsNothing);
-      expect(find.text(l10n.sessionMessageUndoBusy), findsNothing);
+      expect(find.text(l10n.sessionMessageUndoBusy(anEngine)), findsNothing);
       expect(find.text(l10n.sessionMessageEdit), findsOneWidget);
     });
 

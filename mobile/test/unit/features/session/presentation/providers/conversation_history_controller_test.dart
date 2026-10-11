@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
@@ -20,13 +21,15 @@ import 'package:remote_claude/features/session/domain/repositories/transcript_fo
 import 'package:remote_claude/features/session/presentation/providers/conversation_history_controller.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
 import '../../../../../support/fakes/fake_history_repository.dart';
 import '../../../../../support/fakes/fake_transcript_follow_repository.dart';
 
 const Failure timeout = ServerFailure(
-  code: 'CLAUDE_TIMEOUT',
-  messageKey: 'transcript.error.claudeTimeout',
+  code: 'AGENT_TIMEOUT',
+  messageKey: 'transcript.error.agentTimeout',
+  params: <String, String>{'engine': anEngine},
   traceId: 'trace-5',
 );
 
@@ -49,7 +52,7 @@ HistoryPage latest({
   ConversationActivity? activity = ConversationActivity.activeElsewhere,
   List<String>? lines,
 }) => HistoryPage(
-  conversationId: 'conv-1',
+  conversation: conversationOf('conv-1'),
   workspacePath: '/home/someone/project',
   beganElsewhere: true,
   summary: 'Fix the build',
@@ -66,7 +69,7 @@ HistoryPage latest({
 );
 
 HistoryPage earlier({String? nextCursor}) => HistoryPage(
-  conversationId: 'conv-1',
+  conversation: conversationOf('conv-1'),
   workspacePath: '/home/someone/project',
   events: historyOf(<String>[
     messageCompleted(messageId: 'm1', text: 'first', seq: 1),
@@ -85,7 +88,7 @@ FollowAppended appendedOf(
   bool working = false,
 }) => FollowAppended(
   followId: followId,
-  conversationId: 'conv-1',
+  conversation: conversationOf('conv-1'),
   seq: seq,
   events: historyOf(lines),
   lastMessageId: lastMessageId,
@@ -119,7 +122,7 @@ void main() {
   });
 
   ConversationHistoryControllerProvider provider() =>
-      conversationHistoryControllerProvider('conv-1');
+      conversationHistoryControllerProvider(conversationOf('conv-1'));
 
   ProviderSubscription<AsyncValue<HistoryBoard>> hold() {
     final ProviderSubscription<AsyncValue<HistoryBoard>> held = container.listen(
@@ -140,7 +143,7 @@ void main() {
 
     final HistoryBoard board = await loaded();
 
-    expect(history.reads, <(String, String?)>[('conv-1', null)]);
+    expect(history.reads, <(ConversationKey, String?)>[(conversationOf('conv-1'), null)]);
     expect(texts(board), <String>['third', 'fourth']);
     expect(board.workspacePath, '/home/someone/project');
     expect(board.beganElsewhere, isTrue);
@@ -162,7 +165,7 @@ void main() {
     await container.read(provider().notifier).loadEarlier();
 
     final HistoryBoard board = container.read(provider()).value!;
-    expect(history.reads.last, ('conv-1', 'm3'));
+    expect(history.reads.last, (conversationOf('conv-1'), 'm3'));
     expect(texts(board), <String>['first', 'second', 'third', 'fourth']);
     expect(board.nextCursor, isNull);
     expect(board.isLoadingEarlier, isFalse);
@@ -243,7 +246,7 @@ void main() {
     fakeAsync((FakeAsync async) {
       final ProviderContainer local = ProviderContainer(overrides: overrides());
       final ConversationHistoryControllerProvider watched = conversationHistoryControllerProvider(
-        'conv-1',
+        conversationOf('conv-1'),
       );
 
       local.listen(watched, (Object? previous, Object? next) {}).close();
@@ -305,7 +308,9 @@ void main() {
       await loaded();
       await settle();
 
-      expect(follows.follows, <(String, String, String?)>[('follow-1', 'conv-1', 'u-41')]);
+      expect(follows.follows, <(String, ConversationKey, String?)>[
+        ('follow-1', conversationOf('conv-1'), 'u-41'),
+      ]);
     });
 
     test('waits for the socket, and follows once it is ready', () async {
@@ -431,7 +436,7 @@ void main() {
         expect(history.reads, hasLength(2));
         expect(follows.unfollows, <String>['t-1']);
         expect(texts(board()), <String>['third', 'fourth']);
-        expect(follows.follows.last, ('follow-2', 'conv-1', 'u-50'));
+        expect(follows.follows.last, ('follow-2', conversationOf('conv-1'), 'u-50'));
       },
     );
 
@@ -440,9 +445,9 @@ void main() {
       history.answer(latest(lastMessageId: 'u-60'));
 
       follows.emit(
-        const FollowReset(
+        FollowReset(
           followId: 't-other',
-          conversationId: 'conv-1',
+          conversation: conversationOf('conv-1'),
           seq: 1,
           reason: FollowResetReason.rewritten,
         ),
@@ -451,9 +456,9 @@ void main() {
       expect(history.reads, hasLength(1));
 
       follows.emit(
-        const FollowReset(
+        FollowReset(
           followId: 't-1',
-          conversationId: 'conv-1',
+          conversation: conversationOf('conv-1'),
           seq: 1,
           reason: FollowResetReason.rewritten,
         ),
@@ -464,7 +469,7 @@ void main() {
       expect(history.reads, hasLength(2));
       // The subscription ended on the server: there is nothing to let go.
       expect(follows.unfollows, isEmpty);
-      expect(follows.follows.last, ('follow-2', 'conv-1', 'u-60'));
+      expect(follows.follows.last, ('follow-2', conversationOf('conv-1'), 'u-60'));
 
       // What the old subscription might still say is not stitched onto the new reading.
       follows.emit(
@@ -482,9 +487,9 @@ void main() {
       history.failure = notFound;
 
       follows.emit(
-        const FollowReset(
+        FollowReset(
           followId: 't-1',
-          conversationId: 'conv-1',
+          conversation: conversationOf('conv-1'),
           seq: 1,
           reason: FollowResetReason.gone,
         ),
@@ -525,7 +530,7 @@ void main() {
 
       notifier().lifecycleChanged(AppLifecycleState.resumed);
 
-      expect(follows.follows.last, ('follow-2', 'conv-1', 'u-44'));
+      expect(follows.follows.last, ('follow-2', conversationOf('conv-1'), 'u-44'));
     });
 
     test('a follow let go before its ack is let go as soon as the ack names it', () async {
@@ -739,9 +744,6 @@ void main() {
 }
 
 extension on HistoryPage {
-  HistoryPage copyWithNoEvents() => HistoryPage(
-    conversationId: conversationId,
-    workspacePath: workspacePath,
-    nextCursor: nextCursor,
-  );
+  HistoryPage copyWithNoEvents() =>
+      HistoryPage(conversation: conversation, workspacePath: workspacePath, nextCursor: nextCursor);
 }

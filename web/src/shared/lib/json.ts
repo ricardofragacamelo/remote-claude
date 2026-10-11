@@ -21,3 +21,9 @@ export function readText(payload: Readonly<Record<string, unknown>>, field: stri
   const value = payload[field];
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
+
+/**
+ * The shape of a contract's payload before it is read: every field there, and none of them trusted.
+ * What a service declares an answer as, so the contract names the fields and the reader checks each.
+ */
+export type Unchecked<T> = { readonly [K in keyof T]?: unknown };

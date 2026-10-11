@@ -23,6 +23,7 @@ import {
 } from '@/shared/components/ui/dropdown-menu';
 import { useCopy } from '@/shared/hooks/useCopy';
 import { useBrowserNotifications } from '../../hooks/useBrowserNotifications';
+import { useAgentName } from '../../hooks/useEngines';
 import type { SessionHeaderState } from '../../hooks/useSessionHeader';
 import { ActionDialog } from './ActionDialog';
 import { ExportDialog } from './ExportDialog';
@@ -31,13 +32,15 @@ import { UndoDialog } from './UndoDialog';
 export interface SessionMenuProps {
   /** The session on screen — `null` with a draft or a conversation of the history. */
   readonly session: SessionHeaderState | null;
-  readonly folder: string;
   onOpenHelp(): void;
   onOpenRules?: (() => void) | undefined;
 }
 
 /** Which dialog of the menu is open. */
 type Opened = 'close' | 'export' | 'undo' | null;
+
+/** Which id the menu copied last: the live session's, or the conversation's in its engine's store. */
+type Copied = { readonly what: 'session' | 'conversation'; readonly id: string };
 
 /** The look of the button of the menu — an icon of the header. */
 const TRIGGER =
@@ -47,20 +50,26 @@ const TRIGGER =
 /**
  * The menu of the session (`⋯`), in the header of the panel (plan 09, B-17): what is done to the
  * whole session, and seldom — end it (its owner's alone, and asked first: D-10), export it, undo
- * what it wrote, copy its id — and what is the panel's: the notifications of the browser, the rules
- * a "don't ask again" left, and the help. With no session on screen, only the panel's (S-41).
+ * what it wrote, copy its id or the id of its conversation, named by its engine (plan 28, S-40) — and
+ * what is the panel's: the notifications of the browser, the rules a "don't ask again" left, and the
+ * help. With no session on screen, only the panel's (S-41).
  */
 export function SessionMenu({
   session,
-  folder,
   onOpenHelp,
   onOpenRules,
 }: SessionMenuProps): React.JSX.Element {
   const { t } = useTranslation();
   const [opened, setOpened] = useState<Opened>(null);
+  const [copied, setCopied] = useState<Copied | null>(null);
   const copier = useCopy();
+  const agent = useAgentName(session?.conversation?.engine ?? null);
   const close = (): void => {
     setOpened(null);
+  };
+  const copy = (what: Copied['what'], id: string): void => {
+    setCopied({ what, id });
+    copier.copy(id);
   };
 
   return (
@@ -75,7 +84,7 @@ export function SessionMenu({
         <DropdownMenuContent align="end" className="max-w-80">
           {session !== null && (
             <>
-              <SessionItems session={session} onOpen={setOpened} onCopy={copier.copy} />
+              <SessionItems session={session} agent={agent} onOpen={setOpened} onCopy={copy} />
               <DropdownMenuSeparator />
             </>
           )}
@@ -88,16 +97,14 @@ export function SessionMenu({
           )}
           <DropdownMenuItem onSelect={onOpenHelp}>
             <CircleHelp className="size-4" aria-hidden />
-            {t('claudePanel.help.open')}
+            {t('agentPanel.help.open')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {copier.state !== 'idle' && session !== null && (
+      {copier.state !== 'idle' && copied !== null && (
         <span role="status" className="sr-only">
-          {copier.state === 'copied'
-            ? t('sessions.menu.copied')
-            : t('sessions.menu.copyFailed', { sessionId: session.sessionId })}
+          {copyStatus(t, copier.state === 'copied', copied, agent)}
         </span>
       )}
 
@@ -126,8 +133,7 @@ export function SessionMenu({
           <ExportDialog
             open={opened === 'export'}
             onClose={close}
-            conversationId={session.conversationId}
-            folder={folder}
+            conversation={session.conversation}
           />
           {opened === 'undo' && <UndoDialog sessionId={session.sessionId} open onClose={close} />}
         </>
@@ -139,13 +145,18 @@ export function SessionMenu({
 /** What the menu does to the session on screen. */
 function SessionItems({
   session,
+  agent,
   onOpen,
   onCopy,
 }: {
   readonly session: SessionHeaderState;
+
+  /** How the engine of the session is named — the `{{agent}}` of the copy of its conversation's id. */
+  readonly agent: string;
   onOpen(opened: Opened): void;
-  onCopy(text: string): void;
+  onCopy(what: Copied['what'], id: string): void;
 }): React.JSX.Element {
+  const { conversation } = session;
   const { t } = useTranslation();
 
   return (
@@ -168,7 +179,7 @@ function SessionItems({
         </span>
       </DropdownMenuItem>
       <DropdownMenuItem
-        disabled={session.conversationId === null}
+        disabled={conversation === null}
         onSelect={() => {
           onOpen('export');
         }}
@@ -186,12 +197,23 @@ function SessionItems({
       </DropdownMenuItem>
       <DropdownMenuItem
         onSelect={() => {
-          onCopy(session.sessionId);
+          onCopy('session', session.sessionId);
         }}
       >
         <Copy className="size-4" aria-hidden />
         {t('sessions.menu.copyId')}
       </DropdownMenuItem>
+      {/* Until the stream names the conversation there is no id of it to copy. */}
+      {conversation !== null && (
+        <DropdownMenuItem
+          onSelect={() => {
+            onCopy('conversation', conversation.id);
+          }}
+        >
+          <Copy className="size-4" aria-hidden />
+          {t('sessions.menu.copyConversationId', { agent })}
+        </DropdownMenuItem>
+      )}
     </>
   );
 }
@@ -228,6 +250,17 @@ function NotificationsItem(): React.JSX.Element {
       </span>
     </DropdownMenuItem>
   );
+}
+
+/** What the menu says once it tried to copy an id: that it did — which one —, or how to by hand. */
+function copyStatus(t: TFunction, done: boolean, copied: Copied, agent: string): string {
+  if (!done) {
+    return t('sessions.menu.copyFailed', { id: copied.id });
+  }
+
+  return copied.what === 'session'
+    ? t('sessions.menu.copied')
+    : t('sessions.menu.conversationIdCopied', { agent });
 }
 
 function whyOff(permission: string, t: TFunction): string {

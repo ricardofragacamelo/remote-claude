@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/device/install_id.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/logging/log_context.dart';
@@ -11,6 +12,7 @@ import 'package:remote_claude/core/network/contracts/protocol.g.dart';
 import 'package:remote_claude/core/network/trace.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/builders/frames.dart';
 import '../../../support/fakes/fake_credentials.dart';
 import '../../../support/fakes/fake_frame_socket.dart';
@@ -20,7 +22,7 @@ import '../../../support/fakes/recording_writer.dart';
 class _Subscriber implements SessionSubscriber {
   final List<Envelope> events = <Envelope>[];
   int gaps = 0;
-  final List<String?> gapConversations = <String?>[];
+  final List<ConversationKey?> gapConversations = <ConversationKey?>[];
   int seq = 0;
 
   @override
@@ -30,9 +32,9 @@ class _Subscriber implements SessionSubscriber {
   void onEvent(Envelope frame) => events.add(frame);
 
   @override
-  void onGap(String? claudeSessionId) {
+  void onGap(ConversationKey? conversation) {
     gaps += 1;
-    gapConversations.add(claudeSessionId);
+    gapConversations.add(conversation);
   }
 }
 
@@ -444,12 +446,26 @@ void main() {
       client.attach('ses-1', subscriber);
 
       socket()
-        ..deliver(sessionAttached(sessionId: 'ses-1', gap: true, claudeSessionId: 'conv-1'))
-        ..deliver(sessionAttached(sessionId: 'ses-1', gap: true));
+        ..deliver(sessionAttached(sessionId: 'ses-1', gap: true, conversation: 'conv-1'))
+        ..deliver(sessionAttached(sessionId: 'ses-1', gap: true))
+        // The previous protocol's bare id is not a conversation: no engine says whose it is.
+        ..deliver(
+          frame(
+            kind: 'ack',
+            type: 'session.attached',
+            payload: <String, Object?>{
+              'sessionId': 'ses-1',
+              'replayed': 0,
+              'oldestAvailableSeq': 0,
+              'gap': true,
+              'conversation': 'conv-1',
+            },
+          ),
+        );
       await settle();
 
       // The diagnostic stream has no conversation, and says so by leaving the field out.
-      expect(subscriber.gapConversations, <String?>['conv-1', null]);
+      expect(subscriber.gapConversations, <ConversationKey?>[conversationOf('conv-1'), null, null]);
     });
 
     test('S-24 · an attach ack for a session nobody follows reaches the observers', () async {
@@ -461,7 +477,7 @@ void main() {
 
       // What a resume of a conversation already live is answered with: the session it joined,
       // which nothing here watches yet.
-      socket().deliver(sessionAttached(sessionId: 'joined', claudeSessionId: 'conv-1'));
+      socket().deliver(sessionAttached(sessionId: 'joined', conversation: 'conv-1'));
       await settle();
 
       expect(client.status, ConnectionStatus.ready);

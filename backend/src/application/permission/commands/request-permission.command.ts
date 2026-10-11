@@ -1,5 +1,6 @@
 import type { UserId } from '@domain/auth';
 import type { PermissionMode, SessionId } from '@domain/session';
+import type { CanonicalTool } from '@domain/engine';
 
 /** One invocation the SDK is holding its loop open for. */
 export interface RequestPermissionCommand {
@@ -20,4 +21,10 @@ export interface RequestPermissionCommand {
   readonly toolUseId: string | null;
   readonly toolName: string;
   readonly input: Readonly<Record<string, unknown>>;
+
+  /**
+   * The call as the core reads it (plan 28, B-16). The name and the input above go to the rules
+   * and to the trail alone.
+   */
+  readonly tool: CanonicalTool;
 }

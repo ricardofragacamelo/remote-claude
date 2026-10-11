@@ -19,8 +19,8 @@ export interface Queue {
 
 /**
  * The prompts waiting for the turn to end — the backend's, the same for every client watching — and
- * the way to take one out before it reaches Claude (D-14). Taking the same one out twice asks once
- * (plan 09, S-31); a refusal lets it be asked again.
+ * the way to take one out before it reaches the agent (D-14). Taking the same one out twice asks
+ * once (plan 09, S-31); a refusal lets it be asked again.
  */
 export function useQueue(sessionId: string): Queue {
   const prompts = useStore(liveSessionStoreOf(sessionId), (state) => state.queue);

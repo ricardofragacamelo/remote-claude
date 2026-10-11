@@ -8,7 +8,7 @@ abstract interface class InsightRepository {
   /// What the installation of [workspacePath] offers a draft: its commands and its models.
   ///
   /// @throws [Failure] — `SESSION_LIMIT_REACHED` when there is no slot for the question, the
-  ///   refusals of a folder, `CLAUDE_UNAVAILABLE` / `CLAUDE_TIMEOUT`. None of them stops a send: the
+  ///   refusals of a folder, `AGENT_UNAVAILABLE` / `AGENT_TIMEOUT`. None of them stops a send: the
   ///   draft goes on with the installation's default (S-21)
   Future<InstallationCatalog> catalogOf(String workspacePath);
 

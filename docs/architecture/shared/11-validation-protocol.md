@@ -108,7 +108,7 @@ Ordem **obrigatória**: do mais barato ao mais caro. O objetivo é falhar em 5 s
 | 8 | Integração | `pnpm test:integration` | SQL real, gateway real, adapters |
 | 9 | E2E | `pnpm test:e2e` | fluxo pela porta do usuário |
 | 10 | Segurança | `pnpm scan:security` | segredo, dependência vulnerável, padrão inseguro |
-| 11 | Contrato & i18n | `pnpm contracts:check && pnpm i18n:check && pnpm render:check` | contrato dessincronizado, chave faltando, elemento da conversa do web sem par no app |
+| 11 | Contrato, i18n e neutralidade | `pnpm contracts:check && pnpm i18n:check && pnpm render:check && pnpm neutral:check` | contrato dessincronizado, chave faltando, elemento da conversa do web sem par no app, nome de agente no núcleo ([12](12-engines.md#o-portão-de-neutralidade)) |
 | 12 | Quality gate | SonarQube (CI) — **ausente, declarado** | smell, hotspot |
 
 Atalhos:

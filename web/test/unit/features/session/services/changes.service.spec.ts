@@ -33,7 +33,8 @@ describe('what a session changed, as the backend answers it — plan 08, F3', ()
   it('reads the diff of a tool, with both sides and the hunks — B-25', async () => {
     const get = vi.spyOn(api, 'get').mockResolvedValue({
       path: '/srv/app/a.ts',
-      toolName: 'Edit',
+      kind: 'file.edit',
+      pending: false,
       scope: 'file',
       before: { state: 'content', content: 'old\n' },
       after: { state: 'unavailable', reason: 'laterWrite' },
@@ -45,10 +46,11 @@ describe('what a session changed, as the backend answers it — plan 08, F3', ()
     expect(get).toHaveBeenCalledWith(`/sessions/${SESSION}/tools/toolu%201/diff`);
     expect(diff).toEqual({
       path: '/srv/app/a.ts',
-      toolName: 'Edit',
+      kind: 'file.edit',
+      pending: false,
       scope: 'file',
       before: { state: 'content', content: 'old\n', reason: null },
-      after: { state: 'unavailable', content: null, reason: 'laterWrite' },
+      after: { state: 'unavailable', content: null, reason: 'laterWrite', edit: null },
       hunks: [
         {
           id: 'h1',
@@ -68,12 +70,42 @@ describe('what a session changed, as the backend answers it — plan 08, F3', ()
 
     expect(await fetchToolDiff(SESSION, 't')).toEqual({
       path: '',
-      toolName: '',
+      kind: '',
+      pending: false,
       scope: 'edit',
       before: { state: 'unavailable', content: null, reason: null },
-      after: { state: 'unavailable', content: null, reason: null },
+      after: { state: 'unavailable', content: null, reason: null, edit: null },
       hunks: [],
     });
+  });
+
+  it('reads a pending preview, and which replacement would not apply — plan 28 B-17', async () => {
+    const answer = (edit: unknown) => ({
+      path: '/srv/app/a.ts',
+      kind: 'file.edit',
+      pending: true,
+      scope: 'file',
+      before: { state: 'content', content: 'a' },
+      after: { state: 'unavailable', reason: 'editMissing', edit },
+      hunks: [],
+    });
+    vi.spyOn(api, 'get')
+      .mockResolvedValueOnce(answer(1))
+      .mockResolvedValueOnce(answer(-1))
+      .mockResolvedValueOnce(answer(1.5))
+      .mockResolvedValueOnce(answer('2'));
+
+    const first = await fetchToolDiff(SESSION, 't');
+    expect(first.pending).toBe(true);
+    expect(first.after).toEqual({
+      state: 'unavailable',
+      content: null,
+      reason: 'editMissing',
+      edit: 1,
+    });
+    for (let index = 0; index < 3; index += 1) {
+      expect((await fetchToolDiff(SESSION, 't')).after.edit).toBeNull();
+    }
   });
 
   it('reads the list of changes, and drops a file it cannot read — B-26', async () => {

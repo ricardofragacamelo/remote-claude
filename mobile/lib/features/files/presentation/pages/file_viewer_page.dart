@@ -24,7 +24,7 @@ import 'package:remote_claude/features/files/domain/entities/text_document.dart'
 import 'package:remote_claude/features/files/domain/entities/viewer_kind.dart';
 import 'package:remote_claude/features/files/domain/services/viewer_for.dart';
 import 'package:remote_claude/features/files/presentation/providers/file_view_controllers.dart';
-import 'package:remote_claude/features/files/presentation/widgets/claude_waiting_strip.dart';
+import 'package:remote_claude/features/files/presentation/widgets/agent_waiting_strip.dart';
 import 'package:remote_claude/features/files/presentation/widgets/downloads.dart';
 import 'package:remote_claude/features/files/presentation/widgets/viewers/markdown_viewer.dart';
 import 'package:remote_claude/features/files/presentation/widgets/viewers/no_preview.dart';
@@ -97,7 +97,7 @@ class _FileViewerPageState extends ConsumerState<FileViewerPage>
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          if (session != null) ClaudeWaitingStrip(sessionId: session),
+          if (session != null) AgentWaitingStrip(sessionId: session),
           const DownloadsStrip(),
           Expanded(child: _body(context)),
         ],

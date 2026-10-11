@@ -27,11 +27,28 @@ export interface CommandRegistry {
 
   /** Every binding. The same array until something changes. */
   bindings(): readonly Keybinding[];
+  /** The command an id names — its own, or one it had before it was renamed (plan 28, B-39). */
   command(id: string): Command | undefined;
+
+  /** The id a command has now, for one it had before it was renamed — any other id as it is. */
+  currentId(id: string): string;
 
   /** The first key bound to a command — the one the menu, the palette and the help show. */
   bindingOf(id: string): Keybinding | undefined;
   subscribe(listener: () => void): () => void;
+}
+
+/** The command of a list an id names — its own, or one it had before it was renamed. */
+export function commandIn(commands: readonly Command[], id: string): Command | undefined {
+  return (
+    commands.find((each) => each.id === id) ??
+    commands.find((each) => each.formerIds?.includes(id) === true)
+  );
+}
+
+/** The id a command of a list has now, for one it had before — any other id as it is. */
+export function currentIdIn(commands: readonly Command[], id: string): string {
+  return commandIn(commands, id)?.id ?? id;
 }
 
 /** Whether two bindings would answer the same press in the same context, on some platform. */
@@ -54,6 +71,9 @@ export function createCommandRegistry(name = 'commands'): CommandRegistry {
   let bindings: readonly Keybinding[] = [];
   const listeners = createListeners();
   const changed = listeners.notify;
+
+  const command = (id: string): Command | undefined => commandIn(commands, id);
+  const currentId = (id: string): string => currentIdIn(commands, id);
 
   return {
     register(command) {
@@ -102,8 +122,9 @@ export function createCommandRegistry(name = 'commands'): CommandRegistry {
 
     commands: () => commands,
     bindings: () => bindings,
-    command: (id) => commands.find((command) => command.id === id),
-    bindingOf: (id) => bindings.find((binding) => binding.command === id),
+    command,
+    currentId,
+    bindingOf: (id) => bindings.find((binding) => currentId(binding.command) === id),
     subscribe: listeners.subscribe,
   };
 }

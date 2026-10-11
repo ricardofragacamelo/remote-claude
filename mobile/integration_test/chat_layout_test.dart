@@ -182,7 +182,7 @@ void main() {
 
     await robot.openDraft(app.container);
     await robot.pick(app.l10n.modelLabel, layout.text('modelLabel'));
-    await robot.pick(app.l10n.modeLabel, app.l10n.modePlan);
+    await robot.pick(app.l10n.modeLabel, app.l10n.modeReadOnly);
     await robot.pick(app.l10n.effortLabel, app.l10n.effortHigh);
 
     final String sessionId = await robot.sentFromTheDraft(turnOf(layout.text('turn')));
@@ -199,7 +199,7 @@ void main() {
     // ...and the bar of the session says so — the effort too, which only the phone that chose it
     // knows (the server never says it back).
     await tester.pumpAndSettle();
-    expect(await robot.valueOf(app.l10n.modeLabel), app.l10n.modePlan);
+    expect(await robot.valueOf(app.l10n.modeLabel), app.l10n.modeReadOnly);
     expect(await robot.valueOf(app.l10n.effortLabel), app.l10n.effortHigh);
     expect(await robot.valueOf(app.l10n.modelLabel), contains(layout.text('modelLabel')));
   });
@@ -267,7 +267,7 @@ void main() {
       final SessionRobot robot = app.robot(tester);
       final String sessionId = await aLongConversation(tester, app);
 
-      // The pill: away from the card, it says Claude waits; tapped, it brings the card back.
+      // The pill: away from the card, it says the agent waits; tapped, it brings the card back.
       await robot.prompt(turnOf(layout.text('inlineTurn')));
       final String first = await aCardOnScreen(tester, app, sessionId);
       final ScrollableState scroller = conversationScroller(tester);

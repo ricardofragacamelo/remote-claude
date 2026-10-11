@@ -15,6 +15,7 @@ import { wsClient } from '@/shared/api/ws';
 import { render, translator } from '../../../support/render';
 import { installFakeWebSocket } from '../../../support/fake-websocket';
 import type { InstalledWebSocket } from '../../../support/fake-websocket';
+import { aToolCall } from '../../../support/canonical-tool';
 
 const t = translator('en');
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
@@ -43,10 +44,9 @@ function requestFrame(overrides: Record<string, unknown> = {}): Record<string, u
     payload: {
       requestId: 'req-1',
       toolUseId: 'toolu-1',
-      toolName: 'Bash',
-      title: 'permission.tool.Bash',
+      ...aToolCall('Bash', { command: 'rm -rf build/' }),
+      title: 'permission.tool.shell',
       description: 'rm -rf build/',
-      input: { command: 'rm -rf build/' },
       riskHint: 'destructive',
       defaultToNo: true,
       expiresAt: new Date(NOW.getTime() + 30_000).toISOString(),
@@ -67,10 +67,12 @@ function Requests({
   sessionId,
   onOpenRules,
   onPlanApproved,
+  planModes,
 }: {
   readonly sessionId: string;
   readonly onOpenRules?: () => void;
   readonly onPlanApproved?: (mode: PlanMode) => void;
+  readonly planModes?: readonly PlanMode[];
 }): React.JSX.Element {
   const queue = usePermissionQueue(sessionId);
   const last = queue.settled.at(-1);
@@ -88,6 +90,7 @@ function Requests({
               onExtend={queue.extend}
               onOpenRules={onOpenRules}
               onPlanApproved={onPlanApproved}
+              planModes={planModes}
             />
           ))}
         </ul>
@@ -149,7 +152,7 @@ describe('the permission queue', () => {
     connect();
 
     ask();
-    expect(screen.getByRole('listitem', { name: /Bash/ })).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: /Shell/ })).toBeInTheDocument();
 
     act(() => {
       sockets.latest.receive({
@@ -175,16 +178,35 @@ describe('the permission queue', () => {
 
     expect(screen.getByText('rm -rf build/')).toBeInTheDocument();
     expect(screen.getByText(t('permission.risk.destructive'))).toBeInTheDocument();
-    expect(screen.getByText(t('permission.tool.Bash'))).toBeInTheDocument();
+    expect(screen.getByText(t('permission.tool.shell'))).toBeInTheDocument();
   });
 
-  it('falls back to a generic label for a tool it has no words for', () => {
+  it('names the request by its kind, whatever the tool — plan 28 S-55', () => {
     render(<Requests sessionId={SESSION} />);
     connect();
-    ask({ toolName: 'McpDoSomething', title: 'permission.tool.McpDoSomething' });
+    ask({ ...aToolCall('McpDoSomething'), title: 'permission.tool.other' });
 
+    expect(screen.getByText(t('permission.tool.other'))).toBeInTheDocument();
     expect(
-      screen.getByText(t('permission.tool.unknown', { tool: 'McpDoSomething' })),
+      screen.getByRole('listitem', {
+        name: t('permission.card.label', { tool: 'McpDoSomething' }),
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('falls back to the translated label for a kind it has no words for — plan 28 S-56', () => {
+    render(<Requests sessionId={SESSION} />);
+    connect();
+    ask({
+      kind: 'vcs.commit',
+      label: { messageKey: 'sessions.tool.vcsCommit', params: { name: 'commit' } },
+      origin: { engine: 'other-agent', native: 'commit' },
+      title: 'permission.tool.vcsCommit',
+    });
+
+    expect(screen.getByRole('heading', { name: 'commit' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('listitem', { name: t('permission.card.label', { tool: 'commit' }) }),
     ).toBeInTheDocument();
   });
 
@@ -358,7 +380,7 @@ describe('the permission queue', () => {
 
     /** The question with the two persisted scopes offered, the way the backend offers them. */
     function askPersisted(): void {
-      const rule = { pattern: 'Bash(git status)', lifetimeMs: LIFETIME_DAYS * 86_400_000 };
+      const rule = { pattern: 'shell(git status)', lifetimeMs: LIFETIME_DAYS * 86_400_000 };
       ask({
         description: 'git status',
         input: { command: 'git status' },
@@ -390,7 +412,7 @@ describe('the permission queue', () => {
         within(step).getByText(t('permission.persist.always', { duration })),
       ).toBeInTheDocument();
       // The pattern exactly as it will be stored — the reach, with no euphemism in between.
-      expect(within(step).getByText('Bash(git status)')).toBeInTheDocument();
+      expect(within(step).getByText('shell(git status)')).toBeInTheDocument();
       expect(within(step).getByText(t('permission.persist.revocable'))).toBeInTheDocument();
       expect(answers()).toHaveLength(0);
     });
@@ -474,7 +496,7 @@ describe('the permission queue', () => {
           {
             scope: 'always',
             labelKey: 'permission.scope.always',
-            pattern: 'Bash(rm -rf build/)',
+            pattern: 'shell(rm -rf build/)',
             lifetimeMs: 3_600_000,
           },
         ],
@@ -507,8 +529,8 @@ describe('the permission queue', () => {
 
   describe('how far a rule reaches — plan 23, B-13', () => {
     const LIFETIME = 90 * 86_400_000;
-    const PREFIX = ['Bash(git push:*)', 'Bash(tail:*)'];
-    const EXACT = ['Bash(git push 2>&1 | tail -5)'];
+    const PREFIX = ['shell(git push:*)', 'shell(tail:*)'];
+    const EXACT = ['shell(git push 2>&1 | tail -5)'];
 
     function askWithReaches(reaches: readonly Record<string, unknown>[]): void {
       ask({
@@ -561,12 +583,11 @@ describe('the permission queue', () => {
       render(<Requests sessionId={SESSION} />);
       connect();
       ask({
-        toolName: 'Edit',
-        title: 'permission.tool.Edit',
+        ...aToolCall('Edit', { file_path: '/a/b.ts' }),
+        title: 'permission.tool.fileEdit',
         description: '/a/b.ts',
-        input: { file_path: '/a/b.ts' },
         reaches: [
-          { reach: 'exact', patterns: ['Edit(/a/b.ts)'] },
+          { reach: 'exact', patterns: ['file.edit(a/b.ts)'] },
           { reach: 'tool', patterns: ['Edit'] },
         ],
       });
@@ -658,7 +679,7 @@ describe('the permission queue', () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Requests sessionId={SESSION} />);
       connect();
-      const rule = { pattern: 'Bash(git status)', lifetimeMs: LIFETIME };
+      const rule = { pattern: 'shell(git status)', lifetimeMs: LIFETIME };
       ask({
         description: 'git status',
         input: { command: 'git status' },
@@ -672,7 +693,7 @@ describe('the permission queue', () => {
       await user.click(screen.getByRole('button', { name: t('permission.scope.always') }));
       expect(
         within(screen.getByRole('group', { name: t('permission.persist.title') })).getByText(
-          'Bash(git status)',
+          'shell(git status)',
         ),
       ).toBeInTheDocument();
     });
@@ -712,6 +733,24 @@ describe('the permission queue', () => {
       expect(screen.getByText(t('permission.outcome.ruleDenied'))).toBeInTheDocument();
     });
 
+    it('says a read-only session refused it — plan 28, B-26', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      ask();
+      settle({ decision: 'deny', via: 'readOnly' });
+
+      expect(screen.getByText(t('permission.outcome.readOnly'))).toBeInTheDocument();
+    });
+
+    it('reads a refusal by Permitir tudo, which never refuses, as a rule`s', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      ask();
+      settle({ decision: 'deny', via: 'allowAll' });
+
+      expect(screen.getByText(t('permission.outcome.ruleDenied'))).toBeInTheDocument();
+    });
+
     it('reads a `via` it does not know as a rule — S-82', () => {
       render(<Requests sessionId={SESSION} />);
       connect();
@@ -725,14 +764,18 @@ describe('the permission queue', () => {
   describe('approving a plan — plan 08, B-22', () => {
     const PLAN = '# The plan\n\n1. Read the tests\n2. Fix the clock';
 
+    const PLAN_PATH = '/home/dev/.claude/plans/p.md';
+
     function askPlan(): void {
       ask({
-        toolName: 'ExitPlanMode',
-        title: 'permission.tool.ExitPlanMode',
+        ...aToolCall('ExitPlanMode', { plan: PLAN, planFilePath: PLAN_PATH }),
+        title: 'permission.tool.plan',
         description: 'plan',
-        input: { plan: PLAN, planFilePath: '/home/dev/.claude/plans/p.md' },
         riskHint: 'read',
-        defaultToNo: false,
+        defaultToNo: true,
+        suggestions: [],
+        reaches: [],
+        interaction: { kind: 'plan', markdown: PLAN, path: PLAN_PATH },
       });
     }
 
@@ -775,7 +818,63 @@ describe('the permission queue', () => {
 
       await user.click(screen.getByRole('button', { name: t('permission.plan.approve') }));
 
-      expect(onPlanApproved).toHaveBeenCalledWith('default');
+      expect(onPlanApproved).toHaveBeenCalledWith('ask');
+    });
+
+    it('offers only the modes the engine announces that a plan can go on in — plan 28, S-81', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onPlanApproved = vi.fn();
+      render(
+        <Requests
+          sessionId={SESSION}
+          onPlanApproved={onPlanApproved}
+          planModes={['readOnly', 'acceptEdits', 'allowAll', 'ask']}
+        />,
+      );
+      connect();
+      askPlan();
+
+      expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual([
+        'acceptEdits',
+        'ask',
+      ]);
+      // The first the engine announces is the one chosen until another is.
+      await user.click(screen.getByRole('button', { name: t('permission.plan.approve') }));
+      expect(onPlanApproved).toHaveBeenCalledWith('acceptEdits');
+    });
+
+    it('asks nothing of the mode with one to go on in, and goes on in it — plan 28, S-81', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onPlanApproved = vi.fn();
+      render(
+        <Requests
+          sessionId={SESSION}
+          onPlanApproved={onPlanApproved}
+          planModes={['readOnly', 'ask']}
+        />,
+      );
+      connect();
+      askPlan();
+
+      expect(screen.queryByRole('radio')).toBeNull();
+      expect(screen.queryByText(t('permission.plan.modeLegend'))).toBeNull();
+      await user.click(screen.getByRole('button', { name: t('permission.plan.approve') }));
+      expect(onPlanApproved).toHaveBeenCalledWith('ask');
+    });
+
+    it('approves without changing the mode when the engine has none a plan goes on in', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onPlanApproved = vi.fn();
+      render(
+        <Requests sessionId={SESSION} onPlanApproved={onPlanApproved} planModes={['readOnly']} />,
+      );
+      connect();
+      askPlan();
+
+      await user.click(screen.getByRole('button', { name: t('permission.plan.approve') }));
+
+      expect(answers()[0]?.['payload']).toMatchObject({ decision: 'allow', scope: 'once' });
+      expect(onPlanApproved).not.toHaveBeenCalled();
     });
 
     it('keeps planning by refusing it, with the comment as the reason for Claude — S-94', async () => {
@@ -823,11 +922,55 @@ describe('the permission queue', () => {
     it('shows an empty plan as an empty plan, not as a failure', () => {
       render(<Requests sessionId={SESSION} />);
       connect();
-      ask({ toolName: 'ExitPlanMode', input: {}, riskHint: 'read', defaultToNo: false });
+      ask({
+        ...aToolCall('ExitPlanMode', {}),
+        riskHint: 'read',
+        interaction: { kind: 'plan', markdown: '' },
+      });
 
       expect(
         screen.getByRole('listitem', { name: t('permission.plan.label') }),
       ).toBeInTheDocument();
+    });
+
+    it('draws the plan the interaction carries, never the input of the tool — plan 28, S-61', async () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      ask({
+        ...aToolCall('ExitPlanMode', { plan: '# From the input' }),
+        riskHint: 'read',
+        interaction: { kind: 'plan', markdown: '# From the interaction' },
+      });
+
+      const card = screen.getByRole('listitem', { name: t('permission.plan.label') });
+      expect(
+        await within(card).findByRole('heading', { name: 'From the interaction' }),
+      ).toBeInTheDocument();
+      expect(within(card).queryByText('From the input')).not.toBeInTheDocument();
+    });
+
+    it('chooses the card by the interaction, not the kind of the tool — plan 28, B-20', () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      ask({ ...aToolCall('ExitPlanMode', { plan: PLAN }), riskHint: 'read' });
+
+      expect(
+        screen.queryByRole('listitem', { name: t('permission.plan.label') }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: t('permission.scope.once') })).toBeInTheDocument();
+    });
+
+    it('draws a plan asked of a tool of another kind as a plan — the interaction decides', async () => {
+      render(<Requests sessionId={SESSION} />);
+      connect();
+      ask({
+        ...aToolCall('SomethingElse', {}),
+        riskHint: 'read',
+        interaction: { kind: 'plan', markdown: PLAN },
+      });
+
+      const card = screen.getByRole('listitem', { name: t('permission.plan.label') });
+      expect(await within(card).findByRole('heading', { name: 'The plan' })).toBeInTheDocument();
     });
 
     it('never compacts a question about any other tool — S-76', () => {

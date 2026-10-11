@@ -17,7 +17,7 @@ describe('the templates of "New from template" — S-169, 07 · D-19', () => {
       'test',
       'gitignore',
       'editorconfig',
-      'claude',
+      'agentInstructions',
     ]);
     expect(
       FILE_TEMPLATES.every((template) => template.labelKey.startsWith('explorer.template.')),

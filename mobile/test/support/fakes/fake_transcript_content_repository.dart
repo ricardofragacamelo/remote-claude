@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
 import 'package:remote_claude/features/session/domain/repositories/transcript_content_repository.dart';
@@ -15,11 +16,11 @@ class FakeTranscriptContentRepository implements TranscriptContentRepository {
   /// The image of each block, by `blockId`.
   final Map<String, PromptImageBytes> images = <String, PromptImageBytes>{};
 
-  /// Every output asked for, as `(conversationId, toolUseId)`, in order.
-  final List<(String, String)> toolReads = <(String, String)>[];
+  /// Every output asked for, as `(conversation, toolUseId)`, in order.
+  final List<(ConversationKey, String)> toolReads = <(ConversationKey, String)>[];
 
-  /// Every image asked for, as `(conversationId, blockId)`, in order.
-  final List<(String, String)> imageReads = <(String, String)>[];
+  /// Every image asked for, as `(conversation, blockId)`, in order.
+  final List<(ConversationKey, String)> imageReads = <(ConversationKey, String)>[];
 
   /// What the next reads throw instead of answering, while set.
   Object? failure;
@@ -28,15 +29,15 @@ class FakeTranscriptContentRepository implements TranscriptContentRepository {
   Completer<void>? gate;
 
   @override
-  Future<ToolOutput> toolResult(String conversationId, String toolUseId) async {
-    toolReads.add((conversationId, toolUseId));
+  Future<ToolOutput> toolResult(ConversationKey conversation, String toolUseId) async {
+    toolReads.add((conversation, toolUseId));
     await _wait();
     return outputs[toolUseId] ?? (throw const UnexpectedFailure(traceId: 't-missing'));
   }
 
   @override
-  Future<PromptImageBytes> promptImage(String conversationId, String blockId) async {
-    imageReads.add((conversationId, blockId));
+  Future<PromptImageBytes> promptImage(ConversationKey conversation, String blockId) async {
+    imageReads.add((conversation, blockId));
     await _wait();
     return images[blockId] ?? (throw const UnexpectedFailure(traceId: 't-missing'));
   }

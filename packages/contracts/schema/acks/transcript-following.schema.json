@@ -6,14 +6,14 @@
   "x-kind": "ack",
   "x-type": "transcript.following",
   "type": "object",
-  "required": ["followId", "conversationId", "activity"],
+  "required": ["followId", "conversation", "activity"],
   "properties": {
     "followId": {
       "type": "string",
       "description": "The subscription. Its events carry it, and `seq` is monotonic per `followId`, from 1."
     },
-    "conversationId": {
-      "type": "string",
+    "conversation": {
+      "$ref": "../definitions/conversation-ref.schema.json",
       "description": "The conversation being followed."
     },
     "activity": {

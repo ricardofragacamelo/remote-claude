@@ -9,7 +9,8 @@ import type {
 import { TRANSCRIPT_STORE } from '@application/transcript';
 import type { TranscriptStore } from '@application/transcript';
 import type { ChainEntry } from '@domain/session';
-import type { ClaudeSessionId, TranscriptMessage } from '@domain/transcript';
+import type { TranscriptMessage } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * `session` asking about a conversation it was told to continue.
@@ -25,7 +26,7 @@ export class TranscriptModuleConversationSource implements ResumableConversation
     @Inject(SESSION_ORIGIN_REPOSITORY) private readonly origins: SessionOriginRepository,
   ) {}
 
-  async find(id: ClaudeSessionId): Promise<ResumableConversation | null> {
+  async find(id: ConversationRef): Promise<ResumableConversation | null> {
     const session = await this.store.find(id);
 
     if (session === null) {
@@ -34,10 +35,10 @@ export class TranscriptModuleConversationSource implements ResumableConversation
 
     const openers = await this.origins.openersOf([id]);
 
-    return { id, cwd: session.cwd, openedBy: openers.get(id.value) };
+    return { id, cwd: session.cwd, openedBy: openers.get(id.key) };
   }
 
-  async chainOf(id: ClaudeSessionId): Promise<readonly ChainEntry[]> {
+  async chainOf(id: ConversationRef): Promise<readonly ChainEntry[]> {
     const session = await this.store.find(id);
 
     return session === null

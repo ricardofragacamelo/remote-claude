@@ -4,9 +4,9 @@ import { permissionQueueOf } from '@/features/permission';
 import { usePanelSessions } from './usePanelTabs';
 
 /**
- * How many questions Claude is waiting on in a folder tab — every session of its panel, the ones not
- * on screen included (plan 08, B-42). Answered on another device, the count drops with the queue
- * (S-190): the queue reacts to `permission.resolved`, never to its own optimism.
+ * How many questions the agent is waiting on in a folder tab — every session of its panel, the ones
+ * not on screen included (plan 08, B-42). Answered on another device, the count drops with the
+ * queue (S-190): the queue reacts to `permission.resolved`, never to its own optimism.
  */
 export function usePendingPermissions(folder: string): number {
   const sessions = usePanelSessions(folder);

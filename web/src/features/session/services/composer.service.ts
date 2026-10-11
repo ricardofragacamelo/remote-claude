@@ -59,8 +59,8 @@ function limitsOf(value: unknown): ComposerLimits {
 /**
  * The catalogue of a folder — `GET /catalog?workspacePath=` (D-13).
  *
- * @throws {AppError} the folder refused; `SESSION_LIMIT_REACHED`; `CLAUDE_UNAVAILABLE` or
- *   `CLAUDE_TIMEOUT` — none of which stops the composer: the menu is discovery (S-246)
+ * @throws {AppError} the folder refused; `SESSION_LIMIT_REACHED`; `AGENT_UNAVAILABLE` or
+ *   `AGENT_TIMEOUT` — none of which stops the composer: the menu is discovery (S-246)
  */
 export async function fetchCatalog(folder: string): Promise<InstallationCatalog> {
   const body = await api.get<unknown>(
@@ -186,7 +186,7 @@ export async function listMentionLevel(folder: string, directory: string): Promi
   };
 }
 
-/** The type of the bytes that Claude reads: text, and images. */
+/** The type of the bytes that the agent reads: text, and images. */
 const READ_AS_IS = /^(text\/|image\/(png|jpeg|gif|webp|bmp|svg\+xml|x-icon))/;
 
 /**

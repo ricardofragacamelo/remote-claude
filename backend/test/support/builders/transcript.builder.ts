@@ -1,7 +1,7 @@
 import { QuestionHistory, TranscriptAudience } from '@application/transcript';
 import type { LiveConversationSource, TranscriptOriginSource } from '@application/transcript';
 import type { Clock } from '@domain/shared';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import type { TranscriptMessage, TranscriptSession } from '@domain/transcript';
 import { FixedClock } from '../fakes/fixed-clock';
 import { anAllowlist } from './workspace.builder';
@@ -18,7 +18,7 @@ export function aTranscriptSession(
   const { id = 1, ...rest } = overrides;
 
   return {
-    id: ClaudeSessionId.create(typeof id === 'number' ? conversationId(id) : id),
+    id: ConversationRef.create('claude', typeof id === 'number' ? conversationId(id) : id),
     summary: 'a conversation',
     cwd: '/srv/projects/app',
     gitBranch: null,

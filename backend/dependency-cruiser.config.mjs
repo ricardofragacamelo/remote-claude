@@ -72,8 +72,39 @@ export default {
         'The Agent SDK lives behind one adapter. The rule exists before the code it protects, ' +
         'on purpose: added afterwards it would be born already violated.',
       severity: 'error',
-      from: { pathNot: '^src/adapter/outbound/claude/' },
+      from: { pathNot: '^src/adapter/outbound/engines/claude/' },
       to: { dependencyTypes: ['npm'], path: 'node_modules/@anthropic-ai/' },
+    },
+    {
+      name: 'engine-extension-is-isolated',
+      comment:
+        'What only one coding agent has lives in `engines/<engine>/` of its layer, and the core ' +
+        'never imports it: the composition in `infrastructure/modules/engines/` is the one place ' +
+        'that knows an extension, and wires it into the registries of the core. An import from the ' +
+        'core is the core learning an engine — ADR-025, docs/architecture/shared/12-engines.md.',
+      severity: 'error',
+      from: { pathNot: '/engines/' },
+      to: { path: '^src/.+/engines/[^/]+/' },
+    },
+    {
+      name: 'engines-do-not-know-each-other',
+      comment:
+        'An engine extension depends on the core alone, never on another extension: adding or ' +
+        'removing an engine touches its folders and the composition, and nothing else — ADR-025.',
+      severity: 'error',
+      from: { path: '/engines/([^/]+)/' },
+      to: { path: '/engines/[^/]+/', pathNot: '/engines/$1/' },
+    },
+    {
+      name: 'adapters-do-not-know-each-other',
+      comment:
+        'No other adapter reaches into the adapter of an engine: what it needs from the engine comes ' +
+        'through a port of the core, or the next engine has to be wired into that adapter too. It ' +
+        'holds with no exception since plan 28, F5 (B-34): the versions are asked of the registry ' +
+        'of engines, and the loop is released through a port — ADR-025, plan 28 D-19.',
+      severity: 'error',
+      from: { path: '^src/adapter/', pathNot: '^src/adapter/outbound/engines/' },
+      to: { path: '^src/adapter/outbound/engines/[^/]+/' },
     },
     {
       name: 'transcript-reads-through-the-sdk',
@@ -85,7 +116,7 @@ export default {
         'filesystem. See docs/architecture/backend/03-modules.md#transcript.',
       severity: 'error',
       from: {
-        path: '^src/(domain/transcript/|application/transcript/|adapter/inbound/http/transcript/|adapter/outbound/transcript/|adapter/outbound/claude/transcript)',
+        path: '^src/(domain/transcript/|application/transcript/|adapter/inbound/http/transcript/|adapter/outbound/transcript/|adapter/outbound/engines/claude/transcript)',
       },
       to: {
         dependencyTypes: ['core'],
@@ -106,7 +137,7 @@ export default {
       severity: 'error',
       from: { path: '^src/(adapter/outbound/persistence/|infrastructure/database/)' },
       to: {
-        path: '^src/(application/transcript/|adapter/outbound/transcript/|adapter/outbound/claude/transcript|domain/transcript/value-objects/transcript-message)',
+        path: '^src/(application/transcript/|adapter/outbound/transcript/|adapter/outbound/engines/claude/transcript|domain/transcript/value-objects/transcript-message)',
       },
     },
     {
@@ -156,17 +187,19 @@ export default {
       to: { path: '^src/(domain|application)/(session|transcript)/' },
     },
     {
-      name: 'claude-config-never-reaches-session',
+      name: 'settings-never-reach-session',
       comment:
-        'The `claude-config` module is asked by `session` through a port `session` declares, and ' +
-        'reaches the live sessions through the registry module, `workspace` and `permission` through ' +
-        'ports of its own — the outbound adapters that implement those ports are the whole of the ' +
+        'The settings of the engines — the core `agent-settings` and `mcp`, and every engine ' +
+        'extension above its outbound adapter (`domain/engines/*`, `application/engines/*`, ' +
+        '`adapter/inbound/http/engines/*`) — are asked by `session` through a port `session` ' +
+        'declares, and reach the live sessions through the registry module, `workspace` through ' +
+        'ports of their own: the outbound adapters that implement those ports are the whole of the ' +
         'coupling. An import of the application of `session` here would close the cycle session → ' +
-        'claude-config → session; the pure types of its domain (a model, a mode) are not a module. ' +
-        'See docs/architecture/backend/03-modules.md#claude-config and plan 13, B-03, S-14.',
+        'settings → session; the pure types of its domain (a model, a mode) are not a module. ' +
+        'See docs/architecture/backend/03-modules.md#agent-settings and plan 28, B-36.',
       severity: 'error',
       from: {
-        path: '^src/(domain/claude-config|application/claude-config|adapter/inbound/http/claude-config)',
+        path: '^src/(domain/(agent-settings|mcp|engines)/|application/(agent-settings|mcp|engines)/|adapter/inbound/http/(agent-settings/|engines/[^/]+/))',
       },
       to: { path: '^src/application/session/' },
     },

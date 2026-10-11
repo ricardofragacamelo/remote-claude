@@ -5,10 +5,13 @@ import type { AppError } from '@/shared/api/errors';
 import { wsClient } from '@/shared/api/ws';
 import type { ConnectionStatus } from '@/shared/api/ws-client';
 import { useConnectionStatus } from '@/shared/hooks/useConnectionStatus';
+import { sameConversation } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { fetchHistoryPage } from '../services/history.service';
 import { sessionCostOf } from '../services/conversation-reducer';
 import {
   closeSession,
+  compactSession,
   interruptSession,
   sendPrompt,
   setSessionModel,
@@ -17,6 +20,7 @@ import {
 import { createLiveSessionStore, liveSessionStoreOf } from '../store/live-session.store';
 import type { LiveSessionStore } from '../store/live-session.store';
 import { useOwnedSessionsStore } from '../store/owned-sessions.store';
+import type { EngineCapabilities } from '../types/engine';
 import type { Conversation } from '../types/live-session';
 import { useCommandRefusal } from './useCommandRefusal';
 import { useLiveSessionAttachment } from './useLiveSessionAttachment';
@@ -28,8 +32,8 @@ export interface HistoryStatus {
   /** Why it could not be read. What the stream brought stays on screen beside it. */
   readonly error: AppError | null;
 
-  /** The conversation of Claude this session is, once known — what the whole history is read by. */
-  readonly conversationId: string | null;
+  /** The conversation this session is, once known — what the whole history is read by. */
+  readonly conversation: ConversationRef | null;
 
   retry(): void;
 }
@@ -57,7 +61,16 @@ export interface LiveSession extends Conversation {
    */
   readonly promptError: AppError | null;
 
+  /**
+   * What the engine of the session can do, as its `session.started` declared it — `null` until it
+   * did: a control exists by it (plan 28, F3).
+   */
+  readonly capabilities: EngineCapabilities | null;
+
   prompt(text: string): void;
+
+  /** Compacts the conversation — `session.compact`, whose refusal is the `promptError` (B-23). */
+  compact(): void;
   interrupt(): void;
   setModel(model: string): void;
   setPermissionMode(mode: string): void;
@@ -112,7 +125,7 @@ export function useLiveSession(sessionId: string | null): LiveSession {
   // screen is not, so coming back sends nothing on the wire (plan 06, S-181).
   useLiveSessionAttachment(sessionId);
 
-  const history = useHistoryUnderStream(store, state.historyFrom, state.conversationId);
+  const history = useHistoryUnderStream(store, state.historyFrom, state.conversation);
   const { error: promptError, expect: expectRefusal } = useCommandRefusal();
 
   const drive = useCallback(
@@ -136,6 +149,8 @@ export function useLiveSession(sessionId: string | null): LiveSession {
     lastTurn: state.lastTurn,
     ending: state.ending,
     turnSince: state.turnSince,
+    taskList: state.taskList,
+    capabilities: state.capabilities,
     isPartial: state.isPartial,
     isOwner: sessionId !== null && owned.includes(sessionId),
     history,
@@ -148,6 +163,11 @@ export function useLiveSession(sessionId: string | null): LiveSession {
       },
       [drive, expectRefusal],
     ),
+    compact: useCallback(() => {
+      drive((id) => {
+        expectRefusal(compactSession(wsClient, id));
+      });
+    }, [drive, expectRefusal]),
     interrupt: useCallback(() => {
       drive((id) => interruptSession(wsClient, id));
     }, [drive]),
@@ -171,7 +191,7 @@ export function useLiveSession(sessionId: string | null): LiveSession {
 
 /** A failed load, and which conversation it failed for. */
 interface HistoryFailure {
-  readonly from: string;
+  readonly from: ConversationRef;
   readonly attempt: number;
   readonly error: AppError;
 }
@@ -190,8 +210,8 @@ interface HistoryFailure {
  */
 function useHistoryUnderStream(
   store: LiveSessionStore,
-  from: string | null,
-  conversationId: string | null,
+  from: ConversationRef | null,
+  conversation: ConversationRef | null,
 ): HistoryStatus {
   const [attempt, setAttempt] = useState(0);
   const [failure, setFailure] = useState<HistoryFailure | null>(null);
@@ -220,12 +240,13 @@ function useHistoryUnderStream(
     };
   }, [store, from, attempt]);
 
-  const failed = failure !== null && failure.from === from && failure.attempt === attempt;
+  const failed =
+    failure !== null && sameConversation(failure.from, from) && failure.attempt === attempt;
 
   return {
     isLoading: from !== null && !failed,
     error: failed ? failure.error : null,
-    conversationId,
+    conversation,
     retry: useCallback(() => {
       setAttempt((previous) => previous + 1);
     }, []),

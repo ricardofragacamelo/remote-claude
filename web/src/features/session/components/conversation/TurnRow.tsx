@@ -1,8 +1,9 @@
 import { Archive, Receipt, Undo2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import type { TurnSummary } from '../../types/live-session';
+import type { TurnSummary, TurnUsage } from '../../types/live-session';
 
 /** A number in the reader's language. */
 function formatted(value: number, locale: string, options: Intl.NumberFormatOptions = {}): string {
@@ -39,33 +40,61 @@ function SystemRow({
   );
 }
 
+/** The counts a turn row says, in its order, and how each is said — named in full for the check. */
+const TOKEN_PARTS = [
+  ['inputTokens', 'sessions.turn.inputTokens'],
+  ['outputTokens', 'sessions.turn.outputTokens'],
+] as const;
+
+/**
+ * The tokens of a turn, as far as the engine counted them: in, out and from the cache — the read and
+ * the written together —, each only when it came (plan 28, B-29).
+ */
+function tokensOf(usage: TurnUsage | null, locale: string, t: TFunction): string {
+  const parts = TOKEN_PARTS.flatMap(([field, key]) => {
+    const count = usage?.[field];
+    return count === undefined ? [] : [t(key, { count: formatted(count, locale) })];
+  });
+  const cached = [usage?.cacheReadTokens, usage?.cacheWriteTokens].filter(
+    (count): count is number => count !== undefined,
+  );
+
+  if (cached.length > 0) {
+    const count = formatted(
+      cached.reduce((sum, each) => sum + each, 0),
+      locale,
+    );
+    parts.push(t('sessions.turn.cacheTokens', { count }));
+  }
+
+  return parts.length === 0 ? t('sessions.turn.noTokens') : parts.join(', ');
+}
+
 /**
  * The end of a turn: what it cost, how long it took, the tokens in, out and from the cache — in the
- * reader's language (plan 08, B-23, S-97). A turn interrupted before the model answered has no
- * usage: it says what it has, and never `NaN` (S-98).
+ * reader's language (plan 08, B-23, S-97). It says what the engine reported and nothing else: no
+ * cost from an engine that reports none (plan 28, S-86) — and a cost of zero as zero (S-87) —, and a
+ * turn with no count says so, never `NaN` (S-98).
  */
 export function TurnRow({ turn }: { readonly turn: TurnSummary }): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
-  const cost = formatted(Number(turn.costUsd) || 0, locale, {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 4,
+  const cost =
+    turn.costUsd === null
+      ? []
+      : [
+          formatted(Number(turn.costUsd) || 0, locale, {
+            style: 'currency',
+            currency: 'USD',
+            maximumFractionDigits: 4,
+          }),
+        ];
+  const seconds = t('sessions.turn.seconds', {
+    seconds: formatted(turn.durationMs / 1000, locale, { maximumFractionDigits: 1 }),
   });
-  const seconds = formatted(turn.durationMs / 1000, locale, { maximumFractionDigits: 1 });
+  const details = [...cost, seconds, tokensOf(turn.usage, locale, t)].join(' · ');
 
-  const text =
-    turn.usage === null
-      ? t('sessions.turn.noUsage', { cost, seconds })
-      : t('sessions.turn.summary', {
-          cost,
-          seconds,
-          input: formatted(turn.usage.input, locale),
-          output: formatted(turn.usage.output, locale),
-          cache: formatted(turn.usage.cacheRead + turn.usage.cacheWrite, locale),
-        });
-
-  return <SystemRow icon={Receipt} text={text} />;
+  return <SystemRow icon={Receipt} text={t('sessions.turn.summary', { details })} />;
 }
 
 /** Where the conversation was compacted: what came before is a summary now. */

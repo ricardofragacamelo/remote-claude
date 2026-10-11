@@ -191,6 +191,20 @@ describe('mobile.mjs', () => {
     expect(result.stdout).toContain('domain_is_pure_http');
   });
 
+  // Plan 28, S-21 — the core never imports an engine extension, and the gate bites on it.
+  it('fails when a feature imports an engine extension', async () => {
+    writeTemporary('mobile/lib/engines/claude/_arch_engine_probe.dart', 'const probe = 1;\n');
+    writeTemporary(
+      'mobile/lib/features/session/presentation/_arch_engine_probe.dart',
+      "import 'package:remote_claude/engines/claude/_arch_engine_probe.dart';\n\nconst reached = probe;\n",
+    );
+
+    const result = await runScript('mobile.mjs', ['arch']);
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('features_cannot_import_engines');
+  });
+
   it('passes over the module as it stands', async () => {
     const result = await runScript('mobile.mjs', ['arch']);
 

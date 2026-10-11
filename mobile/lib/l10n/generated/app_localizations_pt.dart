@@ -56,8 +56,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get authSignInTitle => 'Entre para continuar';
 
   @override
-  String get authSignInDescription =>
-      'O remote-claude executa o Claude Code na sua própria máquina, por isso pergunta quem é você antes.';
+  String authSignInDescription(String agent) {
+    return 'O remote-claude executa o $agent na sua própria máquina, por isso pergunta quem é você antes.';
+  }
 
   @override
   String get authSignInAction => 'Entrar';
@@ -238,6 +239,163 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String sessionToolFileRead(String path) {
+    return 'Ler $path';
+  }
+
+  @override
+  String sessionToolFileEdit(String path, String added, String removed) {
+    return 'Editar $path (+$added −$removed)';
+  }
+
+  @override
+  String sessionToolFileEditMany(String path) {
+    return 'Editar $path (várias mudanças)';
+  }
+
+  @override
+  String sessionToolFileEditCell(String path) {
+    return 'Editar o notebook $path';
+  }
+
+  @override
+  String sessionToolFileWrite(String path, String lines) {
+    return 'Gravar $path ($lines linhas)';
+  }
+
+  @override
+  String sessionToolShell(String command) {
+    return 'Shell: $command';
+  }
+
+  @override
+  String get sessionToolShellOutput => 'Ler a saída de um comando';
+
+  @override
+  String sessionToolSearch(String pattern) {
+    return 'Buscar “$pattern”';
+  }
+
+  @override
+  String sessionToolSearchIn(String pattern, String path) {
+    return 'Buscar “$pattern” em $path';
+  }
+
+  @override
+  String sessionToolSearchFiles(String pattern) {
+    return 'Achar arquivos $pattern';
+  }
+
+  @override
+  String sessionToolWebFetch(String host) {
+    return 'Buscar $host';
+  }
+
+  @override
+  String sessionToolWebSearch(String query) {
+    return 'Pesquisar na web “$query”';
+  }
+
+  @override
+  String sessionToolAgent(String type, String description) {
+    return 'Subagente ($type): $description';
+  }
+
+  @override
+  String sessionToolQuestion(String header) {
+    return 'Perguntou: $header';
+  }
+
+  @override
+  String sessionToolQuestions(String count) {
+    return 'Fez $count perguntas';
+  }
+
+  @override
+  String get sessionToolPlan => 'Apresentar o plano';
+
+  @override
+  String sessionToolTasksWrite(String count) {
+    return 'Atualizou a lista de tarefas ($count tarefas)';
+  }
+
+  @override
+  String sessionToolTaskCreate(String subject) {
+    return 'Adicionou uma tarefa: $subject';
+  }
+
+  @override
+  String sessionToolTaskUpdate(String id) {
+    return 'Mudou a tarefa #$id';
+  }
+
+  @override
+  String sessionToolTaskGet(String id) {
+    return 'Leu a tarefa #$id';
+  }
+
+  @override
+  String get sessionToolTaskList => 'Leu a lista de tarefas';
+
+  @override
+  String sessionToolMcp(String server, String tool) {
+    return '$server · $tool';
+  }
+
+  @override
+  String sessionToolOther(String name) {
+    return '$name';
+  }
+
+  @override
+  String get sessionKindFileRead => 'Ler';
+
+  @override
+  String get sessionKindFileEdit => 'Editar';
+
+  @override
+  String get sessionKindFileWrite => 'Gravar';
+
+  @override
+  String get sessionKindFileDelete => 'Apagar';
+
+  @override
+  String get sessionKindFileMove => 'Mover';
+
+  @override
+  String get sessionKindSearch => 'Busca';
+
+  @override
+  String get sessionKindShell => 'Shell';
+
+  @override
+  String get sessionKindShellOutput => 'Saída';
+
+  @override
+  String get sessionKindWebFetch => 'Página';
+
+  @override
+  String get sessionKindWebSearch => 'Pesquisa na web';
+
+  @override
+  String get sessionKindMcp => 'MCP';
+
+  @override
+  String get sessionKindAgent => 'Subagente';
+
+  @override
+  String get sessionKindQuestion => 'Pergunta';
+
+  @override
+  String get sessionKindPlan => 'Plano';
+
+  @override
+  String get sessionKindTasks => 'Tarefas';
+
+  @override
+  String get sessionKindOther => 'Ferramenta';
+
+  @override
   String sessionToolRowLabel(String tool, String status) {
     return '$tool — $status. Mostrar o input exato';
   }
@@ -284,7 +442,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionImageClose => 'Fechar';
 
   @override
-  String get sessionImageDescription => 'A imagem que este prompt levou, como o Claude a recebeu.';
+  String sessionImageDescription(String agent) {
+    return 'A imagem que este prompt levou, como o $agent a recebeu.';
+  }
 
   @override
   String get sessionImageLoading => 'Carregando a imagem…';
@@ -321,30 +481,54 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get permissionToolBash => 'Executar um comando no terminal';
+  String get permissionToolFileRead => 'Ler um arquivo';
 
   @override
-  String get permissionToolWrite => 'Gravar um arquivo';
+  String get permissionToolFileEdit => 'Editar um arquivo';
 
   @override
-  String get permissionToolEdit => 'Editar um arquivo';
+  String get permissionToolFileWrite => 'Escrever um arquivo';
 
   @override
-  String get permissionToolMultiEdit => 'Editar vários arquivos';
+  String get permissionToolFileDelete => 'Apagar um arquivo';
 
   @override
-  String get permissionToolNotebookEdit => 'Editar um notebook';
+  String get permissionToolFileMove => 'Mover um arquivo';
 
   @override
-  String get permissionToolRead => 'Ler um arquivo';
+  String get permissionToolSearch => 'Buscar nos arquivos';
+
+  @override
+  String get permissionToolShell => 'Executar um comando de shell';
+
+  @override
+  String get permissionToolShellOutput => 'Ler a saída de um comando';
 
   @override
   String get permissionToolWebFetch => 'Buscar uma página';
 
   @override
-  String permissionToolUnknown(String tool) {
-    return 'Usar $tool';
+  String get permissionToolWebSearch => 'Pesquisar na web';
+
+  @override
+  String get permissionToolMcp => 'Usar uma ferramenta MCP';
+
+  @override
+  String get permissionToolAgent => 'Iniciar um subagente';
+
+  @override
+  String permissionToolQuestion(String agent) {
+    return 'Responder à pergunta do $agent';
   }
+
+  @override
+  String get permissionToolPlan => 'Aprovar o plano';
+
+  @override
+  String get permissionToolTasks => 'Mudar a lista de tarefas';
+
+  @override
+  String get permissionToolOther => 'Usar uma ferramenta';
 
   @override
   String get permissionRiskRead => 'Lê algo';
@@ -465,6 +649,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Negado por uma das suas regras, sem perguntar a ninguém.';
 
   @override
+  String get permissionRefusedReadOnly => 'Recusado: a sessão é só leitura';
+
+  @override
   String get permissionOutcomeAllowedByAllowAll =>
       'Permitido pelo Permitir tudo, sem perguntar a ninguém.';
 
@@ -528,13 +715,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get permissionPersistTitle => 'Parar de perguntar sobre isto?';
 
   @override
-  String permissionPersistProject(String duration) {
-    return 'O Claude vai executar o que casar com a regra abaixo neste projeto sem perguntar a você, por $duration.';
+  String permissionPersistProject(String agent, String duration) {
+    return 'O $agent vai executar o que casar com a regra abaixo neste projeto sem perguntar a você, por $duration.';
   }
 
   @override
-  String permissionPersistAlways(String duration) {
-    return 'O Claude vai executar o que casar com a regra abaixo em qualquer projeto seu sem perguntar a você, por $duration.';
+  String permissionPersistAlways(String agent, String duration) {
+    return 'O $agent vai executar o que casar com a regra abaixo em qualquer projeto seu sem perguntar a você, por $duration.';
   }
 
   @override
@@ -551,10 +738,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get permissionErrorRuleNotFound => 'Essa regra não existe.';
 
   @override
-  String get permissionToolAskUserQuestion => 'Responder à pergunta do Claude';
-
-  @override
-  String get permissionQuestionLabel => 'Pergunta do Claude';
+  String permissionQuestionLabel(String agent) {
+    return 'Pergunta do $agent';
+  }
 
   @override
   String permissionQuestionProgress(int n, int total) {
@@ -592,7 +778,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get permissionQuestionDecline => 'Não responder';
 
   @override
-  String get permissionQuestionDeclineReason => 'Por quê? O Claude lê isto (opcional)';
+  String permissionQuestionDeclineReason(String agent) {
+    return 'Por quê? O $agent lê isto (opcional)';
+  }
 
   @override
   String get permissionQuestionDeclineConfirm => 'Enviar sem responder';
@@ -604,25 +792,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get permissionQuestionExpired => 'Esta pergunta expirou. Nada foi enviado.';
 
   @override
-  String get permissionQuestionMalformed =>
-      'Não foi possível ler a pergunta do Claude, então ela não pode ser respondida aqui. Recusar avisa o Claude disso.';
+  String permissionQuestionMalformed(String agent) {
+    return 'Não foi possível ler a pergunta do $agent, então ela não pode ser respondida aqui. Recusar avisa o $agent disso.';
+  }
 
   @override
   String get permissionQuestionWaiting => 'Aguardando sua resposta a uma pergunta';
 
   @override
-  String permissionQuestionPill(String count) {
-    return 'O Claude te perguntou algo ($count)';
-  }
-
-  @override
-  String permissionQuestionAsked(String header) {
-    return 'Perguntou: $header';
-  }
-
-  @override
-  String permissionQuestionAskedMany(int count) {
-    return 'Fez $count perguntas';
+  String permissionQuestionPill(String agent, String count) {
+    return 'O $agent te perguntou algo ($count)';
   }
 
   @override
@@ -655,8 +834,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get rulesReload => 'Ler a lista de novo';
 
   @override
-  String get rulesDescription =>
-      'O que o Claude pode fazer nesta máquina sem perguntar a você antes. A revogação vale no próximo pedido, em toda sessão aberta.';
+  String rulesDescription(String agent) {
+    return 'O que o $agent pode fazer nesta máquina sem perguntar a você antes. A revogação vale no próximo pedido, em toda sessão aberta.';
+  }
 
   @override
   String get rulesLoading => 'Carregando suas regras…';
@@ -665,8 +845,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get rulesEmptyTitle => 'Nenhuma regra ainda';
 
   @override
-  String get rulesEmptyBody =>
-      'Uma regra nasce quando você responde um pedido com “não perguntar de novo”. Até lá, o Claude pergunta toda vez.';
+  String rulesEmptyBody(String agent) {
+    return 'Uma regra nasce quando você responde um pedido com “não perguntar de novo”. Até lá, o $agent pergunta toda vez.';
+  }
 
   @override
   String get rulesScopeProject => 'Em um projeto';
@@ -688,6 +869,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get rulesStatusUnknown => 'Estado desconhecido';
+
+  @override
+  String get rulesStatusDisabled => 'Desligada';
+
+  @override
+  String rulesDisabledExplanation(String agent) {
+    return 'Escrita para o $agent numa forma que esta versão não traduz: não vale mais. Crie de novo se ainda quiser.';
+  }
 
   @override
   String rulesRowLabel(String pattern) {
@@ -715,13 +904,13 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String rulesExpiredOn(String at) {
-    return 'Expirou em $at. O Claude volta a perguntar.';
+  String rulesExpiredOn(String agent, String at) {
+    return 'Expirou em $at. O $agent volta a perguntar.';
   }
 
   @override
-  String rulesExpiringSoon(String at) {
-    return 'Expira em breve: depois de $at, o Claude volta a perguntar.';
+  String rulesExpiringSoon(String agent, String at) {
+    return 'Expira em breve: depois de $at, o $agent volta a perguntar.';
   }
 
   @override
@@ -744,7 +933,9 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get sessionErrorClaudeUnavailable => 'O Claude parou de responder nesta máquina.';
+  String sessionErrorAgentUnavailable(String agent) {
+    return 'O $agent parou de responder nesta máquina.';
+  }
 
   @override
   String get transcriptErrorNotFound => 'Essa conversa não existe, ou não é sua para ler.';
@@ -755,12 +946,14 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get transcriptErrorClaudeUnavailable =>
-      'O Claude não conseguiu ler o histórico nesta máquina.';
+  String transcriptErrorAgentUnavailable(String agent) {
+    return 'O $agent não conseguiu ler o histórico nesta máquina.';
+  }
 
   @override
-  String get transcriptErrorClaudeTimeout =>
-      'O Claude demorou demais para ler o histórico. Tente de novo.';
+  String transcriptErrorAgentTimeout(String agent) {
+    return 'O $agent demorou demais para ler o histórico. Tente de novo.';
+  }
 
   @override
   String get transcriptErrorCursorStale =>
@@ -863,8 +1056,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get historyFollowWorking => 'Trabalhando em outro cliente…';
 
   @override
-  String get historyFollowWorkingHelp =>
-      'Isto é uma inferência, não algo que o Claude informou: a última entrada da conversa deixa o turno aberto — uma ferramenta sem resultado, um pensamento ou um prompt sem resposta — e algo escreveu nela há pouco. O histórico não grava o estado de um turno, e nada aqui diz qual é o outro cliente.';
+  String historyFollowWorkingHelp(String agent) {
+    return 'Isto é uma inferência, não algo que o $agent informou: a última entrada da conversa deixa o turno aberto — uma ferramenta sem resultado, um pensamento ou um prompt sem resposta — e algo escreveu nela há pouco. O histórico não grava o estado de um turno, e nada aqui diz qual é o outro cliente.';
+  }
 
   @override
   String get historyFollowNewerOne => '1 nova';
@@ -896,13 +1090,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionHistoryLoading => 'Carregando o que foi dito antes';
 
   @override
-  String sessionErrorUnknownCommand(String command) {
-    return '$command não é um comando que o Claude oferece nesta máquina.';
+  String sessionErrorUnknownCommand(String agent, String command) {
+    return '$command não é um comando que o $agent oferece nesta máquina.';
   }
 
   @override
-  String get sessionErrorClaudeTimeout =>
-      'O Claude demorou demais para responder nesta máquina. Tente de novo.';
+  String sessionErrorAgentTimeout(String agent) {
+    return 'O $agent demorou demais para responder. Tente de novo.';
+  }
+
+  @override
+  String engineErrorCapabilityUnavailable(String agent) {
+    return 'O $agent não consegue fazer isso.';
+  }
+
+  @override
+  String get engineNameFallback => 'agente';
 
   @override
   String get sessionErrorResumeTimeout =>
@@ -925,8 +1128,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionCommandsTitle => 'Comandos';
 
   @override
-  String get sessionCommandsDescription =>
-      'O que o Claude oferece nesta máquina. A caixa de prompt aceita qualquer comando, listado aqui ou não.';
+  String sessionCommandsDescription(String agent) {
+    return 'O que o $agent oferece nesta máquina. A caixa de prompt aceita qualquer comando, listado aqui ou não.';
+  }
 
   @override
   String get sessionCommandsSearch => 'Buscar comandos';
@@ -944,8 +1148,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionCommandsEmptyTitle => 'Nenhum comando nesta máquina';
 
   @override
-  String get sessionCommandsEmptyBody =>
-      'O Claude daqui não oferece comandos. Você ainda pode digitar qualquer coisa na caixa de prompt.';
+  String sessionCommandsEmptyBody(String agent) {
+    return 'O $agent daqui não oferece comandos. Você ainda pode digitar qualquer coisa na caixa de prompt.';
+  }
 
   @override
   String sessionCommandsNoMatch(String query) {
@@ -1097,8 +1302,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get diagnosticsDebugAlwaysOn => 'Sempre ligado em um build de desenvolvimento.';
 
   @override
-  String get sessionEndedResumes =>
-      'Mandar um prompt a retoma, num novo processo do Claude nesta máquina.';
+  String sessionEndedResumes(String agent) {
+    return 'Mandar um prompt a retoma, num novo processo do $agent nesta máquina.';
+  }
 
   @override
   String get sessionEndedResumeAndSend => 'Retomar e enviar';
@@ -1112,6 +1318,11 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String sessionTurnLine(String costUsd, String seconds) {
     return 'Turno encerrado: $costUsd USD · $seconds s';
+  }
+
+  @override
+  String sessionTurnLineNoCost(String seconds) {
+    return 'Turno encerrado: $seconds s';
   }
 
   @override
@@ -1167,8 +1378,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get draftTitle => 'Uma nova conversa';
 
   @override
-  String get draftDescription =>
-      'Nada roda até você enviar o primeiro prompt: então uma sessão do Claude abre nesta pasta, com o que você escolheu abaixo.';
+  String draftDescription(String agent) {
+    return 'Nada roda até você enviar o primeiro prompt: então uma sessão do $agent abre nesta pasta, com o que você escolheu abaixo.';
+  }
 
   @override
   String get draftCommands => 'Digite / para os comandos e skills desta instalação.';
@@ -1189,14 +1401,17 @@ class AppLocalizationsPt extends AppLocalizations {
   String get composerBoxLabel => 'Prompt';
 
   @override
-  String get composerPlaceholder => 'Peça ao Claude algo nesta pasta…';
+  String composerPlaceholder(String agent) {
+    return 'Peça ao $agent algo nesta pasta…';
+  }
 
   @override
   String get composerQueue => 'Pôr na fila';
 
   @override
-  String get composerQueued =>
-      'O Claude está trabalhando: o que você enviar agora espera na fila e roda em seguida.';
+  String composerQueued(String agent) {
+    return 'O $agent está trabalhando: o que você enviar agora espera na fila e roda em seguida.';
+  }
 
   @override
   String get composerStop => 'Parar';
@@ -1230,40 +1445,46 @@ class AppLocalizationsPt extends AppLocalizations {
   String get modeLabel => 'Modo';
 
   @override
-  String get modeDefault => 'Perguntar';
+  String get modeAsk => 'Perguntar';
 
   @override
-  String get modeDefaultDescription =>
-      'O Claude pergunta antes de cada tool que precisa da sua palavra.';
+  String modeAskDescription(String agent) {
+    return 'O $agent pergunta antes de cada tool que precisa da sua palavra.';
+  }
 
   @override
   String get modeAcceptEdits => 'Aceitar edições';
 
   @override
-  String get modeAcceptEditsDescription =>
-      'O Claude edita e grava arquivos sem perguntar; ainda pergunta antes do resto.';
+  String modeAcceptEditsDescription(String agent) {
+    return 'O $agent edita e grava arquivos sem perguntar; ainda pergunta antes do resto.';
+  }
 
   @override
-  String get modeAcceptEditsWarning =>
-      'O Claude vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.';
+  String modeAcceptEditsWarning(String agent) {
+    return 'O $agent vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.';
+  }
 
   @override
-  String get modePlan => 'Plan';
+  String get modeReadOnly => 'Só leitura';
 
   @override
-  String get modePlanDescription =>
-      'O Claude planeja sem mudar nada, e pede que você aprove o plano.';
+  String modeReadOnlyDescription(String agent) {
+    return 'O $agent lê e planeja sem mudar nada: nada que grave arquivos ou rode comandos é permitido.';
+  }
 
   @override
   String get modeAllowAll => 'Permitir tudo';
 
   @override
-  String get modeAllowAllDescription =>
-      'O Claude executa toda tool sem perguntar, menos o que uma regra sua recusa. As perguntas dele a você continuam chegando.';
+  String modeAllowAllDescription(String agent) {
+    return 'O $agent executa toda tool sem perguntar, menos o que uma regra sua recusa. As perguntas dele a você continuam chegando.';
+  }
 
   @override
-  String get modeAllowAllWarning =>
-      'O Claude vai executar qualquer comando nesta máquina sem perguntar a você, até você trocar o modo.';
+  String modeAllowAllWarning(String agent) {
+    return 'O $agent vai executar qualquer comando nesta máquina sem perguntar a você, até você trocar o modo.';
+  }
 
   @override
   String get modelLabel => 'Modelo';
@@ -1301,8 +1522,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get effortMax => 'Máximo';
 
   @override
-  String get effortReadOnly =>
-      'O esforço se escolhe quando a conversa começa. Trocá-lo com ela rodando faria o Claude parar de perguntar antes de cada tool.';
+  String effortReadOnly(String agent) {
+    return 'O esforço se escolhe quando a conversa começa. Trocá-lo com ela rodando faria o $agent parar de perguntar antes de cada tool.';
+  }
 
   @override
   String get effortUnknown => 'O do início';
@@ -1358,7 +1580,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'A conversa está perto do limite do contexto. Compactá-la a mantém andando.';
 
   @override
-  String get contextCompact => 'Compactar a conversa (/compact)';
+  String get contextCompact => 'Compactar a conversa';
 
   @override
   String get contextCompacting => 'Compactando…';
@@ -1370,28 +1592,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get contextLoading => 'Lendo o contexto';
 
   @override
-  String get contextSystemPrompt => 'Prompt de sistema';
+  String get contextSystem => 'Prompt de sistema';
 
   @override
-  String get contextSystemTools => 'Tools do sistema';
-
-  @override
-  String get contextMcpTools => 'Tools de MCP';
+  String get contextTools => 'Ferramentas';
 
   @override
   String get contextMessages => 'Mensagens';
 
   @override
-  String get contextMemoryFiles => 'Arquivos de memória';
+  String get contextMemory => 'Arquivos de memória';
 
   @override
-  String get contextSkills => 'Skills';
+  String get contextFree => 'Espaço livre';
 
   @override
-  String get contextFreeSpace => 'Espaço livre';
-
-  @override
-  String get contextBuffer => 'Reservado para compactação';
+  String get contextReserved => 'Reservado para compactação';
 
   @override
   String get sessionErrorQueuedPromptStarted =>
@@ -1432,10 +1648,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionDotReconnecting => 'Reconectando…';
 
   @override
-  String get sessionDotRunning => 'O Claude está trabalhando';
+  String sessionDotRunning(String agent) {
+    return 'O $agent está trabalhando';
+  }
 
   @override
-  String get sessionDotWaiting => 'O Claude espera sua resposta';
+  String sessionDotWaiting(String agent) {
+    return 'O $agent espera sua resposta';
+  }
 
   @override
   String get sessionDotEnded => 'A sessão terminou';
@@ -1461,6 +1681,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionStatusNoCost => 'Nenhum turno terminou ainda, então não há custo a dizer.';
 
   @override
+  String sessionStatusCostNotReported(String agent) {
+    return 'O $agent não informa quanto custam os turnos.';
+  }
+
+  @override
   String get sessionMenuOpen => 'Mais ações da sessão';
 
   @override
@@ -1474,6 +1699,16 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get sessionMenuCopied => 'O id da sessão foi copiado.';
+
+  @override
+  String sessionMenuCopyConversationId(String agent) {
+    return 'Copiar o id da conversa do $agent';
+  }
+
+  @override
+  String sessionMenuConversationIdCopied(String agent) {
+    return 'O id da conversa do $agent foi copiado.';
+  }
 
   @override
   String sessionMenuCopyFailed(String sessionId) {
@@ -1496,8 +1731,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionCloseTitle => 'Encerrar esta sessão?';
 
   @override
-  String get sessionCloseDescription =>
-      'O Claude para nesta máquina. O que ele escreveu fica no disco, mas o desfazer das alterações de arquivo vai embora com a sessão. A conversa fica no histórico e pode ser retomada.';
+  String sessionCloseDescription(String agent) {
+    return 'O $agent para nesta máquina. O que ele escreveu fica no disco, mas o desfazer das alterações de arquivo vai embora com a sessão. A conversa fica no histórico e pode ser retomada.';
+  }
 
   @override
   String get sessionCloseKeep => 'Manter rodando';
@@ -1522,8 +1758,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionHelpBarHeading => 'A barra sob a caixa';
 
   @override
-  String get sessionHelpBar =>
-      'Nesta ordem: / lista os comandos e skills; depois o modo, o modelo, o esforço e a parte da janela de contexto em uso — com Compactar dentro dela — e enviar. Enquanto o Claude trabalha, enviar põe o que você escreveu na fila, e Parar fica ao lado; com a caixa vazia, o próprio botão é Parar. O esforço só se escolhe numa conversa nova. Numa tela estreita, o modelo, o esforço e o contexto vão para o … da barra.';
+  String sessionHelpBar(String agent) {
+    return 'Nesta ordem: / lista os comandos e skills; depois o modo, o modelo, o esforço e a parte da janela de contexto em uso — com Compactar dentro dela — e enviar. Enquanto o $agent trabalha, enviar põe o que você escreveu na fila, e Parar fica ao lado; com a caixa vazia, o próprio botão é Parar. O esforço só se escolhe numa conversa nova. Numa tela estreita, o modelo, o esforço e o contexto vão para o … da barra.';
+  }
 
   @override
   String get sessionHelpMenuHeading => 'O menu da sessão';
@@ -1540,42 +1777,51 @@ class AppLocalizationsPt extends AppLocalizations {
       'O chip da barra de cima diz como a sessão está, por cor e por palavra: conectada, reconectando, rodando, esperando você ou encerrada. Toque nele para ver o id da sessão, com o jeito de copiá-lo, e quanto ela custou desde que abriu.';
 
   @override
-  String get sessionHelpWorkingHeading => 'Enquanto o Claude trabalha';
+  String sessionHelpWorkingHeading(String agent) {
+    return 'Enquanto o $agent trabalha';
+  }
 
   @override
-  String get sessionHelpWorking =>
-      'Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o Claude está fazendo — a tool que executa, que espera você, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina — o que pensou à vista, mais discreto que a resposta, quando o modelo mostrou; recolhido quando não mostrou. Uma tool é uma linha, recolhida: toque para ver o que entrou e o que saiu. Quando o turno acaba, a linha dá lugar ao que o turno custou.';
+  String sessionHelpWorking(String agent) {
+    return 'Enquanto um turno roda, a última linha dele se mexe: um asterisco, o que o $agent está fazendo — a tool que executa, que espera você, ou uma palavra para o turno — e há quanto tempo. O raciocínio é uma linha própria, na ordem: \"Pensando…\" enquanto chega, \"Pensou por n s\" quando termina — o que pensou à vista, mais discreto que a resposta, quando o modelo mostrou; recolhido quando não mostrou. Uma tool é uma linha, recolhida: toque para ver o que entrou e o que saiu. Quando o turno acaba, a linha dá lugar ao que o turno custou.';
+  }
 
   @override
   String get sessionHelpInlineHeading => 'Perguntas na conversa';
 
   @override
-  String get sessionHelpInline =>
-      'Quando o Claude pergunta antes de executar uma tool, a pergunta fica na conversa, no lugar dessa tool: o comando exato, o risco, o tempo que resta e até onde vai um sim. Respondida, a linha da tool diz como — por você, no navegador, por uma regra sua, ou recusada porque ninguém respondeu a tempo. Uma pergunta nunca fecha o teclado nem tira a caixa de você: enviar continua enviando o seu prompt, e só um toque no card responde a ela.';
+  String sessionHelpInline(String agent) {
+    return 'Quando o $agent pergunta antes de executar uma tool, a pergunta fica na conversa, no lugar dessa tool: o comando exato, o risco, o tempo que resta e até onde vai um sim. Respondida, a linha da tool diz como — por você, no navegador, por uma regra sua, ou recusada porque ninguém respondeu a tempo. Uma pergunta nunca fecha o teclado nem tira a caixa de você: enviar continua enviando o seu prompt, e só um toque no card responde a ela.';
+  }
 
   @override
   String get sessionHelpPillHeading => 'Esperando sua resposta';
 
   @override
-  String get sessionHelpPill =>
-      'Com uma pergunta fora de vista — a conversa rolada para cima —, uma pílula sobre a caixa diz que o Claude espera, e quantas perguntas. Tocar nela leva à mais antiga.';
+  String sessionHelpPill(String agent) {
+    return 'Com uma pergunta fora de vista — a conversa rolada para cima —, uma pílula sobre a caixa diz que o $agent espera, e quantas perguntas. Tocar nela leva à mais antiga.';
+  }
 
   @override
   String get sessionHelpTasksHeading => 'A lista de tarefas';
 
   @override
-  String get sessionHelpTasks =>
-      'Quando o Claude mantém uma lista de tarefas, ela fica sobre a caixa, recolhida numa linha — quantas estão feitas e o que está sendo feito agora. Toque nela para a lista inteira; ela muda enquanto o Claude trabalha, sem mexer no que você está lendo.';
+  String sessionHelpTasks(String agent) {
+    return 'Quando o $agent mantém uma lista de tarefas, ela fica sobre a caixa, recolhida numa linha — quantas estão feitas e o que está sendo feito agora. Toque nela para a lista inteira; ela muda enquanto o $agent trabalha, sem mexer no que você está lendo.';
+  }
 
   @override
   String get sessionHelpActionsHeading => 'A partir de um prompt';
 
   @override
-  String get sessionHelpActions =>
-      'Pressione e segure um prompt seu para o que dá para fazer a partir dele: editar e reenviar, bifurcar de antes dele, e devolver os arquivos a antes do turno dele — com o alcance mostrado arquivo a arquivo antes. O leitor de tela oferece as mesmas três como ações da mensagem. Enquanto o Claude trabalha, o desfazer espera o turno acabar; com a sessão encerrada não há desfazer.';
+  String sessionHelpActions(String agent) {
+    return 'Pressione e segure um prompt seu para o que dá para fazer a partir dele: editar e reenviar, bifurcar de antes dele, e devolver os arquivos a antes do turno dele — com o alcance mostrado arquivo a arquivo antes. O leitor de tela oferece as mesmas três como ações da mensagem. Enquanto o $agent trabalha, o desfazer espera o turno acabar; com a sessão encerrada não há desfazer.';
+  }
 
   @override
-  String get permissionPlanLabel => 'O plano que o Claude propõe';
+  String permissionPlanLabel(String agent) {
+    return 'O plano que o $agent propõe';
+  }
 
   @override
   String get permissionPlanTitle => 'Aprovar o plano?';
@@ -1593,7 +1839,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get permissionPlanKeepPlanning => 'Continuar planejando';
 
   @override
-  String get permissionPlanModeDefault => 'perguntando antes de cada edição';
+  String get permissionPlanModeAsk => 'perguntando antes de cada edição';
 
   @override
   String get permissionPlanModeAcceptEdits => 'aceitando edições sem perguntar';
@@ -1677,15 +1923,17 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionWorkingVerbMusing => 'Refletindo…';
 
   @override
-  String sessionPendingPill(String count) {
-    return 'O Claude espera sua resposta ($count)';
+  String sessionPendingPill(String agent, String count) {
+    return 'O $agent espera sua resposta ($count)';
   }
 
   @override
   String get sessionInlineTail => 'Perguntas esperando você';
 
   @override
-  String get sessionTasksLabel => 'A lista de tarefas que o Claude mantém nesta conversa';
+  String sessionTasksLabel(String agent) {
+    return 'A lista de tarefas que o $agent mantém nesta conversa';
+  }
 
   @override
   String sessionTasksHeadline(String done, String total, String task) {
@@ -1733,8 +1981,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionMessageUndo => 'Devolver os arquivos a antes deste prompt';
 
   @override
-  String get sessionMessageUndoBusy =>
-      'Devolver os arquivos a antes deste prompt — não enquanto o Claude trabalha';
+  String sessionMessageUndoBusy(String agent) {
+    return 'Devolver os arquivos a antes deste prompt — não enquanto o $agent trabalha';
+  }
 
   @override
   String get sessionMessageHold => 'Pressione e segure para o que fazer com este prompt';
@@ -1756,8 +2005,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionForkStarting => 'Abrindo a nova conversa…';
 
   @override
-  String get sessionErrorForkRejected =>
-      'O Claude não conseguiu continuar a conversa a partir dessa mensagem. Retome a conversa e edite a partir dela.';
+  String sessionErrorForkRejected(String agent) {
+    return 'O $agent não conseguiu continuar a conversa a partir dessa mensagem. Retome a conversa e edite a partir dela.';
+  }
 
   @override
   String get sessionErrorForkPointUnknown =>
@@ -1956,14 +2206,17 @@ class AppLocalizationsPt extends AppLocalizations {
   String get foldersHelpOpen => 'Ajuda sobre as pastas';
 
   @override
-  String get foldersHelpBody =>
-      'Abertas: as pastas em que você está trabalhando — as mesmas das abas de pasta no navegador. Cada uma diz quantas sessões estão abertas nela e quantos pedidos esperam você. Toque numa para ver as sessões e o histórico dela, ou para começar uma sessão nova.\n\nRecentes: pastas que você abriu antes. Toque numa para abri-la de novo; fixe as que você volta sempre.\n\nAbrir outra pasta: percorra as raízes em que este computador deixa o Claude rodar, um nível por vez, e abra a pasta que quiser.\n\nFechar uma pasta só a tira da lista: as sessões dela continuam rodando.';
+  String foldersHelpBody(String agent) {
+    return 'Abertas: as pastas em que você está trabalhando — as mesmas das abas de pasta no navegador. Cada uma diz quantas sessões estão abertas nela e quantos pedidos esperam você. Toque numa para ver as sessões e o histórico dela, ou para começar uma sessão nova.\n\nRecentes: pastas que você abriu antes. Toque numa para abri-la de novo; fixe as que você volta sempre.\n\nAbrir outra pasta: percorra as raízes em que este computador deixa o $agent rodar, um nível por vez, e abra a pasta que quiser.\n\nFechar uma pasta só a tira da lista: as sessões dela continuam rodando.';
+  }
 
   @override
   String get folderPickerTitle => 'Abrir uma pasta';
 
   @override
-  String get folderPickerRoots => 'As raízes em que este computador deixa o Claude rodar';
+  String folderPickerRoots(String agent) {
+    return 'As raízes em que este computador deixa o $agent rodar';
+  }
 
   @override
   String get folderPickerOpenThis => 'Abrir esta pasta';
@@ -2030,8 +2283,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get folderHelpOpen => 'Ajuda sobre esta pasta';
 
   @override
-  String get folderHelpBody =>
-      'Nova sessão: um rascunho nesta pasta. Nada roda até você mandar o primeiro prompt.\n\nSessões abertas: o que roda agora nesta pasta e abaixo dela, aberto aqui, em outro celular ou num navegador. Toque numa para acompanhá-la; ela entra no painel de sessões desta pasta.\n\nHistórico: as conversas que o Claude guardou desta pasta. Abra uma para ler ou continuar.';
+  String folderHelpBody(String agent) {
+    return 'Nova sessão: um rascunho nesta pasta. Nada roda até você mandar o primeiro prompt.\n\nSessões abertas: o que roda agora nesta pasta e abaixo dela, aberto aqui, em outro celular ou num navegador. Toque numa para acompanhá-la; ela entra no painel de sessões desta pasta.\n\nHistórico: as conversas que o $agent guardou desta pasta. Abra uma para ler ou continuar.';
+  }
 
   @override
   String get liveStatusStarting => 'Iniciando';
@@ -2238,12 +2492,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get fileViewerBack => 'Voltar';
 
   @override
-  String fileViewerClaudeWaiting(int count) {
+  String fileViewerAgentWaiting(String agent, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'O Claude está esperando $count respostas',
-      one: 'O Claude está esperando sua resposta',
+      other: 'O $agent está esperando $count respostas',
+      one: 'O $agent está esperando sua resposta',
     );
     return '$_temp0';
   }

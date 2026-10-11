@@ -53,7 +53,7 @@ export function TemplateDialog({ explorer }: TemplateDialogProps): React.JSX.Ele
                 explorer.newEntry('file', template.id);
               }}
             >
-              <span>{t(template.labelKey)}</span>
+              <span>{t(template.labelKey, { fileName: template.suggestedName })}</span>
               <span className="font-code text-ui-sm text-muted-foreground">
                 {template.suggestedName}
               </span>

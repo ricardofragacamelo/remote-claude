@@ -429,7 +429,7 @@ Faz sentido como desenho de segurança: honrar `deny` de um repositório de terc
 > repetiu o teste num diretório **confiado**, sobre um `CLAUDE_CONFIG_DIR` isolado: o `allow` de
 > projeto passa a ser aplicado e o `canUseTool` **não é chamado**. A tabela acima vale apenas para
 > diretório não confiado. O detalhe da medição está em
-> [04-claude-integration](../architecture/backend/04-claude-integration.md#diretório-confiado-fura-o-canusetool--medido).
+> [04a-claude](../architecture/backend/04a-claude.md#diretório-confiado-fura-o-canusetool--medido).
 
 ### 8.3 — `reinitialize()` não reentrega o pedido, e não precisamos dele
 

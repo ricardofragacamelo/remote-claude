@@ -18,6 +18,8 @@ import {
   routeApi,
   SESSION,
 } from '../../../support/session-tools';
+import { aToolCall } from '../../../support/canonical-tool';
+import { CAPABILITIES } from '../../../support/engines';
 
 const t = translator('en');
 const NOW = new Date('2026-10-03T12:00:00.000Z');
@@ -82,10 +84,9 @@ function asks(overrides: Record<string, unknown> = {}): void {
     payload: {
       requestId,
       toolUseId: 't1',
-      toolName: 'Bash',
-      title: 'permission.tool.Bash',
+      ...aToolCall('Bash', { command: 'rm -rf build/' }),
+      title: 'permission.tool.shell',
       description: 'rm -rf build/ && pnpm build --filter ./web --mode production',
-      input: { command: 'rm -rf build/' },
       riskHint: 'destructive',
       defaultToNo: true,
       // From the clock of the test — the real one, unless the case froze it.
@@ -115,10 +116,11 @@ function opened(element: React.JSX.Element = <Hosted />): ReturnType<typeof rend
   live.connect();
   says('session.started', {
     sessionId: SESSION,
-    claudeSessionId: 'conv-1',
+    conversation: { engine: 'claude', id: 'conv-1' },
     workspacePath: FOLDER,
     model: 'claude-opus-5',
-    permissionMode: 'default',
+    permissionMode: 'ask',
+    capabilities: CAPABILITIES,
   });
   return mounted;
 }
@@ -126,10 +128,15 @@ function opened(element: React.JSX.Element = <Hosted />): ReturnType<typeof rend
 const conversation = (): HTMLElement =>
   screen.getByRole('list', { name: t('session.screen.conversation') });
 const toolStarted = (toolUseId: string, toolName = 'Bash', input: Record<string, unknown> = {}) => {
-  says('tool.started', { toolUseId, toolName, input: { command: 'rm -rf build/', ...input } });
+  says('tool.started', {
+    toolUseId,
+    ...aToolCall(toolName, { command: 'rm -rf build/', ...input }),
+  });
 };
+/** What the line of the shell call says — its label, from the server (plan 28, B-18). */
+const SHELL = t('sessions.tool.shell', { command: 'rm -rf build/' });
 const cardOfBash = (): HTMLElement =>
-  screen.getByRole('listitem', { name: t('permission.card.label', { tool: 'Bash' }) });
+  screen.getByRole('listitem', { name: t('permission.card.label', { tool: SHELL }) });
 const answers = (): Record<string, unknown>[] =>
   live.sent().filter((frame) => frame['type'] === 'permission.resolve');
 const indicator = (): HTMLElement | null =>
@@ -175,7 +182,7 @@ describe('the line of a turn that runs — plan 09, B-21', () => {
     toolStarted('t1');
 
     expect(within(indicator() as HTMLElement).getByRole('status')).toHaveTextContent(
-      t('sessions.working.runningTool', { tool: 'Bash' }),
+      t('sessions.working.runningTool', { tool: SHELL }),
     );
 
     asks();
@@ -250,7 +257,7 @@ describe('thinking, in the order of the conversation — plan 09, B-22', () => {
     says('message.completed', {
       messageId: 'm1',
       role: 'assistant',
-      content: [{ type: 'redacted_thinking', data: 'opaque' }],
+      content: [{ type: 'redactedThinking', data: 'opaque' }],
     });
 
     expect(screen.getByText(t('sessions.thinking.hidden'))).toBeInTheDocument();
@@ -267,11 +274,11 @@ describe('the question, in the place of its tool — plan 09, B-23, B-24', () =>
     asks();
 
     const card = within(conversation()).getByRole('listitem', {
-      name: t('permission.card.label', { tool: 'Bash' }),
+      name: t('permission.card.label', { tool: SHELL }),
     });
-    expect(
-      screen.queryByRole('button', { name: new RegExp(t('sessions.tool.bash', { command: '' })) }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: new RegExp(SHELL) })).toBeNull();
+    // What is asked, by the kind of the call.
+    expect(within(card).getByText(t('permission.tool.shell'))).toBeInTheDocument();
     // The command exact and whole, the risk, the countdown, the scopes, the second step.
     expect(
       within(card).getByText('rm -rf build/ && pnpm build --filter ./web --mode production'),
@@ -293,18 +300,17 @@ describe('the question, in the place of its tool — plan 09, B-23, B-24', () =>
 
     expect(screen.queryByRole('list', { name: t('sessions.inline.tail') })).toBeNull();
     expect(
-      screen.getAllByRole('listitem', { name: t('permission.card.label', { tool: 'Bash' }) }),
+      screen.getAllByRole('listitem', { name: t('permission.card.label', { tool: SHELL }) }),
     ).toHaveLength(1);
-    expect(within(conversation()).getByRole('listitem', { name: /Bash/ })).toBe(cardOfBash());
+    expect(within(conversation()).getByRole('listitem', { name: /Shell/ })).toBe(cardOfBash());
   });
 
   it('keeps the question of a subagent’s tool in view at the end, never folded under its tool', () => {
     opened();
-    says('tool.started', { toolUseId: 'a1', toolName: 'Agent', input: { description: 'look' } });
+    says('tool.started', { toolUseId: 'a1', ...aToolCall('Agent', { description: 'look' }) });
     says('tool.started', {
       toolUseId: 't9',
-      toolName: 'Bash',
-      input: { command: 'ls' },
+      ...aToolCall('Bash', { command: 'ls' }),
       parentToolUseId: 'a1',
     });
 
@@ -335,7 +341,7 @@ describe('the question, in the place of its tool — plan 09, B-23, B-24', () =>
 
     expect(screen.queryByRole('timer')).toBeNull();
     expect(within(conversation()).getByText(t('permission.outcome.expired'))).toBeInTheDocument();
-    expect(within(conversation()).getByRole('button', { name: /Bash/ })).toBeInTheDocument();
+    expect(within(conversation()).getByRole('button', { name: /Shell/ })).toBeInTheDocument();
   });
 
   it('becomes the line of its tool with who answered on a phone, rather than vanishing — S-62', () => {
@@ -365,7 +371,7 @@ describe('the question, in the place of its tool — plan 09, B-23, B-24', () =>
     resolves('req-9', { decision: 'allow', auto: true });
 
     expect(within(conversation()).queryByText(t('permission.outcome.rule'))).toBeNull();
-    expect(within(conversation()).getByRole('button', { name: /Bash/ })).toBeInTheDocument();
+    expect(within(conversation()).getByRole('button', { name: /Shell/ })).toBeInTheDocument();
   });
 
   it('says it was you who answered, from this screen', async () => {
@@ -392,15 +398,14 @@ describe('the question, in the place of its tool — plan 09, B-23, B-24', () =>
     toolStarted('t1');
     says('tool.started', {
       toolUseId: 't2',
-      toolName: 'Write',
-      input: { file_path: '/srv/app/a.txt', content: 'a' },
+      ...aToolCall('Write', { file_path: '/srv/app/a.txt', content: 'a' }),
     });
     asks();
     asks({
       requestId: 'req-2',
       toolUseId: 't2',
-      toolName: 'Write',
-      title: 'permission.tool.Write',
+      ...aToolCall('Write', { file_path: '/srv/app/a.txt', content: 'a' }),
+      title: 'permission.tool.fileWrite',
       description: '/srv/app/a.txt',
       riskHint: 'write',
       defaultToNo: false,
@@ -418,7 +423,9 @@ describe('the question, in the place of its tool — plan 09, B-23, B-24', () =>
     expect(answers()).toHaveLength(1);
     expect(answers()[0]).toMatchObject({ payload: { requestId: 'req-1', decision: 'allow' } });
     const write = screen.getByRole('listitem', {
-      name: t('permission.card.label', { tool: 'Write' }),
+      name: t('permission.card.label', {
+        tool: t('sessions.tool.fileWrite', { path: '/srv/app/a.txt', lines: 1 }),
+      }),
     });
     expect(within(write).getByRole('button', { name: t('permission.scope.once') })).toBeEnabled();
   });
@@ -437,14 +444,19 @@ describe('the question, in the place of its tool — plan 09, B-23, B-24', () =>
   it('puts the plan to approve in the place of ExitPlanMode, and approving it moves the mode of the bar — S-66', async () => {
     const user = userEvent.setup();
     opened();
-    says('tool.started', { toolUseId: 't3', toolName: 'ExitPlanMode', input: { plan: '# Plan' } });
+    const interaction = { kind: 'plan', markdown: '# Plan' };
+    says('tool.started', {
+      toolUseId: 't3',
+      ...aToolCall('ExitPlanMode', { plan: '# Plan' }),
+      interaction,
+    });
     asks({
       toolUseId: 't3',
-      toolName: 'ExitPlanMode',
-      title: 'permission.tool.ExitPlanMode',
-      input: { plan: '# Plan' },
+      ...aToolCall('ExitPlanMode', { plan: '# Plan' }),
+      title: 'permission.tool.plan',
       riskHint: 'read',
-      defaultToNo: false,
+      defaultToNo: true,
+      interaction,
     });
 
     const plan = within(conversation()).getByRole('listitem', { name: t('permission.plan.label') });

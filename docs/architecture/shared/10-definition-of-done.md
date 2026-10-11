@@ -55,6 +55,8 @@ ordem de importância — é conjunção, não ponderação.
 - [ ] Typecheck strict passando. Nenhum `any`, nenhum `dynamic`, nenhum `@ts-ignore`.
 - [ ] **Regras de arquitetura** passando (`dependency-cruiser`, `boundaries`, `import_lint`).
 - [ ] **Duplicação** dentro do limite ([linhas repetidas](09-code-quality.md#linhas-repetidas)).
+- [ ] **Neutralidade** verde: `pnpm neutral:check` sem violação nova, e o baseline sem entrada nova
+      ([12](12-engines.md#o-portão-de-neutralidade)).
 - [ ] Complexidade dentro do limite: ≤ 10 por função, no `pnpm lint`.
 - [ ] `gitleaks`, `semgrep` e scanner de dependência sem achado novo.
 - [ ] Supressão de regra, se houver, tem justificativa e link de issue.

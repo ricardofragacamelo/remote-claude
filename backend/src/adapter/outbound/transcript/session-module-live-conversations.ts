@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SessionRegistry } from '@application/session';
 import type { LiveConversationSource } from '@application/transcript';
 import type { UserId } from '@domain/auth';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * `transcript` asking `session` which conversations are live for the caller.
@@ -17,7 +17,7 @@ import type { ClaudeSessionId } from '@domain/transcript';
 export class SessionModuleLiveConversations implements LiveConversationSource {
   constructor(@Inject(SessionRegistry) private readonly registry: SessionRegistry) {}
 
-  liveSessionOf(conversation: ClaudeSessionId, userId: UserId): string | null {
+  liveSessionOf(conversation: ConversationRef, userId: UserId): string | null {
     return this.registry.findConversation(conversation, userId)?.session.id.value ?? null;
   }
 }

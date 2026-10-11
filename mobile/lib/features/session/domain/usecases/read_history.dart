@@ -1,6 +1,7 @@
 /// Reading one page of a conversation's history.
 library;
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/features/session/domain/entities/history_page.dart';
 import 'package:remote_claude/features/session/domain/repositories/history_repository.dart';
 
@@ -10,7 +11,7 @@ class ReadHistory {
 
   final HistoryRepository _history;
 
-  /// The latest messages of [conversationId], or the page before [cursor].
-  Future<HistoryPage> call(String conversationId, {String? cursor}) =>
-      _history.page(conversationId, cursor: cursor);
+  /// The latest messages of [conversation], or the page before [cursor].
+  Future<HistoryPage> call(ConversationKey conversation, {String? cursor}) =>
+      _history.page(conversation, cursor: cursor);
 }

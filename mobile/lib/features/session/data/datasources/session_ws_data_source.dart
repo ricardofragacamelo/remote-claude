@@ -6,6 +6,7 @@ library;
 
 import 'dart:async';
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
 import 'package:remote_claude/core/network/contracts/protocol.g.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
@@ -86,11 +87,11 @@ class SessionWsDataSource implements SessionSubscriber {
   void onEvent(Envelope frame) => _onFrame(frame);
 
   @override
-  void onGap(String? claudeSessionId) => _emit(StreamGap(claudeSessionId: claudeSessionId));
+  void onGap(ConversationKey? conversation) => _emit(StreamGap(conversation: conversation));
 
   /// A gap of [sessionId] — that session's screen reloads, and no other.
-  void _gapOf(String sessionId, String? claudeSessionId) =>
-      _emit(StreamGap(sessionId: sessionId, claudeSessionId: claudeSessionId));
+  void _gapOf(String sessionId, ConversationKey? conversation) =>
+      _emit(StreamGap(sessionId: sessionId, conversation: conversation));
 
   /// Releases the subscription and closes the stream.
   Future<void> dispose() async {
@@ -161,5 +162,5 @@ class _Following implements SessionSubscriber {
   void onEvent(Envelope frame) => _source.onEvent(frame);
 
   @override
-  void onGap(String? claudeSessionId) => _source._gapOf(sessionId, claudeSessionId);
+  void onGap(ConversationKey? conversation) => _source._gapOf(sessionId, conversation);
 }

@@ -113,14 +113,15 @@ Regras:
 | `connection.authenticate` | `{ token, locale, client }` | handshake |
 | `connection.reauthenticate` | `{ token }` | renova a credencial sem reabrir o socket |
 | `diag.ping` | `{ sessionId?, nonce }` | diagnóstico do gateway: atravessa as camadas sem tocar no Agent SDK. Sem `sessionId`, abre uma sessão |
-| `session.start` | `{ workspacePath, model?, permissionMode?, effort?, resumeSessionId?, forkAt? }` | abre sessão — ou continua uma conversa do histórico, com `resumeSessionId` (ver [Retomada](#retomada)); com `forkAt`, continua a partir de **antes** daquele prompt, sempre num id novo — o editar e reenviar ([08 · D-19](../../plans/08-claude-panel/decisions.md#d-19--editar-e-reenviar)) |
+| `session.start` | `{ workspacePath, model?, permissionMode?, effort?, engine?, resumeFrom?, forkAt? }` | abre sessão no motor `engine` (ausente: o padrão do `GET /engines`) — ou continua uma conversa do histórico, com `resumeFrom: { engine, id }` (ver [Retomada](#retomada)); com `forkAt`, continua a partir de **antes** daquele prompt, sempre num id novo — o editar e reenviar ([08 · D-19](../../plans/08-claude-panel/decisions.md#d-19--editar-e-reenviar)) |
 | `session.attach` | `{ sessionId }` | observa sessão existente |
 | `session.detach` | `{ sessionId }` | para de observar |
 | `session.prompt` | `{ sessionId, text, attachments? }` | envia um turno — ver [O contexto do prompt](#o-contexto-do-prompt--attachments) |
 | `session.cancelQueuedPrompt` | `{ sessionId, queueId }` | tira da fila um prompt que ainda não começou — ver [A fila de prompts](#a-fila-de-prompts) |
 | `session.interrupt` | `{ sessionId }` | `query.interrupt()` |
-| `session.setPermissionMode` | `{ sessionId, mode }` | troca o modo em execução. `allowAll` é o **Permitir tudo**, um modo nosso: o SDK roda em `default` e o servidor aprova sozinho toda tool que nenhuma regra recuse, menos as que são perguntas ([ADR-022](00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk)). Trocar **para** `allowAll` resolve os pedidos já abertos da sessão pelas mesmas regras. `bypassPermissions` continua sendo o do SDK, nunca honrado |
-| `session.toggleMcpServer` | `{ sessionId, name, enabled }` | liga ou desliga um servidor MCP **desta** sessão (`toggleMcpServer` do SDK); só o dono, só servidor que a sessão tem (`MCP_SERVER_NOT_FOUND`), `CLAUDE_UNAVAILABLE` se o SDK falha. `ack` antes do efeito; o resultado vem em `session.mcpStatusChanged` — e nenhum, quando nada mudou ([plano 13 · B-22](../../plans/13-claude-settings/F2-mcp-servers.md#b-22--status-vivo-e-comandos-da-sessão-)) |
+| `session.compact` | `{ sessionId }` | compacta a conversa: o backend manda o prompt do motor para isso (no Claude, `/compact`) pela fila, com `ack` antes do turno, como um `session.prompt`; `session.compacted` diz quando aconteceu. `ENGINE_CAPABILITY_UNAVAILABLE` (409) num motor sem `compaction`. O `/compact` que a pessoa digita continua indo como prompt ([28 · B-23](../../plans/28-agent-neutral-core/F3-interactions.md#b-23--o-comando-sessioncompact-)) |
+| `session.setPermissionMode` | `{ sessionId, mode }` | troca o modo em execução. Os modos são os canônicos ([28 · B-26](../../plans/28-agent-neutral-core/F4-modes-and-usage.md#b-26--os-modos-canônicos-no-backend-e-no-banco-)): `ask` (tudo que precisa de licença pergunta), `acceptEdits`, `readOnly` (o servidor recusa sozinho, antes das regras, toda escrita de arquivo e todo `shell`, com `via: 'readOnly'`; o modo do motor é a segunda camada) e `allowAll`, o **Permitir tudo**, um modo nosso: o motor roda no modo que pergunta e o servidor aprova sozinho toda tool que nenhuma regra recuse, menos perguntas e planos ([ADR-022](00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk)). Só os de `capabilities.permissionModes` são oferecidos. Trocar **para** `allowAll` ou `readOnly` resolve os pedidos já abertos da sessão pelas mesmas regras. Na `v1`, `default` e `plan` são lidos como `ask` e `readOnly`; `bypassPermissions` é recusado (`INVALID_INPUT`) |
+| `session.toggleMcpServer` | `{ sessionId, name, enabled }` | liga ou desliga um servidor MCP **desta** sessão (`toggleMcpServer` do SDK); só o dono, só servidor que a sessão tem (`MCP_SERVER_NOT_FOUND`), `AGENT_UNAVAILABLE` se o SDK falha. `ack` antes do efeito; o resultado vem em `session.mcpStatusChanged` — e nenhum, quando nada mudou ([plano 13 · B-22](../../plans/13-claude-settings/F2-mcp-servers.md#b-22--status-vivo-e-comandos-da-sessão-)) |
 | `session.reconnectMcpServer` | `{ sessionId, name }` | reconecta um servidor MCP desta sessão — o caminho de volta de `failed`; mesmas recusas |
 | `session.setModel` | `{ sessionId, model }` | troca o modelo em execução |
 | `session.close` | `{ sessionId }` | encerra e libera o subprocesso |
@@ -130,17 +131,17 @@ Regras:
 | `session.restoreChange` | `{ sessionId, path }` | desfaz a última rejeição de um arquivo (de um trecho ou do arquivo inteiro), enquanto o arquivo ainda é o que a rejeição deixou — ver [Desfazer arquivos](#desfazer-arquivos) |
 | `workspace.watch` | `{ workspacePath }` | passa a acompanhar as mudanças no disco de uma pasta aberta — ver [A pasta assistida](#a-pasta-assistida--workspace) |
 | `workspace.unwatch` | `{ watchId }` | para de acompanhar; idempotente |
-| `transcript.follow` | `{ conversationId, afterMessageId? }` | passa a acompanhar uma conversa do histórico que este backend não opera — ver [Acompanhar um transcript](#acompanhar-um-transcript--transcript) |
+| `transcript.follow` | `{ conversation: { engine, id }, afterMessageId? }` | passa a acompanhar uma conversa do histórico que este backend não opera — ver [Acompanhar um transcript](#acompanhar-um-transcript--transcript) |
 | `transcript.unfollow` | `{ followId }` | para de acompanhar; idempotente |
 | `permission.extend` | `{ requestId }` | estende o prazo do pedido pendente. O cliente **não** escolha o número: incremento e teto vêm da configuração do backend |
 | `permission.resolve` | *(é `response`, não command — ver abaixo)* | |
 
 Todo comando recebe `ack` ou `error`. `ack` significa **aceito**, não **concluído** — o
 resultado chega como `event`. O ack genérico é `command.accepted { command }`; `session.attach`
-responde `session.attached { sessionId, replayed, oldestAvailableSeq, gap, claudeSessionId?, resumedFrom? }`
+responde `session.attached { sessionId, replayed, oldestAvailableSeq, gap, conversation?, resumedFrom? }`
 — e `session.start` também, quando retoma uma conversa que **já está viva** para o chamador
 (ver [Retomada](#retomada)); `workspace.watch` responde `workspace.watching { watchId, workspacePath }`; `transcript.follow` responde
-`transcript.following { followId, conversationId, activity }`.
+`transcript.following { followId, conversation, activity }`.
 
 **Ordem garantida:** o `ack` sai antes de qualquer frame causado pelo comando. Um cliente nunca vê
 o resultado antes de saber que o comando foi aceito.
@@ -154,17 +155,17 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 
 | `type` | Payload | Origem no SDK |
 |---|---|---|
-| `session.started` | `{ sessionId, workspacePath, model, permissionMode, claudeSessionId, resumedFrom?, effort?, outputStyle?, defaultsFrom? }` — `defaultsFrom` diz de onde veio o modelo que a sessão usa: `client`·`folder`·`user`·`installation` ([plano 13 · B-15](../../plans/13-claude-settings/F1-models-and-modes.md#b-15--aplicar-no-sessionstart-)) | `system:init` |
+| `session.started` | `{ sessionId, workspacePath, model, permissionMode, engine, conversation, resumedFrom?, capabilities, effort?, outputStyle?, defaultsFrom? }` — `engine` é o motor da sessão, `capabilities` o que ela sabe fazer (o cliente esconde o que falta, [12-engines](12-engines.md#capacidades)); `defaultsFrom` diz de onde veio o modelo que a sessão usa: `client`·`folder`·`user`·`installation` ([plano 13 · B-15](../../plans/13-claude-settings/F1-models-and-modes.md#b-15--aplicar-no-sessionstart-)) | `system:init` |
 | `session.mcpStatusChanged` | `{ servers: [{ name, status, source, toolCount, error? }] }` — a lista inteira, sempre; `status` `connected`·`failed`·`needs-auth`·`pending`·`disabled`; `source` `ours`·`project`·`plugin`·`other`, lido do `source` do SDK, nunca do nome; `error` redigido. Evento **da sessão**, com o `seq` dela: depois que os servidores compostos chegam ao CLI, depois de cada comando que mudou algo, e quando um servidor é desligado por ter saído do store ou sido desligado lá (apertar vale já) | derivado de `mcpServerStatus()` |
 | `session.statusChanged` | `{ status }` — `idle`·`thinking`·`running`·`waitingPermission`·`closed` | derivado |
 | `message.delta` | `{ messageId, delta, blockType?, parentToolUseId? }` — `blockType`: `text`·`thinking` | `stream_event` |
 | `message.completed` | `{ messageId, role, content[], promptedBy?, parentToolUseId? }` | `assistant` / `user` — e o **prompt**, dito pelo backend (ver abaixo) |
-| `tool.started` | `{ toolUseId, toolName, input, title?, parentToolUseId? }` | `assistant` (tool_use) |
-| `tool.progress` | `{ toolUseId, chunk, parentToolUseId? }` | `tool_progress` |
+| `tool.started` | `{ toolUseId, kind, label, subject, changes, origin, rawInput, title?, parentToolUseId? }` — a [ferramenta canônica](#ferramenta-canônica) | `assistant` (tool_use) |
+| `tool.progress` | `{ toolUseId, chunk, parentToolUseId? }` — `chunk` é só o tempo decorrido (`3s`), sem o nome da tool: o texto da linha é o `label` do `tool.started` | `tool_progress` |
 | `tool.completed` | `{ toolUseId, status, summary?, parentToolUseId?, taskId? }` — `succeeded`·`failed`·`denied`; `taskId` só de `TaskCreate`/`TaskUpdate` (a lista de tarefas, plano 08) | `user` (tool_result) |
 | `permission.requested` | ver abaixo | `canUseTool` |
 | `permission.resolved` | `{ requestId, decision, auto, resolvedBy?, resolvedFrom?, toolUseId?, via? }` — `via` diz por que ninguém foi perguntado: `rule` (uma regra respondeu) ou `allowAll` (a sessão está em Permitir tudo); ausente quando um humano respondeu ou o prazo venceu — `toolUseId` é a chamada de tool do pedido, quando o SDK a nomeou: o que põe a decisão na linha daquela tool, inclusive a de uma regra que respondeu sem perguntar ninguém ([plano 10, B-20](../../plans/10-mobile-chat-layout/F4-inline.md)). A correspondência continua sendo pelo `requestId` | derivado |
-| `turn.completed` | `{ turnId, usage, costUsd, durationMs, promptedBy? }` | `result` |
+| `turn.completed` | `{ turnId, usage, costUsd?, durationMs, promptedBy? }` — `usage` com nomes nossos, cada contagem só quando o motor a dá: `{ inputTokens?, outputTokens?, cacheReadTokens?, cacheWriteTokens?, reasoningTokens?, webSearches? }`; `costUsd` ausente num motor sem custo (`capabilities.cost: none`), e zero é `"0.000000"`, nunca ausente ([28 · B-29](../../plans/28-agent-neutral-core/F4-modes-and-usage.md#b-29--o-usage-canônico-)). A `v1` recebe o `usage` nos nomes da Anthropic | `result` |
 | `session.closed` | `{ sessionId, reason }` — `closedByUser`·`completed`·`failed`·`auditUnavailable`·`shutdown`·`idleTimeout` | fim do generator · TTL de ociosa (`idleTimeout`) · shutdown |
 | `diag.pong` | `{ sessionId, pingedAt, pingCount, nonce }` | resposta do `diag.ping` |
 | `permission.extended` | `{ requestId, expiresAt, remainingExtensions }` | derivado do `permission.extend` |
@@ -172,10 +173,11 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `session.compacted` | `{ trigger, preTokens? }` — `trigger`: `manual`·`auto` | `system:compact_boundary` |
 | `prompt.queued` | `{ queueId, position, promptedBy, preview }` | a fila do backend |
 | `prompt.dequeued` | `{ queueId, reason }` — `started`·`cancelled` | a fila do backend |
-| `workspace.filesChanged` | `{ watchId, changes[{ path, kind, origin? }], overflow? }` — `kind`: `created`·`changed`·`deleted`; `origin`: `claude`·`user`·`external` | o watcher da pasta assistida |
+| `workspace.filesChanged` | `{ watchId, changes[{ path, kind, origin?, engine? }], overflow? }` — `kind`: `created`·`changed`·`deleted`; `origin`: `agent`·`user`·`external` (`claude` até o [28 · B-25](../../plans/28-agent-neutral-core/F3-interactions.md#b-25--a-origem-agent-da-mudança-de-arquivo-), e ainda na `v1`); `engine` ao lado de `agent` | o watcher da pasta assistida |
+| `session.tasksChanged` | `{ tasks[{ id, title, activeTitle?, status }], at? }` — a lista inteira de tarefas do agente; `status` `pending`·`inProgress`·`completed` — ver [A lista de tarefas](#a-lista-de-tarefas--sessiontaskschanged) | o adapter, das tools de lista do motor |
 | `workspace.watchStopped` | `{ watchId, reason }` — `allowlistChanged`·`folderDeleted`·`systemLimit` | o watcher da pasta assistida |
-| `transcript.appended` | `{ followId, conversationId, events[], lastMessageId?, activity, working }` | o seguidor do transcript |
-| `transcript.reset` | `{ followId, conversationId, reason }` — `rewritten`·`gone` | o seguidor do transcript |
+| `transcript.appended` | `{ followId, conversation, events[], lastMessageId?, activity, working }` | o seguidor do transcript |
+| `transcript.reset` | `{ followId, conversation, reason }` — `rewritten`·`gone` | o seguidor do transcript |
 | `error` | envelope de erro | qualquer falha |
 
 **`seq` é obrigatório em todo `event`**, monotônico **por stream** — uma sessão, ou uma assinatura
@@ -187,12 +189,13 @@ mistura dois streams: o `seq` de uma assinatura não move o ponto de retomada de
 ### Dois ids: a sessão viva e a conversa
 
 `sessionId` nomeia a **sessão viva** — um subprocesso e um stream, que morrem com ela.
-`claudeSessionId` nomeia a **conversa** no store do Claude, que sobrevive a toda sessão que a
-continuou: é por ela que o histórico é lido (`GET /transcripts/:claudeSessionId/messages`) e é ela
-que uma retomada aceita como `resumeSessionId`. `resumedFrom` diz qual conversa a sessão continua,
-quando é uma retomada — igual a `claudeSessionId` quando uma conversa **nossa** continua no mesmo
-arquivo, diferente quando uma conversa começada fora é **bifurcada** num id novo. Ver
-[backend/04 — Retomada](../backend/04-claude-integration.md#retomada--fork-fora-in-place-dentro).
+`conversation` nomeia a **conversa** — `{ engine, id }`, o `ConversationRef` do contrato —, que
+sobrevive a toda sessão que a continuou: é por ela que o histórico é lido
+(`GET /transcripts/:engine/:id/messages`) e é ela que uma retomada aceita como `resumeFrom`. O `id` é
+opaco, na forma do motor; o cliente nunca decide por ele nem pelo `engine`. `resumedFrom` diz qual
+conversa a sessão continua, quando é uma retomada — igual a `conversation` quando uma conversa
+**nossa** continua no mesmo arquivo, diferente quando uma conversa começada fora é **bifurcada** num id
+novo. Ver [backend/04a — Retomada](../backend/04a-claude.md#retomada--fork-fora-in-place-dentro).
 
 `session.attached` repete os dois campos porque um `gap` é justamente quando o buffer já não guarda
 o `session.started` que os disse. Ausentes para um stream que não é conversa (o `diag.*`).
@@ -231,13 +234,16 @@ Dois campos opcionais, e nenhum muda o que um cliente antigo entende do resto
 - **`blockType: 'thinking'`** num `message.delta` diz que o fragmento é o raciocínio do modelo, não a
   resposta; ausente é `text`. No `message.completed`, o bloco é `{ type: 'thinking', thinking }` — o
   texto num campo **próprio**, nunca em `text`, para que um cliente que junta o `text` de cada bloco
-  nunca o mostre como resposta — e `{ type: 'redacted_thinking' }` diz que houve raciocínio sem dizer
-  qual. O web o mostra recolhido ([08 · D-17](../../plans/08-claude-panel/decisions.md#d-17--thinking)),
+  nunca o mostre como resposta — e `{ type: 'redactedThinking' }` diz que houve raciocínio sem dizer
+  qual. Os tipos de bloco são nossos desde o [28 · B-30](../../plans/28-agent-neutral-core/F4-modes-and-usage.md#b-30--os-blocos-com-nome-nosso-):
+  `text`, `thinking` (só de motor com a capacidade `thinking`), `redactedThinking`, `toolUse`,
+  `toolResult` e `image`; um tipo que o cliente não conhece aparece como bloco desconhecido, nunca some, e
+  a `v1` recebe os nomes da Anthropic. O web o mostra recolhido ([08 · D-17](../../plans/08-claude-panel/decisions.md#d-17--thinking)),
   e o app também, como entrada própria da conversa, nunca no texto da resposta
   ([10 · B-05](../../plans/10-mobile-chat-layout/F1-session-frame.md)). Um `blockType` que o cliente
   não conhece é ignorado, e o `seq` dele anda do mesmo jeito. No log, só o tamanho.
 - **`parentToolUseId`** em `message.*` e `tool.*` diz que o evento vem de um **subagent**: o
-  `toolUseId` do `Task`/`Agent` que o abriu. O cliente o aninha ali; ausente é a conversa principal
+  `toolUseId` da chamada de `kind` `agent` que o abriu. O cliente o aninha ali; ausente é a conversa principal
   ([08 · D-15](../../plans/08-claude-panel/decisions.md#d-15--subagents-o-que-encaminhar)).
 
 Um build anterior a estes campos mostraria o fragmento de thinking como texto enquanto ele chega — o
@@ -245,19 +251,56 @@ Um build anterior a estes campos mostraria o fragmento de thinking como texto en
 [plano 19](../../plans/19-distribution/README.md) não começou), e os dois clientes deste repositório
 passam a lê-los na mesma entrega.
 
-### A lista de tarefas — `TodoWrite` e `Task*`
+### Ferramenta canônica
 
-Não há evento de lista: ela é **lida das tools** que o Claude chama, pelo nome — nunca pelo modelo
-([plano 08 · D-25](../../plans/08-claude-panel/decisions.md#d-25--a-lista-de-tarefas-todowrite-ou-task)).
-O backend abre o SDK com `CLAUDE_CODE_ENABLE_TODO_TOOLS=1`, e o CLI oferece uma de duas formas:
+Toda chamada de ferramenta chega ao cliente **já interpretada pelo adapter do motor**
+([ADR-025](00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas),
+[28 · F2](../../plans/28-agent-neutral-core/F2-canonical-tools.md)). `tool.started` e
+`permission.requested` levam os mesmos seis campos, com as definições em
+`packages/contracts/schema/definitions/`:
 
-- `TodoWrite` — cada `tool.started` traz a lista **inteira** no `input.todos`;
-- `TaskCreate`/`TaskUpdate` — incrementais. O `id` de uma tarefa nova só existe no resultado, e por
-  isso o `tool.completed` delas leva o **`taskId`**: ao vivo, do resultado estruturado do SDK; no
-  histórico, que o SDK devolve sem ele, do texto completo do resultado. `TaskGet` e `TaskList` só leem.
+| Campo | O que é | O cliente |
+|---|---|---|
+| `kind` | o tipo canônico, **aberto**: `file.read` · `file.edit` · `file.write` · `file.delete` · `file.move` · `search` · `shell` · `shell.output` · `web.fetch` · `web.search` · `mcp` · `agent` · `question` · `plan` · `tasks` · `other` | desenha por ele; o que não conhece vira a linha genérica, nunca erro |
+| `label` (`tool-label`) | `{ messageKey, params }`: o rótulo da linha, montado pelo backend — `sessions.tool.fileEdit` com `{ path, added, removed }`, `sessions.tool.shell` com `{ command }` | só traduz ([28 · D-02](../../plans/28-agent-neutral-core/decisions.md#f2--ferramentas-canônicas)); chave desconhecida é a linha genérica |
+| `subject` (`tool-subject`) | o assunto normalizado, todos opcionais: `paths`, `command`, `pattern`, `url`, `query`, `server`, `tool`, `description`, `window` | o IN de um `shell` é o `subject.command` |
+| `changes` (`file-change`) | `{ path, op, to? }[]`: os arquivos que a chamada muda, com caminho absoluto; `op` `edit`·`write`·`delete`·`move` | liga o diff, que vem da rota `GET /sessions/:id/tools/:toolUseId/diff`, nunca de cálculo próprio ([28 · D-28](../../plans/28-agent-neutral-core/decisions.md#f2--ferramentas-canônicas)) |
+| `origin` (`engine-origin`) | `{ engine, native }`: o motor e o nome que ele dá à ferramenta | texto opaco, para diagnóstico; nenhum cliente decide por ele |
+| `rawInput` | o input exato da chamada | **opaco**: desenhado inteiro na "entrada exata" e exportado, nunca lido campo a campo ([28 · D-04](../../plans/28-agent-neutral-core/decisions.md#f2--ferramentas-canônicas)) |
 
-O cliente reduz as chamadas em ordem; uma chamada fora do formato, ou um `TaskUpdate` de um `taskId`
-que a lista não tem, é uma tool como outra qualquer.
+- O `title` do `permission.requested` é a chave `permission.tool.<kind>`, com os pontos tirados e a
+  letra seguinte em maiúscula (`permission.tool.fileEdit`). O cliente sem a chave mostra o `label`.
+- O `tool.completed` **não** leva `kind` nem `label`: o `tool.started` do mesmo `toolUseId` sempre
+  chegou antes, ao vivo e no histórico.
+- O histórico (`transcript.appended`, `GET /transcripts/…/messages`) leva a mesma forma, pelas mesmas
+  funções do ao vivo, com os caminhos do `label` relativos à pasta da conversa.
+- A rota do diff serve também o pedido de permissão **pendente** (`pending: true`): o disco agora
+  contra o disco com a mudança aplicada, com `after.reason` `editMissing` ou `editAmbiguous` quando
+  uma substituição não se aplicaria ([28 · B-17](../../plans/28-agent-neutral-core/F2-canonical-tools.md#b-17--o-diff-e-a-prévia-pelo-backend-)).
+- A pergunta e o plano chegam na `interaction` (no `tool.started` e no `permission.requested`), e a
+  lista de tarefas no `session.tasksChanged` (F3): nenhum cliente lê campo do `rawInput`.
+- Na [janela da `v1`](#a-janela-da-v1--plano-28), uma conexão `v1` recebe `toolName` (o
+  `origin.native`) e `input` (o `rawInput`) no lugar dos seis campos, e o `title` por nome; o
+  `tool.progress` dela chega sem o nome. As respostas REST que levam esses eventos mantêm `toolName` e
+  `input` ao lado dos novos até a F7 ([28 · D-22](../../plans/28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)).
+
+### A lista de tarefas — `session.tasksChanged`
+
+A lista de tarefas do agente chega **pronta**, num evento da sessão, com `seq` e no replay
+([28 · B-22](../../plans/28-agent-neutral-core/F3-interactions.md#b-22--sessiontaskschanged-)): a lista
+**inteira**, como está agora, depois de cada chamada da conversa principal que a mudou e terminou bem.
+Quem a lê das ferramentas do motor é o adapter dele; o cliente só a desenha e nunca a reconstrói.
+
+- No Claude, o backend abre o SDK com `CLAUDE_CODE_ENABLE_TODO_TOOLS=1`, e o adapter lê o `TodoWrite`
+  (a lista inteira) e o `TaskCreate`/`TaskUpdate` (incrementais; o `id` de uma tarefa nova só existe no
+  resultado) ([08 · D-25](../../plans/08-claude-panel/decisions.md#d-25--a-lista-de-tarefas-todowrite-ou-task)).
+- O passo de cada chamada vale quando ela **termina com sucesso**: uma chamada recusada ou que falhou não
+  mudou a lista, e um `update` de tarefa que a lista não tem não muda nada. As chamadas de um subagent não
+  contam.
+- No histórico (`transcript.appended`, `GET /transcripts/…/messages`), o evento vem logo depois do
+  `tool.completed` da chamada, pela mesma função do ao vivo, com o `at` dele.
+- O `id` é opaco e estável durante a vida da tarefa; o cliente compara duas listas por ele.
+- Sem a capacidade `taskList`, não há faixa. O `taskId` do `tool.completed` fica só para a `v1`, até a F7.
 
 ### Identidade do bloco, instante, título e saída
 
@@ -278,7 +321,9 @@ sem eles continua válido nas três pontas, e nenhum sobe `v`
   Ao vivo não vai: o relógio é o `ts` do frame.
 - **`title`** em `tool.started` passa a ser preenchido: a `description` que o modelo deu à chamada,
   quando é texto não vazio ([22 · D-05](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
-  Ausente, o cliente rotula a tool como antes.
+  Ausente, o cliente mostra só o `label`. Presente, a linha é "nome curto do `kind` · título", com o
+  `label` embaixo; em `mcp`, `other` e `kind` desconhecido, o nome curto é o próprio `label` traduzido
+  ([28 · B-18](../../plans/28-agent-neutral-core/F2-canonical-tools.md#b-18--o-web-pelo-kind-)).
 - **`summary`** em `tool.completed` é **texto** — o resultado em lista de blocos é o texto deles
   junto, nunca JSON — e guarda o **fim**: as últimas 5 linhas, até 400 caracteres, com `…` no começo
   quando cortou ([22 · D-07](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)). A
@@ -408,23 +453,27 @@ Payload de `permission.requested`:
 {
   "requestId": "req_...",        // idempotência é por ESTE campo
   "toolUseId": "toolu_...",
-  "toolName": "Bash",
-  "title": "Run shell command",
+  "kind": "shell",                // a ferramenta canônica, como no tool.started
+  "label": { "messageKey": "sessions.tool.shell", "params": { "command": "rm -rf build/" } },
+  "subject": { "command": "rm -rf build/" },
+  "changes": [],
+  "origin": { "engine": "claude", "native": "Bash" },   // opaco
+  "rawInput": { "command": "rm -rf build/" },          // opaco: só a entrada exata
+  "title": "permission.tool.shell",                     // chave por kind
   "description": "rm -rf build/",
-  "input": { "command": "rm -rf build/" },
-  "riskHint": "destructive",      // read | write | destructive — derivado no backend
+  "riskHint": "destructive",      // read | write | destructive — derivado no backend, pelo kind
   "defaultToNo": true,
   "suggestions": [
     { "scope": "once",    "labelKey": "permission.scope.once" },
     { "scope": "session", "labelKey": "permission.scope.session" },
     { "scope": "project", "labelKey": "permission.scope.project",
-      "pattern": "Bash(rm -rf build/)", "lifetimeMs": 7776000000 },
+      "pattern": "shell(rm -rf build/)", "lifetimeMs": 7776000000 },
     { "scope": "always",  "labelKey": "permission.scope.always",
-      "pattern": "Bash(rm -rf build/)", "lifetimeMs": 7776000000 }
+      "pattern": "shell(rm -rf build/)", "lifetimeMs": 7776000000 }
   ],
   "reaches": [                    // os alcances que uma regra deixada por esta resposta pode ter
-    { "reach": "exact",  "patterns": ["Bash(rm -rf build/)"] },
-    { "reach": "prefix", "patterns": ["Bash(rm:*)"] }
+    { "reach": "exact",  "patterns": ["shell(rm -rf build/)"] },
+    { "reach": "prefix", "patterns": ["shell(rm:*)"] }
   ],
   "expiresAt": "2026-09-13T12:02:00.000Z"
 }
@@ -447,7 +496,7 @@ shell) cobre todo comando que começa como cada comando desta linha, um padrão 
 não lê `reaches`. A resposta leva `reach`; o servidor recalcula os padrões a partir do pedido e recusa
 com `INVALID_INPUT` um alcance que não ofereceu, deixando o pedido aberto. O alcance vale para
 `session`, `project` e `always`. Ver
-[backend/04](../backend/04-claude-integration.md#o-alcance-de-uma-regra-nascida-no-card).
+[backend/04](../backend/04a-claude.md#o-alcance-de-uma-regra-nascida-no-card).
 
 Resposta:
 
@@ -462,25 +511,25 @@ Resposta:
 A obrigatoriedade condicional do `reason` é **do schema**, não de validação espalhada pelo
 código — ver [campo obrigatório por condição](#campo-obrigatório-por-condição).
 
-### A pergunta — `interaction`
+### A pergunta e o plano — `interaction`
 
-Quando o Claude chama `AskUserQuestion`, o pedido **continua sendo um pedido de permissão** — mesmo
+Quando o agente pergunta algo (no Claude, `AskUserQuestion`), o pedido **continua sendo um pedido de permissão** — mesmo
 `requestId`, mesma idempotência, a primeira resposta vence, o prazo nega, só o dono responde, toda
 decisão é auditada — e ganha uma `interaction` do tipo `question`, com as perguntas **já
-normalizadas pelo backend**. O cliente desenha a `interaction` e nunca lê o `input` do SDK, que
-continua no payload para a auditoria e a depuração
-([plano 24](../../plans/24-structured-questions/README.md)):
+normalizadas pelo adapter do motor**. O cliente desenha a `interaction` e nunca lê o `rawInput`
+([plano 24](../../plans/24-structured-questions/README.md); a definição é a `interaction`, que era a
+`question-interaction`, [28 · B-20](../../plans/28-agent-neutral-core/F3-interactions.md#b-20--a-interação-plan-)):
 
 ```jsonc
 {
-  "requestId": "req_…", "toolUseId": "toolu_…", "toolName": "AskUserQuestion",
-  "title": "permission.tool.AskUserQuestion",   // sem description: quem desenha é a interaction
-  "input": { "questions": [ … ] },
+  "requestId": "req_…", "toolUseId": "toolu_…", "kind": "question",
+  "label": { … }, "subject": {}, "changes": [], "origin": { … }, "rawInput": { … },
+  "title": "permission.tool.question",          // sem description: quem desenha é a interaction
   "riskHint": "read", "defaultToNo": false,      // a pergunta não tem efeito colateral
   "suggestions": [], "reaches": [],               // não há "sempre responder assim"
   "expiresAt": "…",                               // RC_QUESTION_TIMEOUT_MS, não o da permissão
   "interaction": {
-    "kind": "question",                           // a única variante, por ora
+    "kind": "question",                           // ou "plan" — ver abaixo
     "malformed": false,
     "questions": [
       { "id": "q1", "header": "Avaliação", "prompt": "Qual tipo de avaliação você quer?",
@@ -531,7 +580,16 @@ separado. A string unida por `", "` que o SDK espera só existe no adapter do ba
 outro cliente trocar o card pela pergunta respondida, para a linha da tool ao vivo, no replay do
 `session.attach` e no `GET` de estado. No histórico, as respostas chegam no campo `question` do
 `tool.completed`, casadas pelo `toolUseId` com o que o backend gravou; uma sessão respondida fora do
-produto não tem registro nosso e mostra as perguntas e o `summary`.
+produto não tem registro nosso e mostra as perguntas e o `summary`. O `tool.started` de uma pergunta
+leva a mesma `interaction`, para o histórico desenhá-la sem o input cru.
+
+**O plano** (`interaction.kind: 'plan'`, [28 · B-20](../../plans/28-agent-neutral-core/F3-interactions.md#b-20--a-interação-plan-)):
+quando o agente apresenta um plano para aprovar (no Claude, `ExitPlanMode`), o pedido leva
+`{ kind: 'plan', markdown, path? }` — o texto do plano e o arquivo em que o agente o gravou, quando diz —,
+com `defaultToNo: true` e sem `suggestions` nem `reaches`: nenhuma regra aprova um plano. Aprovar é o
+mesmo `permission.resolve` com `allow`, e o modo em que a sessão segue é o `session.setPermissionMode` que
+o cliente manda depois; recusar é `deny` com o motivo, que volta ao agente. Os dois clientes escolhem o
+card do plano por esse `kind`, e não pelo nome da ferramenta. Capacidade `planApproval`.
 
 ### Regras não negociáveis
 
@@ -557,23 +615,23 @@ sendo o `permission.resolve` deste contrato. Ver
 
 ## Retomada
 
-`session.start` com `resumeSessionId` continua uma conversa do histórico. `workspacePath` é o `cwd`
+`session.start` com `resumeFrom: { engine, id }` continua uma conversa do histórico, no motor dela. `workspacePath` é o `cwd`
 da conversa — ela é procurada **dentro** desse workspace, e é por ele que o SDK acha o arquivo.
 
 | Situação | Resposta |
 |---|---|
-| a conversa pode ser continuada | `command.accepted` e depois `session.started` de uma sessão **nova** — `seq` recomeça em 1 —, com `claudeSessionId` e `resumedFrom` |
+| a conversa pode ser continuada | `command.accepted` e depois `session.started` de uma sessão **nova** — `seq` recomeça em 1 —, com `conversation` e `resumedFrom` |
 | `forkAt` que não é prompt da conversa | `error` `INVALID_INPUT` (`session.error.forkPointUnknown`) |
 | o CLI recusou o ponto de fork | `error` `SESSION_FORK_REJECTED` (`409`) — a tela oferece a retomada simples, sem repetir o fork |
-| a conversa já está **viva para o chamador** (em sessão aberta ou retomada por ele) | `session.attached { sessionId, replayed: 0, gap: false, claudeSessionId, resumedFrom? }` da sessão viva — **retomar o que está vivo é attach**, nunca um segundo subprocesso. A conexão já fica anexada; a tela que segue faz o próprio `session.attach` para o replay |
+| a conversa já está **viva para o chamador** (em sessão aberta ou retomada por ele) | `session.attached { sessionId, replayed: 0, gap: false, conversation, resumedFrom? }` da sessão viva — **retomar o que está vivo é attach**, nunca um segundo subprocesso. A conexão já fica anexada; a tela que segue faz o próprio `session.attach` para o replay |
 | duas retomadas da mesma conversa chegam juntas | uma `query()` só: a primeira abre, a segunda recebe o `session.attached` |
 | workspace fora da allowlist | `error` `WORKSPACE_NOT_ALLOWED` (`403`) |
 | conversa inexistente, de outro workspace, sem `cwd`, ou aberta aqui por outra pessoa | `error` `SESSION_NOT_FOUND` (`404`) — a mesma resposta, de propósito |
-| id que não é UUID | `error` `INVALID_INPUT` (`transcript.error.invalidSessionId`) |
+| motor que não está habilitado, ou id que o motor nunca entrega | `error` `INVALID_INPUT` (`transcript.error.invalidSessionId`, `params.engine`) |
 | instalação no limite | `error` `SESSION_LIMIT_REACHED` (`params.limit`, `params.retryAfterSeconds`) |
 
 O cliente reconhece a resposta à **sua** retomada por um de três frames: `session.started` ou
-`session.attached` cujo `claudeSessionId` ou `resumedFrom` é a conversa pedida, ou `error` cujo
+`session.attached` cujo `conversation` ou `resumedFrom` é a conversa pedida (mesmo `engine` e `id`), ou `error` cujo
 `correlationId` é o `id` do comando. O histórico anterior à retomada vem do transcript (HTTP), nunca
 do ring buffer — que só guarda o que esta sessão disse.
 
@@ -638,14 +696,14 @@ juntas fazem uma chamada ([08 · D-13](../../plans/08-claude-panel/decisions.md#
 | `200` | a lista, **sem** os internos (`__`) e os mortos (`(removed)`, `Renamed to`) — filtrados por metadado, no backend, uma vez; os sugeridos primeiro, na ordem do ranking, e os demais por nome |
 | `400` `INVALID_INPUT` | `sessionId` que não é um |
 | `403` / `404` | sessão de outra pessoa / sessão que não está viva |
-| `502` `CLAUDE_UNAVAILABLE` / `504` `CLAUDE_TIMEOUT` | o SDK falhou ou não respondeu no prazo — **a caixa de prompt continua utilizável**: o menu é descoberta, não fronteira |
+| `502` `AGENT_UNAVAILABLE` / `504` `AGENT_TIMEOUT` | o SDK falhou ou não respondeu no prazo — **a caixa de prompt continua utilizável**: o menu é descoberta, não fronteira |
 
 Disparar o comando é mandar o texto como prompt (`session.prompt { text: "/init" }`), e ele passa
 pelo fluxo normal de permissão. Comando que **não existe** na instalação — nem como nome nem como
 alias, incluídos os que o menu esconde — é recusado antes de chegar ao Claude:
 `error` `INVALID_INPUT` (`session.error.unknownCommand`, `params.command`), com `correlationId` do
 `session.prompt`. Lista indisponível não recusa nada: o prompt segue. Ver
-[backend/04 — Slash commands](../backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd).
+[backend/04 — Slash commands](../backend/04a-claude.md#slash-commands-init-gerar-readme-e-agentsmd).
 
 ---
 
@@ -719,7 +777,7 @@ Os caminhos das alterações são **absolutos**, como os do desfazer: é o que o
 Motivos de `preserved`: `modifiedOutside` (alguém alterou depois da sessão), `notRestorable`
 (grande demais ou ilegível para snapshot), `unsafePath` (virou link, deixou de ser arquivo regular,
 ou o diretório deixou de resolver) e `noBaseline` (nada registra como a sessão o deixou). Ver
-[backend/04 — Desfazer arquivos](../backend/04-claude-integration.md#desfazer-arquivos--o-store-é-nosso).
+[backend/04 — Desfazer arquivos](../backend/04a-claude.md#desfazer-arquivos--o-store-é-nosso).
 
 ---
 
@@ -731,7 +789,7 @@ chega por **assinatura** no socket que já existe ([07 · D-07](../../plans/07-e
 ```
 → command  workspace.watch     { workspacePath: "/srv/projects/app" }
 ← ack      workspace.watching  { watchId: "w_01J…", workspacePath: "/srv/projects/app" }
-← event    workspace.filesChanged  seq 1  { watchId, changes: [{ path: "src/a.ts", kind: "changed", origin: "claude" }] }
+← event    workspace.filesChanged  seq 1  { watchId, changes: [{ path: "src/a.ts", kind: "changed", origin: "agent", engine: "claude" }] }
 ← event    workspace.filesChanged  seq 2  { … }
 ```
 
@@ -770,11 +828,11 @@ histórico a mostra. O leitor a **assina** no socket que já existe, no molde da
 
 ```
 GET /transcripts/:id/messages                 → página + lastMessageId: "u-41"
-→ command  transcript.follow     { conversationId, afterMessageId: "u-41" }
-← ack      transcript.following  { followId: "t_01J…", conversationId, activity: "activeElsewhere" }
-← event    transcript.appended   seq 1  { followId, conversationId, events: […], lastMessageId: "u-44", activity, working: true }
+→ command  transcript.follow     { conversation: { engine, id }, afterMessageId: "u-41" }
+← ack      transcript.following  { followId: "t_01J…", conversation, activity: "activeElsewhere" }
+← event    transcript.appended   seq 1  { followId, conversation, events: […], lastMessageId: "u-44", activity, working: true }
 ← event    transcript.appended   seq 2  { …, events: [], working: false }
-← event    transcript.reset      seq 3  { followId, conversationId, reason: "rewritten" }
+← event    transcript.reset      seq 3  { followId, conversation, reason: "rewritten" }
 ```
 
 - **Sem lacuna entre a página e a assinatura.** A página de `GET /transcripts/:id/messages` diz o
@@ -834,7 +892,7 @@ Cliente reconecta
   veio depois (plano 04, S-88).
 - `resumeFromSeq` menor que `oldestAvailableSeq` → `gap: true`. O cliente **descarta o
   estado local e recarrega o transcript por HTTP** — da conversa que o ack nomeia em
-  `claudeSessionId`. Não tente costurar buraco. A página recarregada é **posta por baixo** do que o
+  `conversation`. Não tente costurar buraco. A página recarregada é **posta por baixo** do que o
   stream trouxer enquanto ela carrega, casando por `messageId` e `toolUseId`, com o stream por
   cima: recarregar com o stream chegando não duplica mensagem, e o histórico não entra na
   numeração de `seq`.
@@ -923,6 +981,28 @@ que ninguém decidiu aquilo.
 - O servidor suporta `v` atual e `v-1` durante uma janela de depreciação (o app publicado na
   loja não atualiza sozinho).
 
+### A janela da `v1` — plano 28
+
+A `v2` nasceu na F1 do [plano 28](../../plans/28-agent-neutral-core/F1-engine-port.md)
+([D-08](../../plans/28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)): a conversa passou
+a ser `{ engine, id }`, e o `session.started` ganhou `engine` e `capabilities`. A `v` atual é o
+`x-protocol-version` do schema do envelope, de onde o gerador tira o `PROTOCOL_VERSION`.
+
+- **Cada conexão fala a versão do último frame que mandou**, e recebe tudo nela: um cliente em `v1` e
+  outro em `v2` na mesma sessão recebem cada um a sua forma.
+- **O núcleo só emite a forma atual.** A tradução é da borda, em
+  `backend/src/infrastructure/websocket/protocol-window.ts`: para a `v1`, `conversation` vira
+  `claudeSessionId`, `resumedFrom` vira o id sozinho, e `engine`/`capabilities` saem; nos `transcript.*`,
+  `conversation` vira `conversationId`. No sentido contrário, o `session.start` da `v1` com
+  `resumeSessionId` e o `transcript.follow` com `conversationId` viram os da `v2`, no único motor que a
+  `v1` conhecia.
+- **No REST**, as rotas da `v1` (`/transcripts/:sessionId/…`) respondem o mesmo que as novas
+  (`/transcripts/:engine/:id/…`), e as respostas lidas pelo app publicado guardam os campos da `v1` ao
+  lado dos novos (`sessionId` ao lado de `conversation`; `claudeSessionId` e `resumedFrom` ao lado de
+  `conversation` e `resumedFromConversation` em `GET /sessions`).
+- **A janela fecha na F7** ([B-47](../../plans/28-agent-neutral-core/F7-e2e.md)): a tradução, as rotas e os
+  campos da `v1` saem juntos.
+
 ### Campo obrigatório por condição
 
 Duas regras do contrato não são "este campo é obrigatório", e sim "este campo é obrigatório
@@ -934,7 +1014,7 @@ Duas regras do contrato não são "este campo é obrigatório", e sim "este camp
 | `permission.resolve` | `reason` é obrigatório quando `decision` é `deny` | a razão vai para a auditoria e volta ao Claude como mensagem |
 | `permission.resolved` | `resolvedBy` é obrigatório quando `auto` é `false` | decisão que um humano tomou tem autor; só a negação automática não tem |
 | `session.prompt.attachments[]` | `path` quando `kind` é `file`, `folder` **ou ausente**; `attachmentId` quando é `upload`; `source`, `label` e `content` quando é `text` | cada tipo de contexto se nomeia de um jeito; o ausente é o anexo de arquivo que existia antes dos tipos |
-| `session.start` | `resumeSessionId` é obrigatório quando `forkAt` está **presente** | um ponto de fork é uma mensagem de uma conversa, e só a retomada tem uma |
+| `session.start` | `resumeFrom` é obrigatório quando `forkAt` está **presente** | um ponto de fork é uma mensagem de uma conversa, e só a retomada tem uma |
 
 Elas vivem **no schema**, na extensão `x-required-when`, e o gerador as emite nos dois alvos — em
 TypeScript como uma cláusula dentro do guard, em Dart como um predicado ao lado da classe:

@@ -1,21 +1,21 @@
 import type { PathLock } from '@application/shared';
-import {
-  FileChangedError,
-  PreconditionRequiredError,
-  isWildcard,
-  touchesSensitive,
-} from '@domain/files';
-import type { Etag, FilePath } from '@domain/files';
+import { FileChangedError, PreconditionRequiredError, isWildcard } from '@domain/files';
+import type { Etag, FilePath, SensitiveFiles } from '@domain/files';
 
 /**
- * The second step of a file that changes what Claude may do — or of a folder that holds one
+ * The second step of a file that changes what an agent may do — or of a folder that holds one
  * ([07 · D-15](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-15--arquivos-que-mudam-a-permissão)).
  *
+ * @param files the configuration files every registered engine declares (plan 28, B-35)
  * @returns whether the operation reaches one, for the trail to say so
  * @throws {PreconditionRequiredError} it does, and the request did not confirm it (S-79)
  */
-export function confirmSensitive(confirmed: boolean, ...entries: readonly FilePath[]): boolean {
-  const sensitive = entries.find((entry) => touchesSensitive(entry.relative));
+export function confirmSensitive(
+  files: SensitiveFiles,
+  confirmed: boolean,
+  ...entries: readonly FilePath[]
+): boolean {
+  const sensitive = entries.find((entry) => files.touchedBy(entry.relative));
 
   if (sensitive !== undefined && !confirmed) {
     throw new PreconditionRequiredError(sensitive.relative, 'sensitiveFile');

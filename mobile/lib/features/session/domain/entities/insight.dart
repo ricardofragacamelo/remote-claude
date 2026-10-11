@@ -63,19 +63,24 @@ class InstallationCatalog extends Equatable {
   List<Object?> get props => <Object?>[commands, models];
 }
 
-/// One category of the context window: the system prompt, the tools, the messages, the free space.
+/// One category of the context window: the system prompt, the tools, the messages, the free space
+/// (plan 28, B-24).
 class ContextCategory extends Equatable {
-  const ContextCategory({required this.id, required this.name, required this.tokens});
+  const ContextCategory({required this.id, required this.tokens, this.messageKey, this.text});
 
-  /// A stable name the screen translates — `systemTools`, `messages`, `freeSpace`…
+  /// `system`, `tools`, `messages`, `memory`, `free` or `reserved` — the canonical ones — or an id of
+  /// the engine's own, opaque.
   final String id;
 
-  /// The installation's own name, shown when this build has no words for [id].
-  final String name;
+  /// The key that names a canonical category — `sessions.context.system`… —, `null` otherwise.
+  final String? messageKey;
+
+  /// The engine's own words for a category with no key, shown as they are.
+  final String? text;
   final int tokens;
 
   @override
-  List<Object?> get props => <Object?>[id, name, tokens];
+  List<Object?> get props => <Object?>[id, messageKey, text, tokens];
 }
 
 /// The use of a session's context window, against the window of its model.

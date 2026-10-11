@@ -13,7 +13,7 @@
  * trace is exactly what the trail exists to prevent.
  *
  * And so is a person writing to the disk from the web: creating, saving, moving, copying and
- * deleting files of the open folder. A human editing over Claude's work is a new actor on the same
+ * deleting files of the open folder. A human editing over the agent's work is a new actor on the same
  * machine, and "who changed this file?" has to have an answer — recorded **before** the disk, with
  * paths, sizes and hashes, never the contents. `file.failed` points at a fact whose write the disk
  * then refused, so the trail never asserts a write that did not happen; `file.restored` is a version
@@ -22,12 +22,15 @@
  * Downloading is a read, and it is here all the same: `file.downloaded` takes contents off the
  * machine, which is what the trail exists to tell — recorded before the first byte (07 · F7).
  *
- * And so is changing how Claude works on this machine (plan 13): a default, an MCP server — a
+ * And so is changing how a coding agent works on this machine (plan 13): a default, an MCP server — a
  * program that runs with the user's credentials whenever a session opens —, an approval of a
  * repository's `.mcp.json`, a plugin, and switching on the skills of the user or of the system. Each
  * widens what runs before anybody is asked, and is recorded **before** the effect, with the command
  * or address in full and only the **names** of variables, never a value. Testing a server is here
  * too: it runs the command.
+ *
+ * No kind names an engine (plan 28, D-10): the core's follow their module — `agentSettings.*`,
+ * `mcp.*` — and what only one engine's extension does is `engine.*`, with the engine in `details`.
  *
  * They do not fit `audit_entries`, which is shaped around one invocation — a session, a tool, an
  * input — so they get their own table in the same module rather than three nullable columns in
@@ -51,19 +54,20 @@ export const AUDIT_EVENT_KINDS = [
   'file.failed',
   'file.downloaded',
   'file.restored',
-  'claude.defaultsChanged',
-  'claude.mcpServerAdded',
-  'claude.mcpServerChanged',
-  'claude.mcpServerRemoved',
-  'claude.mcpServerToggled',
-  'claude.mcpServerTested',
-  'claude.mcpProjectServerApproved',
-  'claude.mcpProjectServerRejected',
-  'claude.pluginAdded',
-  'claude.pluginUpdated',
-  'claude.pluginToggled',
-  'claude.pluginRemoved',
-  'claude.skillSourceToggled',
+  'agentSettings.defaultsChanged',
+  'mcp.serverAdded',
+  'mcp.serverChanged',
+  'mcp.serverRemoved',
+  'mcp.serverToggled',
+  'mcp.serverTested',
+  'mcp.projectServerApproved',
+  'mcp.projectServerRejected',
+  'engine.pluginAdded',
+  'engine.pluginUpdated',
+  'engine.pluginToggled',
+  'engine.pluginRemoved',
+  'engine.skillSourceToggled',
+  'engine.diagnosticsProbed',
 ] as const;
 
 export type AuditEventKind = (typeof AUDIT_EVENT_KINDS)[number];

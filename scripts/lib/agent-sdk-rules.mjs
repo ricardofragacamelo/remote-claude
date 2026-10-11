@@ -7,7 +7,7 @@
  *
  * No generic scanner knows about any of this, which is why the checks are written here rather
  * than configured somewhere. See docs/architecture/shared/00-decisions.md (ADR-011) and
- * docs/architecture/backend/04-claude-integration.md#a-armadilha-do-settingsources.
+ * docs/architecture/backend/04a-claude.md#a-armadilha-do-settingsources.
  */
 
 import { inspectAll as inspectWith } from './source-rules.mjs';

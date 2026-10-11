@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 import 'package:remote_claude/features/session/domain/repositories/transcript_follow_repository.dart';
 
@@ -10,8 +11,8 @@ import 'package:remote_claude/features/session/domain/repositories/transcript_fo
 class FakeTranscriptFollowRepository implements TranscriptFollowRepository {
   final StreamController<FollowUpdate> _updates = StreamController<FollowUpdate>.broadcast();
 
-  /// Every follow sent, as `(commandId, conversationId, afterMessageId)`, in order.
-  final List<(String, String, String?)> follows = <(String, String, String?)>[];
+  /// Every follow sent, as `(commandId, conversation, afterMessageId)`, in order.
+  final List<(String, ConversationKey, String?)> follows = <(String, ConversationKey, String?)>[];
 
   /// Every subscription let go, in order.
   final List<String> unfollows = <String>[];
@@ -26,13 +27,13 @@ class FakeTranscriptFollowRepository implements TranscriptFollowRepository {
   String get lastCommand => follows.last.$1;
 
   @override
-  String? follow(String conversationId, {String? afterMessageId}) {
+  String? follow(ConversationKey conversation, {String? afterMessageId}) {
     if (!accepts) {
       return null;
     }
 
     final String commandId = 'follow-${follows.length + 1}';
-    follows.add((commandId, conversationId, afterMessageId));
+    follows.add((commandId, conversation, afterMessageId));
     return commandId;
   }
 
@@ -50,7 +51,7 @@ class FakeTranscriptFollowRepository implements TranscriptFollowRepository {
     FollowStarted(
       commandId: lastCommand,
       followId: followId,
-      conversationId: follows.last.$2,
+      conversation: follows.last.$2,
       activity: activity,
     ),
   );

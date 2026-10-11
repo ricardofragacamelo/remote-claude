@@ -120,7 +120,7 @@ void main() {
     final PermissionRequest offering = aPermissionRequest(
       riskHint: RiskHint.read,
       scopes: const <PermissionScope>[PermissionScope.once, PermissionScope.always],
-      rule: const RuleOffer(pattern: 'Bash(git status)', lifetime: Duration(days: 90)),
+      rule: const RuleOffer(pattern: 'shell(git status)', lifetime: Duration(days: 90)),
     );
     serverSays(LookupPending(offering, remainingExtensions: 1));
     await open(tester);
@@ -262,7 +262,7 @@ void main() {
       repository.feed.emit(asked(aQuestionRequest(requestId: 'request-1')));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.permissionToolAskUserQuestion), findsOneWidget);
+      expect(find.text(l10n.permissionToolQuestion('engine-a')), findsOneWidget);
       expect(find.text(sections.prompt), findsOneWidget);
       expect(find.text(l10n.permissionQuestionSubmit), findsOneWidget);
     });

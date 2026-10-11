@@ -1,0 +1,2765 @@
+{
+  "$comment": "The violations of the neutrality gate on the day it was born, 2026-10-10 (plan 28, B-05): by file and term, with how many times the term occurs and the phase of plan 28 that removes it — the last phase that touches it. A ratchet that only shrinks: `pnpm neutral:check` fails a violation beyond it, an entry that occurs less than it says, and an entry whose phase is ✅. Shrink it with `node scripts/engine-neutrality.mjs --write-baseline`, which keeps every phase and writes `?` for a new entry. Empty at the end of F7.",
+  "entries": [
+    {
+      "file": "backend/src/adapter/inbound/http/claude-config/claude-config.controller.ts",
+      "term": "claude",
+      "count": 8,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/claude-config/claude-config.dto.ts",
+      "term": "bypassPermissions",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/claude-config/claude-config.dto.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/diag/diag.controller.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/diag/diag.controller.ts",
+      "term": "sdk",
+      "count": 3,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/files/files.controller.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/files/files.dto.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/session/live-sessions.dto.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/session/session-attachments.controller.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/transcript/transcript.controller.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/transcript/transcript.dto.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/inbound/http/workspace/workspace.controller.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/outbound/checkpoint/node-undo.disk.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/claude-config/registry-live-installation.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/claude-config/workspace-module.folder-access.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/diag/diag-session.ownership.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/diag/installation-versions.reader.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/diag/installation-versions.reader.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/filesystem/atomic-file.writer.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/filesystem/folder-archive.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/filesystem/folder-tree.reader.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/permission/permission-resolved.listeners.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/permission/permission-resolved.listeners.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/persistence/audit/drizzle-audit.repository.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/outbound/persistence/claude-config/claude-defaults.mapper.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/persistence/claude-config/drizzle-claude-defaults.repository.ts",
+      "term": "claude",
+      "count": 23,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/persistence/permission/drizzle-permission-request.repository.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/outbound/persistence/session/drizzle-session-file.repository.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/outbound/persistence/session/drizzle-session-origin.repository.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/outbound/persistence/session/session-file.mapper.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/adapter/outbound/session/audit-tool-invocation.recorder.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/session/claude-config-module.configuration.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/session/emitter-session-file.events.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/session/files-module-reference.inspector.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/session/registry-session.ownership.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/session/transcript-module-conversation.source.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/adapter/outbound/session/transcript-module-conversation.source.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/app.module.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/audit/record-tool-invocation.use-case.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/compose-session-configuration.use-case.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/defaults.use-cases.ts",
+      "term": "claude",
+      "count": 20,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/index.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/installation-catalog.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/installation-catalog.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/installation.use-cases.ts",
+      "term": "claude",
+      "count": 17,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/installation.use-cases.ts",
+      "term": "sdk",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/ports/claude-defaults.repository.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/ports/installation.ports.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/claude-config/ports/installation.ports.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/diag/index.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/diag/ports/installation-versions.port.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/diag/ports/installation-versions.port.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/files/delete-entry.use-case.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/files/file-writing.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/files/history-keeper.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/files/recent-writes.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/files/restore-history-entry.use-case.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/files/save-file.use-case.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/notification/notification-registry.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/notification/notify-permission.use-case.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/notification/notify-permission.use-case.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/commands/request-permission.command.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/permission-auto-answer.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/permission-deadlines.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/permission-deadlines.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/permission-payloads.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/permission-registry.ts",
+      "term": "sdk",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/permission-settings.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/ports/question-record.source.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/request-permission.use-case.ts",
+      "term": "sdk",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/resolve-permission.use-case.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/permission/settle-permission.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/attach-session.use-case.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/drive-session.use-cases.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/drive-session.use-cases.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/installation-cache.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/permission-gate.port.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/permission-gate.port.ts",
+      "term": "sdk",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/prompt-reference.port.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/resumable-conversation.source.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/resumable-conversation.source.ts",
+      "term": "sdk",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/session-file-events.port.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/session-file-journal.port.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/session-ownership.port.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/tool-invocation.port.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/ports/undo.ports.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/prompt-attachments.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/prompt-context.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/prompt-hand-over.ts",
+      "term": "claude",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/session-change-memory.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/session-registry.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/session/start-session.use-case.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/shared/path-lock.port.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/shared/session-file-events.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/transcript/follow-transcript.use-case.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/transcript/list-transcripts.use-case.ts",
+      "term": "sdk",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/transcript/ports/transcript-origin.source.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/transcript/ports/transcript-store.port.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/transcript/ports/transcript-store.port.ts",
+      "term": "sdk",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/transcript/read-transcript.use-case.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/transcript/transcript-audience.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/workspace/open-folders.use-cases.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/workspace/resolve-workspace.use-case.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/application/workspace/resolve-workspace.use-case.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/bootstrap.ts",
+      "term": "claude",
+      "count": 8,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/bootstrap.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/audit/value-objects/audit-event-kind.value-object.ts",
+      "term": "claude",
+      "count": 15,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/claude-config-forbidden.error.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/claude-config-input-invalid.error.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/default-mode-not-allowed.error.ts",
+      "term": "bypassPermissions",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/default-mode-not-allowed.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/mcp-approval-stale.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/mcp-server-config-invalid.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/mcp-server-name-taken.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/mcp-server-not-found.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/model-not-available.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/plugin-marketplace-not-allowed.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/plugin-not-found.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/plugin-path-invalid.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/plugin-source-unavailable.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/errors/secret-store-unavailable.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/index.ts",
+      "term": "claude",
+      "count": 9,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/services/defaults-resolution.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/services/defaults-validation.ts",
+      "term": "bypassPermissions",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/services/defaults-validation.ts",
+      "term": "claude",
+      "count": 9,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/services/defaults-validation.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/services/session-defaults.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/value-objects/claude-defaults.value-object.ts",
+      "term": "bypassPermissions",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/claude-config/value-objects/claude-defaults.value-object.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/diag/entities/diag-session.entity.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/diag/index.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/files/errors/file-changed.error.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/files/errors/file-not-found.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/files/errors/precondition-required.error.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/files/services/change-origin.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/files/services/local-history.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/files/value-objects/etag.value-object.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/notification/entities/push-message.entity.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/notification/services/notification-catalogue.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/permission/entities/permission-request.entity.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/permission/entities/permission-request.entity.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/permission/errors/permission-answers-invalid.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/permission/errors/permission-reason-required.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/permission/errors/permission-request-expired.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/permission/errors/permission-request-expired.error.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/entities/prompt-queue.entity.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/entities/prompt-queue.entity.ts",
+      "term": "sdk",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/entities/session.entity.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/entities/session.entity.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/errors/invalid-session-transition.error.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/errors/reference-kind-mismatch.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/errors/unknown-command.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/attachment-kind.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/file-state.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/installation.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/installation.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/prompt-context.ts",
+      "term": "claude",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/resume-strategy.ts",
+      "term": "sdk",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/rewind-plan.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/session-diff.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/session-status.projection.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/session-status.projection.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/slash-commands.ts",
+      "term": "claude",
+      "count": 9,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/session/services/slash-commands.ts",
+      "term": "sdk",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/shared/record.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/entities/transcript-session.entity.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/entities/transcript-session.entity.ts",
+      "term": "sdk",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/errors/transcript-cursor-stale.error.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/errors/transcript-timeout.error.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/errors/transcript-unavailable.error.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/errors/transcript-unavailable.error.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/services/infer-working.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/services/transcript-tail.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/services/transcript-visibility.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/transcript/services/transcript-visibility.ts",
+      "term": "sdk",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/workspace/value-objects/workspace-path.value-object.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/domain/workspace/value-objects/workspace-path.value-object.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/config/environment.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/config/environment.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/audit-events.schema.ts",
+      "term": "claude",
+      "count": 13,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/audit.schema.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/claude-config.schema.ts",
+      "term": "claude",
+      "count": 15,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/columns.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/diag.schema.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/index.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/permission.schema.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/session-files.schema.ts",
+      "term": "claude",
+      "count": 8,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/session-origins.schema.ts",
+      "term": "claude",
+      "count": 5,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/database/schema/session-origins.schema.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/lifecycle/orphan-sweep.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/modules/diag.module.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/modules/files.module.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/modules/permission.module.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/modules/session-origin.module.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/modules/session.module.ts",
+      "term": "claude",
+      "count": 10,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/modules/session.module.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/modules/transcript.module.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/modules/transcript.module.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "anthropic",
+      "count": 4,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "bypassPermissions",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "cache_creation_input_tokens",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "cache_read_input_tokens",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "input_tokens",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "output_tokens",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "redacted_thinking",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "tool_result",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/infrastructure/websocket/protocol-window.ts",
+      "term": "tool_use",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "backend/src/shared/i18n/locales/en.json",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/shared/i18n/locales/pt-BR.json",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/shared/i18n/push-translator.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/shared/ids/uuid-generator.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/shared/ids/uuid-generator.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/shared/logging/redact.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "backend/src/shared/utils/plain-object.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/core/logging/log_context.dart",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/core/navigation/routes.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/files/presentation/pages/file_viewer_page.dart",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/files/presentation/widgets/claude_waiting_strip.dart",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/files/presentation/widgets/files_panel.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/data/datasources/permission_ws_data_source.dart",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/domain/entities/permission_queue.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/domain/entities/permission_request.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/domain/entities/question.dart",
+      "term": "claude",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/domain/repositories/permission_repository.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/domain/usecases/watch_permissions.dart",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/presentation/pages/rules_page.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/presentation/providers/permission_queue_controller.dart",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/presentation/widgets/answered_questions.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/permission/presentation/widgets/question_card.dart",
+      "term": "claude",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/data/mappers/session_event_mapper.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/domain/entities/conversation_entry.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/domain/entities/conversation_entry.dart",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/domain/entities/session_event.dart",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/domain/entities/slash_command.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/domain/entities/transcript_follow.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/domain/entities/transcript_follow.dart",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/presentation/providers/conversation_history_controller.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/presentation/widgets/conversation_view.dart",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/presentation/widgets/pending_pill.dart",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/presentation/widgets/session_dock.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/presentation/widgets/session_help.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/presentation/widgets/thinking_line.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/presentation/widgets/tool_card.dart",
+      "term": "claude",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/presentation/widgets/tool_card.dart",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/session/presentation/widgets/working_indicator.dart",
+      "term": "claude",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/transcript/domain/entities/conversation_origin.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/transcript/domain/repositories/transcript_repository.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/workspace/domain/entities/workspace.dart",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/workspace/domain/repositories/folder_repository.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/workspace/presentation/pages/folder_page.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/workspace/presentation/pages/workspace_list_page.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/features/workspace/presentation/providers/folders_home_controller.dart",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/l10n/app_en.arb",
+      "term": "claude",
+      "count": 50,
+      "phase": "F6"
+    },
+    {
+      "file": "mobile/lib/l10n/app_pt.arb",
+      "term": "claude",
+      "count": 44,
+      "phase": "F6"
+    },
+    {
+      "file": "packages/contracts/schema/commands/diag-ping.schema.json",
+      "term": "claude",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/commands/diag-ping.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/commands/session-prompt.schema.json",
+      "term": "claude",
+      "count": 4,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/commands/session-rewind-files.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/commands/session-set-model.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/commands/session-set-permission-mode.schema.json",
+      "term": "bypassPermissions",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/commands/session-start.schema.json",
+      "term": "bypassPermissions",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/definitions/question-answer.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/message-completed.schema.json",
+      "term": "redacted_thinking",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/message-delta.schema.json",
+      "term": "claude",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/message-delta.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/permission-resolved.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/prompt-queued.schema.json",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/session-compacted.schema.json",
+      "term": "claude",
+      "count": 2,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/session-compacted.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/session-mcp-status-changed.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/session-started.schema.json",
+      "term": "bypassPermissions",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/session-status-changed.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/transcript-appended.schema.json",
+      "term": "claude",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/transcript-appended.schema.json",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/events/workspace-files-changed.schema.json",
+      "term": "claude",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "packages/contracts/schema/responses/permission-resolve.schema.json",
+      "term": "claude",
+      "count": 1,
+      "phase": "F7"
+    },
+    {
+      "file": "web/src/app/ClaudeSettingsRoute.tsx",
+      "term": "claude",
+      "count": 18,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/app/ClaudeSideBar.tsx",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/app/global-navigation.ts",
+      "term": "claude",
+      "count": 9,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/app/NotFoundRoute.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/app/PanelLocation.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/app/router.tsx",
+      "term": "claude",
+      "count": 12,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/app/SettingsRoute.tsx",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/app/useAppCommands.ts",
+      "term": "claude",
+      "count": 9,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/app/workbench-location.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/app/WorkbenchRoute.tsx",
+      "term": "claude",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/about/components/AboutScreen.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/about/components/AboutScreen.tsx",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/about/hooks/useVersions.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/about/hooks/useVersions.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/about/services/about.service.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/about/services/about.service.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/about/types/about.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/about/types/about.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/components/AccountSection.tsx",
+      "term": "claude",
+      "count": 17,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/components/ClaudeSettingsScreen.tsx",
+      "term": "claude",
+      "count": 17,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/components/DefaultsForm.tsx",
+      "term": "claude",
+      "count": 39,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/components/FolderPicker.tsx",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/components/InstallationSection.tsx",
+      "term": "claude",
+      "count": 33,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/components/InstallationSection.tsx",
+      "term": "sdk",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/components/ModelsSection.tsx",
+      "term": "claude",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/components/section-views.tsx",
+      "term": "claude",
+      "count": 20,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/hooks/claude-config-keys.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/hooks/useAccount.ts",
+      "term": "claude",
+      "count": 8,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/hooks/useDefaults.ts",
+      "term": "claude",
+      "count": 13,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/hooks/useInstallation.ts",
+      "term": "claude",
+      "count": 8,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/index.ts",
+      "term": "claude",
+      "count": 16,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/lib/claude-settings-help.ts",
+      "term": "claude",
+      "count": 23,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/lib/claude-settings-search.ts",
+      "term": "claude",
+      "count": 10,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/services/claude-config.service.ts",
+      "term": "claude",
+      "count": 29,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/types/claude-settings.ts",
+      "term": "claude",
+      "count": 9,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/types/defaults.ts",
+      "term": "claude",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/types/installation.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/claude-settings/types/installation.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/components/DiffPane.tsx",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/components/EditorNotices.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/components/EditorTab.tsx",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/components/EditorTabMenu.tsx",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/components/FileQuestions.tsx",
+      "term": "claude",
+      "count": 9,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/components/SaveAsDialog.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/hooks/insert.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/hooks/saving.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/hooks/tab-menu.ts",
+      "term": "claude",
+      "count": 10,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/hooks/tabs.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/hooks/text-actions.ts",
+      "term": "claude",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/hooks/useCodeView.ts",
+      "term": "claude",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/hooks/useEditor.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/hooks/useEditorCommands.ts",
+      "term": "claude",
+      "count": 8,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/hooks/views.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/services/files.service.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/editor/types/editor.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/components/DeleteDialog.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/components/ExplorerContextMenu.tsx",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/components/ExplorerTree.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/components/SensitiveDialog.tsx",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/hooks/explorer-actions.ts",
+      "term": "claude",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/hooks/kept-delete.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/hooks/useDeleteFlow.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/hooks/useExplorer.ts",
+      "term": "claude",
+      "count": 10,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/hooks/useFollowFocus.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/hooks/useOutcome.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/hooks/useTreePointer.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/lib/reasons.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/lib/templates.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/lib/undo.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/explorer/services/explorer.service.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/file-history/components/RestoreDialog.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/file-history/components/TimelineHelp.tsx",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/file-history/hooks/undo-deletion.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/file-history/hooks/useRestore.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/file-history/services/history.service.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/file-history/store/timeline.store.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/permission/components/AnsweredQuestions.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/permission/components/QuestionCard.tsx",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/permission/components/RuleList.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/permission/components/RuleRow.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/permission/hooks/usePermissionQueue.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/permission/lib/question-draft.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/permission/types/permission.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/changes/ChangesStatusItem.tsx",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/composer/ComposerToolbar.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/composer/SessionChoices.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/conversation/ChatMarkdown.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/conversation/CodeBlock.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/conversation/question-of.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/conversation/ThinkingBlock.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/conversation/TimelineEntries.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/conversation/ToolRow.tsx",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/conversation/ToolRow.tsx",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/conversation/WorkingIndicator.tsx",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/ConversationReader.tsx",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/ClaudePanel.tsx",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/ClaudeStatusItem.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/DraftView.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/Notifiers.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/PanelCommands.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/PanelHeader.tsx",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/PanelHelp.tsx",
+      "term": "claude",
+      "count": 14,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/PanelTabMenu.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/PanelTabStrip.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/PendingPill.tsx",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/PermissionBadges.tsx",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/QueueList.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/panel/SessionMenu.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/sessions/registration.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/sessions/SessionsView.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/components/SessionScreen.tsx",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useBrowserNotifications.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useClaudePanel.ts",
+      "term": "claude",
+      "count": 9,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useContextSet.ts",
+      "term": "claude",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useConversationFollow.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useConversationHistory.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useDiffTabs.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useDraft.ts",
+      "term": "claude",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useEditAndResend.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useExportConversation.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useFollowTail.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/usePanelCommands.ts",
+      "term": "claude",
+      "count": 22,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/usePanelTabs.ts",
+      "term": "claude",
+      "count": 6,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/usePendingPermissions.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/usePermissionNotices.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useQueue.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useResumeAndSend.ts",
+      "term": "claude",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useScrollKeeper.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useSessionChanges.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useSessionSettings.ts",
+      "term": "claude",
+      "count": 3,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useSessionsView.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/hooks/useSetPermissionMode.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/index.ts",
+      "term": "claude",
+      "count": 9,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/lib/conversation-markdown.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/lib/panel-modes.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/lib/working-verbs.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/register-changes.ts",
+      "term": "claude",
+      "count": 8,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/register-context.ts",
+      "term": "claude",
+      "count": 11,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/services/composer.service.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/services/conversation-reducer.ts",
+      "term": "sdk",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/services/live-session.service.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/services/live-session.service.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/services/queue.service.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/services/session-diff-source.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/services/tool-question.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/store/claude-panel-restorer.ts",
+      "term": "claude",
+      "count": 15,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/store/claude-panel.store.ts",
+      "term": "claude",
+      "count": 12,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/store/sessions-view.store.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/types/changes.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/types/command.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/types/command.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/types/context.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/types/live-session.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/session/types/live-session.ts",
+      "term": "sdk",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/settings/index.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/settings/store/settings-sections.ts",
+      "term": "claude",
+      "count": 8,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/settings/types/settings.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/components/CloseFoldersDialog.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/components/FolderShell.tsx",
+      "term": "claude",
+      "count": 14,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/components/FolderTabStrip.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/components/MobileViewBar.tsx",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/components/SecondarySideBar.tsx",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/components/Workbench.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/hooks/useFolderTabs.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/hooks/useWorkbenchCommands.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/hooks/workbench-layout.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/store/folder-tab.store.ts",
+      "term": "claude",
+      "count": 7,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/store/registries.ts",
+      "term": "claude",
+      "count": 2,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workbench/types/workbench.ts",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workspace/services/workspace.service.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/features/workspace/types/workspace.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/main.tsx",
+      "term": "claude",
+      "count": 4,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/components/DiffHunks.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/components/markdown/Markdown.tsx",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/components/markdown/safe-url.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/i18n/locales/en.json",
+      "term": "claude",
+      "count": 189,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/i18n/locales/en.json",
+      "term": "sdk",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/i18n/locales/pt-BR.json",
+      "term": "claude",
+      "count": 189,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/i18n/locales/pt-BR.json",
+      "term": "sdk",
+      "count": 5,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/lib/diff-hunk.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/lib/files-drag.ts",
+      "term": "claude",
+      "count": 13,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/lib/folder-path.ts",
+      "term": "claude",
+      "count": 1,
+      "phase": "F6"
+    },
+    {
+      "file": "web/src/shared/lib/sensitive-files.ts",
+      "term": "claude",
+      "count": 8,
+      "phase": "F6"
+    }
+  ]
+}

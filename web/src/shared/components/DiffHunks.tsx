@@ -34,8 +34,8 @@ const LINE_NAMES: Readonly<Record<Exclude<HunkLine['kind'], 'context'>, string>>
 };
 
 /**
- * The hunks of a diff, line by line, with the line numbers of both sides — what Claude changed in a
- * file, in the chat, in the list of changes and in the card that asks (plan 08, F3).
+ * The hunks of a diff, line by line, with the line numbers of both sides — what the agent changed
+ * in a file, in the chat, in the list of changes and in the card that asks (plan 08, F3).
  *
  * The sign of each line is drawn by the stylesheet and the kind is **said** to a screen reader: the
  * colour is never the only way to tell an added line from a removed one. Long diffs fold, and

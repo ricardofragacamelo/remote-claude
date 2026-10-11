@@ -58,6 +58,12 @@ export type PromptAttachmentDto = z.infer<typeof attachment>;
  */
 const MAX_REJECTED_PATHS = 256;
 
+/** A conversation, `{ engine, id }` — the `ConversationRef` of the contract (plan 28, B-12). */
+export const conversationRef = z.object({
+  engine: z.string().min(1).max(32),
+  id: z.string().min(1).max(256),
+});
+
 /** The payloads the session commands carry, as the contract declares them. */
 export const sessionSchemas = {
   session: z.object({ sessionId: z.string().min(1) }),
@@ -67,14 +73,15 @@ export const sessionSchemas = {
       model: z.string().min(1).optional(),
       permissionMode: z.enum(PERMISSION_MODES).optional(),
       effort: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
-      resumeSessionId: z.string().min(1).optional(),
+      engine: z.string().min(1).max(32).optional(),
+      resumeFrom: conversationRef.optional(),
       forkAt: z.string().min(1).max(256).optional(),
     })
     // The `x-required-when` of the schema: a fork point is a message of a conversation, and only a
     // resumed conversation has one (plan 08, S-08).
-    .refine((start) => start.forkAt === undefined || start.resumeSessionId !== undefined, {
-      path: ['resumeSessionId'],
-      message: 'forkAt needs resumeSessionId',
+    .refine((start) => start.forkAt === undefined || start.resumeFrom !== undefined, {
+      path: ['resumeFrom'],
+      message: 'forkAt needs resumeFrom',
     }),
   prompt: z
     .object({
@@ -111,6 +118,7 @@ export const SESSION_HANDLERS = {
   start: Symbol('session.start handler'),
   prompt: Symbol('session.prompt handler'),
   interrupt: Symbol('session.interrupt handler'),
+  compact: Symbol('session.compact handler'),
   setModel: Symbol('session.setModel handler'),
   setPermissionMode: Symbol('session.setPermissionMode handler'),
   setLocale: Symbol('session.setLocale handler'),

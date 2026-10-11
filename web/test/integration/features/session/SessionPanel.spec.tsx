@@ -8,9 +8,9 @@ import { McpIndicator } from '@/features/session/components/panel/McpIndicator';
 import { SessionMenu } from '@/features/session/components/panel/SessionMenu';
 import { useEditAndResend } from '@/features/session/hooks/useEditAndResend';
 import { useSessionHeader } from '@/features/session/hooks/useSessionHeader';
-import { claudePanelStore } from '@/features/session/store/claude-panel.store';
+import { agentPanelStore } from '@/features/session/store/agent-panel.store';
 import { folderTabStore, forgetFolderTabs } from '@/features/workbench';
-import { aHistoryPage, claudeUnavailable, said } from '../../../support/history';
+import { aHistoryPage, agentUnavailable, said } from '../../../support/history';
 import { aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
 import { render, translator } from '../../../support/render';
@@ -22,6 +22,8 @@ import {
   routeApi,
   SESSION,
 } from '../../../support/session-tools';
+import { aToolCall } from '../../../support/canonical-tool';
+import { CAPABILITIES } from '../../../support/engines';
 
 const t = translator('en');
 const A = '/srv/projects/app';
@@ -33,7 +35,7 @@ const PATHS = {
   mcp: `/sessions/${SESSION}/mcp-servers`,
   checkpoints: `/sessions/${SESSION}/checkpoints`,
   commands: `/sessions/${SESSION}/commands`,
-  history: `/transcripts/${CONVERSATION}/messages`,
+  history: `/transcripts/claude/${CONVERSATION}/messages`,
 };
 
 const OPUS = {
@@ -52,8 +54,14 @@ const aContext = (percentage: number) => ({
   maxTokens: 200_000,
   percentage,
   categories: [
-    { id: 'messages', name: 'Messages', tokens: 800, kind: 'used' },
-    { id: 'customThing', name: 'Custom thing', tokens: 40, kind: 'used' },
+    {
+      id: 'messages',
+      messageKey: 'sessions.context.messages',
+      name: 'Messages',
+      tokens: 800,
+      kind: 'used',
+    },
+    { id: 'customThing', text: 'Custom thing', name: 'Custom thing', tokens: 40, kind: 'used' },
   ],
 });
 
@@ -84,7 +92,7 @@ function Hosted(): React.JSX.Element {
   return (
     <>
       <McpIndicator sessionId={SESSION} />
-      <SessionMenu session={session} folder={A} onOpenHelp={() => undefined} />
+      <SessionMenu session={session} onOpenHelp={() => undefined} />
       <SessionScreen sessionId={SESSION} folder={A} edit={edit} />
     </>
   );
@@ -119,10 +127,11 @@ function opened(started: Record<string, unknown> = {}): ReturnType<typeof render
   live.receive(
     hubEvent(SESSION, 'session.started', 1, {
       sessionId: SESSION,
-      claudeSessionId: CONVERSATION,
+      conversation: { engine: 'claude', id: CONVERSATION },
       workspacePath: A,
       model: 'claude-opus-5',
-      permissionMode: 'default',
+      permissionMode: 'ask',
+      capabilities: CAPABILITIES,
       ...started,
     }),
   );
@@ -217,7 +226,7 @@ describe('the model, the mode — plan 08, B-36', () => {
   });
 
   it('keeps the model in use, and the box, when the list cannot be had — S-168', async () => {
-    served({ models: [{ ...claudeUnavailable }] });
+    served({ models: [{ ...agentUnavailable }] });
     opened();
 
     await waitFor(() => {
@@ -226,17 +235,17 @@ describe('the model, the mode — plan 08, B-36', () => {
     expect(box()).toBeEnabled();
   });
 
-  it('offers the modes, Permitir tudo last — never the SDK`s that skips the callback — S-170, plan 23 S-69', async () => {
+  it('offers the modes the engine announces, Permitir tudo last — never the SDK`s that skips the callback — S-170, plan 23 S-69, plan 28 S-81', async () => {
     const user = userEvent.setup();
     served();
     opened();
 
-    await user.click(picker(t('sessions.mode.label'), t('sessions.mode.default')));
+    await user.click(picker(t('sessions.mode.label'), t('sessions.mode.ask')));
     const modes = (await screen.findAllByRole('menuitem')).map((item) => item.textContent);
     expect(modes).toEqual([
-      `${t('sessions.mode.default')}${t('sessions.mode.defaultDescription')}`,
+      `${t('sessions.mode.ask')}${t('sessions.mode.askDescription')}`,
       `${t('sessions.mode.acceptEdits')}${t('sessions.mode.acceptEditsDescription')}`,
-      `${t('sessions.mode.plan')}${t('sessions.mode.planDescription')}`,
+      `${t('sessions.mode.readOnly')}${t('sessions.mode.readOnlyDescription')}`,
       `${t('sessions.mode.allowAll')}${t('sessions.mode.allowAllDescription')}`,
     ]);
 
@@ -262,7 +271,7 @@ describe('the model, the mode — plan 08, B-36', () => {
     served();
     opened();
 
-    await user.click(picker(t('sessions.mode.label'), t('sessions.mode.default')));
+    await user.click(picker(t('sessions.mode.label'), t('sessions.mode.ask')));
     await user.click(
       await screen.findByRole('menuitem', { name: new RegExp(t('sessions.mode.allowAll')) }),
     );
@@ -278,10 +287,10 @@ describe('the model, the mode — plan 08, B-36', () => {
     expect(await screen.findByRole('note')).toHaveTextContent(t('sessions.mode.allowAllWarning'));
 
     await user.click(
-      screen.getByRole('menuitem', { name: new RegExp(t('sessions.mode.defaultDescription')) }),
+      screen.getByRole('menuitem', { name: new RegExp(t('sessions.mode.askDescription')) }),
     );
     expect(live.lastSent('session.setPermissionMode')).toMatchObject({
-      payload: { sessionId: SESSION, mode: 'default' },
+      payload: { sessionId: SESSION, mode: 'ask' },
     });
   });
 });
@@ -319,7 +328,7 @@ describe('the context window — plan 08, B-37', () => {
     expect(screen.queryByText(t('sessions.context.near'))).toBeNull();
   });
 
-  it('compacts by the installation’s own /compact, and reads the use again after it — S-174', async () => {
+  it('compacts by session.compact, and reads the use again after it — S-174, plan 28 S-69', async () => {
     const user = userEvent.setup();
     const get = served({ context: [aContext(85), aContext(10)] });
     opened();
@@ -331,9 +340,8 @@ describe('the context window — plan 08, B-37', () => {
       }),
     );
     await user.click(await screen.findByRole('menuitem', { name: t('sessions.context.compact') }));
-    expect(live.lastSent('session.prompt')).toMatchObject({
-      payload: { sessionId: SESSION, text: '/compact' },
-    });
+    expect(live.lastSent('session.compact')).toMatchObject({ payload: { sessionId: SESSION } });
+    expect(live.lastSent('session.prompt')).toBeUndefined();
 
     says('session.compacted', { trigger: 'manual', preTokens: 1200 });
     says('turn.completed', { turnId: 'turn-1', costUsd: '0.01', durationMs: 1000 });
@@ -347,7 +355,7 @@ describe('the context window — plan 08, B-37', () => {
   });
 
   it('steps aside with the reason when the use cannot be read, the box going on — S-175', async () => {
-    served({ context: [{ ...claudeUnavailable }] });
+    served({ context: [{ ...agentUnavailable }] });
     opened();
 
     expect(
@@ -414,7 +422,7 @@ describe('the MCP servers — plan 08, B-38', () => {
   });
 
   it('says so in an icon when they cannot be read, never in the way of the chat — S-178, plan 09 S-44', async () => {
-    served({ mcp: [{ ...claudeUnavailable }] });
+    served({ mcp: [{ ...agentUnavailable }] });
     opened();
 
     expect(await screen.findByRole('img', { name: t('sessions.mcp.unavailable') })).toBeVisible();
@@ -445,7 +453,7 @@ describe('exporting the conversation — plan 08, B-39', () => {
   const tool = [
     {
       type: 'tool.started',
-      payload: { toolUseId: 't1', toolName: 'Bash', input: { command: 'npm test' } },
+      payload: { toolUseId: 't1', ...aToolCall('Bash', { command: 'npm test' }) },
     },
     {
       type: 'tool.completed',
@@ -506,14 +514,16 @@ describe('exporting the conversation — plan 08, B-39', () => {
     const saved = savedFiles();
     served(
       { history: [aHistoryPage([said('m2', 'Done.')], { nextCursor: 'older' })] },
-      { [`${PATHS.history}?cursor=older`]: [{ ...claudeUnavailable }] },
+      { [`${PATHS.history}?cursor=older`]: [{ ...agentUnavailable }] },
     );
     opened();
 
     await exportIt(user, false);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      t('sessions.export.failed', { reason: t('transcript.error.claudeUnavailable') }),
+      t('sessions.export.failed', {
+        reason: t('transcript.error.agentUnavailable', agentUnavailable.params),
+      }),
     );
     expect(saved.names).toEqual([]);
   });
@@ -521,7 +531,7 @@ describe('exporting the conversation — plan 08, B-39', () => {
   it('is not offered before the conversation is known', async () => {
     const user = userEvent.setup();
     served();
-    opened({ claudeSessionId: undefined });
+    opened({ conversation: undefined });
     await menu(user);
 
     expect(
@@ -617,7 +627,11 @@ describe('editing a prompt and sending it again — plan 08, B-35', () => {
     await user.click(screen.getByRole('button', { name: t('sessions.edit.send') }));
 
     expect(live.lastSent('session.start')).toMatchObject({
-      payload: { workspacePath: A, resumeSessionId: CONVERSATION, forkAt: 'u1' },
+      payload: {
+        workspacePath: A,
+        resumeFrom: { engine: 'claude', id: CONVERSATION },
+        forkAt: 'u1',
+      },
     });
     expect(live.lastSent('session.rewindFiles')).toBeUndefined();
 
@@ -626,7 +640,7 @@ describe('editing a prompt and sending it again — plan 08, B-35', () => {
     expect(live.lastSent('session.prompt')).toMatchObject({
       payload: { sessionId: FORKED, text: 'fix the parser properly' },
     });
-    expect(claudePanelStore(A).getState().active).toBe(`session:${FORKED}`);
+    expect(agentPanelStore(A).getState().active).toBe(`session:${FORKED}`);
     expect(folderTabStore(A).getState().sessionId).toBe(FORKED);
     // The original stays as it was, readable.
     expect(screen.getByText('Fixed.')).toBeVisible();
@@ -701,7 +715,7 @@ describe('editing a prompt and sending it again — plan 08, B-35', () => {
     );
     expect(live.lastSent('session.start')).toEqual(
       expect.objectContaining({
-        payload: { workspacePath: A, resumeSessionId: CONVERSATION },
+        payload: { workspacePath: A, resumeFrom: { engine: 'claude', id: CONVERSATION } },
       }),
     );
   });
@@ -736,7 +750,7 @@ describe('editing a prompt and sending it again — plan 08, B-35', () => {
     await user.click(await screen.findByRole('menuitem', { name: t('sessions.message.forkFrom') }));
 
     expect(live.lastSent('session.start')).toMatchObject({
-      payload: { resumeSessionId: CONVERSATION, forkAt: 'u1' },
+      payload: { resumeFrom: { engine: 'claude', id: CONVERSATION }, forkAt: 'u1' },
     });
     forkOpened();
     expect(live.lastSent('session.prompt')).toMatchObject({

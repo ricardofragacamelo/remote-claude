@@ -34,9 +34,7 @@ class ErrorView extends StatelessWidget {
             // unreadable in the dark theme is a real problem, not a cosmetic one.
             Icon(Icons.error_outline, color: theme.colorScheme.error),
             const SizedBox(width: Tokens.spaceSm),
-            Expanded(
-              child: Text(translateFailure(l10n, failure), style: theme.textTheme.bodyLarge),
-            ),
+            Expanded(child: Text(failureText(context, failure), style: theme.textTheme.bodyLarge)),
           ],
         ),
         const SizedBox(height: Tokens.spaceSm),

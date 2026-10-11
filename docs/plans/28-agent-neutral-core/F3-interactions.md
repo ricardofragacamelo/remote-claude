@@ -31,7 +31,7 @@ o plano como "a segunda variante". Esta fase completa o que o 24 começou.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-20 — A interação `plan` 🔲
+### B-20 — A interação `plan` ✅
 
 A `interaction` de `permission.requested` ganha a variante `{ kind: 'plan', markdown, path? }`, ao lado
 da `question` do 24, na definição `question-interaction` (que passa a se chamar `interaction`). O adapter
@@ -46,7 +46,7 @@ adapter os traduz. Saem:
 
 Capacidade `planApproval`. Cenários S-61…S-63.
 
-### B-21 — A pergunta e o subagent pelo `kind` 🔲
+### B-21 — A pergunta e o subagent pelo `kind` ✅
 
 O `question-of.ts`, o `ToolRow.tsx` e o `tool_card.dart` (`questionTool`) reconhecem a pergunta pelo
 `kind` `question`. O `QUESTION_TOOL` sai do domínio, e o `question-history.ts` do backend pareia
@@ -56,7 +56,7 @@ O subagent é o `kind` `agent`: o `opensSubagent` (web) e o `Agent`/`Task` (app)
 continua pelo `parentToolUseId`. A rota de subagent é a de `/transcripts/:engine/:id/subagents/:toolUseId`
 da F1. Capacidades `questions` e `subagents`. Cenários S-64, S-65.
 
-### B-22 — `session.tasksChanged` 🔲
+### B-22 — `session.tasksChanged` ✅
 
 Evento novo, com `seq`, no replay e no histórico: `{ tasks: [{ id, title, activeTitle?, status:
 pending · inProgress · completed }] }`. O adapter o deriva de `TodoWrite`, `TaskCreate` e `TaskUpdate`,
@@ -66,7 +66,7 @@ Saem o `task-list.ts` do web e o `task_list.dart` do app (o da camada de domíni
 `task_strip.dart` desenham o evento. O histórico reproduz a última lista pela mesma função do ao vivo.
 Capacidade `taskList`; sem ela, a faixa não existe. Cenários S-66…S-68.
 
-### B-23 — O comando `session.compact` 🔲
+### B-23 — O comando `session.compact` ✅
 
 Comando novo `session.compact { sessionId }`, recusado com `ENGINE_CAPABILITY_UNAVAILABLE` quando o
 motor não tem `compaction`. No Claude, o adapter manda `/compact`. Saem os dois `'/compact'` literais, o
@@ -76,7 +76,7 @@ O `session.compacted` continua como está, com o `compactionId` que o [27](../27
 acrescenta. O slash command digitado pela pessoa continua indo como prompt: é o motor que o entende, e
 não nós. Cenários S-69, S-70.
 
-### B-24 — O contexto canônico 🔲
+### B-24 — O contexto canônico ✅
 
 `GET /sessions/:id/context` passa a responder categorias `{ id, messageKey?, text?, tokens }`:
 
@@ -86,7 +86,7 @@ não nós. Cenários S-69, S-70.
 Saem os ids do Claude do `ContextMeter.tsx` e do `context_ring.dart`. A rota entra no `schema/http/`.
 Capacidade `contextUse`. Cenários S-71, S-72.
 
-### B-25 — A origem `agent` da mudança de arquivo 🔲
+### B-25 — A origem `agent` da mudança de arquivo ✅
 
 `workspace.filesChanged.origin` passa de `claude` para `agent`, com o `engine` ao lado. Mudam:
 

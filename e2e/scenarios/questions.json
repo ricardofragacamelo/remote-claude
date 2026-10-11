@@ -4,7 +4,7 @@
   "user": { "username": "dev", "password": "dev" },
   "expect": {
     "fixture": "question-turn",
-    "card": "Claude's question",
+    "card": "Claude Code's question",
     "sections": ["Usage", "License"],
     "formatTab": "Format",
     "format": "Tables & bullets",
@@ -13,7 +13,7 @@
     "otherAnswer": "Other: a friendly one",
     "submit": "Send answers",
     "decline": "Don't answer",
-    "declineReason": "Why not? Claude reads this (optional)",
+    "declineReason": "Why not? Claude Code reads this (optional)",
     "reason": "I'll write it myself.",
     "declineConfirm": "Send without answering",
     "declined": "Not answered:",

@@ -1,4 +1,4 @@
-/// One page of a conversation's history, read from Claude's store.
+/// One page of a conversation's history, read from its engine's store.
 ///
 /// Pure Dart. The events are the **same** [SessionEvent]s the live stream produces — history and
 /// the stream go through one mapper and one fold, because two readers of the same thing is how the
@@ -6,13 +6,14 @@
 library;
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 
 /// A page of history: the latest messages, or the ones before a cursor.
 class HistoryPage extends Equatable {
   const HistoryPage({
-    required this.conversationId,
+    required this.conversation,
     required this.workspacePath,
     this.beganElsewhere = false,
     this.summary = '',
@@ -22,8 +23,8 @@ class HistoryPage extends Equatable {
     this.lastMessageId,
   });
 
-  /// The conversation in Claude's store this is a page of.
-  final String conversationId;
+  /// The conversation this is a page of — its engine and its id.
+  final ConversationKey conversation;
 
   /// Whether it began outside this product — in the editor or in the terminal; nothing says
   /// which. A resume of such a conversation continues it under a new id, and the editor will not
@@ -54,7 +55,7 @@ class HistoryPage extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
-    conversationId,
+    conversation,
     beganElsewhere,
     workspacePath,
     summary,

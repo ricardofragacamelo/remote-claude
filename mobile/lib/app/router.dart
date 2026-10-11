@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/config/app_config_provider.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/navigation/deep_link_controller.dart';
 import 'package:remote_claude/core/navigation/page_observer.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
@@ -172,11 +173,10 @@ GoRouter buildRouter(Ref ref) {
           // Nested under the list, so "back" lands on the conversations of the same workspace —
           // the address carries that workspace for exactly this reason.
           GoRoute(
-            path: ':conversationId',
+            path: ':engine/:conversationId',
             name: 'history-conversation',
-            builder: (BuildContext context, GoRouterState state) => ConversationHistoryPage(
-              conversationId: state.pathParameters['conversationId'] ?? '',
-            ),
+            builder: (BuildContext context, GoRouterState state) =>
+                ConversationHistoryPage(conversation: _conversationOf(state)),
           ),
         ],
       ),
@@ -214,3 +214,9 @@ GoRouter buildRouter(Ref ref) {
 
   return router;
 }
+
+/// The conversation an address of the history names: its engine and its id, both segments of it.
+ConversationKey _conversationOf(GoRouterState state) => ConversationKey(
+  engine: state.pathParameters['engine'] ?? '',
+  id: state.pathParameters['conversationId'] ?? '',
+);

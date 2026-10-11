@@ -1,8 +1,8 @@
-/// A root this installation will let Claude run in.
+/// A root this installation will let the agent run in.
 ///
 /// Pure Dart: no `flutter/*`, no `dio`. The allowlist is decided on the machine running the
 /// backend and is read here, never edited — a phone that could add a root would be a phone that
-/// could point Claude at any directory on somebody's computer.
+/// could point the agent at any directory on somebody's computer.
 library;
 
 import 'package:equatable/equatable.dart';

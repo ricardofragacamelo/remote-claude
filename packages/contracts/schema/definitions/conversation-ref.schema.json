@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/conversation-ref.json",
+  "title": "ConversationRef",
+  "description": "Which conversation of which coding agent: the engine, and the id the conversation has in that engine's own store. It is not the `sessionId` of a live session, which names a subprocess and ends with it; this one outlives every session that ever continued it, and is what the history reads and a resume takes (ADR-025).",
+  "type": "object",
+  "required": ["engine", "id"],
+  "properties": {
+    "engine": {
+      "type": "string",
+      "maxLength": 32,
+      "description": "The engine — an `id` of `GET /engines`. Opaque to the client, which never decides by it."
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "The id of the conversation in the engine's store, in the engine's own form — opaque."
+    }
+  }
+}

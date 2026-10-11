@@ -8,11 +8,12 @@ import { DomainError } from '@domain/shared';
  * is a different alarm from upstream answering with a failure.
  */
 export class TranscriptTimeoutError extends DomainError {
-  readonly code = 'CLAUDE_TIMEOUT';
-  readonly messageKey = 'transcript.error.claudeTimeout';
+  readonly code = 'AGENT_TIMEOUT';
+  readonly messageKey = 'transcript.error.agentTimeout';
 
-  constructor(operation: string, timeoutMs: number) {
-    super(`the Agent SDK did not ${operation} within ${String(timeoutMs)} ms`, {
+  constructor(engine: string, operation: string, timeoutMs: number) {
+    super(`the agent ${engine} did not ${operation} within ${String(timeoutMs)} ms`, {
+      engine,
       operation,
       timeoutMs,
     });

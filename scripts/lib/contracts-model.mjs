@@ -8,7 +8,15 @@
  */
 
 /** Keywords a message schema may carry beyond the subset below. */
-const METADATA = new Set(['$schema', '$id', 'title', 'description', 'x-kind', 'x-type']);
+const METADATA = new Set([
+  '$schema',
+  '$id',
+  'title',
+  'description',
+  'x-kind',
+  'x-type',
+  'x-protocol-version',
+]);
 
 /**
  * The bounds the subset understands, and the one declared type each of them may bound.
@@ -32,6 +40,7 @@ const SUPPORTED = new Set([
   'enum',
   'const',
   'x-required-when',
+  'x-nullable',
   ...LIMIT_KEYWORDS_OF_TYPE.keys(),
 ]);
 
@@ -77,6 +86,8 @@ export class ContractError extends Error {
  * @property {string} description
  * @property {TypeRef} type
  * @property {Limits} limits the bounds the schema gives the field; empty when it gives none
+ * @property {boolean} nullable whether the field may be `null` — `x-nullable`, for an answer of
+ *   HTTP that says "none" with `null` and that a published client already reads that way
  */
 
 /**
@@ -129,6 +140,8 @@ export class ContractError extends Error {
 /**
  * @typedef {object} Model
  * @property {Interface} envelope
+ * @property {number} protocolVersion the version this build speaks — `x-protocol-version` of the
+ *   envelope; the server also accepts the one before it, for the window of plan 28, D-08
  * @property {Interface[]} interfaces every named object type, dependencies first
  * @property {Message[]} messages
  */
@@ -542,8 +555,22 @@ function toInterface(source, name, schema, collector) {
       description: String(property['description'] ?? ''),
       type: resolveType(source, `${name}${pascalCase(field)}`, property, collector),
       limits: toLimits(source, `${name}.${field}`, property),
+      nullable: nullableOf(source, `${name}.${field}`, property),
     })),
   };
+}
+
+/**
+ * Whether a property may be `null`: `x-nullable: true`, and nothing else is accepted for it.
+ *
+ * @param {string} source @param {string} name @param {Record<string, unknown>} property
+ */
+function nullableOf(source, name, property) {
+  const nullable = property['x-nullable'];
+  if (nullable !== undefined && typeof nullable !== 'boolean') {
+    throw new ContractError(source, `\`${name}\` has an \`x-nullable\` that is not a boolean`);
+  }
+  return nullable === true;
 }
 
 /**
@@ -589,6 +616,14 @@ export function buildModel(envelope, messages, definitions = []) {
   }
 
   const envelopeInterface = toInterface(envelope.source, 'Envelope', envelope.schema, collector);
+  const protocolVersion = envelope.schema['x-protocol-version'];
+  if (
+    typeof protocolVersion !== 'number' ||
+    !Number.isInteger(protocolVersion) ||
+    protocolVersion < 1
+  ) {
+    throw new ContractError(envelope.source, '`x-protocol-version` is not a positive integer');
+  }
 
   for (const definition of definitions) {
     define(definition, collector);
@@ -610,7 +645,7 @@ export function buildModel(envelope, messages, definitions = []) {
     throw new ContractError(duplicate.name, `\`${duplicate.frameType}\` is declared twice`);
   }
 
-  return { envelope: envelopeInterface, interfaces, messages: built };
+  return { envelope: envelopeInterface, protocolVersion, interfaces, messages: built };
 }
 
 /** @param {string} source @returns {string} the file name a `$ref` uses */

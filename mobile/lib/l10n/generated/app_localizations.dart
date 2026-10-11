@@ -183,11 +183,11 @@ abstract class AppLocalizations {
   /// **'Sign in to continue'**
   String get authSignInTitle;
 
-  /// Why the application asks for a sign-in
+  /// Why the application asks for a sign-in; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'remote-claude runs Claude Code on your own machine, so it asks who you are first.'**
-  String get authSignInDescription;
+  /// **'remote-claude runs {agent} on your own machine, so it asks who you are first.'**
+  String authSignInDescription(String agent);
 
   /// Opens the provider in the system browser
   ///
@@ -501,6 +501,240 @@ abstract class AppLocalizations {
   /// **'{name} · {title}'**
   String sessionToolTitled(String name, String title);
 
+  /// Row label of a call that reads a file
+  ///
+  /// In en, this message translates to:
+  /// **'Read {path}'**
+  String sessionToolFileRead(String path);
+
+  /// Row label of a call that edits a file, with the lines added and removed
+  ///
+  /// In en, this message translates to:
+  /// **'Edit {path} (+{added} −{removed})'**
+  String sessionToolFileEdit(String path, String added, String removed);
+
+  /// Row label of a call that makes several changes to a file
+  ///
+  /// In en, this message translates to:
+  /// **'Edit {path} (several changes)'**
+  String sessionToolFileEditMany(String path);
+
+  /// Row label of a call that edits a cell of a notebook
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the notebook {path}'**
+  String sessionToolFileEditCell(String path);
+
+  /// Row label of a call that writes a whole file
+  ///
+  /// In en, this message translates to:
+  /// **'Write {path} ({lines} lines)'**
+  String sessionToolFileWrite(String path, String lines);
+
+  /// Row label of a shell command, with its first line
+  ///
+  /// In en, this message translates to:
+  /// **'Shell: {command}'**
+  String sessionToolShell(String command);
+
+  /// Row label of a call that reads the output of a running command
+  ///
+  /// In en, this message translates to:
+  /// **'Read the output of a command'**
+  String get sessionToolShellOutput;
+
+  /// Row label of a search in the files
+  ///
+  /// In en, this message translates to:
+  /// **'Search for “{pattern}”'**
+  String sessionToolSearch(String pattern);
+
+  /// Row label of a search in one place
+  ///
+  /// In en, this message translates to:
+  /// **'Search for “{pattern}” in {path}'**
+  String sessionToolSearchIn(String pattern, String path);
+
+  /// Row label of a search for files by name
+  ///
+  /// In en, this message translates to:
+  /// **'Find files {pattern}'**
+  String sessionToolSearchFiles(String pattern);
+
+  /// Row label of a call that fetches a page
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch {host}'**
+  String sessionToolWebFetch(String host);
+
+  /// Row label of a web search
+  ///
+  /// In en, this message translates to:
+  /// **'Search the web for “{query}”'**
+  String sessionToolWebSearch(String query);
+
+  /// Row label of a call that starts a subagent
+  ///
+  /// In en, this message translates to:
+  /// **'Subagent ({type}): {description}'**
+  String sessionToolAgent(String type, String description);
+
+  /// Row label of one question the agent asked
+  ///
+  /// In en, this message translates to:
+  /// **'Asked: {header}'**
+  String sessionToolQuestion(String header);
+
+  /// Row label of several questions the agent asked
+  ///
+  /// In en, this message translates to:
+  /// **'Asked {count} questions'**
+  String sessionToolQuestions(String count);
+
+  /// Row label of the call that presents a plan
+  ///
+  /// In en, this message translates to:
+  /// **'Present the plan'**
+  String get sessionToolPlan;
+
+  /// Row label of a call that rewrites the task list
+  ///
+  /// In en, this message translates to:
+  /// **'Updated the task list ({count} tasks)'**
+  String sessionToolTasksWrite(String count);
+
+  /// Row label of a call that adds a task
+  ///
+  /// In en, this message translates to:
+  /// **'Added a task: {subject}'**
+  String sessionToolTaskCreate(String subject);
+
+  /// Row label of a call that changes a task
+  ///
+  /// In en, this message translates to:
+  /// **'Changed task #{id}'**
+  String sessionToolTaskUpdate(String id);
+
+  /// Row label of a call that reads a task
+  ///
+  /// In en, this message translates to:
+  /// **'Read task #{id}'**
+  String sessionToolTaskGet(String id);
+
+  /// Row label of a call that reads the task list
+  ///
+  /// In en, this message translates to:
+  /// **'Read the task list'**
+  String get sessionToolTaskList;
+
+  /// Row label of a call of an MCP tool, by its server and its tool
+  ///
+  /// In en, this message translates to:
+  /// **'{server} · {tool}'**
+  String sessionToolMcp(String server, String tool);
+
+  /// The generic row label: the name the backend gave, or the kind
+  ///
+  /// In en, this message translates to:
+  /// **'{name}'**
+  String sessionToolOther(String name);
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Read file'**
+  String get sessionKindFileRead;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Edit file'**
+  String get sessionKindFileEdit;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Write file'**
+  String get sessionKindFileWrite;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get sessionKindFileDelete;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get sessionKindFileMove;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get sessionKindSearch;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Shell'**
+  String get sessionKindShell;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Output'**
+  String get sessionKindShellOutput;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch'**
+  String get sessionKindWebFetch;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Web search'**
+  String get sessionKindWebSearch;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'MCP'**
+  String get sessionKindMcp;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Subagent'**
+  String get sessionKindAgent;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Question'**
+  String get sessionKindQuestion;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get sessionKindPlan;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get sessionKindTasks;
+
+  /// Short name of a kind of tool call, before the description the model gave it
+  ///
+  /// In en, this message translates to:
+  /// **'Tool'**
+  String get sessionKindOther;
+
   /// Accessible name of the line of a tool, which opens its card
   ///
   /// In en, this message translates to:
@@ -579,11 +813,11 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get sessionImageClose;
 
-  /// What the screen of a prompt's image shows
+  /// What the screen of a prompt's image shows; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'The image this prompt carried, as Claude received it.'**
-  String get sessionImageDescription;
+  /// **'The image this prompt carried, as {agent} received it.'**
+  String sessionImageDescription(String agent);
 
   /// The image of a prompt is being read
   ///
@@ -645,53 +879,101 @@ abstract class AppLocalizations {
   /// **'Permission for {tool}'**
   String permissionCardLabel(String tool);
 
-  /// What the Bash tool does
-  ///
-  /// In en, this message translates to:
-  /// **'Run a shell command'**
-  String get permissionToolBash;
-
-  /// What the Write tool does
-  ///
-  /// In en, this message translates to:
-  /// **'Write a file'**
-  String get permissionToolWrite;
-
-  /// What the Edit tool does
-  ///
-  /// In en, this message translates to:
-  /// **'Edit a file'**
-  String get permissionToolEdit;
-
-  /// What the MultiEdit tool does
-  ///
-  /// In en, this message translates to:
-  /// **'Edit several files'**
-  String get permissionToolMultiEdit;
-
-  /// What the NotebookEdit tool does
-  ///
-  /// In en, this message translates to:
-  /// **'Edit a notebook'**
-  String get permissionToolNotebookEdit;
-
-  /// What the Read tool does
+  /// Title of a permission request: what is asked, by the kind of the call
   ///
   /// In en, this message translates to:
   /// **'Read a file'**
-  String get permissionToolRead;
+  String get permissionToolFileRead;
 
-  /// What the WebFetch tool does
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Edit a file'**
+  String get permissionToolFileEdit;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Write a file'**
+  String get permissionToolFileWrite;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Delete a file'**
+  String get permissionToolFileDelete;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Move a file'**
+  String get permissionToolFileMove;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Search the files'**
+  String get permissionToolSearch;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Run a shell command'**
+  String get permissionToolShell;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Read a command\'s output'**
+  String get permissionToolShellOutput;
+
+  /// Title of a permission request: what is asked, by the kind of the call
   ///
   /// In en, this message translates to:
   /// **'Fetch a page'**
   String get permissionToolWebFetch;
 
-  /// Fallback label for a tool this build has no words for
+  /// Title of a permission request: what is asked, by the kind of the call
   ///
   /// In en, this message translates to:
-  /// **'Use {tool}'**
-  String permissionToolUnknown(String tool);
+  /// **'Search the web'**
+  String get permissionToolWebSearch;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Use an MCP tool'**
+  String get permissionToolMcp;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Start a subagent'**
+  String get permissionToolAgent;
+
+  /// Title of a question the agent asks; {agent} is the display name of the engine
+  ///
+  /// In en, this message translates to:
+  /// **'Answer {agent}\'s question'**
+  String permissionToolQuestion(String agent);
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Approve the plan'**
+  String get permissionToolPlan;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Change the task list'**
+  String get permissionToolTasks;
+
+  /// Title of a permission request: what is asked, by the kind of the call
+  ///
+  /// In en, this message translates to:
+  /// **'Use a tool'**
+  String get permissionToolOther;
 
   /// Risk of a read-only invocation
   ///
@@ -909,6 +1191,12 @@ abstract class AppLocalizations {
   /// **'Refused by one of your rules, without asking anybody.'**
   String get permissionOutcomeRefusedByRule;
 
+  /// The server refused a call that changes something because the session runs in the mode readOnly
+  ///
+  /// In en, this message translates to:
+  /// **'Refused: the session is read-only'**
+  String get permissionRefusedReadOnly;
+
   /// Allow everything (allowAll) answered — the session runs without asking
   ///
   /// In en, this message translates to:
@@ -1017,17 +1305,17 @@ abstract class AppLocalizations {
   /// **'Stop asking about this?'**
   String get permissionPersistTitle;
 
-  /// The reach of a project rule, in full
+  /// The reach of a project rule, in full; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude will run what matches the rule below in this project without asking you, for {duration}.'**
-  String permissionPersistProject(String duration);
+  /// **'{agent} will run what matches the rule below in this project without asking you, for {duration}.'**
+  String permissionPersistProject(String agent, String duration);
 
-  /// The reach of an always rule, in full
+  /// The reach of an always rule, in full; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude will run what matches the rule below in any of your projects without asking you, for {duration}.'**
-  String permissionPersistAlways(String duration);
+  /// **'{agent} will run what matches the rule below in any of your projects without asking you, for {duration}.'**
+  String permissionPersistAlways(String agent, String duration);
 
   /// That a persisted rule is revocable, and when revoking takes effect
   ///
@@ -1053,17 +1341,11 @@ abstract class AppLocalizations {
   /// **'That rule does not exist.'**
   String get permissionErrorRuleNotFound;
 
-  /// What the AskUserQuestion tool does
+  /// Accessibility label of the card of a question the agent asks; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Answer Claude\'s question'**
-  String get permissionToolAskUserQuestion;
-
-  /// Accessibility label of the card of a question Claude asks
-  ///
-  /// In en, this message translates to:
-  /// **'Claude\'s question'**
-  String get permissionQuestionLabel;
+  /// **'{agent}\'s question'**
+  String permissionQuestionLabel(String agent);
 
   /// Which step of the questions is on screen
   ///
@@ -1089,7 +1371,7 @@ abstract class AppLocalizations {
   /// **'Type your answer…'**
   String get permissionQuestionOtherPlaceholder;
 
-  /// The mark of the option Claude recommends
+  /// The mark of the option the agent recommends
   ///
   /// In en, this message translates to:
   /// **'Recommended'**
@@ -1119,7 +1401,7 @@ abstract class AppLocalizations {
   /// **'Next'**
   String get permissionQuestionNext;
 
-  /// Sends the answers to Claude
+  /// Sends the answers to the agent
   ///
   /// In en, this message translates to:
   /// **'Send answers'**
@@ -1131,11 +1413,11 @@ abstract class AppLocalizations {
   /// **'Don\'t answer'**
   String get permissionQuestionDecline;
 
-  /// The optional reason for not answering
+  /// The optional reason for not answering; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Why not? Claude reads this (optional)'**
-  String get permissionQuestionDeclineReason;
+  /// **'Why not? {agent} reads this (optional)'**
+  String permissionQuestionDeclineReason(String agent);
 
   /// Confirms not answering
   ///
@@ -1155,35 +1437,23 @@ abstract class AppLocalizations {
   /// **'This question ran out of time. Nothing was sent.'**
   String get permissionQuestionExpired;
 
-  /// A question whose input could not be read
+  /// A question whose input could not be read; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude\'s question could not be read, so it cannot be answered here. Declining tells Claude so.'**
-  String get permissionQuestionMalformed;
+  /// **'{agent}\'s question could not be read, so it cannot be answered here. Declining tells {agent} so.'**
+  String permissionQuestionMalformed(String agent);
 
-  /// The working indicator: a question of Claude waits
+  /// The working indicator: a question of the agent waits
   ///
   /// In en, this message translates to:
   /// **'Waiting for your answer to a question'**
   String get permissionQuestionWaiting;
 
-  /// The pill over the box with a question of Claude out of view
+  /// The pill over the box with a question of the agent out of view; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude asked you something ({count})'**
-  String permissionQuestionPill(String count);
-
-  /// The line of a tool that asked one question
-  ///
-  /// In en, this message translates to:
-  /// **'Asked: {header}'**
-  String permissionQuestionAsked(String header);
-
-  /// The line of a tool that asked several questions
-  ///
-  /// In en, this message translates to:
-  /// **'Asked {count} questions'**
-  String permissionQuestionAskedMany(int count);
+  /// **'{agent} asked you something ({count})'**
+  String permissionQuestionPill(String agent, String count);
 
   /// A question not answered yet
   ///
@@ -1233,11 +1503,11 @@ abstract class AppLocalizations {
   /// **'Read the list again'**
   String get rulesReload;
 
-  /// What the rules screen is
+  /// What the rules screen is; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'What Claude may do on this machine without asking you first. Revoking takes effect on the next request, in every open session.'**
-  String get rulesDescription;
+  /// **'What {agent} may do on this machine without asking you first. Revoking takes effect on the next request, in every open session.'**
+  String rulesDescription(String agent);
 
   /// While the rules load
   ///
@@ -1251,11 +1521,11 @@ abstract class AppLocalizations {
   /// **'No rules yet'**
   String get rulesEmptyTitle;
 
-  /// What a rule is, when there is none
+  /// What a rule is, when there is none; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'A rule is created when you answer a request with “don\'t ask again”. Until then, Claude asks you every time.'**
-  String get rulesEmptyBody;
+  /// **'A rule is created when you answer a request with “don\'t ask again”. Until then, {agent} asks you every time.'**
+  String rulesEmptyBody(String agent);
 
   /// Reach of a project rule
   ///
@@ -1299,13 +1569,25 @@ abstract class AppLocalizations {
   /// **'Unknown state'**
   String get rulesStatusUnknown;
 
+  /// A rule written for an agent in a form this version cannot translate: it answers nothing
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get rulesStatusDisabled;
+
+  /// Why a disabled rule answers nothing; {agent} is the display name of the engine it was written for
+  ///
+  /// In en, this message translates to:
+  /// **'Written for {agent} in a form this version cannot translate: it no longer applies. Create it again if you still want it.'**
+  String rulesDisabledExplanation(String agent);
+
   /// Accessible name of a rule row
   ///
   /// In en, this message translates to:
   /// **'Rule {pattern}'**
   String rulesRowLabel(String pattern);
 
-  /// The tool of a rule and what it does
+  /// The short name of the kind of call a rule answers, and what it does
   ///
   /// In en, this message translates to:
   /// **'{tool} · {decision}'**
@@ -1329,17 +1611,17 @@ abstract class AppLocalizations {
   /// **'Valid until {at}'**
   String rulesValidUntil(String at);
 
-  /// When a rule stopped answering
+  /// When a rule stopped answering; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Expired on {at}. Claude asks you again.'**
-  String rulesExpiredOn(String at);
+  /// **'Expired on {at}. {agent} asks you again.'**
+  String rulesExpiredOn(String agent, String at);
 
-  /// Warning for a rule close to expiring
+  /// Warning for a rule close to expiring; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Expires soon: after {at}, Claude will ask you again.'**
-  String rulesExpiringSoon(String at);
+  /// **'Expires soon: after {at}, {agent} will ask you again.'**
+  String rulesExpiringSoon(String agent, String at);
 
   /// Revokes a rule
   ///
@@ -1371,11 +1653,11 @@ abstract class AppLocalizations {
   /// **'This machine is already running {limit} sessions, which is as many as it allows. End one and try again.'**
   String sessionErrorLimitReached(String limit);
 
-  /// The server answered CLAUDE_UNAVAILABLE for a session
+  /// The server answered AGENT_UNAVAILABLE for a session; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude stopped responding on this machine.'**
-  String get sessionErrorClaudeUnavailable;
+  /// **'{agent} stopped responding on this machine.'**
+  String sessionErrorAgentUnavailable(String agent);
 
   /// The history answered NOT_FOUND
   ///
@@ -1389,17 +1671,17 @@ abstract class AppLocalizations {
   /// **'{sessionId} is not a conversation identifier.'**
   String transcriptErrorInvalidSessionId(String sessionId);
 
-  /// The history answered CLAUDE_UNAVAILABLE
+  /// The history answered AGENT_UNAVAILABLE; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude could not read its history on this machine.'**
-  String get transcriptErrorClaudeUnavailable;
+  /// **'{agent} could not read its history on this machine.'**
+  String transcriptErrorAgentUnavailable(String agent);
 
-  /// The history answered CLAUDE_TIMEOUT
+  /// The history answered AGENT_TIMEOUT; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude took too long to read its history. Try again.'**
-  String get transcriptErrorClaudeTimeout;
+  /// **'{agent} took too long to read its history. Try again.'**
+  String transcriptErrorAgentTimeout(String agent);
 
   /// The page cursor no longer points into the conversation
   ///
@@ -1569,11 +1851,11 @@ abstract class AppLocalizations {
   /// **'Working in another client…'**
   String get historyFollowWorking;
 
-  /// The help of "Working in another client…": why it is an inference
+  /// The help of "Working in another client…": why it is an inference; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'This is an inference, not something Claude reported: the conversation\'s last entry leaves the turn open — a tool without its result, a thought, or a prompt without an answer — and something wrote it a moment ago. The history does not record the state of a turn, and nothing here says which client it is.'**
-  String get historyFollowWorkingHelp;
+  /// **'This is an inference, not something {agent} reported: the conversation\'s last entry leaves the turn open — a tool without its result, a thought, or a prompt without an answer — and something wrote it a moment ago. The history does not record the state of a turn, and nothing here says which client it is.'**
+  String historyFollowWorkingHelp(String agent);
 
   /// The pill over a followed conversation scrolled up, with one entry arrived below; the same as the web's history.follow.newerOne
   ///
@@ -1623,17 +1905,29 @@ abstract class AppLocalizations {
   /// **'Loading what was said before'**
   String get sessionHistoryLoading;
 
-  /// The server answered INVALID_INPUT for a slash command the installation does not have
+  /// The server answered INVALID_INPUT for a slash command the installation does not have; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'{command} is not a command Claude offers on this machine.'**
-  String sessionErrorUnknownCommand(String command);
+  /// **'{command} is not a command {agent} offers on this machine.'**
+  String sessionErrorUnknownCommand(String agent, String command);
 
-  /// The server answered CLAUDE_TIMEOUT for a session
+  /// The server answered AGENT_TIMEOUT for a session; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude took too long to answer on this machine. Try again.'**
-  String get sessionErrorClaudeTimeout;
+  /// **'{agent} took too long to answer. Try again.'**
+  String sessionErrorAgentTimeout(String agent);
+
+  /// The server answered ENGINE_CAPABILITY_UNAVAILABLE: the engine of the session does not have what was asked; {agent} is its display name
+  ///
+  /// In en, this message translates to:
+  /// **'{agent} cannot do this.'**
+  String engineErrorCapabilityUnavailable(String agent);
+
+  /// What {agent} becomes while no engine name is known: signed out, or before the list of engines arrived
+  ///
+  /// In en, this message translates to:
+  /// **'The agent'**
+  String get engineNameFallback;
 
   /// A resume got no answer before the client's deadline
   ///
@@ -1665,11 +1959,11 @@ abstract class AppLocalizations {
   /// **'Commands'**
   String get sessionCommandsTitle;
 
-  /// What the command menu is — discovery, not a boundary (D-05)
+  /// What the command menu is — discovery, not a boundary (D-05); {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'What Claude offers on this machine. The prompt box accepts any command, listed here or not.'**
-  String get sessionCommandsDescription;
+  /// **'What {agent} offers on this machine. The prompt box accepts any command, listed here or not.'**
+  String sessionCommandsDescription(String agent);
 
   /// Label of the search box of the command menu
   ///
@@ -1701,11 +1995,11 @@ abstract class AppLocalizations {
   /// **'No commands on this machine'**
   String get sessionCommandsEmptyTitle;
 
-  /// Body of the empty state of the command menu: what to do about it
+  /// Body of the empty state of the command menu: what to do about it; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude here offers no commands. You can still type anything in the prompt box.'**
-  String get sessionCommandsEmptyBody;
+  /// **'{agent} here offers no commands. You can still type anything in the prompt box.'**
+  String sessionCommandsEmptyBody(String agent);
 
   /// Shown when the search of the command menu finds nothing
   ///
@@ -1959,11 +2253,11 @@ abstract class AppLocalizations {
   /// **'Always on in a development build.'**
   String get diagnosticsDebugAlwaysOn;
 
-  /// Strip above the box of a closed session: sending resumes it
+  /// Strip above the box of a closed session: sending resumes it; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Sending a prompt resumes it, in a new process of Claude on this machine.'**
-  String get sessionEndedResumes;
+  /// **'Sending a prompt resumes it, in a new process of {agent} on this machine.'**
+  String sessionEndedResumes(String agent);
 
   /// Send button of a closed session
   ///
@@ -1988,6 +2282,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turn ended: {costUsd} USD · {seconds} s'**
   String sessionTurnLine(String costUsd, String seconds);
+
+  /// One-line summary that closes a turn of an engine that reports no cost
+  ///
+  /// In en, this message translates to:
+  /// **'Turn ended: {seconds} s'**
+  String sessionTurnLineNoCost(String seconds);
 
   /// Line where the conversation was compacted on request
   ///
@@ -2067,11 +2367,11 @@ abstract class AppLocalizations {
   /// **'A new conversation'**
   String get draftTitle;
 
-  /// What the draft is
+  /// What the draft is; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Nothing runs until you send the first prompt: then a session of Claude opens in this folder, with what you chose below.'**
-  String get draftDescription;
+  /// **'Nothing runs until you send the first prompt: then a session of {agent} opens in this folder, with what you chose below.'**
+  String draftDescription(String agent);
 
   /// Hint of the draft
   ///
@@ -2103,11 +2403,11 @@ abstract class AppLocalizations {
   /// **'Prompt'**
   String get composerBoxLabel;
 
-  /// Placeholder of the prompt box
+  /// Placeholder of the prompt box; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Ask Claude to do something in this folder…'**
-  String get composerPlaceholder;
+  /// **'Ask {agent} to do something in this folder…'**
+  String composerPlaceholder(String agent);
 
   /// Send button while a turn runs
   ///
@@ -2115,11 +2415,11 @@ abstract class AppLocalizations {
   /// **'Add to queue'**
   String get composerQueue;
 
-  /// Said while a turn runs and the box has text
+  /// Said while a turn runs and the box has text; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude is working: what you send now waits in the queue and runs next.'**
-  String get composerQueued;
+  /// **'{agent} is working: what you send now waits in the queue and runs next.'**
+  String composerQueued(String agent);
 
   /// Stops the turn that is running
   ///
@@ -2175,17 +2475,17 @@ abstract class AppLocalizations {
   /// **'Mode'**
   String get modeLabel;
 
-  /// Mode default
+  /// The mode ask: every call that needs leave asks
   ///
   /// In en, this message translates to:
   /// **'Ask me'**
-  String get modeDefault;
+  String get modeAsk;
 
-  /// modeDefaultDescription
+  /// What the mode ask does; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude asks before every tool that needs your word.'**
-  String get modeDefaultDescription;
+  /// **'{agent} asks before every tool that needs your word.'**
+  String modeAskDescription(String agent);
 
   /// modeAcceptEdits
   ///
@@ -2193,29 +2493,29 @@ abstract class AppLocalizations {
   /// **'Accept edits'**
   String get modeAcceptEdits;
 
-  /// modeAcceptEditsDescription
+  /// What the mode acceptEdits does; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude edits and writes files without asking; it still asks before anything else.'**
-  String get modeAcceptEditsDescription;
+  /// **'{agent} edits and writes files without asking; it still asks before anything else.'**
+  String modeAcceptEditsDescription(String agent);
 
-  /// modeAcceptEditsWarning
+  /// The warning of the mode acceptEdits; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude will edit and write files without asking you — and without the preview of the change.'**
-  String get modeAcceptEditsWarning;
+  /// **'{agent} will edit and write files without asking you — and without the preview of the change.'**
+  String modeAcceptEditsWarning(String agent);
 
-  /// modePlan
+  /// The mode readOnly: nothing that writes files or runs commands is allowed
   ///
   /// In en, this message translates to:
-  /// **'Plan'**
-  String get modePlan;
+  /// **'Read only'**
+  String get modeReadOnly;
 
-  /// modePlanDescription
+  /// What the mode readOnly does; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude plans without changing anything, and asks you to approve the plan.'**
-  String get modePlanDescription;
+  /// **'{agent} reads and plans without changing anything: nothing that writes files or runs commands is allowed.'**
+  String modeReadOnlyDescription(String agent);
 
   /// modeAllowAll
   ///
@@ -2223,17 +2523,17 @@ abstract class AppLocalizations {
   /// **'Allow everything'**
   String get modeAllowAll;
 
-  /// modeAllowAllDescription
+  /// What the mode allowAll does; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude runs every tool without asking, except what one of your rules refuses. Its questions to you still come.'**
-  String get modeAllowAllDescription;
+  /// **'{agent} runs every tool without asking, except what one of your rules refuses. Its questions to you still come.'**
+  String modeAllowAllDescription(String agent);
 
-  /// modeAllowAllWarning
+  /// The warning of the mode allowAll; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude will run any command on this machine without asking you, until you change the mode.'**
-  String get modeAllowAllWarning;
+  /// **'{agent} will run any command on this machine without asking you, until you change the mode.'**
+  String modeAllowAllWarning(String agent);
 
   /// Model chip
   ///
@@ -2301,11 +2601,11 @@ abstract class AppLocalizations {
   /// **'Maximum'**
   String get effortMax;
 
-  /// effortReadOnly
+  /// effortReadOnly; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'The effort is chosen when a conversation starts. Changing it in a running one would stop Claude from asking before each tool.'**
-  String get effortReadOnly;
+  /// **'The effort is chosen when a conversation starts. Changing it in a running one would stop {agent} from asking before each tool.'**
+  String effortReadOnly(String agent);
 
   /// effortUnknown
   ///
@@ -2388,7 +2688,7 @@ abstract class AppLocalizations {
   /// contextCompact
   ///
   /// In en, this message translates to:
-  /// **'Compact the conversation (/compact)'**
+  /// **'Compact the conversation'**
   String get contextCompact;
 
   /// contextCompacting
@@ -2409,23 +2709,17 @@ abstract class AppLocalizations {
   /// **'Reading the context'**
   String get contextLoading;
 
-  /// contextSystemPrompt
+  /// The canonical context category sessions.context.system: the agent's system prompt
   ///
   /// In en, this message translates to:
   /// **'System prompt'**
-  String get contextSystemPrompt;
+  String get contextSystem;
 
-  /// contextSystemTools
+  /// The canonical context category sessions.context.tools: the definitions of the tools the agent can call
   ///
   /// In en, this message translates to:
-  /// **'System tools'**
-  String get contextSystemTools;
-
-  /// contextMcpTools
-  ///
-  /// In en, this message translates to:
-  /// **'MCP tools'**
-  String get contextMcpTools;
+  /// **'Tools'**
+  String get contextTools;
 
   /// contextMessages
   ///
@@ -2433,29 +2727,23 @@ abstract class AppLocalizations {
   /// **'Messages'**
   String get contextMessages;
 
-  /// contextMemoryFiles
+  /// The canonical context category sessions.context.memory: the memory files the agent loaded
   ///
   /// In en, this message translates to:
   /// **'Memory files'**
-  String get contextMemoryFiles;
+  String get contextMemory;
 
-  /// contextSkills
-  ///
-  /// In en, this message translates to:
-  /// **'Skills'**
-  String get contextSkills;
-
-  /// contextFreeSpace
+  /// The canonical context category sessions.context.free: what is left of the window
   ///
   /// In en, this message translates to:
   /// **'Free space'**
-  String get contextFreeSpace;
+  String get contextFree;
 
-  /// contextBuffer
+  /// The canonical context category sessions.context.reserved: the part of the window kept aside for compaction
   ///
   /// In en, this message translates to:
   /// **'Reserved for compaction'**
-  String get contextBuffer;
+  String get contextReserved;
 
   /// sessionErrorQueuedPromptStarted
   ///
@@ -2523,17 +2811,17 @@ abstract class AppLocalizations {
   /// **'Reconnecting…'**
   String get sessionDotReconnecting;
 
-  /// How the session stands, in full
+  /// How the session stands, in full; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude is working'**
-  String get sessionDotRunning;
+  /// **'{agent} is working'**
+  String sessionDotRunning(String agent);
 
-  /// How the session stands, in full: a question waits
+  /// How the session stands, in full: a question waits; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude is waiting for your answer'**
-  String get sessionDotWaiting;
+  /// **'{agent} is waiting for your answer'**
+  String sessionDotWaiting(String agent);
 
   /// How the session stands, in full
   ///
@@ -2571,6 +2859,12 @@ abstract class AppLocalizations {
   /// **'No turn has ended yet, so there is no cost to say.'**
   String get sessionStatusNoCost;
 
+  /// The status sheet of a session whose engine reports no cost; {agent} is the display name of the engine
+  ///
+  /// In en, this message translates to:
+  /// **'{agent} does not report what its turns cost.'**
+  String sessionStatusCostNotReported(String agent);
+
   /// Tooltip of the ⋯ of the bar
   ///
   /// In en, this message translates to:
@@ -2600,6 +2894,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The session id was copied.'**
   String get sessionMenuCopied;
+
+  /// Item of the menu of the session: copies the id of the conversation in the engine's own store; {agent} is the display name of the engine
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the {agent} conversation id'**
+  String sessionMenuCopyConversationId(String agent);
+
+  /// Said once the id of the conversation is on the clipboard; {agent} is the display name of the engine
+  ///
+  /// In en, this message translates to:
+  /// **'The {agent} conversation id was copied.'**
+  String sessionMenuConversationIdCopied(String agent);
 
   /// Said when the clipboard refused the id
   ///
@@ -2637,11 +2943,11 @@ abstract class AppLocalizations {
   /// **'End this session?'**
   String get sessionCloseTitle;
 
-  /// What ending the session loses
+  /// What ending the session loses; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude stops on this machine. What it wrote stays on disk, but the undo of its file changes goes with the session. The conversation stays in the history, and can be resumed.'**
-  String get sessionCloseDescription;
+  /// **'{agent} stops on this machine. What it wrote stays on disk, but the undo of its file changes goes with the session. The conversation stays in the history, and can be resumed.'**
+  String sessionCloseDescription(String agent);
 
   /// Backs out of ending the session
   ///
@@ -2685,11 +2991,11 @@ abstract class AppLocalizations {
   /// **'The bar under the box'**
   String get sessionHelpBarHeading;
 
-  /// Help: the bar of the box
+  /// Help: the bar of the box; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'In this order: / lists the commands and skills; then the mode, the model, the effort and the share of the context window used — with Compact inside it — and send. While Claude works, send puts what you wrote in the queue, and Stop stands beside it; with the box empty, the button itself is Stop. The effort is chosen in a new conversation only. On a narrow screen, the model, the effort and the context move into the … of the bar.'**
-  String get sessionHelpBar;
+  /// **'In this order: / lists the commands and skills; then the mode, the model, the effort and the share of the context window used — with Compact inside it — and send. While {agent} works, send puts what you wrote in the queue, and Stop stands beside it; with the box empty, the button itself is Stop. The effort is chosen in a new conversation only. On a narrow screen, the model, the effort and the context move into the … of the bar.'**
+  String sessionHelpBar(String agent);
 
   /// Help heading
   ///
@@ -2715,17 +3021,17 @@ abstract class AppLocalizations {
   /// **'The chip of the top bar says how the session stands, by colour and by word: connected, reconnecting, running, waiting for you, or ended. Tap it for the id of the session, with the way to copy it, and what it has cost since it opened.'**
   String get sessionHelpStatus;
 
-  /// Help heading
+  /// Help heading; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'While Claude works'**
-  String get sessionHelpWorkingHeading;
+  /// **'While {agent} works'**
+  String sessionHelpWorkingHeading(String agent);
 
-  /// Help: the working indicator
+  /// Help: the working indicator; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'While a turn runs, its last line moves: an asterisk, what Claude is doing — the tool it runs, that it waits for you, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over — what it thought in view, quieter than the answer, when the model showed it; folded when it did not. A tool is one line, folded: tap it for what went in and what came out. When the turn ends, the line gives way to what the turn cost.'**
-  String get sessionHelpWorking;
+  /// **'While a turn runs, its last line moves: an asterisk, what {agent} is doing — the tool it runs, that it waits for you, or a word for the turn — and for how long. Its thinking is a line of its own, in order: \"Thinking…\" while it arrives, \"Thought for n s\" once it is over — what it thought in view, quieter than the answer, when the model showed it; folded when it did not. A tool is one line, folded: tap it for what went in and what came out. When the turn ends, the line gives way to what the turn cost.'**
+  String sessionHelpWorking(String agent);
 
   /// Help heading
   ///
@@ -2733,11 +3039,11 @@ abstract class AppLocalizations {
   /// **'Questions in the conversation'**
   String get sessionHelpInlineHeading;
 
-  /// Help: the inline question
+  /// Help: the inline question; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'When Claude asks before running a tool, the question is in the conversation, in the place of that tool: the exact command, how risky it is, the time left and how far a yes reaches. Once answered, the tool line says how — by you, in the browser, by one of your rules, or refused because nobody answered in time. A question never closes the keyboard nor takes the box from you: send still sends your prompt, and only a tap on the card answers it.'**
-  String get sessionHelpInline;
+  /// **'When {agent} asks before running a tool, the question is in the conversation, in the place of that tool: the exact command, how risky it is, the time left and how far a yes reaches. Once answered, the tool line says how — by you, in the browser, by one of your rules, or refused because nobody answered in time. A question never closes the keyboard nor takes the box from you: send still sends your prompt, and only a tap on the card answers it.'**
+  String sessionHelpInline(String agent);
 
   /// Help heading
   ///
@@ -2745,11 +3051,11 @@ abstract class AppLocalizations {
   /// **'Waiting for your answer'**
   String get sessionHelpPillHeading;
 
-  /// Help: the pending pill
+  /// Help: the pending pill; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'With a question out of view — the conversation scrolled up — a pill over the box says Claude is waiting, and how many questions. Tapping it takes you to the oldest.'**
-  String get sessionHelpPill;
+  /// **'With a question out of view — the conversation scrolled up — a pill over the box says {agent} is waiting, and how many questions. Tapping it takes you to the oldest.'**
+  String sessionHelpPill(String agent);
 
   /// Help heading
   ///
@@ -2757,11 +3063,11 @@ abstract class AppLocalizations {
   /// **'The task list'**
   String get sessionHelpTasksHeading;
 
-  /// Help: the task strip
+  /// Help: the task strip; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'When Claude keeps a task list, it stands over the box, folded into one line — how many are done and what is being done now. Tap it for the whole list; it changes as Claude works, without moving what you are reading.'**
-  String get sessionHelpTasks;
+  /// **'When {agent} keeps a task list, it stands over the box, folded into one line — how many are done and what is being done now. Tap it for the whole list; it changes as {agent} works, without moving what you are reading.'**
+  String sessionHelpTasks(String agent);
 
   /// Help heading
   ///
@@ -2769,17 +3075,17 @@ abstract class AppLocalizations {
   /// **'From a prompt'**
   String get sessionHelpActionsHeading;
 
-  /// Help: the actions of a message
+  /// Help: the actions of a message; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Press and hold a prompt of yours for what can be done from it: edit it and send it again, fork from before it, and put the files back to before its turn — with the reach shown file by file first. A screen reader offers the same three as actions of the message. While Claude works the undo waits for the turn to end; once the session has ended there is no undo.'**
-  String get sessionHelpActions;
+  /// **'Press and hold a prompt of yours for what can be done from it: edit it and send it again, fork from before it, and put the files back to before its turn — with the reach shown file by file first. A screen reader offers the same three as actions of the message. While {agent} works the undo waits for the turn to end; once the session has ended there is no undo.'**
+  String sessionHelpActions(String agent);
 
-  /// What a screen reader says of the plan card
+  /// What a screen reader says of the plan card; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'The plan Claude proposes'**
-  String get permissionPlanLabel;
+  /// **'The plan {agent} proposes'**
+  String permissionPlanLabel(String agent);
 
   /// Title of the plan card
   ///
@@ -2811,11 +3117,11 @@ abstract class AppLocalizations {
   /// **'Keep planning'**
   String get permissionPlanKeepPlanning;
 
-  /// The mode an approved plan goes on in
+  /// The mode an approved plan goes on in: ask
   ///
   /// In en, this message translates to:
   /// **'asking before each edit'**
-  String get permissionPlanModeDefault;
+  String get permissionPlanModeAsk;
 
   /// The mode an approved plan goes on in
   ///
@@ -2967,11 +3273,11 @@ abstract class AppLocalizations {
   /// **'Musing…'**
   String get sessionWorkingVerbMusing;
 
-  /// The pill over the box with a question out of view
+  /// The pill over the box with a question out of view; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude is waiting for your answer ({count})'**
-  String sessionPendingPill(String count);
+  /// **'{agent} is waiting for your answer ({count})'**
+  String sessionPendingPill(String agent, String count);
 
   /// The questions at the tail, whose tool is not a line yet
   ///
@@ -2979,11 +3285,11 @@ abstract class AppLocalizations {
   /// **'Questions waiting for you'**
   String get sessionInlineTail;
 
-  /// What a screen reader says of the task strip
+  /// What a screen reader says of the task strip; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'The task list Claude keeps for this conversation'**
-  String get sessionTasksLabel;
+  /// **'The task list {agent} keeps for this conversation'**
+  String sessionTasksLabel(String agent);
 
   /// The task strip, folded
   ///
@@ -3057,11 +3363,11 @@ abstract class AppLocalizations {
   /// **'Put the files back to before this prompt'**
   String get sessionMessageUndo;
 
-  /// An action of a prompt, off while a turn runs
+  /// An action of a prompt, off while a turn runs; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Put the files back to before this prompt — not while Claude is working'**
-  String get sessionMessageUndoBusy;
+  /// **'Put the files back to before this prompt — not while {agent} is working'**
+  String sessionMessageUndoBusy(String agent);
 
   /// Hint a screen reader gives on a prompt
   ///
@@ -3099,11 +3405,11 @@ abstract class AppLocalizations {
   /// **'Opening the new conversation…'**
   String get sessionForkStarting;
 
-  /// Translation of session.error.forkRejected
+  /// Translation of session.error.forkRejected; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Claude could not continue the conversation from that message. Resume the conversation instead, and edit from there.'**
-  String get sessionErrorForkRejected;
+  /// **'{agent} could not continue the conversation from that message. Resume the conversation instead, and edit from there.'**
+  String sessionErrorForkRejected(String agent);
 
   /// Translation of session.error.forkPointUnknown
   ///
@@ -3435,11 +3741,11 @@ abstract class AppLocalizations {
   /// **'Help about folders'**
   String get foldersHelpOpen;
 
-  /// Help of the folders home
+  /// Help of the folders home; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'Open: the folders you are working in — the same as the folder tabs in the browser. Each one says how many sessions are open in it and how many questions wait for you. Tap one to see its sessions and its history, or to start a new session.\n\nRecent: folders you opened before. Tap one to open it again; pin the ones you come back to.\n\nOpen another folder: walk the roots this computer lets Claude run in, one level at a time, and open the folder you want.\n\nClosing a folder only takes it off the list: the sessions in it keep running.'**
-  String get foldersHelpBody;
+  /// **'Open: the folders you are working in — the same as the folder tabs in the browser. Each one says how many sessions are open in it and how many questions wait for you. Tap one to see its sessions and its history, or to start a new session.\n\nRecent: folders you opened before. Tap one to open it again; pin the ones you come back to.\n\nOpen another folder: walk the roots this computer lets {agent} run in, one level at a time, and open the folder you want.\n\nClosing a folder only takes it off the list: the sessions in it keep running.'**
+  String foldersHelpBody(String agent);
 
   /// Title of the folder picker
   ///
@@ -3447,11 +3753,11 @@ abstract class AppLocalizations {
   /// **'Open a folder'**
   String get folderPickerTitle;
 
-  /// Heading of the roots level
+  /// Heading of the roots level; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'The roots this computer lets Claude run in'**
-  String get folderPickerRoots;
+  /// **'The roots this computer lets {agent} run in'**
+  String folderPickerRoots(String agent);
 
   /// Opens the folder being browsed
   ///
@@ -3567,11 +3873,11 @@ abstract class AppLocalizations {
   /// **'Help about this folder'**
   String get folderHelpOpen;
 
-  /// Help of the folder screen
+  /// Help of the folder screen; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'New session: a draft in this folder. Nothing runs until you send the first prompt.\n\nOpen sessions: what runs in this folder and below it right now, opened here, on another phone or in a browser. Tap one to follow it; it joins the sessions panel of this folder.\n\nHistory: the conversations Claude kept for this folder. Open one to read it or to continue it.'**
-  String get folderHelpBody;
+  /// **'New session: a draft in this folder. Nothing runs until you send the first prompt.\n\nOpen sessions: what runs in this folder and below it right now, opened here, on another phone or in a browser. Tap one to follow it; it joins the sessions panel of this folder.\n\nHistory: the conversations {agent} kept for this folder. Open one to read it or to continue it.'**
+  String folderHelpBody(String agent);
 
   /// Status of a live session
   ///
@@ -3921,11 +4227,11 @@ abstract class AppLocalizations {
   /// **'Back'**
   String get fileViewerBack;
 
-  /// A question waits in the session the viewer was opened from
+  /// A question waits in the session the viewer was opened from; {agent} is the display name of the engine
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{Claude is waiting for your answer} other{Claude is waiting for {count} answers}}'**
-  String fileViewerClaudeWaiting(int count);
+  /// **'{count, plural, =1{{agent} is waiting for your answer} other{{agent} is waiting for {count} answers}}'**
+  String fileViewerAgentWaiting(String agent, int count);
 
   /// Goes to the card of the question
   ///

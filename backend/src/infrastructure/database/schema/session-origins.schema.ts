@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 /**
  * That **we** opened a conversation of Claude: `session_origins`.
@@ -17,11 +17,18 @@ export const sessionOrigins = pgTable(
   'session_origins',
   {
     claudeSessionId: text('claude_session_id').primaryKey(),
+    /** The engine of the conversation (plan 28, B-11) — written by the code, never defaulted. */
+    engine: text('engine').notNull(),
+    /** The id of the conversation in its engine's store; the old column is its copy until F7. */
+    conversationId: text('conversation_id').notNull(),
     /** Our id for the live session that opened it. */
     sessionId: text('session_id').notNull(),
     userId: text('user_id').notNull(),
     workspacePath: text('workspace_path').notNull(),
     openedAt: timestamp('opened_at', { withTimezone: true }).notNull(),
   },
-  (table) => [index('session_origins_session_id_idx').on(table.sessionId)],
+  (table) => [
+    index('session_origins_session_id_idx').on(table.sessionId),
+    uniqueIndex('session_origins_conversation_idx').on(table.engine, table.conversationId),
+  ],
 );

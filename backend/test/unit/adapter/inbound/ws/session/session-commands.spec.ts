@@ -130,17 +130,17 @@ describe('the attachments of session.prompt', () => {
 describe('the fork point of session.start — S-08', () => {
   it('refuses a fork point without the conversation it belongs to', () => {
     expect(refusedFields(sessionSchemas.start, { workspacePath: '/w', forkAt: 'm-1' })).toEqual([
-      'resumeSessionId',
+      'resumeFrom',
     ]);
   });
 
   it('accepts a fork point of a resumed conversation, and a start with neither', () => {
     expect(
       payloadOf(
-        frame({ workspacePath: '/w', forkAt: 'm-1', resumeSessionId: 'c-1' }),
+        frame({ workspacePath: '/w', forkAt: 'm-1', resumeFrom: { engine: 'claude', id: 'c-1' } }),
         sessionSchemas.start,
       ),
-    ).toMatchObject({ forkAt: 'm-1', resumeSessionId: 'c-1' });
+    ).toMatchObject({ forkAt: 'm-1', resumeFrom: { engine: 'claude', id: 'c-1' } });
     expect(payloadOf(frame({ workspacePath: '/w' }), sessionSchemas.start)).toEqual({
       workspacePath: '/w',
     });

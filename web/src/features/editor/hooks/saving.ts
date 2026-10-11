@@ -19,7 +19,7 @@ export type SaveResult =
 
 /** What a save may be told besides the file. */
 export interface SaveOptions {
-  /** The second step of a file that changes what Claude may do was answered (07 · D-15). */
+  /** The second step of a file that changes what the agent may do was answered (07 · D-15). */
   readonly confirmSensitive?: boolean;
 
   /** "Overwrite": the version the `412` brought, saved over on purpose (S-228). */

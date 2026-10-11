@@ -5,8 +5,8 @@ import { fireEvent } from '@testing-library/react';
 import { atEnd, useFollowTail } from '@/features/session/hooks/useFollowTail';
 import type { ScrollKeeper } from '@/features/session/hooks/useFollowTail';
 import { useScrollKeeper } from '@/features/session/hooks/useScrollKeeper';
-import { claudePanelStore, forgetClaudePanel } from '@/features/session/store/claude-panel.store';
-import type { ScrollMemory } from '@/features/session/store/claude-panel.store';
+import { agentPanelStore, forgetAgentPanel } from '@/features/session/store/agent-panel.store';
+import type { ScrollMemory } from '@/features/session/store/agent-panel.store';
 
 /** The observers of sizes the hook made — jsdom lays nothing out, so the test says when sizes change. */
 const observed = vi.hoisted(() => new Set<() => void>());
@@ -28,7 +28,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
 });
 
 /** A scroller of jsdom with the sizes a test gives it. */
@@ -189,7 +189,7 @@ describe('where each conversation was left — plan 09, B-05', () => {
 
     expect(one?.read()).toEqual({ top: 120, following: false });
     expect(other?.read()).toBeUndefined();
-    expect(claudePanelStore('/a').getState().scrolls['session:x']).toEqual({
+    expect(agentPanelStore('/a').getState().scrolls['session:x']).toEqual({
       top: 120,
       following: false,
     });
@@ -200,12 +200,12 @@ describe('where each conversation was left — plan 09, B-05', () => {
   });
 
   it('forgets it with the tab', () => {
-    const panel = claudePanelStore('/a').getState();
+    const panel = agentPanelStore('/a').getState();
     panel.show('session', 'x');
     panel.setScroll('session:x', { top: 10, following: false });
 
-    claudePanelStore('/a').getState().close('session:x');
+    agentPanelStore('/a').getState().close('session:x');
 
-    expect(claudePanelStore('/a').getState().scrolls).toEqual({});
+    expect(agentPanelStore('/a').getState().scrolls).toEqual({});
   });
 });

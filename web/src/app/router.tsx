@@ -150,8 +150,8 @@ const settingsRoute = createRoute({
 });
 
 /**
- * How Claude works on this machine (plan 13): the section and the folder in the search, so the link
- * reproduces the screen. A section nobody knows is the first one, without an error.
+ * How the agent works on this machine (plan 13): the section and the folder in the search, so the
+ * link reproduces the screen. A section nobody knows is the first one, without an error.
  */
 const claudeSettingsRoute = createRoute({
   getParentRoute: () => frameRoute,

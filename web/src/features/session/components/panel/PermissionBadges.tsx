@@ -6,9 +6,9 @@ import { folderName } from '@/shared/lib/folder-name';
 import { usePendingPermissions } from '../../hooks/usePendingPermissions';
 
 /**
- * How many questions Claude is waiting on in a folder tab, on the tab itself and on the activity bar
- * (plan 08, B-42) — so a question never gets lost by being asked where nobody is looking: a tab not
- * on screen, a panel closed (S-188, S-189). Answered on another device, it goes (S-190).
+ * How many questions the agent is waiting on in a folder tab, on the tab itself and on the activity
+ * bar (plan 08, B-42) — so a question never gets lost by being asked where nobody is looking: a tab
+ * not on screen, a panel closed (S-188, S-189). Answered on another device, it goes (S-190).
  */
 export function PermissionCount({ folder }: { readonly folder: string }): React.JSX.Element | null {
   const { t } = useTranslation();
@@ -25,7 +25,7 @@ export function PermissionCount({ folder }: { readonly folder: string }): React.
   );
 }
 
-/** The badge on the view of Claude's sessions in the activity bar — said aloud when the panel is closed. */
+/** The badge on the agent's sessions in the activity bar — said aloud when the panel is closed. */
 export function ActivityPermissionBadge({
   folder,
 }: {

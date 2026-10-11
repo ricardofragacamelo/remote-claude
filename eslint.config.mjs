@@ -48,6 +48,28 @@ const OTHER_ICONS = {
     'icons-only-lucide: the web draws its icons from `lucide-react` alone, so every control that is only an icon looks and is labelled the same way.',
 };
 
+/**
+ * The core never imports an engine extension: the composition in `web/src/app/engines.ts` is the one
+ * file that knows one (ADR-025, docs/architecture/shared/12-engines.md). Reused by every scope of the
+ * core below, since a later scope that sets `no-restricted-imports` replaces the earlier one.
+ */
+const CORE_CANNOT_IMPORT_ENGINES = {
+  group: [
+    '@/engines',
+    '@/engines/**',
+    '../engines/**',
+    '../../engines/**',
+    '../../../engines/**',
+    '../../../../engines/**',
+    '../../../../../engines/**',
+  ],
+  message:
+    'core-cannot-import-engines: the core never knows an engine extension; app/engines.ts registers it into the registries of the core (ADR-025).',
+};
+
+/** The engine extensions of the web, one folder each under `web/src/engines/`. */
+const WEB_ENGINES = ['claude'];
+
 /** A token in `localStorage` is a token any script on the page can read — see the scope below. */
 const TOKEN_IN_WEB_STORAGE = {
   selector: 'CallExpression[callee.object.name="localStorage"][callee.property.name="setItem"]',
@@ -139,6 +161,48 @@ export default tseslint.config(
   },
 
   {
+    // The three rings of ADR-025, for every file of the core that no narrower scope below covers.
+    // The scopes below repeat the pattern, because the last scope to set a rule replaces it.
+    name: 'remote-claude/web-core-cannot-import-engines',
+    files: ['web/src/{features,shared,app}/**/*.{ts,tsx}', 'web/src/*.{ts,tsx}'],
+    ignores: ['web/src/app/engines.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [CORE_CANNOT_IMPORT_ENGINES, OTHER_ICONS] }],
+    },
+  },
+
+  // An engine extension depends on the core alone: never on another extension, never on the inside
+  // of a feature (only its barrel). One scope per engine, since a pattern cannot say "another".
+  ...WEB_ENGINES.map(
+    (engine) =>
+      /** @type {import('eslint').Linter.Config} */ ({
+        name: `remote-claude/web-engines-are-isolated-${engine}`,
+        files: [`web/src/engines/${engine}/**/*.{ts,tsx}`],
+        rules: {
+          'no-restricted-imports': [
+            'error',
+            {
+              patterns: [
+                {
+                  group: [
+                    '@/engines/*',
+                    '@/engines/*/**',
+                    `!@/engines/${engine}`,
+                    `!@/engines/${engine}/**`,
+                  ],
+                  message:
+                    'engines-are-isolated: one engine extension never imports another; each depends on the core alone (ADR-025).',
+                },
+                CROSS_FEATURE,
+                OTHER_ICONS,
+              ],
+            },
+          ],
+        },
+      }),
+  ),
+
+  {
     // The chain `Component → Hook → Service → api.ts` of docs/architecture/web/01-architecture.md,
     // as lint. Each block below is one line of the table in
     // docs/architecture/shared/09-code-quality.md#web--eslint-plugin-boundaries, and a violation
@@ -162,6 +226,7 @@ export default tseslint.config(
             },
             CROSS_FEATURE,
             OTHER_ICONS,
+            CORE_CANNOT_IMPORT_ENGINES,
           ],
         },
       ],
@@ -189,6 +254,7 @@ export default tseslint.config(
                 'no-react-in-services: a service is an async function with no React in it, which is what makes testing it a call rather than a render.',
             },
             CROSS_FEATURE,
+            CORE_CANNOT_IMPORT_ENGINES,
           ],
         },
       ],
@@ -202,7 +268,7 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [CROSS_FEATURE],
+          patterns: [CROSS_FEATURE, CORE_CANNOT_IMPORT_ENGINES],
         },
       ],
     },
@@ -222,6 +288,7 @@ export default tseslint.config(
                 'shared-cannot-import-features: shared/ is the bottom of the stack. The arrow points at it, never away from it.',
             },
             OTHER_ICONS,
+            CORE_CANNOT_IMPORT_ENGINES,
           ],
         },
       ],
@@ -232,6 +299,16 @@ export default tseslint.config(
     // The app layer composes screens and draws the frame: the same one set of icons.
     name: 'remote-claude/web-app-icons',
     files: ['web/src/app/**/*.{ts,tsx}'],
+    ignores: ['web/src/app/engines.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [OTHER_ICONS, CORE_CANNOT_IMPORT_ENGINES] }],
+    },
+  },
+
+  {
+    // The composition: the one file of the core that imports the engine extensions (ADR-025).
+    name: 'remote-claude/web-app-engines',
+    files: ['web/src/app/engines.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [OTHER_ICONS] }],
     },

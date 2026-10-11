@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_outcome.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_request.dart';
+import 'package:remote_claude/features/permission/domain/entities/plan_interaction.dart';
 
 import '../../../../../support/builders/permissions.dart';
+import '../../../../../support/builders/tools.dart';
 
 void main() {
   group('the deadline', () {
@@ -62,11 +64,20 @@ void main() {
     });
 
     test('keeps the rule it would grant when the deadline moves', () {
-      const RuleOffer rule = RuleOffer(pattern: 'Bash(git status)', lifetime: Duration(days: 90));
+      const RuleOffer rule = RuleOffer(pattern: 'shell(git status)', lifetime: Duration(days: 90));
       final PermissionRequest offering = aPermissionRequest(rule: rule);
 
       expect(offering.withDeadline(t0).rule, rule);
       expect(offering, isNot(aPermissionRequest()));
+    });
+
+    test('a plan to approve travels with the deadline, and tells two requests apart', () {
+      const PlanInteraction plan = PlanInteraction(markdown: '1. Read', path: '/w/plan.md');
+      final PermissionRequest planning = aPermissionRequest(plan: plan);
+
+      expect(planning.withDeadline(t0).plan, plan);
+      expect(planning, isNot(aPermissionRequest()));
+      expect(plan, isNot(const PlanInteraction(markdown: '1. Read')));
     });
   });
 
@@ -79,7 +90,7 @@ void main() {
     test('is the whole input when there is no detail', () {
       final PermissionRequest request = aPermissionRequest(
         description: null,
-        input: <String, Object?>{'file_path': '/tmp/a', 'content': 'x'},
+        call: aToolCall(rawInput: const <String, Object?>{'file_path': '/tmp/a', 'content': 'x'}),
       );
 
       expect(request.command, contains('"file_path": "/tmp/a"'));

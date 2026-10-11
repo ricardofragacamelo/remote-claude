@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/error/failure.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/features/session/domain/entities/insight.dart';
 import 'package:remote_claude/features/session/presentation/widgets/composer_bar.dart';
 import 'package:remote_claude/features/session/presentation/widgets/session_choices.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/pump_app.dart';
 
 const InstallationModel opus = InstallationModel(
@@ -20,7 +22,13 @@ const InstallationModel opus = InstallationModel(
 );
 const InstallationModel sonnet = InstallationModel(value: 'sonnet', displayName: 'Sonnet');
 
-/// Mounts the chip [build] makes, as the bar draws it.
+/// Every canonical mode, as an engine that has them all announces them.
+const List<String> allModes = <String>['ask', 'acceptEdits', 'readOnly', 'allowAll'];
+
+/// The levels of effort the engine of these tests announces — one this build has no words for.
+const List<String> someLevels = <String>['low', 'medium', 'high', 'turbo'];
+
+/// Mounts the chip [build] makes, as the bar draws it, under the names of the engines.
 Future<void> pumpChip(WidgetTester tester, ComposerChoice? Function(BuildContext) build) =>
     tester.pumpApp(
       Builder(
@@ -28,6 +36,13 @@ Future<void> pumpChip(WidgetTester tester, ComposerChoice? Function(BuildContext
           final ComposerChoice? choice = build(context);
           return choice == null ? const Text('no chip') : ChoiceChipButton(choice: choice);
         },
+      ),
+      builder: (BuildContext context, Widget? child) => AgentNamesScope(
+        names: const AgentNames(
+          names: <String, String>{anEngine: anEngineName},
+          defaultEngine: anEngine,
+        ),
+        child: child ?? const SizedBox.shrink(),
       ),
     );
 
@@ -42,27 +57,71 @@ void main() {
   setUp(() => picked = <Object?>[]);
 
   group('the mode', () {
-    testWidgets('S-33 · offers ask, accept edits and plan — never bypassing every question', (
+    testWidgets('S-33 · offers ask, accept edits and read only — never bypassing every question', (
       WidgetTester tester,
     ) async {
       await pumpChip(
         tester,
-        (BuildContext context) => modeChoice(context, current: null, onPick: picked.add),
+        (BuildContext context) =>
+            modeChoice(context, current: null, modes: allModes, onPick: picked.add),
       );
 
-      expect(find.text(l10n.modeDefault), findsOneWidget);
-      await tester.tap(find.text(l10n.modeDefault));
+      expect(find.text(l10n.modeAsk), findsOneWidget);
+      await tester.tap(find.text(l10n.modeAsk));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.modePlan), findsOneWidget);
+      expect(find.text(l10n.modeReadOnly), findsOneWidget);
       expect(find.text(l10n.modeAcceptEdits), findsOneWidget);
       expect(find.textContaining('bypass'), findsNothing);
-      // The warning is said in full where it is chosen.
-      expect(find.textContaining(l10n.modeAcceptEditsWarning), findsOneWidget);
+      // The warning is said in full where it is chosen, of the agent by its name.
+      expect(find.textContaining(l10n.modeAcceptEditsWarning(anEngineName)), findsOneWidget);
+      expect(find.textContaining(l10n.modeReadOnlyDescription(anEngineName)), findsOneWidget);
 
-      await tester.tap(find.text(l10n.modePlan));
+      await tester.tap(find.text(l10n.modeReadOnly));
       await tester.pumpAndSettle();
-      expect(picked, <Object?>['plan']);
+      expect(picked, <Object?>['readOnly']);
+    });
+
+    testWidgets('plan 28 · S-81 · offers only the modes the engine announced, in its order', (
+      WidgetTester tester,
+    ) async {
+      await pumpChip(
+        tester,
+        (BuildContext context) => modeChoice(
+          context,
+          current: 'readOnly',
+          modes: const <String>['readOnly', 'ask'],
+          onPick: picked.add,
+        ),
+      );
+
+      await tester.tap(find.text(l10n.modeReadOnly));
+      await tester.pumpAndSettle();
+
+      final List<String> titles = tester
+          .widgetList<ListTile>(find.byType(ListTile))
+          .map((ListTile tile) => (tile.title! as Text).data!)
+          .toList();
+      expect(titles, <String>[l10n.modeReadOnly, l10n.modeAsk]);
+      expect(find.text(l10n.modeAcceptEdits), findsNothing);
+      expect(find.text(l10n.modeAllowAll), findsNothing);
+    });
+
+    testWidgets('plan 28 · S-81 · one mode, or none known, is no choice: no chip', (
+      WidgetTester tester,
+    ) async {
+      for (final List<String> modes in <List<String>>[
+        const <String>['ask'],
+        const <String>[],
+      ]) {
+        await pumpChip(
+          tester,
+          (BuildContext context) =>
+              modeChoice(context, current: 'ask', modes: modes, onPick: picked.add),
+        );
+
+        expect(find.text('no chip'), findsOneWidget, reason: '$modes');
+      }
     });
 
     testWidgets(
@@ -70,7 +129,8 @@ void main() {
       (WidgetTester tester) async {
         await pumpChip(
           tester,
-          (BuildContext context) => modeChoice(context, current: 'acceptEdits', onPick: picked.add),
+          (BuildContext context) =>
+              modeChoice(context, current: 'acceptEdits', modes: allModes, onPick: picked.add),
         );
 
         expect(find.text(l10n.modeAcceptEdits), findsOneWidget);
@@ -83,15 +143,17 @@ void main() {
     ) async {
       await pumpChip(
         tester,
-        (BuildContext context) => modeChoice(context, current: null, onPick: picked.add),
+        (BuildContext context) =>
+            modeChoice(context, current: null, modes: allModes, onPick: picked.add),
       );
 
-      await tester.tap(find.text(l10n.modeDefault));
+      await tester.tap(find.text(l10n.modeAsk));
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.modeAllowAll), findsOneWidget);
-      expect(find.textContaining(l10n.modeAllowAllWarning), findsOneWidget);
-      expect(offeredModes.last, 'allowAll');
+      expect(find.textContaining(l10n.modeAllowAllWarning(anEngineName)), findsOneWidget);
+      expect(find.textContaining(l10n.modeAllowAllDescription(anEngineName)), findsOneWidget);
+      expect(find.textContaining(l10n.modeAskDescription(anEngineName)), findsOneWidget);
 
       await tester.tap(find.text(l10n.modeAllowAll));
       await tester.pumpAndSettle();
@@ -103,7 +165,8 @@ void main() {
     ) async {
       await pumpChip(
         tester,
-        (BuildContext context) => modeChoice(context, current: 'allowAll', onPick: picked.add),
+        (BuildContext context) =>
+            modeChoice(context, current: 'allowAll', modes: allModes, onPick: picked.add),
       );
 
       expect(find.text(l10n.modeAllowAll), findsOneWidget);
@@ -115,24 +178,28 @@ void main() {
       (WidgetTester tester) async {
         await pumpChip(
           tester,
-          (BuildContext context) => modeChoice(context, current: 'dontAsk', onPick: picked.add),
+          (BuildContext context) =>
+              modeChoice(context, current: 'dontAsk', modes: allModes, onPick: picked.add),
         );
 
         expect(find.text('dontAsk'), findsOneWidget);
         expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
-        expect(offeredModes, isNot(contains('dontAsk')));
+        await tester.tap(find.text('dontAsk'));
+        await tester.pumpAndSettle();
+        expect(find.text('dontAsk'), findsOneWidget);
       },
     );
 
     testWidgets('picking what is already chosen sends nothing', (WidgetTester tester) async {
       await pumpChip(
         tester,
-        (BuildContext context) => modeChoice(context, current: 'plan', onPick: picked.add),
+        (BuildContext context) =>
+            modeChoice(context, current: 'readOnly', modes: allModes, onPick: picked.add),
       );
 
-      await tester.tap(find.text(l10n.modePlan));
+      await tester.tap(find.text(l10n.modeReadOnly));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.modePlan).last);
+      await tester.tap(find.text(l10n.modeReadOnly).last);
       await tester.pumpAndSettle();
 
       expect(picked, isEmpty);
@@ -143,14 +210,19 @@ void main() {
     ) async {
       await pumpChip(
         tester,
-        (BuildContext context) =>
-            modeChoice(context, current: 'plan', onPick: picked.add, isPending: true),
+        (BuildContext context) => modeChoice(
+          context,
+          current: 'readOnly',
+          modes: allModes,
+          onPick: picked.add,
+          isPending: true,
+        ),
       );
 
       expect(find.text(l10n.composerChoicePending), findsOneWidget);
       await tester.tap(find.text(l10n.composerChoicePending));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.modeDefault));
+      await tester.tap(find.text(l10n.modeAsk));
       await tester.pumpAndSettle();
 
       expect(picked, isEmpty);
@@ -159,7 +231,8 @@ void main() {
     test('a mode this build has no words for is shown as it is', () async {
       final AppLocalizations en = await englishCatalogue();
       expect(modeName(en, 'auto'), 'auto');
-      expect(modeDescription(en, 'auto'), isEmpty);
+      expect(modeDescription(en, 'auto', anEngineName), isEmpty);
+      expect(modeWarning(en, 'auto', anEngineName), isNull);
     });
   });
 
@@ -291,15 +364,57 @@ void main() {
     testWidgets('a model that takes none has no chip', (WidgetTester tester) async {
       await pumpChip(
         tester,
-        (BuildContext context) => effortChoice(context, model: sonnet, current: null),
+        (BuildContext context) =>
+            effortChoice(context, model: sonnet, levels: someLevels, current: null),
       );
       expect(find.text('no chip'), findsOneWidget);
 
       await pumpChip(
         tester,
-        (BuildContext context) => effortChoice(context, model: null, current: null),
+        (BuildContext context) =>
+            effortChoice(context, model: null, levels: someLevels, current: null),
       );
       expect(find.text('no chip'), findsOneWidget);
+    });
+
+    testWidgets('plan 28 · S-83 · an engine that announces no level has no chip', (
+      WidgetTester tester,
+    ) async {
+      await pumpChip(
+        tester,
+        (BuildContext context) => effortChoice(
+          context,
+          model: opus,
+          levels: const <String>[],
+          current: null,
+          onPick: picked.add,
+        ),
+      );
+
+      expect(find.text('no chip'), findsOneWidget);
+    });
+
+    testWidgets('plan 28 · S-83 · only the levels the engine announced that the model takes', (
+      WidgetTester tester,
+    ) async {
+      await pumpChip(
+        tester,
+        (BuildContext context) => effortChoice(
+          context,
+          model: opus,
+          levels: const <String>['high', 'max'],
+          current: null,
+          onPick: picked.add,
+        ),
+      );
+
+      await tester.tap(find.text(l10n.effortDefault));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.effortHigh), findsOneWidget);
+      expect(find.text(l10n.effortLow), findsNothing);
+      expect(find.text(l10n.effortMax), findsNothing);
+      expect(find.text('turbo'), findsNothing);
     });
 
     testWidgets('S-34 · in a draft, the levels the model takes, by name', (
@@ -307,8 +422,13 @@ void main() {
     ) async {
       await pumpChip(
         tester,
-        (BuildContext context) =>
-            effortChoice(context, model: opus, current: null, onPick: picked.add),
+        (BuildContext context) => effortChoice(
+          context,
+          model: opus,
+          levels: someLevels,
+          current: null,
+          onPick: picked.add,
+        ),
       );
 
       await tester.tap(find.text(l10n.effortDefault));
@@ -327,13 +447,14 @@ void main() {
     ) async {
       await pumpChip(
         tester,
-        (BuildContext context) => effortChoice(context, model: opus, current: 'high'),
+        (BuildContext context) =>
+            effortChoice(context, model: opus, levels: someLevels, current: 'high'),
       );
 
       await tester.tap(find.text(l10n.effortHigh));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.effortReadOnly), findsOneWidget);
+      expect(find.text(l10n.effortReadOnly(anEngineName)), findsOneWidget);
       expect(find.text(l10n.effortLow), findsNothing);
     });
 
@@ -342,7 +463,8 @@ void main() {
     ) async {
       await pumpChip(
         tester,
-        (BuildContext context) => effortChoice(context, model: opus, current: null, isKnown: false),
+        (BuildContext context) =>
+            effortChoice(context, model: opus, levels: someLevels, current: null, isKnown: false),
       );
 
       expect(find.text(l10n.effortUnknown), findsOneWidget);

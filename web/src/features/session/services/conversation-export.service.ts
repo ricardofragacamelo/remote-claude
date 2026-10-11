@@ -1,3 +1,4 @@
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { logger } from '@/shared/logging/logger';
 import { conversationMarkdown } from '../lib/conversation-markdown';
 import type { MarkdownLabels, MarkdownOptions } from '../lib/conversation-markdown';
@@ -15,7 +16,7 @@ import { fetchHistoryPage } from './history.service';
  *   half a conversation (S-182)
  */
 export async function exportConversation(
-  conversationId: string,
+  conversation: ConversationRef,
   labels: MarkdownLabels,
   options: MarkdownOptions,
   onPage: (pages: number) => void,
@@ -25,7 +26,7 @@ export async function exportConversation(
 
   do {
     onPage(pages.length);
-    const page = await fetchHistoryPage(conversationId, cursor);
+    const page = await fetchHistoryPage(conversation, cursor);
     pages.unshift(page.events);
     cursor = page.nextCursor;
   } while (cursor !== null);
@@ -34,7 +35,7 @@ export async function exportConversation(
   logger.debug(
     {
       op: 'session.export',
-      conversationId,
+      conversation,
       pages: pages.length,
       outputs: options.outputs,
       length: markdown.length,

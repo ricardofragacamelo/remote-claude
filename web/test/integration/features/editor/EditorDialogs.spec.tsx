@@ -83,7 +83,7 @@ describe('the questions of the editor, answered with Esc — plan 07, S-268', ()
     const dialog = await screen.findByRole('dialog', {
       name: t('editor.sensitive.title', { path: 'hooks.json' }),
     });
-    expect(within(dialog).getByText(t('editor.sensitive.claudeSettings'))).toBeVisible();
+    expect(within(dialog).getByText(t('editor.sensitive.projectSettings'))).toBeVisible();
     await user.keyboard('{Escape}');
 
     await waitFor(() => {

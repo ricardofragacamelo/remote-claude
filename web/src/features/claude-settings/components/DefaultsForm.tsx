@@ -5,13 +5,16 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import type { ErrorStateProps } from '@/shared/components/ErrorState';
 import { LearnMore } from '@/shared/components/LearnMore';
 import { Button } from '@/shared/components/ui/button';
-import { DEFAULT_MODES, EFFORT_LEVELS, THINKING_SETTINGS } from '../types/defaults';
+import { levelName, useEngineCapabilities } from '@/features/session';
+import { THINKING_SETTINGS } from '../types/defaults';
 import type {
   ClaudeDefaults,
   ClaudeModel,
   DefaultField,
+  DefaultMode,
   DefaultsOrigin,
   EffectiveValue,
+  EffortLevel,
 } from '../types/defaults';
 
 const INPUT = 'h-10 rounded-lg border border-border bg-transparent px-3 text-ui md:h-8';
@@ -29,20 +32,21 @@ const FIELD_KEYS: Readonly<
 };
 
 /** Each mode, named in full. */
-export const MODE_NAMES: Readonly<Record<(typeof DEFAULT_MODES)[number], string>> = {
-  default: 'claudeSettings.models.modeDefault',
+const MODE_NAMES: Readonly<Record<DefaultMode, string>> = {
+  ask: 'claudeSettings.models.modeAsk',
   acceptEdits: 'claudeSettings.models.modeAcceptEdits',
-  plan: 'claudeSettings.models.modePlan',
+  readOnly: 'claudeSettings.models.modeReadOnly',
   allowAll: 'claudeSettings.models.modeAllowAll',
 };
 
-const EFFORT_NAMES: Readonly<Record<(typeof EFFORT_LEVELS)[number], string>> = {
-  low: 'claudeSettings.models.effortLow',
-  medium: 'claudeSettings.models.effortMedium',
-  high: 'claudeSettings.models.effortHigh',
-  xhigh: 'claudeSettings.models.effortXhigh',
-  max: 'claudeSettings.models.effortMax',
-};
+/** Each canonical level, named in full — one this build does not know is shown as the engine says. */
+const EFFORT_NAMES: ReadonlyMap<string, string> = new Map<EffortLevel, string>([
+  ['low', 'claudeSettings.models.effortLow'],
+  ['medium', 'claudeSettings.models.effortMedium'],
+  ['high', 'claudeSettings.models.effortHigh'],
+  ['xhigh', 'claudeSettings.models.effortXhigh'],
+  ['max', 'claudeSettings.models.effortMax'],
+]);
 
 const THINKING_NAMES: Readonly<Record<(typeof THINKING_SETTINGS)[number], string>> = {
   on: 'claudeSettings.models.thinkingOn',
@@ -70,18 +74,28 @@ export interface DefaultsFormProps {
   onClear?(): void;
 }
 
-/** The levels of effort a model declares — none for a model that takes none. */
-function levelsOf(models: readonly ClaudeModel[], model: string | null): readonly string[] {
+/**
+ * The levels of effort a model takes, of the ones the engine announces — every one of them for a
+ * model the installation did not list, none for a model that takes none.
+ */
+function levelsOf(
+  models: readonly ClaudeModel[],
+  model: string | null,
+  announced: readonly string[],
+): readonly string[] {
   const entry = models.find(
     (each) => each.value === (model ?? 'default') || each.resolvedModel === model,
   );
-  return entry === undefined ? EFFORT_LEVELS : entry.supportedEffortLevels;
+  return entry === undefined ? announced : entry.supportedEffortLevels;
 }
 
 /**
  * One scope of defaults — the user's, or a folder's — as a form (plan 13, B-16, B-17). An effort the
  * chosen model does not take is not offered, with why beside it, before anything is sent (S-60); the
  * server checks again, and its refusal comes back translated, saying what to do (S-61).
+ *
+ * The modes and the levels of effort are the ones the engine announces (plan 28, B-27, B-28): an
+ * engine that announces no level has no field of effort at all.
  */
 export function DefaultsForm({
   heading,
@@ -102,8 +116,10 @@ export function DefaultsForm({
   const set = (field: DefaultField) => (value: string) => {
     setDraft((current) => ({ ...current, [field]: value === '' ? null : value }));
   };
-  const levels = levelsOf(models, draft.model);
-  const effortRefused = draft.effort !== null && !levels.includes(draft.effort);
+  const capabilities = useEngineCapabilities(null);
+  const announced = capabilities?.effortLevels ?? [];
+  const levels = levelsOf(models, draft.model, announced);
+  const effortRefused = refusedEffort(announced, levels, draft.effort);
   const named = (each: readonly ClaudeModel[]): readonly Option[] =>
     each.map((model) => ({ value: model.value, label: model.displayName }));
 
@@ -133,27 +149,21 @@ export function DefaultsForm({
         <Choice
           value={draft.permissionMode}
           none={installationDefault}
-          options={DEFAULT_MODES.map((mode) => ({ value: mode, label: t(MODE_NAMES[mode]) }))}
+          options={(capabilities?.permissionModes ?? []).map((mode) => ({
+            value: mode,
+            label: t(MODE_NAMES[mode]),
+          }))}
           onChange={set('permissionMode')}
         />
       </Field>
 
-      <Field
-        field="effort"
+      <EffortField
+        announced={announced}
+        levels={levels}
+        value={draft.effort}
         effective={effective}
-        refusal={effortRefused ? t('claudeSettings.models.effortRefused') : null}
-      >
-        <Choice
-          value={draft.effort}
-          none={installationDefault}
-          options={EFFORT_LEVELS.map((level) => ({
-            value: level,
-            label: t(EFFORT_NAMES[level]),
-            disabled: !levels.includes(level),
-          }))}
-          onChange={set('effort')}
-        />
-      </Field>
+        onChange={set('effort')}
+      />
 
       <Field field="thinking" effective={effective}>
         <Choice
@@ -200,6 +210,62 @@ export function DefaultsForm({
         )}
       </div>
     </form>
+  );
+}
+
+/** An effort chosen that the model does not take — only where the engine announces levels at all. */
+function refusedEffort(
+  announced: readonly string[],
+  levels: readonly string[],
+  effort: string | null,
+): boolean {
+  return announced.length > 0 && effort !== null && !levels.includes(effort);
+}
+
+interface EffortFieldProps {
+  /** The levels the engine announces — none, and the field is not there (plan 28, B-28). */
+  readonly announced: readonly string[];
+
+  /** The ones of them the chosen model takes. */
+  readonly levels: readonly string[];
+  readonly value: string | null;
+  readonly effective: Readonly<Record<DefaultField, EffectiveValue>> | null;
+  onChange(value: string): void;
+}
+
+/** The effort: the engine's levels, the ones the model does not take shown and not offered (S-60). */
+function EffortField({
+  announced,
+  levels,
+  value,
+  effective,
+  onChange,
+}: EffortFieldProps): React.JSX.Element | null {
+  const { t } = useTranslation();
+
+  if (announced.length === 0) {
+    return null;
+  }
+
+  return (
+    <Field
+      field="effort"
+      effective={effective}
+      refusal={
+        refusedEffort(announced, levels, value) ? t('claudeSettings.models.effortRefused') : null
+      }
+    >
+      <Choice
+        value={value}
+        none={t('claudeSettings.models.installationDefault')}
+        options={announced.map((level) => ({
+          value: level,
+          label: levelName(EFFORT_NAMES, level, t),
+          disabled: !levels.includes(level),
+        }))}
+        onChange={onChange}
+      />
+    </Field>
   );
 }
 

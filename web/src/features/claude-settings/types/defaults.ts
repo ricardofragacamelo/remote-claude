@@ -1,13 +1,12 @@
-import type { EffortLevel, InstallationModel } from '@/features/session';
+import type { EffortLevel, InstallationModel, PanelMode } from '@/features/session';
 
 export type { EffortLevel };
 
-/** The levels of effort a model can declare, in the order a list shows them. */
-export const EFFORT_LEVELS: readonly EffortLevel[] = ['low', 'medium', 'high', 'xhigh', 'max'];
-
-/** The modes a default can take — `bypassPermissions` never is one (plan 13, B-14). */
-export const DEFAULT_MODES = ['default', 'acceptEdits', 'plan', 'allowAll'] as const;
-export type DefaultMode = (typeof DEFAULT_MODES)[number];
+/**
+ * A mode a default can take — a canonical one; which of them the form offers is what the engine
+ * announces (plan 28, B-27).
+ */
+export type DefaultMode = PanelMode;
 
 export const THINKING_SETTINGS = ['on', 'off'] as const;
 export type ThinkingSetting = (typeof THINKING_SETTINGS)[number];

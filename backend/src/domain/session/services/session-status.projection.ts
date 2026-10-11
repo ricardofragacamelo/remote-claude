@@ -6,12 +6,15 @@ import type { SessionStatus } from '../value-objects/session-status.value-object
  * The status is **derived by us**, not read off a single SDK message — there is no field in the
  * stream that says "waiting on a human". Keeping the derivation here, as a table, is what stops
  * the same inference from being made slightly differently in the runner, in the gateway and in
- * the client. See docs/architecture/backend/04-claude-integration.md.
+ * the client. See docs/architecture/backend/04a-claude.md.
  *
  * An event that is not in the table leaves the status alone: most of the stream is content, and a
  * default of "unknown" would make the UI flicker on every delta.
  */
-const STATUS_BY_EVENT: Readonly<Record<string, SessionStatus>> = {
+/** A status an event moves a session to — never `starting`, which only opening a session is. */
+export type ObservedStatus = Exclude<SessionStatus, 'starting'>;
+
+const STATUS_BY_EVENT: Readonly<Record<string, ObservedStatus>> = {
   'session.started': 'idle',
   'message.delta': 'thinking',
   'message.completed': 'thinking',
@@ -27,6 +30,6 @@ const STATUS_BY_EVENT: Readonly<Record<string, SessionStatus>> = {
 };
 
 /** The status `eventType` implies, or `null` when it implies nothing. */
-export function statusFor(eventType: string): SessionStatus | null {
+export function statusFor(eventType: string): ObservedStatus | null {
   return STATUS_BY_EVENT[eventType] ?? null;
 }

@@ -1,16 +1,15 @@
+import type { SubagentPagePayload } from '@remote-claude/contracts';
+
 import { api } from '@/shared/api/api';
+import type { ConversationRef } from '@/shared/lib/conversation';
+import type { Unchecked } from '@/shared/lib/json';
 import type { HistoryEvent } from '../types/history';
-import { toHistoryEvents } from './history.service';
+import { toHistoryEvents, transcriptPath } from './history.service';
 
 /** A page of what a subagent said, oldest first, and the cursor of the page before it. */
 export interface SubagentPage {
   readonly events: readonly HistoryEvent[];
   readonly nextCursor: string | null;
-}
-
-interface SubagentPageResponse {
-  readonly events?: unknown;
-  readonly nextCursor?: unknown;
 }
 
 /**
@@ -22,11 +21,11 @@ interface SubagentPageResponse {
  *   not have, or a conversation the caller does not read (S-91)
  */
 export async function fetchSubagentPage(
-  conversationId: string,
+  conversation: ConversationRef,
   toolUseId: string,
 ): Promise<SubagentPage> {
-  const body = await api.get<SubagentPageResponse>(
-    `/transcripts/${encodeURIComponent(conversationId)}/subagents/${encodeURIComponent(toolUseId)}/messages`,
+  const body = await api.get<Unchecked<SubagentPagePayload>>(
+    transcriptPath(conversation, 'subagents', toolUseId, 'messages'),
   );
 
   return {

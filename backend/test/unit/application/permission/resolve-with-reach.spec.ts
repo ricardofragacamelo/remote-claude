@@ -65,8 +65,8 @@ describe('ResolvePermissionUseCase — the reach', () => {
     await answer({ scope: 'always', reach: 'prefix' });
 
     expect(harness.rules.rules.map((rule) => rule.ruleContent)).toEqual([
-      'Bash(git push:*)',
-      'Bash(tail:*)',
+      'shell(git push:*)',
+      'shell(tail:*)',
     ]);
     expect(harness.trail.kinds).toEqual(['permission.ruleGranted', 'permission.ruleGranted']);
   });
@@ -98,7 +98,7 @@ describe('ResolvePermissionUseCase — the reach', () => {
     await ask('request-1', { command: 'git status' });
     await answer({ scope: 'project' });
 
-    expect(harness.rules.rules.map((rule) => rule.ruleContent)).toEqual(['Bash(git status)']);
+    expect(harness.rules.rules.map((rule) => rule.ruleContent)).toEqual(['shell(git status)']);
     expect(harness.rules.rules[0]?.projectPath).toBe(PERMISSION_PROJECT);
   });
 
@@ -138,7 +138,7 @@ describe('ResolvePermissionUseCase — the reach', () => {
   it('leaves alone a rule that existed before the answer, when taking back — D-13', async () => {
     const before = await harness.grant.execute({
       userId: PERMISSION_OWNER,
-      pattern: 'Bash(git push:*)',
+      pattern: 'shell(git push:*)',
       decision: 'allow',
       scope: 'always',
       projectPath: null,
@@ -157,7 +157,7 @@ describe('ResolvePermissionUseCase — the reach', () => {
       harness.grant.executeAll([
         {
           userId: PERMISSION_OWNER,
-          pattern: 'Bash(git push:*)',
+          pattern: 'shell(git push:*)',
           decision: 'allow',
           scope: 'always',
           projectPath: null,
@@ -165,7 +165,7 @@ describe('ResolvePermissionUseCase — the reach', () => {
         },
         {
           userId: PERMISSION_OWNER,
-          pattern: 'Bash()',
+          pattern: 'shell()',
           decision: 'allow',
           scope: 'always',
           projectPath: null,
@@ -188,7 +188,7 @@ describe('ResolvePermissionUseCase — the reach', () => {
 
     expect(first.won).toBe(true);
     expect(second).toMatchObject({ won: false, resolution: { decision: 'allow' } });
-    expect(harness.rules.rules.map((rule) => rule.ruleContent)).toEqual(['Write']);
+    expect(harness.rules.rules.map((rule) => rule.ruleContent)).toEqual(['file.write']);
   });
 
   it('lets the second answer settle when the first one in flight was refused — S-65', async () => {
@@ -201,7 +201,7 @@ describe('ResolvePermissionUseCase — the reach', () => {
 
     expect(first.status).toBe('rejected');
     expect(second).toMatchObject({ status: 'fulfilled', value: { won: true } });
-    expect(harness.rules.rules.map((rule) => rule.ruleContent)).toEqual(['Bash(git status)']);
+    expect(harness.rules.rules.map((rule) => rule.ruleContent)).toEqual(['shell(git status)']);
   });
 
   it('grants nothing twice when the same answer comes again — S-64', async () => {
@@ -212,9 +212,9 @@ describe('ResolvePermissionUseCase — the reach', () => {
     await answer({ requestId: 'request-2', scope: 'always', reach: 'prefix' });
 
     expect(harness.rules.rules.map((rule) => rule.ruleContent)).toEqual([
-      'Bash(git push:*)',
-      'Bash(tail:*)',
-      'Bash(echo:*)',
+      'shell(git push:*)',
+      'shell(tail:*)',
+      'shell(echo:*)',
     ]);
   });
 

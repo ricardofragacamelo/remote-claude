@@ -33,7 +33,7 @@ que foi feito, e não o que deveria ser.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — ADR-025 e as notas nos ADRs que ele altera 🔲
+### B-01 — ADR-025 e as notas nos ADRs que ele altera ✅
 
 Em [00-decisions](../../architecture/shared/00-decisions.md), o **ADR-025 — "Núcleo neutro de agente,
 extensões isoladas por motor nas três pontas"**:
@@ -57,7 +57,7 @@ a fase que muda cada um ([discovery §8.2](../../discovery/10-nucleo-canonico-e-
 A reescrita do ADR-011 é da [F5](F5-permission-dialect.md#b-35--o-adr-011-reescrito-como-contrato-de-segurança-por-motor-), e a
 reclassificação do ADR-018 é da [F6](F6-engine-extensions.md). Aqui entra só a nota. Cenários S-01, S-02.
 
-### B-02 — O AGENTS 🔲
+### B-02 — O AGENTS ✅
 
 Em [AGENTS.md](../../../AGENTS.md), o que a [discovery §8.1](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#81-agentsmd)
 lista:
@@ -81,7 +81,7 @@ lista:
 
 O `CLAUDE.md` não muda. Cenário S-03.
 
-### B-03 — O `shared/12-engines.md` e a forma-alvo nos documentos 🔲
+### B-03 — O `shared/12-engines.md` e a forma-alvo nos documentos ✅
 
 O documento novo [shared/12-engines.md](../../architecture/shared/README.md) traz:
 
@@ -106,7 +106,7 @@ E, já valendo, as regras e o portão em [shared/09](../../architecture/shared/0
 O detalhe de contrato (o [05](../../architecture/shared/05-websocket-protocol.md)) **não** entra aqui:
 cada fase escreve o seu evento junto com ele. Cenário S-04.
 
-### B-04 — O portão de neutralidade: `pnpm neutral:check` 🔲
+### B-04 — O portão de neutralidade: `pnpm neutral:check` ✅
 
 Um script, pela regra 10 do AGENTS. A lógica fica em `scripts/lib/engine-neutrality.mjs`, a entrada em
 `scripts/engine-neutrality.mjs` e os testes em `test/unit/scripts/engine-neutrality.spec.mjs`. Ele
@@ -138,7 +138,7 @@ roda no `check:contracts-i18n` do portão 11, ao lado do `render:check` do 26.
 
 Cenários S-05…S-10.
 
-### B-05 — O baseline: a catraca que só encolhe 🔲
+### B-05 — O baseline: a catraca que só encolhe ✅
 
 `scripts/engine-neutrality-baseline.json`: cada violação de hoje, com arquivo, termo e a **fase deste
 plano que a remove** (`F1`…`F6`). O portão reprova:
@@ -153,7 +153,7 @@ mão, pela tabela da [discovery §4](../../discovery/10-nucleo-canonico-e-agente
 Ao fim da [F7](F7-e2e.md) ele está **vazio**, e a opção de gravar o baseline sai do script. Cenários
 S-11…S-16.
 
-### B-06 — O lint dos três anéis, nas três pontas 🔲
+### B-06 — O lint dos três anéis, nas três pontas ✅
 
 As regras da [discovery §7.1](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#71-lint-de-arquitetura-nas-três-pontas),
 **valendo já**, com `engines/` vazio onde ainda não existe:
@@ -171,7 +171,7 @@ As regras da [discovery §7.1](../../discovery/10-nucleo-canonico-e-agentes-isol
 Cada regra tem um teste de que reprova (o portão que não reprova é pior que nenhum,
 [09-code-quality](../../architecture/shared/09-code-quality.md#mobile--import_lint)). Cenários S-17…S-22.
 
-### B-07 — Os planos seguintes conferidos contra as normas 🔲
+### B-07 — Os planos seguintes conferidos contra as normas ✅
 
 Os planos 12, 13, 14, 15, 16, 18, 19, 26 e 27 foram **ajustados na criação deste plano** (2026-10-10, pedido
 do usuário): dependências, ordem e as tasks 🔲 reescritas no isolamento, nas regras pelo dialeto e no

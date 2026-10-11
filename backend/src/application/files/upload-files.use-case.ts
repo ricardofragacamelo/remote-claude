@@ -9,7 +9,6 @@ import {
   UploadSizeMismatchError,
   isWildcard,
   keepBothName,
-  touchesSensitive,
 } from '@domain/files';
 import type { Etag, FilePath } from '@domain/files';
 import { DomainError } from '@domain/shared';
@@ -117,7 +116,7 @@ export class UploadFilesUseCase {
     const plan = planUpload(folder, command.directory, command.items, this.limits, 'manifest');
 
     await ensureDirectory(this.writing.disk, plan.directory);
-    confirmSensitive(command.confirmSensitive, ...plan.targets);
+    confirmSensitive(this.writing.sensitive, command.confirmSensitive, ...plan.targets);
 
     const outcomes: UploadOutcome[] = [];
 
@@ -279,7 +278,7 @@ export class UploadFilesUseCase {
           entryKind: 'file',
           sizeBytes: staged.size,
           hash: staged.etag.value,
-          sensitive: touchesSensitive(entry.relative),
+          sensitive: this.writing.sensitive.touchedBy(entry.relative),
           source: 'upload',
         },
       },
@@ -316,7 +315,7 @@ export class UploadFilesUseCase {
           sizeBytes: staged.size,
           hashBefore: before.value,
           hashAfter: staged.etag.value,
-          sensitive: touchesSensitive(target.relative),
+          sensitive: this.writing.sensitive.touchedBy(target.relative),
           source: 'upload',
         },
       },

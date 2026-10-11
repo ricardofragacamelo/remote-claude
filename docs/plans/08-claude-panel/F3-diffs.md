@@ -25,7 +25,7 @@ inventar um lado.
 
 E rejeitar é restaurar — pelo mesmo `UndoPlanner`, com as mesmas regras do desfazer do plano 04:
 preserva o que foi alterado à mão, nunca escreve através de link, restaura atomicamente e grava na
-trilha antes do disco ([backend/04](../../architecture/backend/04-claude-integration.md#desfazer-arquivos--o-store-é-nosso)).
+trilha antes do disco ([backend/04](../../architecture/backend/04a-claude.md#desfazer-arquivos--o-store-é-nosso)).
 
 ---
 

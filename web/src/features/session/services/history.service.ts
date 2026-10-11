@@ -1,5 +1,10 @@
+import type { TranscriptPagePayload } from '@remote-claude/contracts';
+
 import { api } from '@/shared/api/api';
+import { readConversation } from '@/shared/lib/conversation';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { isRecord, readText } from '@/shared/lib/json';
+import type { Unchecked } from '@/shared/lib/json';
 import type {
   ConversationActivity,
   ConversationOrigin,
@@ -8,12 +13,15 @@ import type {
   HistoryPage,
 } from '../types/history';
 
-/** The shape the backend answers with. It stops existing at the end of this file. */
-interface HistoryPageResponse {
-  readonly session?: unknown;
-  readonly events?: unknown;
-  readonly nextCursor?: unknown;
-  readonly lastMessageId?: unknown;
+/**
+ * The path of a conversation on the server: `/transcripts/:engine/:id`, then `rest` — every part
+ * escaped. Shared by every route of a conversation, so none of them forgets the engine.
+ */
+export function transcriptPath(conversation: ConversationRef, ...rest: readonly string[]): string {
+  return [
+    '/transcripts',
+    ...[conversation.engine, conversation.id, ...rest].map(encodeURIComponent),
+  ].join('/');
 }
 
 /**
@@ -25,25 +33,25 @@ interface HistoryPageResponse {
  *
  * @param cursor the `nextCursor` of the page after this one, or `null` for the latest messages
  * @throws {import('@/shared/api/errors').AppError} `NOT_FOUND` for a conversation that does not
- *   exist or is not the caller's, `CLAUDE_UNAVAILABLE` / `CLAUDE_TIMEOUT` when the SDK failed
+ *   exist or is not the caller's, `AGENT_UNAVAILABLE` / `AGENT_TIMEOUT` when the engine failed
  */
 export async function fetchHistoryPage(
-  conversationId: string,
+  conversation: ConversationRef,
   cursor: string | null,
 ): Promise<HistoryPage> {
-  const path = `/transcripts/${encodeURIComponent(conversationId)}/messages`;
-  const body = await api.get<HistoryPageResponse>(
+  const path = transcriptPath(conversation, 'messages');
+  const body = await api.get<Unchecked<TranscriptPagePayload>>(
     cursor === null ? path : `${path}?cursor=${encodeURIComponent(cursor)}`,
   );
 
-  const conversation = toConversationSummary(body.session);
+  const summary = toConversationSummary(body.session);
 
-  if (conversation === null) {
+  if (summary === null) {
     throw new TypeError('the history answered without the conversation it is a page of');
   }
 
   return {
-    conversation,
+    conversation: summary,
     events: toHistoryEvents(body.events),
     nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null,
     lastMessageId: typeof body.lastMessageId === 'string' ? body.lastMessageId : null,
@@ -61,17 +69,17 @@ export function toConversationSummary(value: unknown): ConversationSummary | nul
     return null;
   }
 
-  const conversationId = readText(value, 'sessionId');
+  const conversation = readConversation(value, 'conversation');
   const cwd = readText(value, 'cwd');
   const lastModified = readText(value, 'lastModified');
   const origin = value['origin'];
 
-  if (conversationId === null || cwd === null || lastModified === null || !isOrigin(origin)) {
+  if (conversation === null || cwd === null || lastModified === null || !isOrigin(origin)) {
     return null;
   }
 
   return {
-    conversationId,
+    conversation,
     summary: readText(value, 'summary') ?? '',
     origin,
     cwd,

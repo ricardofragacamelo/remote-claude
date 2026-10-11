@@ -166,7 +166,7 @@ em `features/claude-settings/` (web).
 | Medida | Valor | Onde |
 |---|---|---|
 | Arquivos que importam o SDK | 17, **todos** no adapter | `sdk-is-isolated` garante |
-| Tamanho do adapter | 28 arquivos, 4 067 linhas | [adapter/outbound/claude/](../../backend/src/adapter/outbound/claude/) |
+| Tamanho do adapter | 28 arquivos, 4 067 linhas | [adapter/outbound/claude/](../../backend/src/adapter/outbound/engines/claude/) |
 | `[Cc]laude` em `domain/` | 66 de 197 arquivos (33 com a palavra em código, 94 linhas) | `audit-event-kind`, `claude-session-id`, `domain/claude-config/*` |
 | `[Cc]laude` em `application/` | 66 de 189 arquivos (33 em código, 133 linhas) | `start-session.use-case.ts` (25), `claude-session.port.ts` |
 | `[Cc]laude` em `adapter/inbound/` | 18 de 58 arquivos | `claude-config.controller.ts`, `session-conversation.ts` |
@@ -193,7 +193,7 @@ em `features/claude-settings/` (web).
 
 **As portas com forma de Claude:**
 
-- [claude-session.port.ts](../../backend/src/application/session/ports/claude-session.port.ts), com
+- [claude-session.port.ts](../../backend/src/application/session/ports/agent-engine.port.ts), com
   `ClaudeSessionStart` (`effort`, `thinking`, `outputStyle`, `fallbackModel`, `forkAt`) e
   `ClaudeSessionHandle` (`cliVersion`, `supportedCommands()`, `contextUse()`, `mcpServers()`).
 - O `SessionEvent` é `{ type: string; payload: Record<string, unknown> }`: o evento não tem tipo na
@@ -237,7 +237,7 @@ em `features/claude-settings/` (web).
 
 | Medida | Valor | Onde |
 |---|---|---|
-| Decide pelo nome da ferramenta | 6 arquivos, 32 linhas, mais 2 que montam chave de i18n com o nome (`permission.tool.${toolName}`) | [tool-labels.ts](../../web/src/features/session/lib/tool-labels.ts) (18 ferramentas), `task-list.ts`, `ToolRow.tsx`, `question-of.ts`, `edit-preview.ts`, `PermissionRequestCard.tsx` |
+| Decide pelo nome da ferramenta | 6 arquivos, 32 linhas, mais 2 que montam chave de i18n com o nome (`permission.tool.${toolName}`) | `tool-labels.ts` (removido no plano 28 · F2) (18 ferramentas), `task-list.ts`, `ToolRow.tsx`, `question-of.ts`, `edit-preview.ts`, `PermissionRequestCard.tsx` |
 | Lê input cru de ferramenta | 6 arquivos (`file_path`, `old_string`, `new_string`, `edits`, `command`, `todos`, `plan`…) | os de cima, mais `useEditPreview.ts` e `PlanApprovalCard.tsx` |
 | Nomes da API no redutor | `input_tokens`, `cache_read_input_tokens`, `redacted_thinking` | [conversation-reducer.ts](../../web/src/features/session/services/conversation-reducer.ts) |
 | Enum do Claude escrito à mão | modos em 5 lugares, esforço em 4 | `claude-panel.store.ts`, `panel-modes.ts`, `claude-panel-restorer.ts`, `claude-settings/types/defaults.ts`, `PlanApprovalCard.tsx` |
@@ -573,7 +573,7 @@ entrega, como manda o AGENTS para contrato. A tabela é a lista que o plano tem 
 | **O que é este projeto** | "operar remotamente o **agente de código** instalado na máquina local (hoje o Claude Code, pela porta de motor)". A stack ganha a linha da porta de motor |
 | **Regras que valem SEMPRE** | regra nova **12 — Núcleo neutro de agente**: nenhum nome de motor, de ferramenta, de modo ou campo de input cru fora de `engines/<motor>/`, nas três pontas; o cliente desenha pelo `kind`; o contrato é nosso. Verificado por `pnpm neutral:check` e pelo lint de arquitetura |
 | **Regra 6** (Dependency Rule) | acrescenta "e o núcleo nunca importa `engines/`, em nenhuma das três pontas" |
-| **Quando carregar cada documento** | "Entender **como** o backend conversa com o Claude local" → "…com um agente de código" ([backend/04-engine-integration](../architecture/backend/04-claude-integration.md), mais o anexo do Claude); linha nova "Mexer em algo que só um agente tem (tela, ferramenta, modo, configuração)" → `shared/12-engines.md` |
+| **Quando carregar cada documento** | "Entender **como** o backend conversa com o Claude local" → "…com um agente de código" ([backend/04-engine-integration](../architecture/backend/04a-claude.md), mais o anexo do Claude); linha nova "Mexer em algo que só um agente tem (tela, ferramenta, modo, configuração)" → `shared/12-engines.md` |
 | **Gatilhos específicos** | "Vai adicionar ou alterar um evento/comando WebSocket" ganha "o evento é canônico: `kind`, `origin`, `messageKey`"; gatilho novo "Vai mostrar algo que vem de uma ferramenta do agente → pelo `kind`, nunca pelo nome" |
 | **Anti-padrões** | entram: "nome de ferramenta, modo ou campo de input de um agente fora de `engines/<motor>/`"; "cliente decidindo por `engine`, `origin.native` ou `toolName`"; "`Claude*`/`claudeSessionId` em identificador, rota, tabela ou chave do núcleo"; "nome de motor escrito numa string de i18n do núcleo (é `{agent}`)". O anti-padrão "`query()` do Agent SDK sem `settingSources`…" vira "sessão de motor aberta sem a asserção de segurança do motor (no Claude: `settingSources: ['project']` e o hook `PreToolUse`)" |
 | `CLAUDE.md` | **não muda**: ele só importa o AGENTS |
@@ -608,7 +608,7 @@ entrega, como manda o AGENTS para contrato. A tabela é a lista que o plano tem 
 | [backend/01-clean-architecture](../architecture/backend/01-clean-architecture.md) | o anel de extensão e a porta de motor |
 | [backend/02-folder-structure](../architecture/backend/02-folder-structure.md) | `*/engines/<motor>/` em cada camada |
 | [backend/03-modules](../architecture/backend/03-modules.md) | o `claude-config` dividido (§5.1); `engine` como módulo do núcleo |
-| [backend/04-claude-integration](../architecture/backend/04-claude-integration.md) | vira `04-engine-integration.md` (a porta, as capacidades, o classificador, o dialeto de regra), mais um anexo `04a-claude.md` com o que é do Claude |
+| [backend/04a-claude](../architecture/backend/04a-claude.md) | vira `04-engine-integration.md` (a porta, as capacidades, o classificador, o dialeto de regra), mais um anexo `04a-claude.md` com o que é do Claude |
 | [backend/05-persistence](../architecture/backend/05-persistence.md) | `engine`, `conversation_id` e `tool_kind` nas tabelas; tabelas de extensão com o prefixo do motor |
 | [backend/07-testing](../architecture/backend/07-testing.md) | a suíte de contrato da porta e o motor de teste |
 | [web/01-architecture](../architecture/web/01-architecture.md), [web/02-folder-structure](../architecture/web/02-folder-structure.md) | `engines/` e a composição em `app/engines.ts`; os registros do núcleo como ponto de extensão |

@@ -7,6 +7,7 @@ import {
   ReadVersionsUseCase,
 } from '@application/diag';
 import type { DiagSessionRepository, InstallationVersionSource } from '@application/diag';
+import { EngineRegistry } from '@application/session';
 import { CLOCK, ID_GENERATOR } from '@application/shared';
 import type { Clock, IdGenerator } from '@domain/shared';
 import { DiagController } from '@adapter/inbound/http/diag/diag.controller';
@@ -16,6 +17,7 @@ import { DiagSessionOwnership } from '@adapter/outbound/diag/diag-session.owners
 import { InstallationVersionReader } from '@adapter/outbound/diag/installation-versions.reader';
 import { DrizzleDiagSessionRepository } from '@adapter/outbound/persistence/diag/drizzle-diag-session.repository';
 import { AuthModule } from './auth.module';
+import { SessionModule } from './session.module';
 
 /**
  * The `diag` module: the gateway round trip that needs no Claude, and the versions of the
@@ -27,12 +29,18 @@ import { AuthModule } from './auth.module';
  * this is the rest of that move.
  */
 @Module({
-  // For `BearerAuthGuard` on the versions route: a route and a socket resolve the caller alike.
-  imports: [AuthModule],
+  // For `BearerAuthGuard` on the versions route: a route and a socket resolve the caller alike. The
+  // session module for the registry of engines, which the versions of the engine are asked of.
+  imports: [AuthModule, SessionModule],
   controllers: [DiagController],
   providers: [
-    // One reader for the process: the versions are read once and kept (S-68).
-    { provide: INSTALLATION_VERSION_SOURCE, useFactory: () => new InstallationVersionReader() },
+    // One reader for the process: the versions are read once, at boot, and kept (S-68) — the
+    // engine's from what the default engine describes itself with (plan 28, B-34).
+    {
+      provide: INSTALLATION_VERSION_SOURCE,
+      inject: [EngineRegistry],
+      useFactory: (engines: EngineRegistry) => InstallationVersionReader.of(engines),
+    },
     {
       provide: ReadVersionsUseCase,
       inject: [INSTALLATION_VERSION_SOURCE],

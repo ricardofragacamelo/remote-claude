@@ -1,5 +1,5 @@
 import type { UserId } from '@domain/auth';
-import type { ClaudeSessionId } from '@domain/transcript';
+import type { ConversationRef } from '@domain/engine';
 
 /**
  * Which live session of a caller holds a conversation, if one does.
@@ -14,7 +14,7 @@ export interface LiveConversationSource {
    *
    * Only the caller's: somebody else's live continuation of a conversation is theirs.
    */
-  liveSessionOf(conversation: ClaudeSessionId, userId: UserId): string | null;
+  liveSessionOf(conversation: ConversationRef, userId: UserId): string | null;
 }
 
 export const LIVE_CONVERSATION_SOURCE = Symbol('LiveConversationSource');

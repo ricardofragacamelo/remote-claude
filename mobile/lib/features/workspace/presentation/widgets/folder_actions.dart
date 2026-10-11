@@ -30,9 +30,7 @@ Future<void> reportFolderChange(
     return;
   }
 
-  final String? message = failure == null
-      ? done
-      : translateFailure(AppLocalizations.of(context), failure);
+  final String? message = failure == null ? done : failureText(context, failure);
 
   if (message != null) {
     tellAboutFolder(context, message);
@@ -59,7 +57,7 @@ Future<void> openFolderAndGo(BuildContext context, WidgetRef ref, String path) a
   }
 
   if (failure != null) {
-    tellAboutFolder(context, translateFailure(AppLocalizations.of(context), failure));
+    tellAboutFolder(context, failureText(context, failure));
     return;
   }
 

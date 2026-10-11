@@ -136,6 +136,23 @@ import_lint:
       from: "package:remote_claude/features/**"
       except: []
 
+    # The three rings of ADR-025: the core never imports an engine extension, and an extension
+    # never imports another. `app/engines.dart` is the composition, the one file that may
+    # (docs/architecture/shared/12-engines.md). `engines/` is empty until a screen of one engine
+    # only exists (plan 28, D-15) — the rules hold from day one, so it is never born violated.
+    core_cannot_import_engines:
+      target: "package:remote_claude/core/**"
+      from: "package:remote_claude/engines/**"
+      except: []
+    features_cannot_import_engines:
+      target: "package:remote_claude/features/**"
+      from: "package:remote_claude/engines/**"
+      except: []
+    engines_are_isolated:
+      target: "package:remote_claude/engines/claude/**"
+      from: "package:remote_claude/engines/**"
+      except: ["package:remote_claude/engines/claude/**"]
+
 # Cyclomatic complexity, at most 10 per function — the same bar ESLint's `complexity` holds on the
 # other two ends (D-10 of plan 05). `dart analyze` has no such rule of its own, so the metric is
 # `dart_code_linter`'s, run by `node scripts/mobile.mjs analyze` right after the analyzer.

@@ -15,7 +15,7 @@ afterEach(() => {
 const answering = (body: unknown) => vi.spyOn(api, 'get').mockResolvedValue(body);
 
 describe('the models of the installation — plan 08, B-36, S-166', () => {
-  it('reads them as the installation gives them, effort only where it has levels', async () => {
+  it('reads them as the installation gives them, effort only where it has levels — plan 28, B-28', async () => {
     const get = answering({
       current: 'opus',
       models: [
@@ -46,7 +46,8 @@ describe('the models of the installation — plan 08, B-36, S-166', () => {
           displayName: 'Opus',
           description: 'Most capable',
           supportsEffort: true,
-          supportedEffortLevels: ['low', 'high'],
+          // Every level the model names, as text: which are offered is the engine's to announce.
+          supportedEffortLevels: ['low', 'high', 'ludicrous'],
         },
         {
           value: 'haiku',
@@ -101,6 +102,36 @@ describe('the use of the context window — B-37, S-173', () => {
       ],
     });
     expect(get).toHaveBeenCalledWith(`/sessions/${SESSION}/context`);
+  });
+
+  it('reads the key of a canonical category and the words of any other — plan 28, S-71', async () => {
+    answering({
+      model: 'opus',
+      totalTokens: 10,
+      maxTokens: 100,
+      percentage: 10,
+      categories: [
+        {
+          id: 'system',
+          messageKey: 'sessions.context.system',
+          name: 'System prompt',
+          tokens: 4,
+          kind: 'used',
+        },
+        { id: 'skills', text: 'Skills', name: 'Skills', tokens: 6, kind: 'used' },
+      ],
+    });
+
+    expect((await fetchContext(SESSION)).categories).toEqual([
+      {
+        id: 'system',
+        messageKey: 'sessions.context.system',
+        name: 'System prompt',
+        tokens: 4,
+        kind: 'used',
+      },
+      { id: 'skills', text: 'Skills', name: 'Skills', tokens: 6, kind: 'used' },
+    ]);
   });
 
   it('reads a body that is not one as nothing used', async () => {

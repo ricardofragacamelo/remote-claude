@@ -1,3 +1,4 @@
+import { payloadOf } from '../../../support/builders/session.builder';
 import { describe, expect, it } from 'vitest';
 
 import { handOverPrompt } from '@application/session/prompt-hand-over';
@@ -23,7 +24,7 @@ describe('the prompt said to everybody — plan 22, B-06, B-09', () => {
       promptedBy: 'web',
     });
 
-    const payload = broadcaster.events[0]?.event.payload;
+    const payload = payloadOf(broadcaster.events[0]?.event);
     expect(payload?.['content']).toEqual([
       { type: 'text', blockId: 'prompt-uuid:0', text: 'what is this?' },
       { type: 'image', blockId: 'prompt-uuid:1', mediaType: 'image/png', size: 16 },

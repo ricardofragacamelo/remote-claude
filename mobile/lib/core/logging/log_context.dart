@@ -1,7 +1,7 @@
 /// The fields every log line of this app carries, whether or not the call site remembered them.
 ///
 /// Same schema as the backend and the web front — see docs/architecture/shared/03-logging.md.
-/// Parity is not tidiness: correlating a tap on a phone with a NestJS request and a Claude
+/// Parity is not tidiness: correlating a tap on a phone with a NestJS request and an engine
 /// subprocess only works when the three ends spell the fields the same way.
 library;
 
@@ -28,7 +28,7 @@ class LogContext extends Equatable {
   /// `android`, `iOS`, and so on.
   final String platform;
 
-  /// Claude session the line belongs to, when it belongs to one.
+  /// Engine session the line belongs to, when it belongs to one.
   final String? sessionId;
 
   /// WebSocket connection the line belongs to.

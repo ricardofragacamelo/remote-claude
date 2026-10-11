@@ -1,6 +1,10 @@
 /// How full the session's context window is, as a ring on the composer bar, and the sheet a tap
 /// opens: the categories, the warning near the limit, and **Compact** (plan 10, B-14).
 ///
+/// Only for an engine that declared `contextUse`, and **Compact** only for one that declared
+/// `compaction` (plan 28, B-23, B-24). A category is named by its key when it is one of ours, and by
+/// the engine's own words otherwise.
+///
 /// A measure that cannot be read is not drawn as zero: the ring gives its place to an icon — the
 /// other chips do not move — and the sheet says why (S-45). A draft has no ring: there is no
 /// session to measure.
@@ -29,7 +33,7 @@ ComposerChoice contextChoice(
   BuildContext context, {
   required String sessionId,
   required AsyncValue<ContextUse> use,
-  required VoidCallback onCompact,
+  required VoidCallback? onCompact,
   required bool isCompacting,
 }) {
   final AppLocalizations l10n = AppLocalizations.of(context);
@@ -63,10 +67,12 @@ ComposerChoice contextChoice(
         context,
         (BuildContext sheet) => ContextSheet(
           sessionId: sessionId,
-          onCompact: () {
-            Navigator.of(sheet).pop();
-            onCompact();
-          },
+          onCompact: onCompact == null
+              ? null
+              : () {
+                  Navigator.of(sheet).pop();
+                  onCompact();
+                },
           isCompacting: isCompacting,
         ),
       ),
@@ -78,13 +84,15 @@ ComposerChoice contextChoice(
 class ContextSheet extends ConsumerWidget {
   const ContextSheet({
     required this.sessionId,
-    required this.onCompact,
     required this.isCompacting,
     super.key,
+    this.onCompact,
   });
 
   final String sessionId;
-  final VoidCallback onCompact;
+
+  /// Compacts the conversation — `null` when the engine cannot, and then there is no button.
+  final VoidCallback? onCompact;
   final bool isCompacting;
 
   @override
@@ -94,6 +102,7 @@ class ContextSheet extends ConsumerWidget {
     final ThemeData theme = Theme.of(context);
     final ContextUse? measured = use.value;
     final Object? failure = use.error;
+    final VoidCallback? compact = onCompact;
     final NumberFormat number = NumberFormat.decimalPattern(
       Localizations.localeOf(context).toLanguageTag(),
     );
@@ -111,7 +120,7 @@ class ContextSheet extends ConsumerWidget {
           const SizedBox(height: Tokens.spaceSm),
           if (failure != null) ...<Widget>[
             Text(
-              '${l10n.contextUnavailable} ${failure is Failure ? translateFailure(l10n, failure) : ''}',
+              '${l10n.contextUnavailable} ${failure is Failure ? failureText(context, failure) : ''}',
             ),
             TextButton(
               onPressed: () =>
@@ -150,27 +159,29 @@ class ContextSheet extends ConsumerWidget {
                 trailing: Text(l10n.contextTokens(number.format(category.tokens))),
               ),
           ],
-          const SizedBox(height: Tokens.spaceSm),
-          FilledButton.tonalIcon(
-            icon: const Icon(Icons.compress),
-            label: Text(isCompacting ? l10n.contextCompacting : l10n.contextCompact),
-            onPressed: isCompacting ? null : onCompact,
-          ),
+          if (compact != null) ...<Widget>[
+            const SizedBox(height: Tokens.spaceSm),
+            FilledButton.tonalIcon(
+              icon: const Icon(Icons.compress),
+              label: Text(isCompacting ? l10n.contextCompacting : l10n.contextCompact),
+              onPressed: isCompacting ? null : compact,
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-/// The name of a category: ours, when this build has words for it; the installation's otherwise.
-String categoryName(AppLocalizations l10n, ContextCategory category) => switch (category.id) {
-  'systemPrompt' => l10n.contextSystemPrompt,
-  'systemTools' => l10n.contextSystemTools,
-  'mcpTools' => l10n.contextMcpTools,
-  'messages' => l10n.contextMessages,
-  'memoryFiles' => l10n.contextMemoryFiles,
-  'skills' => l10n.contextSkills,
-  'freeSpace' => l10n.contextFreeSpace,
-  'autocompactBuffer' || 'buffer' => l10n.contextBuffer,
-  _ => category.name,
-};
+/// The name of a category: ours, by its key, for a canonical one; the engine's own words for any
+/// other — and its id when a key this build does not know came without them.
+String categoryName(AppLocalizations l10n, ContextCategory category) =>
+    switch (category.messageKey) {
+      'sessions.context.system' => l10n.contextSystem,
+      'sessions.context.tools' => l10n.contextTools,
+      'sessions.context.messages' => l10n.contextMessages,
+      'sessions.context.memory' => l10n.contextMemory,
+      'sessions.context.free' => l10n.contextFree,
+      'sessions.context.reserved' => l10n.contextReserved,
+      _ => category.text ?? category.id,
+    };

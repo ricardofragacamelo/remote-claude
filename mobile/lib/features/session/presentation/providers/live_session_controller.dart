@@ -7,6 +7,7 @@ library;
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/history_page.dart';
@@ -72,7 +73,7 @@ class LiveSession extends Equatable {
   /// An interrupt left and the turn has not stopped yet. A second tap sends nothing (S-28).
   final bool isInterrupting;
 
-  /// A `/compact` left and the conversation has not been compacted yet (S-44).
+  /// A compaction left and the conversation has not been compacted yet (S-44).
   final bool isCompacting;
 
   /// The CLI refused the point this session was forked from (`SESSION_FORK_REJECTED`): the screen
@@ -126,7 +127,7 @@ class LiveSessionController extends _$LiveSessionController {
   List<SessionEvent> _history = const <SessionEvent>[];
 
   /// The conversation the history is read from, once something said which one.
-  String? _historyOf;
+  ConversationKey? _historyOf;
   bool _loadingHistory = false;
   Failure? _historyFailure;
 
@@ -224,14 +225,15 @@ class LiveSessionController extends _$LiveSessionController {
     return commandId != null;
   }
 
-  /// Asks for the conversation to be compacted: `/compact`, through the normal flow of a prompt.
-  /// Once — a second tap while it is on its way sends nothing (S-44).
+  /// Asks for the conversation to be compacted — `session.compact`, which the backend queues like a
+  /// prompt (plan 28, B-23). Once — a second tap while it is on its way sends nothing (S-44). A
+  /// refusal — an engine that cannot compact — is said like a refused prompt.
   bool compact() {
     if (_compactId != null) {
       return true;
     }
 
-    final String? commandId = ref.read(driveSessionProvider).prompt(sessionId, '/compact');
+    final String? commandId = ref.read(driveSessionProvider).compact(sessionId);
     _compactId = commandId;
 
     if (commandId != null) {
@@ -308,10 +310,10 @@ class LiveSessionController extends _$LiveSessionController {
 
   /// Reads the history again, after it failed. Nothing to do when nothing said where it is.
   Future<void> retryHistory() async {
-    final String? conversationId = _historyOf;
+    final ConversationKey? conversation = _historyOf;
 
-    if (conversationId != null) {
-      await _readHistory(conversationId);
+    if (conversation != null) {
+      await _readHistory(conversation);
     }
   }
 
@@ -352,8 +354,16 @@ class LiveSessionController extends _$LiveSessionController {
       // looks complete and is not, which is worse than one that admits it reloaded.
       // With no conversation to read the history from, what is on screen starts with the line that
       // says it is only what the server still had (B-23).
-      case StreamGap(:final String? claudeSessionId):
-        _live = claudeSessionId == null ? const Conversation.partial() : const Conversation();
+      case StreamGap(:final ConversationKey? conversation):
+        // What the engine of the session can do is the session's, not the buffer's: the gap keeps it,
+        // or every control of a capability would go with a `session.started` no longer replayed.
+        _live = (conversation == null ? const Conversation.partial() : const Conversation())
+            .copyWith(
+              facts: SessionFacts(
+                engine: _live.facts.engine,
+                capabilities: _live.facts.capabilities,
+              ),
+            );
         _history = const <SessionEvent>[];
         _resumeFrom = 0;
         _historyOf = null;
@@ -362,8 +372,8 @@ class LiveSessionController extends _$LiveSessionController {
         _readings += 1;
         _publish();
 
-        if (claudeSessionId != null) {
-          unawaited(_readHistory(claudeSessionId));
+        if (conversation != null) {
+          unawaited(_readHistory(conversation));
         }
 
       case CommandAccepted(:final String commandId):
@@ -405,7 +415,7 @@ class LiveSessionController extends _$LiveSessionController {
     // what **it** said: everything before comes from the transcript (B-11). Only an event that was
     // applied counts — a replay re-delivering it asks for nothing twice.
     if (event case SessionOpened(
-      :final String resumedFrom?,
+      :final ConversationKey resumedFrom?,
     ) when _live.lastSeq > before && _historyOf == null) {
       unawaited(_readHistory(resumedFrom));
     }
@@ -458,15 +468,15 @@ class LiveSessionController extends _$LiveSessionController {
     _publish();
   }
 
-  Future<void> _readHistory(String conversationId) async {
+  Future<void> _readHistory(ConversationKey conversation) async {
     final int reading = ++_readings;
-    _historyOf = conversationId;
+    _historyOf = conversation;
     _loadingHistory = true;
     _historyFailure = null;
     _publish();
 
     try {
-      final HistoryPage page = await ref.read(readHistoryProvider)(conversationId);
+      final HistoryPage page = await ref.read(readHistoryProvider)(conversation);
 
       if (_isCurrent(reading)) {
         _history = page.events;

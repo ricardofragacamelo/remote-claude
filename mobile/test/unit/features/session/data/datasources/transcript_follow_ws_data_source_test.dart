@@ -19,6 +19,7 @@ import 'package:remote_claude/features/session/domain/entities/session_update.da
 import 'package:remote_claude/features/session/domain/entities/transcript_follow.dart';
 import 'package:remote_claude/features/session/domain/usecases/follow_transcript.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
 import '../../../../../support/fakes/fake_credentials.dart';
 import '../../../../../support/fakes/fake_frame_socket.dart';
@@ -94,14 +95,15 @@ void main() {
   test('S-90 · follow sends transcript.follow from the last entry, and answers its id', () async {
     await ready();
 
-    final String? commandId = follow.follow('conv-1', afterMessageId: 'u-41');
+    final String? commandId = follow.follow(conversationOf('conv-1'), afterMessageId: 'u-41');
 
     final Map<String, Object?> sent = commands().single;
     expect(sent['type'], 'transcript.follow');
     expect(sent['kind'], 'command');
     expect(sent['id'], commandId);
+    // S-39 · the conversation travels whole — its engine and its id.
     expect(sent['payload'], <String, Object?>{
-      'conversationId': 'conv-1',
+      'conversation': <String, Object?>{'engine': anEngine, 'id': 'conv-1'},
       'afterMessageId': 'u-41',
     });
   });
@@ -109,9 +111,11 @@ void main() {
   test('S-89 · a conversation with no entry is followed with no point to start after', () async {
     await ready();
 
-    follow.follow('conv-1');
+    follow.follow(conversationOf('conv-1'));
 
-    expect(commands().single['payload'], <String, Object?>{'conversationId': 'conv-1'});
+    expect(commands().single['payload'], <String, Object?>{
+      'conversation': <String, Object?>{'engine': anEngine, 'id': 'conv-1'},
+    });
   });
 
   test('unfollow sends transcript.unfollow with the subscription', () async {
@@ -124,7 +128,7 @@ void main() {
   });
 
   test('a socket that is not ready sends nothing, and says so', () async {
-    expect(follow.follow('conv-1'), isNull);
+    expect(follow.follow(conversationOf('conv-1')), isNull);
     expect(follow.unfollow('t-1'), isFalse);
     expect(
       written.withOp(LogOp.transcriptFollow).map((Map<String, Object?> r) => r['sent']),
@@ -134,7 +138,7 @@ void main() {
 
   test('S-90 · the ack, what was appended and the reset arrive as follow updates', () async {
     await ready();
-    final String commandId = follow.follow('conv-1', afterMessageId: 'u-41')!;
+    final String commandId = follow.follow(conversationOf('conv-1'), afterMessageId: 'u-41')!;
 
     final List<FollowUpdate> seen = await collect(() {
       socket()
@@ -164,7 +168,7 @@ void main() {
 
   test('S-100 · a refusal of a command arrives, with the reason', () async {
     await ready();
-    final String commandId = follow.follow('conv-1')!;
+    final String commandId = follow.follow(conversationOf('conv-1'))!;
 
     final List<FollowUpdate> seen = await collect(
       () => socket().deliver(
@@ -211,7 +215,7 @@ void main() {
 
   test('every edge is logged in debug — ids and counts, never what an entry says', () async {
     await ready();
-    final String commandId = follow.follow('conv-1', afterMessageId: 'u-41')!;
+    final String commandId = follow.follow(conversationOf('conv-1'), afterMessageId: 'u-41')!;
     await collect(() {
       socket()
         ..deliver(transcriptFollowing(correlationId: commandId))

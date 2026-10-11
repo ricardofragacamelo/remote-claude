@@ -9,7 +9,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/byte_size.dart';
 import 'package:remote_claude/core/widgets/zoomable_image.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
@@ -35,17 +37,17 @@ String imageLabel(AppLocalizations l10n, PromptImage image, String locale) {
 
 /// One image of a prompt, marked.
 class ImageMarker extends StatelessWidget {
-  const ImageMarker({required this.image, super.key, this.conversationId});
+  const ImageMarker({required this.image, super.key, this.conversationKey});
 
   final PromptImage image;
 
   /// The conversation the image is read from — `null` while nothing said which. Without it, or
   /// without the block's identity (a server older than it), the marker is all there is.
-  final String? conversationId;
+  final ConversationKey? conversationKey;
 
   @override
   Widget build(BuildContext context) {
-    final String? conversationId = this.conversationId;
+    final ConversationKey? conversationKey = this.conversationKey;
     final String? blockId = image.blockId;
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String label = imageLabel(l10n, image, Localizations.localeOf(context).toLanguageTag());
@@ -60,12 +62,15 @@ class ImageMarker extends StatelessWidget {
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        if (conversationId != null && blockId != null)
+        if (conversationKey != null && blockId != null)
           TextButton(
             onPressed: () => showDialog<void>(
               context: context,
-              builder: (BuildContext _) =>
-                  PromptImageScreen(conversationId: conversationId, blockId: blockId, title: label),
+              builder: (BuildContext _) => PromptImageScreen(
+                conversationKey: conversationKey,
+                blockId: blockId,
+                title: label,
+              ),
             ),
             child: Text(l10n.sessionImageOpen),
           ),
@@ -77,13 +82,13 @@ class ImageMarker extends StatelessWidget {
 /// The image, on a screen of its own: it while it loads, it, or why it cannot be shown.
 class PromptImageScreen extends ConsumerWidget {
   const PromptImageScreen({
-    required this.conversationId,
+    required this.conversationKey,
     required this.blockId,
     required this.title,
     super.key,
   });
 
-  final String conversationId;
+  final ConversationKey conversationKey;
   final String blockId;
 
   /// What the marker said of it.
@@ -93,7 +98,7 @@ class PromptImageScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<PromptImageBytes> image = ref.watch(
-      promptImageControllerProvider(conversationId, blockId),
+      promptImageControllerProvider(conversationKey, blockId),
     );
 
     return Dialog.fullscreen(
@@ -109,7 +114,11 @@ class PromptImageScreen extends ConsumerWidget {
         body: SafeArea(
           child: Column(
             children: <Widget>[
-              ListTile(title: Text(l10n.sessionImageDescription)),
+              ListTile(
+                title: Text(
+                  l10n.sessionImageDescription(agentNameIn(context, conversationKey.engine)),
+                ),
+              ),
               Expanded(
                 child: ZoomableImage(
                   image: image.whenData((PromptImageBytes value) => value.bytes),
@@ -117,7 +126,7 @@ class PromptImageScreen extends ConsumerWidget {
                   loadingLabel: l10n.sessionImageLoading,
                   finalCodes: _final,
                   onRetry: () => ref
-                      .read(promptImageControllerProvider(conversationId, blockId).notifier)
+                      .read(promptImageControllerProvider(conversationKey, blockId).notifier)
                       .retry(),
                 ),
               ),

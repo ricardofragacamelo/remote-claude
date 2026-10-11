@@ -185,3 +185,18 @@ Backend  →  { error: { code, messageKey, params, traceId } }
 
 O componente **nunca** faz `switch` em status HTTP — ele reage a `error.code`. Ver
 [erros](../shared/04-errors-and-http.md).
+
+---
+
+## Alvo do plano 28 — o núcleo desenha pelo `kind`
+
+> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)). As regras de lint já valem desde a F0; o código chega na
+> fase indicada.
+
+- **O núcleo desenha pelo `kind` (F2…F4).** Nenhum componente, hook ou service decide pelo nome de uma
+  ferramenta, por um modo do CLI ou por um campo de input cru: o backend manda o `kind`, o rótulo
+  (`messageKey` + `params`), as tarefas, o plano e o uso canônico.
+- **A extensão de motor (F6).** O que só um motor tem (a tela de plugins e skills do Claude, por
+  exemplo) mora em `web/src/engines/<motor>/` e se pendura nos registros do núcleo (seções de
+  configuração, navegação, comandos, views). `web/src/app/engines.ts` é a composição, o único arquivo
+  que importa `engines/` ([12-engines](../shared/12-engines.md)).

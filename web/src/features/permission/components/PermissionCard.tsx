@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/components/ui/button';
+import { permissionTitle, toolLabelText } from '@/shared/lib/tool-label';
 import { patternsToConfirm, preselectedReach } from '../lib/reach';
 import { useArrivalFocus } from '../hooks/useArrivalFocus';
-import { EditPreviewView } from './EditPreviewView';
 import { PermissionCountdown } from './PermissionCountdown';
 import type {
   PermissionDecision,
@@ -33,8 +34,11 @@ export interface PermissionCardProps {
   /** Where the rules are revoked. Absent, the second step says so without offering the way. */
   onOpenRules?: (() => void) | undefined;
 
-  /** The folder of the tab — what a pending edit is previewed against (plan 08, B-29). */
-  readonly folder?: string | null;
+  /**
+   * What the change would do to the file, before it is approved — drawn by whoever has the diff of
+   * the call (plan 28, B-17). Absent for a request that changes no file.
+   */
+  readonly preview?: ReactNode;
 }
 
 /** The emphasis each risk gets. A token per role, never a literal shade. */
@@ -68,7 +72,7 @@ export function PermissionCard({
   onAnswer,
   onExtend,
   onOpenRules,
-  folder = null,
+  preview,
 }: PermissionCardProps): React.JSX.Element {
   const { t } = useTranslation();
   const [armed, setArmed] = useState<ScopeSuggestion | null>(null);
@@ -82,20 +86,11 @@ export function PermissionCard({
       // Focusable from code only: the pill and the palette take the person to the card (plan 09, B-25).
       tabIndex={-1}
       className={`flex flex-col gap-3 rounded-lg border-2 p-4 outline-ring focus-visible:outline-2 ${RISK_STYLE[request.riskHint]}`}
-      aria-label={t('permission.card.label', { tool: request.toolName })}
+      aria-label={t('permission.card.label', { tool: toolLabelText(request, t) })}
     >
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold">
-          {/*
-            The key is built from the tool name rather than read out of a variable, and the two
-            reasons are the same reason: this build has words for the tools it knows and a fallback
-            for the rest, and `pnpm i18n:check` can only see a family it can read in the source. A
-            key it cannot see is a key somebody deletes.
-          */}
-          {t(`permission.tool.${request.toolName}`, {
-            defaultValue: t('permission.tool.unknown', { tool: request.toolName }),
-          })}
-        </h3>
+        {/* What is asked, by the kind of the call — its label when this build has no words for it. */}
+        <h3 className="text-sm font-semibold">{permissionTitle(request, t)}</h3>
         <PermissionCountdown remainingMs={remainingMs} />
       </div>
 
@@ -107,7 +102,7 @@ export function PermissionCard({
         </pre>
       )}
 
-      <EditPreviewView request={request} folder={folder} />
+      {preview}
 
       {armed === null && request.reaches.length > 1 && (
         <ReachChooser

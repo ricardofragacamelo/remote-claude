@@ -17,9 +17,13 @@ import {
   PermissionRegistry,
   PermissionRuleBook,
   PermissionSettlement,
+  MigrateRulesUseCase,
+  RULE_MIGRATION_STORE,
   RequestPermissionUseCase,
   ResolvePermissionUseCase,
   RevokePermissionRuleUseCase,
+  RuleDialects,
+  TOOL_KIND_BACKFILL_STORE,
 } from '@application/permission';
 import type {
   PermissionBroadcaster,
@@ -27,8 +31,11 @@ import type {
   PermissionRequestRepository,
   PermissionRuleRepository,
   PermissionSettings,
+  RuleMigrationStore,
+  ToolKindBackfillStore,
 } from '@application/permission';
 import { RecordAuditEventUseCase } from '@application/audit';
+import { ToolClassifiers } from '@application/engine';
 import { ResolveDeviceUseCase } from '@application/auth';
 import { CLOCK, ID_GENERATOR, SCHEDULER } from '@application/shared';
 import type { Scheduler } from '@application/shared';
@@ -46,10 +53,14 @@ import { EmitterPermissionEvents } from '@adapter/outbound/permission/emitter-pe
 import { HubPermissionBroadcaster } from '@adapter/outbound/permission/hub-permission.broadcaster';
 import { DrizzlePermissionRequestRepository } from '@adapter/outbound/persistence/permission/drizzle-permission-request.repository';
 import { DrizzlePermissionRuleRepository } from '@adapter/outbound/persistence/permission/drizzle-permission-rule.repository';
+import { DrizzleRuleMigrationStore } from '@adapter/outbound/persistence/permission/drizzle-rule-migration.store';
+import { DrizzleToolKindBackfillStore } from '@adapter/outbound/persistence/permission/drizzle-tool-kind-backfill.store';
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
+import { RuleMigrationJob } from '../jobs/rule-migration.job';
+import { engineRuleDialectProviders, engineToolClassifierProviders } from './engines';
 import { WebsocketModule } from './websocket.module';
 
 /** DI token of the numbers a request and a rule live by. They are configuration, never a client's. */
@@ -75,6 +86,7 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
   imports: [AuditModule, AuthModule, WebsocketModule],
   controllers: [PermissionController, PermissionRulesController],
   providers: [
+    ...engineToolClassifierProviders,
     {
       provide: PERMISSION_SETTINGS,
       inject: [APP_CONFIG],
@@ -125,32 +137,14 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
       provide: PermissionRuleBook,
       inject: [PermissionRegistry, PERMISSION_RULE_REPOSITORY, LOGGER],
       useFactory: (registry: PermissionRegistry, rules: PermissionRuleRepository, logger: Logger) =>
-        new PermissionRuleBook(
-          registry,
-          rules,
-          (error, requestId) => {
-            // Not a refusal and not an authorisation: the request goes to a human, as if no rule
-            // existed. Loud, because a rule that silently stopped answering looks like a revocation.
-            logger.error(
-              { op: 'permission.rule.lookup', layer: 'application', requestId, err: error },
-              'the permission rules could not be read; the request is put to a human',
-            );
-          },
-          (rule, requestId) => {
-            // An `allow` for a tool that asks the person is never read as an answer (plan 24,
-            // D-26). Said, so it is not mistaken for a revocation.
-            logger.debug(
-              {
-                op: 'permission.rule.lookup',
-                layer: 'application',
-                requestId,
-                ruleId: rule.id,
-                pattern: rule.ruleContent,
-              },
-              'an allow rule matched a tool that asks the person, and was not read as an answer',
-            );
-          },
-        ),
+        new PermissionRuleBook(registry, rules, (error, requestId) => {
+          // Not a refusal and not an authorisation: the request goes to a human, as if no rule
+          // existed. Loud, because a rule that silently stopped answering looks like a revocation.
+          logger.error(
+            { op: 'permission.rule.lookup', layer: 'application', requestId, err: error },
+            'the permission rules could not be read; the request is put to a human',
+          );
+        }),
     },
     {
       provide: GrantPermissionRuleUseCase,
@@ -168,6 +162,34 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
         clock: Clock,
         settings: PermissionSettings,
       ) => new GrantPermissionRuleUseCase(rules, trail, ids, clock, settings),
+    },
+    // The data step of plan 28 · B-33: the rules out of the engine's grammar, and the kind of every
+    // record of a call — once per boot, after the SQL migrations.
+    ...engineRuleDialectProviders,
+    { provide: RULE_MIGRATION_STORE, useClass: DrizzleRuleMigrationStore },
+    { provide: TOOL_KIND_BACKFILL_STORE, useClass: DrizzleToolKindBackfillStore },
+    {
+      provide: MigrateRulesUseCase,
+      inject: [
+        RULE_MIGRATION_STORE,
+        TOOL_KIND_BACKFILL_STORE,
+        RuleDialects,
+        ToolClassifiers,
+        CLOCK,
+      ],
+      useFactory: (
+        store: RuleMigrationStore,
+        backfill: ToolKindBackfillStore,
+        dialects: RuleDialects,
+        classifiers: ToolClassifiers,
+        clock: Clock,
+      ) => new MigrateRulesUseCase(store, backfill, dialects, classifiers, clock),
+    },
+    {
+      provide: RuleMigrationJob,
+      inject: [MigrateRulesUseCase, LOGGER],
+      useFactory: (migrate: MigrateRulesUseCase, logger: Logger) =>
+        new RuleMigrationJob(migrate, logger),
     },
     {
       provide: RevokePermissionRuleUseCase,

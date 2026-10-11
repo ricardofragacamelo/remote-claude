@@ -140,7 +140,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | Modo, modelo e esforço pela barra, com a recusa que volta o chip | B-11 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#comandos-cliente--servidor) | S-32…S-35 |
 | `/` abre os comandos | B-12 | [mobile/03-state-and-data](../../architecture/mobile/03-state-and-data.md#menu-de-comandos-e-desfazer) | S-36, S-37 |
 | Fila, edição, recusa e o motivo de não enviar acima da caixa | B-13 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#a-fila-de-prompts) | S-38…S-42 |
-| O contexto da janela à vista, com Compactar | B-14 | [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#slash-commands-init-gerar-readme-e-agentsmd) | S-43…S-45 |
+| O contexto da janela à vista, com Compactar | B-14 | [backend/04a-claude](../../architecture/backend/04a-claude.md#slash-commands-init-gerar-readme-e-agentsmd) | S-43…S-45 |
 | A `AppBar` com status e histórico | B-15 | [mobile/04-ui](../../architecture/mobile/04-ui.md#navegação--go_router) | S-46…S-48 |
 | O menu `⋯`: encerrar (do dono, confirmado), desfazer, regras, ajuda, copiar id | B-16 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#multi-cliente-na-mesma-sessão) | S-49…S-52 |
 | A ajuda da tela descreve os lugares novos | B-17 | [shared/02-i18n](../../architecture/shared/02-i18n.md#garantias-automatizadas) | S-53 |

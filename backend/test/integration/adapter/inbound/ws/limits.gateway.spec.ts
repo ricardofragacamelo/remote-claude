@@ -1,8 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import { OWNER_VALUE, PROCESS_MARKER } from '@adapter/outbound/claude/process-marker';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import { OWNER_VALUE, PROCESS_MARKER } from '@shared/process/process-marker';
 import { SessionRegistry } from '@application/session';
 import { MACHINE_MEMORY } from '@infra/lifecycle/session-capacity';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';

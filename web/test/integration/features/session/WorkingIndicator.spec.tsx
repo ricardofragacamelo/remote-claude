@@ -199,7 +199,12 @@ describe('the rows of the system', () => {
             turnId: 'turn-1',
             costUsd: '0.0123',
             durationMs: 4200,
-            usage: { input: 1200, output: 34, cacheRead: 5000, cacheWrite: 0 },
+            usage: {
+              inputTokens: 1200,
+              outputTokens: 34,
+              cacheReadTokens: 5000,
+              cacheWriteTokens: 0,
+            },
           }}
         />
         <CompactedRow trigger="manual" preTokens={180_000} />

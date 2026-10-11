@@ -1,66 +1,61 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
 import type { Envelope } from '@remote-claude/contracts';
 
-import { ConversationReader } from '@/features/session';
+import { ConversationReader, KeepAgentNames } from '@/features/session';
 import { Conversation } from '@/features/session/components/Conversation';
 import { TaskStrip } from '@/features/session/components/composer/TaskStrip';
-import { taskListOf } from '@/features/session/lib/task-list';
 import { readEvent, SILENT } from '@/features/session/services/conversation-reducer';
 import type { Conversation as ConversationState } from '@/features/session/types/live-session';
 import { api } from '@/shared/api/api';
+import { CAPABILITIES, anEngineDto, anEngineList } from '../../../support/engines';
 import { aHistoryPage, OURS } from '../../../support/history';
 import { render, translator } from '../../../support/render';
+import { aToolCall } from '../../../support/canonical-tool';
 
 const t = translator('en');
 
 /** One event of the stream, or of a page of the history — the same payload either way. */
 type Event = { readonly type: string; readonly payload: Record<string, unknown> };
 
+type Status = 'pending' | 'inProgress' | 'completed';
+
 const started = (id: string, toolName: string, input: Record<string, unknown>): Event => ({
   type: 'tool.started',
-  payload: { toolUseId: id, toolName, input },
+  payload: { toolUseId: id, ...aToolCall(toolName, input) },
 });
 
-const ended = (id: string, extra: Record<string, unknown> = {}): Event => ({
+const ended = (id: string): Event => ({
   type: 'tool.completed',
-  payload: { toolUseId: id, status: 'succeeded', ...extra },
+  payload: { toolUseId: id, status: 'succeeded' },
 });
 
-const todos = (a: string, b: string, c: string) => ({
-  todos: [
-    { content: 'Write a.txt', status: a, activeForm: 'Writing a.txt' },
-    { content: 'Write b.txt', status: b, activeForm: 'Writing b.txt' },
-    { content: 'Write c.txt', status: c, activeForm: 'Writing c.txt' },
-  ],
+/** The whole list, as the server reads it from the agent's calls (plan 28, B-22). */
+const tasksChanged = (a: Status, b: Status, c: Status): Event => ({
+  type: 'session.tasksChanged',
+  payload: {
+    tasks: [
+      { id: '1', title: 'Write a.txt', activeTitle: 'Writing a.txt', status: a },
+      { id: '2', title: 'Write b.txt', activeTitle: 'Writing b.txt', status: b },
+      { id: '3', title: 'Write c.txt', status: c },
+    ],
+  },
 });
 
-/** What `todo-write-turn` recorded: the whole list, three times. */
-const TODO_WRITE: readonly Event[] = [
-  started('w1', 'TodoWrite', todos('pending', 'pending', 'pending')),
+/** A turn as the history carries it: each call of the list, then the list it left. */
+const TURN: readonly Event[] = [
+  started('w1', 'TodoWrite', { todos: [] }),
   ended('w1'),
-  started('w2', 'TodoWrite', todos('in_progress', 'pending', 'pending')),
+  tasksChanged('pending', 'pending', 'pending'),
+  started('w2', 'TodoWrite', { todos: [] }),
   ended('w2'),
-  started('w3', 'TodoWrite', todos('completed', 'pending', 'pending')),
+  tasksChanged('inProgress', 'pending', 'pending'),
+  started('w3', 'TodoWrite', { todos: [] }),
   ended('w3'),
-];
-
-/** What `task-tools-turn` recorded: three tasks created, then the first moved twice. */
-const TASK_TOOLS: readonly Event[] = [
-  ...['a', 'b', 'c'].flatMap((name, index) => [
-    started(`c${name}`, 'TaskCreate', {
-      subject: `Write ${name}.txt`,
-      activeForm: `Writing ${name}.txt`,
-    }),
-    ended(`c${name}`, { taskId: String(index + 1) }),
-  ]),
-  started('u1', 'TaskUpdate', { taskId: '1', status: 'in_progress' }),
-  ended('u1', { taskId: '1' }),
-  started('u2', 'TaskUpdate', { taskId: '1', status: 'completed' }),
-  ended('u2', { taskId: '1' }),
+  tasksChanged('completed', 'pending', 'pending'),
 ];
 
 function fold(events: readonly Event[]): ConversationState {
@@ -82,9 +77,9 @@ function list(): HTMLElement {
   return screen.getByRole('region', { name: t('sessions.tasks.label') });
 }
 
-/** The strip of the list above the box, as the tools of `events` leave it (plan 09, B-26). */
+/** The strip of the list above the box, as the events leave it (plan 09, B-26). */
 function strip(events: readonly Event[]): ReturnType<typeof render> {
-  return render(<TaskStrip list={taskListOf(fold(events).tools)} />);
+  return render(<TaskStrip list={fold(events).taskList} />);
 }
 
 /** The line the list folds into — what unfolds it. */
@@ -92,46 +87,61 @@ function headline(): HTMLElement {
   return within(list()).getByRole('button');
 }
 
+/** The reader of a conversation, with `GET /engines` saying what its engine can do. */
+function read(events: readonly Event[], capabilities = CAPABILITIES): void {
+  vi.spyOn(api, 'get').mockImplementation((path: string) =>
+    Promise.resolve(
+      path === '/engines'
+        ? anEngineList({ engines: [anEngineDto({ capabilities })] })
+        : aHistoryPage(events),
+    ),
+  );
+  render(
+    <>
+      <KeepAgentNames />
+      <ConversationReader
+        conversation={{ engine: 'claude', id: OURS }}
+        onResumed={vi.fn()}
+        onClose={vi.fn()}
+      />
+    </>,
+  );
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** The task list of the panel — plan 08, B-20, D-25; above the box since plan 09, B-26, D-14. */
+/** The task list of the panel — plan 08, B-20; above the box since plan 09, B-26; an event since plan 28, B-22. */
 describe('the task list of a conversation', () => {
-  it.each([
-    ['TodoWrite', TODO_WRITE],
-    ['TaskCreate and TaskUpdate', TASK_TOOLS],
-  ])(
-    'folds the list of %s into one line above the box, and unfolds it whole — S-85, plan 09 S-73',
-    async (_, events) => {
-      const user = userEvent.setup();
-      strip(events);
+  it('folds the last list into one line above the box, and unfolds it whole, with what moved — S-66', async () => {
+    const user = userEvent.setup();
+    strip(TURN);
 
-      expect(headline()).toHaveTextContent(
-        t('sessions.tasks.headline', { done: 1, total: 3, task: 'Write b.txt' }),
-      );
-      expect(headline()).toHaveAttribute('aria-expanded', 'false');
-      expect(within(list()).queryAllByRole('listitem')).toEqual([]);
+    expect(headline()).toHaveTextContent(
+      t('sessions.tasks.headline', { done: 1, total: 3, task: 'Write b.txt' }),
+    );
+    expect(headline()).toHaveAttribute('aria-expanded', 'false');
+    expect(within(list()).queryAllByRole('listitem')).toEqual([]);
 
-      await user.click(headline());
+    await user.click(headline());
 
-      const items = within(list())
-        .getAllByRole('listitem')
-        .map((item) => item.textContent);
-      expect(items).toEqual([
-        `${t('sessions.taskStatus.completed')}: Write a.txt${t('sessions.tasks.was', { state: t('sessions.taskStatus.inProgress') })}`,
-        `${t('sessions.taskStatus.pending')}: Write b.txt`,
-        `${t('sessions.taskStatus.pending')}: Write c.txt`,
-      ]);
+    const items = within(list())
+      .getAllByRole('listitem')
+      .map((item) => item.textContent);
+    expect(items).toEqual([
+      `${t('sessions.taskStatus.completed')}: Write a.txt${t('sessions.tasks.was', { state: t('sessions.taskStatus.inProgress') })}`,
+      `${t('sessions.taskStatus.pending')}: Write b.txt`,
+      `${t('sessions.taskStatus.pending')}: Write c.txt`,
+    ]);
 
-      await user.click(headline());
-      expect(within(list()).queryAllByRole('listitem')).toEqual([]);
-    },
-  );
+    await user.click(headline());
+    expect(within(list()).queryAllByRole('listitem')).toEqual([]);
+  });
 
   it('says what a task is doing while it is in progress — on its line, and on its row', async () => {
     const user = userEvent.setup();
-    strip(TASK_TOOLS.slice(0, 8));
+    strip(TURN.slice(0, 6));
 
     expect(headline()).toHaveTextContent(
       t('sessions.tasks.headline', { done: 0, total: 3, task: 'Writing a.txt' }),
@@ -145,46 +155,49 @@ describe('the task list of a conversation', () => {
     ).toBeInTheDocument();
   });
 
+  it('says what a task is, in progress, when the agent gave it no other words', async () => {
+    const user = userEvent.setup();
+    strip([tasksChanged('completed', 'completed', 'inProgress')]);
+
+    expect(headline()).toHaveTextContent(
+      t('sessions.tasks.headline', { done: 2, total: 3, task: 'Write c.txt' }),
+    );
+    await user.click(headline());
+    expect(within(list()).getByText('Write c.txt')).toBeInTheDocument();
+  });
+
+  it('marks a task new to the list as moved from nowhere — only a change of state is said', async () => {
+    const user = userEvent.setup();
+    strip([
+      tasksChanged('pending', 'pending', 'pending'),
+      {
+        type: 'session.tasksChanged',
+        payload: { tasks: [{ id: '9', title: 'Write z.txt', status: 'inProgress' }] },
+      },
+    ]);
+
+    await user.click(headline());
+    expect(within(list()).getByText('Write z.txt')).toBeInTheDocument();
+    expect(within(list()).queryByText(/^was /i)).toBeNull();
+  });
+
   it('says so when every task is done, and counts none done at the start — plan 09, S-73', () => {
-    const done = todos('completed', 'completed', 'completed');
-    const { unmount } = strip([started('w9', 'TodoWrite', done), ended('w9')]);
+    const { unmount } = strip([tasksChanged('completed', 'completed', 'completed')]);
     expect(headline()).toHaveTextContent(t('sessions.tasks.allDone', { done: 3, total: 3 }));
     unmount();
 
-    strip(TODO_WRITE.slice(0, 2));
+    strip(TURN.slice(0, 3));
     expect(headline()).toHaveTextContent(
       t('sessions.tasks.headline', { done: 0, total: 3, task: 'Write a.txt' }),
     );
   });
 
-  it('is no longer at the top of the conversation — plan 09, B-26', () => {
-    render(<Conversation conversation={fold(TODO_WRITE)} isPartial={false} />);
+  it('is not at the top of the conversation, and the calls of the list stay lines of their label', () => {
+    render(<Conversation conversation={fold(TURN)} isPartial={false} />);
 
     expect(screen.queryByRole('region', { name: t('sessions.tasks.label') })).toBeNull();
-  });
-
-  it('says each change of the list on its row, and leaves a call it could not read a tool — S-86', () => {
-    render(
-      <Conversation
-        conversation={fold([
-          ...TASK_TOOLS.slice(0, 2),
-          started('lost', 'TaskUpdate', { taskId: '42', status: 'completed' }),
-          ended('lost'),
-        ])}
-        isPartial={false}
-      />,
-    );
-
-    expect(
-      screen.getByRole('button', {
-        name: new RegExp(t('sessions.tool.taskCreate', { subject: 'Write a.txt' })),
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', {
-        name: new RegExp(`^${t('sessions.tool.other', { name: 'TaskUpdate' })}`),
-      }),
-    ).toBeInTheDocument();
+    const label = t('sessions.tool.tasksWrite', { count: 0 });
+    expect(screen.getAllByRole('button', { name: (name) => name.includes(label) })).toHaveLength(3);
   });
 
   it('draws nothing without a list, or once the list was emptied — S-86, plan 09 S-73', () => {
@@ -192,18 +205,14 @@ describe('the task list of a conversation', () => {
     expect(container).toBeEmptyDOMElement();
     unmount();
 
-    strip([...TODO_WRITE, started('w4', 'TodoWrite', { todos: [] }), ended('w4')]);
+    strip([...TURN, { type: 'session.tasksChanged', payload: { tasks: [] } }]);
     expect(
       screen.queryByRole('region', { name: t('sessions.tasks.label') }),
     ).not.toBeInTheDocument();
   });
 
-  it.each([
-    ['TodoWrite', TODO_WRITE],
-    ['TaskCreate and TaskUpdate', TASK_TOOLS],
-  ])('draws the same list of %s from the history, after a reload — S-87', async (_, events) => {
-    vi.spyOn(api, 'get').mockResolvedValue(aHistoryPage(events));
-    render(<ConversationReader conversationId={OURS} onResumed={vi.fn()} onClose={vi.fn()} />);
+  it('draws the same list from the history, after a reload — S-67', async () => {
+    read(TURN);
 
     const region = await screen.findByRole('region', { name: t('sessions.tasks.label') });
     expect(within(region).getByRole('button')).toHaveTextContent(
@@ -211,9 +220,30 @@ describe('the task list of a conversation', () => {
     );
   });
 
+  it('repeats no task when the history says the list twice — S-67', async () => {
+    const user = userEvent.setup();
+    read([...TURN, tasksChanged('completed', 'pending', 'pending')]);
+
+    const region = await screen.findByRole('region', { name: t('sessions.tasks.label') });
+    await user.click(within(region).getByRole('button'));
+    expect(within(region).getAllByRole('listitem')).toHaveLength(3);
+  });
+
+  it('has no strip for a conversation whose engine keeps no list — S-68', async () => {
+    read(TURN, { ...CAPABILITIES, taskList: false });
+
+    expect(await screen.findByText(t('history.screen.description'))).toBeInTheDocument();
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledWith('/engines');
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('region', { name: t('sessions.tasks.label') })).toBeNull();
+    });
+  });
+
   it('has no accessibility violation, folded and unfolded', async () => {
     const user = userEvent.setup();
-    const { container } = strip(TASK_TOOLS);
+    const { container } = strip(TURN);
     expect(await axe(container)).toHaveNoViolations();
 
     await user.click(headline());

@@ -46,8 +46,8 @@
     },
     "via": {
       "type": "string",
-      "enum": ["rule", "allowAll"],
-      "description": "Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), or the session running in Permitir tudo (`allowAll`). Absent when a human answered or the deadline passed."
+      "enum": ["rule", "allowAll", "readOnly"],
+      "description": "Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), the session running in Permitir tudo (`allowAll`), or a call that changes something refused because the session is read-only (`readOnly`, plan 28, B-26). Absent when a human answered or the deadline passed."
     },
     "answers": {
       "type": "array",

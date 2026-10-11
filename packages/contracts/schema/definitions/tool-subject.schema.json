@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/tool-subject.json",
+  "title": "ToolSubject",
+  "description": "What a tool call is about, normalised by the adapter of the engine so that a client reads it the same whatever engine made the call. Every field is optional, and a kind sets the ones it has: the paths of a `file.*`, the command of a `shell`, the pattern of a `search`, the URL of a `web.fetch`.",
+  "type": "object",
+  "properties": {
+    "paths": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "string"
+      },
+      "description": "The files the call reads or writes, absolute, as the engine gave them."
+    },
+    "command": {
+      "type": "string",
+      "description": "The whole command line of a `shell` — what the IN of the row shows."
+    },
+    "pattern": {
+      "type": "string",
+      "description": "What a `search` looks for: the text or the glob."
+    },
+    "url": {
+      "type": "string",
+      "description": "The address a `web.fetch` reads."
+    },
+    "query": {
+      "type": "string",
+      "description": "What a `web.search` asks."
+    },
+    "server": {
+      "type": "string",
+      "description": "The MCP server of an `mcp` call."
+    },
+    "tool": {
+      "type": "string",
+      "description": "The tool of that MCP server."
+    },
+    "description": {
+      "type": "string",
+      "description": "What an `agent` was sent to do, in the words the model gave."
+    }
+  }
+}

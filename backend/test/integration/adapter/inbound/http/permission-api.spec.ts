@@ -18,6 +18,7 @@ import { startIdentityServer } from '../../../../support/identity/identity-serve
 import type { IdentityServer } from '../../../../support/identity/identity-server';
 import { startTestApp, SUBJECT } from '../../../../support/app/test-app';
 import type { TestApp } from '../../../../support/app/test-app';
+import { claudeTool } from '../../../../support/builders/tool.builder';
 
 /** The second account, used wherever the rule is about one user not reaching another's. */
 const OTHER = 'auth|other';
@@ -78,10 +79,11 @@ describe('the permission HTTP surface', () => {
       sessionId: SESSION,
       userId: UserId.create(SUBJECT),
       projectPath: null,
-      permissionMode: 'default',
+      permissionMode: 'ask',
       toolUseId: `toolu-${requestId}`,
       toolName: 'Bash',
       input: { command: 'rm -rf build/' },
+      tool: claudeTool('Bash', { command: 'rm -rf build/' }),
     });
   }
 
@@ -101,10 +103,18 @@ describe('the permission HTTP surface', () => {
       request: {
         requestId: 'request-pending',
         toolUseId: 'toolu-request-pending',
+        // The canonical call (plan 28, B-15), and its title keyed by its kind.
+        kind: 'shell',
+        label: { messageKey: 'sessions.tool.shell', params: { command: 'rm -rf build/' } },
+        subject: { command: 'rm -rf build/' },
+        changes: [],
+        origin: { engine: 'claude', native: 'Bash' },
+        rawInput: { command: 'rm -rf build/' },
+        title: 'permission.tool.shell',
+        // The fields the previous protocol named the call by, beside, until F7 (D-22).
         toolName: 'Bash',
-        title: 'permission.tool.Bash',
-        description: 'rm -rf build/',
         input: { command: 'rm -rf build/' },
+        description: 'rm -rf build/',
         riskHint: 'destructive',
         defaultToNo: true,
         expiresAt: expect.any(String),
@@ -115,14 +125,14 @@ describe('the permission HTTP surface', () => {
           {
             scope: 'always',
             labelKey: 'permission.scope.always',
-            pattern: 'Bash(rm -rf build/)',
+            pattern: 'shell(rm -rf build/)',
             lifetimeMs: 3_600_000,
           },
         ],
         // What a rule left by the answer may reach, computed by the server (plan 23, B-10).
         reaches: [
-          { reach: 'exact', patterns: ['Bash(rm -rf build/)'] },
-          { reach: 'prefix', patterns: ['Bash(rm:*)'] },
+          { reach: 'exact', patterns: ['shell(rm -rf build/)'] },
+          { reach: 'prefix', patterns: ['shell(rm:*)'] },
         ],
       },
       // Two allowed by the suite's configuration, one already spent above.
@@ -140,6 +150,7 @@ describe('the permission HTTP surface', () => {
       toolUseId: 'toolu-request-allow-all',
       toolName: 'Bash',
       input: { command: 'pnpm test' },
+      tool: claudeTool('Bash', { command: 'pnpm test' }),
     });
 
     const response = await revalidate('request-allow-all');
@@ -216,10 +227,11 @@ describe('the permission HTTP surface', () => {
         sessionId: SESSION,
         userId: UserId.create(SUBJECT),
         projectPath: null,
-        permissionMode: 'default',
+        permissionMode: 'ask',
         toolUseId: `toolu-${requestId}`,
         toolName: 'AskUserQuestion',
         input: QUESTIONS,
+        tool: claudeTool('AskUserQuestion', QUESTIONS),
       });
     }
 

@@ -40,6 +40,7 @@ import 'package:remote_claude/features/workspace/workspace_providers.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_lookup.dart';
 
+import '../../support/builders/conversations.dart';
 import '../../support/fakes/fake_files_repository.dart';
 import '../../support/builders/config.dart';
 import '../../support/fakes/fake_insight_repository.dart';
@@ -230,12 +231,14 @@ void main() {
   ) async {
     await pumpApp(tester);
 
-    container.read(routerProvider).go(conversationRouteFor('conv/7', '/home/someone/project'));
+    container
+        .read(routerProvider)
+        .go(conversationRouteFor(conversationOf('conv/7'), '/home/someone/project'));
     await tester.pumpAndSettle();
 
     expect(
-      tester.widget<ConversationHistoryPage>(find.byType(ConversationHistoryPage)).conversationId,
-      'conv/7',
+      tester.widget<ConversationHistoryPage>(find.byType(ConversationHistoryPage)).conversation,
+      conversationOf('conv/7'),
     );
     // Nested, so "back" lands on the conversations of the same folder.
     expect(

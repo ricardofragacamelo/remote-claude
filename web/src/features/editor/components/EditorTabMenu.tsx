@@ -8,7 +8,7 @@ import {
   ContextMenuSeparator,
 } from '@/shared/components/ui/context-menu';
 import { useRegistry } from '@/shared/hooks/useRegistry';
-import { claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentContextTargets } from '@/shared/lib/files-drag';
 import { tabMenuOf } from '../hooks/tab-menu';
 import type { EditorTabAction } from '../hooks/tab-menu';
 import { REVEAL_IN_EXPLORER } from '../hooks/useEditorCommands';
@@ -29,14 +29,14 @@ export function EditorTabMenu({
   dirty,
 }: EditorTabMenuProps): React.JSX.Element {
   const { t } = useTranslation();
-  const claude = useRegistry(claudeContextTargets).length > 0;
+  const agent = useRegistry(agentContextTargets).length > 0;
   const reveal =
     commandRegistry.command(REVEAL_IN_EXPLORER) === undefined
       ? null
       : () => {
           void executeCommand(REVEAL_IN_EXPLORER, t);
         };
-  const sections = tabMenuOf(tab, { folder, group, dirty, claude, reveal });
+  const sections = tabMenuOf(tab, { folder, group, dirty, agent, reveal });
 
   return (
     <ContextMenuContent>

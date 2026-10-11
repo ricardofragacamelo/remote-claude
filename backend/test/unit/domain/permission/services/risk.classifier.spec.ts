@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { classifyRisk } from '@domain/permission';
+import type { RiskHint } from '@domain/permission';
+import { claudeTool } from '../../../../support/builders/tool.builder';
+
+/** The risk of a call of Claude Code, as the core grades it: by the kind the adapter gives it. */
+function risk(toolName: string, input: Record<string, unknown>): RiskHint {
+  return classifyRisk(claudeTool(toolName, input));
+}
 
 /**
  * The classifier, and the one property that matters more than accuracy.
@@ -24,24 +31,42 @@ describe('classifyRisk', () => {
     // A question to the person reads nothing and changes nothing — plan 24, D-10.
     ['AskUserQuestion', { questions: [] }],
   ])('grades %s as a read', (toolName, input) => {
-    expect(classifyRisk(toolName, input)).toBe('read');
+    expect(risk(toolName, input)).toBe('read');
   });
 
   it.each([['Write'], ['Edit'], ['MultiEdit'], ['NotebookEdit']])(
     'grades %s as a write',
     (toolName) => {
-      expect(classifyRisk(toolName, { file_path: '/srv/app/main.ts' })).toBe('write');
+      expect(risk(toolName, { file_path: '/srv/app/main.ts' })).toBe('write');
     },
   );
 
   it('grades a tool it has never heard of as destructive — S-95', () => {
     // The name of a tool says nothing about what it does, so an unknown one gets no benefit of
     // the doubt. A plugin or an SDK release adds tools; neither asks our permission first.
-    expect(classifyRisk('McpDoSomething', { anything: true })).toBe('destructive');
+    expect(risk('McpDoSomething', { anything: true })).toBe('destructive');
+  });
+
+  it.each([
+    ['file.delete'],
+    ['file.move'],
+    ['mcp'],
+    ['agent'],
+    ['plan'],
+    ['other'],
+    ['a.kind.this.build.never.heard.of'],
+  ])('grades the kind %s as destructive — it fails closed (plan 28, B-16)', (kind) => {
+    expect(classifyRisk({ kind, subject: {} })).toBe('destructive');
+  });
+
+  it('grades a shell call by its command, whichever engine named it', () => {
+    // Neutral: the command is parsed from the subject, never from an engine's input.
+    expect(classifyRisk({ kind: 'shell', subject: { command: 'git status' } })).toBe('read');
+    expect(classifyRisk({ kind: 'shell', subject: {} })).toBe('destructive');
   });
 
   it('grades a Bash call with no command string as destructive', () => {
-    expect(classifyRisk('Bash', { description: 'do a thing' })).toBe('destructive');
+    expect(risk('Bash', { description: 'do a thing' })).toBe('destructive');
   });
 
   describe('over a shell line', () => {
@@ -53,11 +78,11 @@ describe('classifyRisk', () => {
       ['/usr/bin/pwd'],
       ['RC_ENV=test ls'],
     ])('grades %s as a read', (command) => {
-      expect(classifyRisk('Bash', { command })).toBe('read');
+      expect(risk('Bash', { command })).toBe('read');
     });
 
     it.each([['mkdir build'], ['touch out.txt'], ['cp a b']])('grades %s as a write', (command) => {
-      expect(classifyRisk('Bash', { command })).toBe('write');
+      expect(risk('Bash', { command })).toBe('write');
     });
 
     it.each([
@@ -72,25 +97,25 @@ describe('classifyRisk', () => {
       ['', 'an empty command'],
       ['   ', 'whitespace only'],
     ])('grades %j as destructive — %s', (command) => {
-      expect(classifyRisk('Bash', { command })).toBe('destructive');
+      expect(risk('Bash', { command })).toBe('destructive');
     });
 
     it('takes the worst of a line, not the first word of it — S-95', () => {
       // `ls` is a read and `rm -rf` is not, and they are one string. Grading by the first segment
       // would authorise the second on the strength of the first.
-      expect(classifyRisk('Bash', { command: 'ls && rm -rf build' })).toBe('destructive');
-      expect(classifyRisk('Bash', { command: 'ls; mkdir out' })).toBe('write');
+      expect(risk('Bash', { command: 'ls && rm -rf build' })).toBe('destructive');
+      expect(risk('Bash', { command: 'ls; mkdir out' })).toBe('write');
     });
 
     it('splits at a lone `&` too, so a backgrounded command is graded on its own — 15 · B-08', () => {
       // Before the operator list became one, a lone `&` did not split: `ls & rm -rf x` was graded
       // by `ls` alone, as a read.
-      expect(classifyRisk('Bash', { command: 'ls & rm -rf x' })).toBe('destructive');
-      expect(classifyRisk('Bash', { command: 'ls & pwd' })).toBe('read');
+      expect(risk('Bash', { command: 'ls & rm -rf x' })).toBe('destructive');
+      expect(risk('Bash', { command: 'ls & pwd' })).toBe('read');
     });
 
     it('grades a destructive command as destructive — S-62', () => {
-      expect(classifyRisk('Bash', { command: 'rm -rf build/' })).toBe('destructive');
+      expect(risk('Bash', { command: 'rm -rf build/' })).toBe('destructive');
     });
   });
 });

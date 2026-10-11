@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { HUMAN_ONLY_TOOLS, answeredByMode } from '@domain/permission';
+import { HUMAN_ONLY_KINDS, answeredByMode, answeredByRule } from '@domain/permission';
 import { SessionId } from '@domain/session';
 import type { GrantPermissionRuleCommand } from '@application/permission';
 import {
@@ -31,7 +31,7 @@ describe('Permitir tudo', () => {
   const grant = (overrides: Partial<GrantPermissionRuleCommand> = {}) =>
     harness.grant.execute({
       userId: PERMISSION_OWNER,
-      pattern: 'Bash(rm:*)',
+      pattern: 'shell(rm:*)',
       decision: 'deny',
       scope: 'project',
       projectPath: PERMISSION_PROJECT,
@@ -87,7 +87,9 @@ describe('Permitir tudo', () => {
         const outcome = await ask({ toolName, input: { questions: [] } });
 
         expect(outcome.kind).toBe('pending');
-        expect(harness.broadcaster.last('permission.requested')).toMatchObject({ toolName });
+        expect(harness.broadcaster.last('permission.requested')).toMatchObject({
+          origin: { native: toolName },
+        });
       },
     );
 
@@ -114,7 +116,7 @@ describe('Permitir tudo', () => {
     });
 
     it('lets an allow rule answer as a rule, before the mode — S-15', async () => {
-      const rule = await grant({ pattern: 'Bash(git status:*)', decision: 'allow' });
+      const rule = await grant({ pattern: 'shell(git status:*)', decision: 'allow' });
 
       const outcome = await ask({ input: { command: 'git status --short' } });
 
@@ -234,7 +236,7 @@ describe('Permitir tudo', () => {
       });
     });
 
-    it.each(['default', 'acceptEdits', 'plan'] as const)(
+    it.each(['ask', 'acceptEdits'] as const)(
       'changes nothing when the session switches to %s — S-24, S-25',
       async (mode) => {
         await openThree();
@@ -293,20 +295,35 @@ describe('Permitir tudo', () => {
   });
 });
 
-describe('the mode alone', () => {
-  it.each([...HUMAN_ONLY_TOOLS])('never answers %s', (toolName) => {
-    expect(answeredByMode('allowAll', toolName)).toBe(false);
+describe('the mode alone, by kind — S-64', () => {
+  it('holds exactly the kinds that ask the person', () => {
+    expect([...HUMAN_ONLY_KINDS].sort()).toEqual(['plan', 'question']);
   });
 
-  it.each(['default', 'acceptEdits', 'bypassPermissions', 'plan'] as const)(
-    'answers nothing in %s',
-    (mode) => {
-      expect(answeredByMode(mode, 'Bash')).toBe(false);
+  it.each([...HUMAN_ONLY_KINDS])('never answers a %s', (kind) => {
+    expect(answeredByMode('allowAll', kind)).toBe(false);
+  });
+
+  it.each(['ask', 'acceptEdits', 'readOnly'] as const)('answers nothing in %s', (mode) => {
+    expect(answeredByMode(mode, 'shell')).toBe(false);
+  });
+
+  it.each(['shell', 'mcp', 'other', 'file.write', 'agent', 'tasks'] as const)(
+    'answers a %s in Permitir tudo',
+    (kind) => {
+      expect(answeredByMode('allowAll', kind)).toBe(true);
     },
   );
+});
 
-  it('answers any other tool in Permitir tudo', () => {
-    expect(answeredByMode('allowAll', 'Bash')).toBe(true);
-    expect(answeredByMode('allowAll', 'mcp__x__y')).toBe(true);
+describe('a rule, by kind — S-64', () => {
+  it.each([...HUMAN_ONLY_KINDS])('answers a %s only when it refuses', (kind) => {
+    expect(answeredByRule('deny', kind)).toBe(true);
+    expect(answeredByRule('allow', kind)).toBe(false);
+  });
+
+  it.each(['shell', 'mcp', 'other'] as const)('answers a %s either way', (kind) => {
+    expect(answeredByRule('deny', kind)).toBe(true);
+    expect(answeredByRule('allow', kind)).toBe(true);
   });
 });

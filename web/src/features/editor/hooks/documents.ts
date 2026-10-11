@@ -10,7 +10,7 @@ import { editorStoreOf, isDirty, updateDoc } from '../store/editor.store';
 import type { EditorStore } from '../store/editor.store';
 import { useEditorPreferences } from '../store/preferences.store';
 import type { CodeEditorEngine, TextModel, TextPosition } from '../types/code-editor';
-import type { ChangeOrigin, FileDocument } from '../types/editor';
+import type { ExternalChange, FileDocument } from '../types/editor';
 
 /** Any failure as the `AppError` the screen shows. */
 export function asAppError(error: unknown): AppError {
@@ -336,6 +336,9 @@ function encodingOf(doc: FileDocument): { encoding?: string } {
   return doc.encoding === 'utf8' ? {} : { encoding: doc.encoding };
 }
 
+/** A change nobody said the author of. */
+const UNKNOWN_AUTHOR: ExternalChange = { origin: null, engine: null };
+
 /**
  * Asks the disk whether a file is still the version in the editor — `If-None-Match`, so the usual
  * answer costs nothing (`304`) — and acts on the answer:
@@ -348,7 +351,7 @@ function encodingOf(doc: FileDocument): { encoding?: string } {
 export async function revalidate(
   folder: string,
   path: string,
-  origin: ChangeOrigin | null = null,
+  by: ExternalChange = UNKNOWN_AUTHOR,
 ): Promise<void> {
   const store = editorStoreOf(folder);
   const doc = store.getState().docs[path];
@@ -364,7 +367,7 @@ export async function revalidate(
 
   try {
     const read = await readFile(folder, path, { ...encodingOf(doc), ifNoneMatch: doc.etag });
-    answered(folder, path, read, origin);
+    answered(folder, path, read, by);
   } catch (error) {
     const failure = asAppError(error);
 
@@ -377,12 +380,7 @@ export async function revalidate(
 }
 
 /** What the disk answered a revalidation, applied to the file as it is now. */
-function answered(
-  folder: string,
-  path: string,
-  read: ReadResult,
-  origin: ChangeOrigin | null,
-): void {
+function answered(folder: string, path: string, read: ReadResult, by: ExternalChange): void {
   const store = editorStoreOf(folder);
   const now = store.getState().docs[path];
 
@@ -393,7 +391,7 @@ function answered(
   if (read.kind === 'notModified') {
     updateDoc(store, path, () => ({ deleted: false }));
   } else if (isDirty(now)) {
-    updateDoc(store, path, () => ({ external: { origin }, deleted: false }));
+    updateDoc(store, path, () => ({ external: by, deleted: false }));
   } else {
     putRead(folder, path, read.file);
   }
@@ -438,7 +436,10 @@ export async function diskChanged(
           return Promise.resolve();
         }
 
-        return revalidate(folder, change.path, change.origin ?? null);
+        return revalidate(folder, change.path, {
+          origin: change.origin ?? null,
+          engine: change.engine ?? null,
+        });
       }),
   );
 }

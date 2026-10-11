@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { openDiff } from '@/features/editor';
 import { changeDiffSides, toolDiffSides } from '../lib/diff-sides';
 
-/** The ways to put a diff of what Claude changed in the editor of the folder tab. */
+/** The ways to put a diff of what the agent changed in the editor of the folder tab. */
 export interface DiffTabs {
   /** Before the tool and what it left (B-27). Opening it again focuses the same tab (S-120). */
   openToolDiff(toolUseId: string, path: string): void;

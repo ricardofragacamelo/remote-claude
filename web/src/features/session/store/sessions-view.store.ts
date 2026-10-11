@@ -4,7 +4,7 @@ import type { StoreApi } from 'zustand/vanilla';
 import { perFolder } from '@/shared/lib/per-folder';
 import type { OriginFilter, SessionGroup, SessionSort } from '../types/sessions-view';
 
-/** What the view of Claude's sessions keeps **for one folder tab** (plan 08, B-09). */
+/** What the view of the agent's sessions keeps **for one folder tab** (plan 08, B-09). */
 export interface SessionsViewState {
   readonly search: string;
   readonly origin: OriginFilter;

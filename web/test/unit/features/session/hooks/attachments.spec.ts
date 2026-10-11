@@ -7,6 +7,7 @@ import { liveSessionStoreOf } from '@/features/session';
 import { useLiveSessionAttachment } from '@/features/session/hooks/useLiveSessionAttachment';
 import { ack, aLiveSocket, hubEvent } from '../../../../support/live-socket';
 import type { LiveSocket } from '../../../../support/live-socket';
+import { aToolCall } from '../../../../support/canonical-tool';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 
@@ -21,10 +22,9 @@ const question = {
   payload: {
     requestId: 'req-1',
     toolUseId: 'toolu-1',
-    toolName: 'Bash',
-    title: 'permission.tool.Bash',
+    ...aToolCall('Bash', { command: 'ls' }),
+    title: 'permission.tool.shell',
     description: 'ls',
-    input: { command: 'ls' },
     riskHint: 'read',
     defaultToNo: false,
     expiresAt: '2026-09-30T12:01:00.000Z',
@@ -53,8 +53,18 @@ describe('the attachments a folder tab holds', () => {
       payload: { sessionId: SESSION, resumeFromSeq: 0 },
     });
 
-    live.receive(ack('session.attached', { sessionId: SESSION, gap: true, claudeSessionId: 'c1' }));
-    expect(liveSessionStoreOf(SESSION).getState()).toMatchObject({ lastSeq: 0, historyFrom: 'c1' });
+    live.receive(
+      ack('session.attached', {
+        sessionId: SESSION,
+        gap: true,
+        conversation: { engine: 'claude', id: 'c1' },
+      }),
+    );
+    // The reload reads the conversation the ack named, by its engine and its id — plan 28, S-39.
+    expect(liveSessionStoreOf(SESSION).getState()).toMatchObject({
+      lastSeq: 0,
+      historyFrom: { engine: 'claude', id: 'c1' },
+    });
   });
 
   it('brings the questions into the queue of its session, and drops them on a gap', () => {

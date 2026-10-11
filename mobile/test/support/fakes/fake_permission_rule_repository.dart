@@ -11,17 +11,19 @@ import 'package:remote_claude/features/permission/domain/repositories/permission
 PermissionRule aPermissionRule({
   String id = 'rule_1',
   PermissionScope scope = PermissionScope.always,
-  String toolName = 'Bash',
-  String pattern = 'Bash(git status)',
+  String? kind = 'shell',
+  String pattern = 'shell(git status)',
   PermissionDecision decision = PermissionDecision.allow,
   String? projectPath,
   DateTime? grantedAt,
   DateTime? expiresAt,
   RuleStatus status = RuleStatus.active,
+  String? engine,
+  String? disabledReason,
 }) => PermissionRule(
   id: id,
   scope: scope,
-  toolName: toolName,
+  kind: kind,
   pattern: pattern,
   decision: decision,
   projectPath: projectPath,
@@ -29,6 +31,8 @@ PermissionRule aPermissionRule({
   grantedAt: grantedAt ?? DateTime.utc(2026, 9, 20, 10),
   expiresAt: expiresAt ?? DateTime.utc(2026, 12, 19, 10),
   status: status,
+  engine: engine,
+  disabledReason: disabledReason,
 );
 
 /// [PermissionRuleRepository] over a list the test owns.

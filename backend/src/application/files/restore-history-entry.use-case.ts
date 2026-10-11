@@ -68,7 +68,7 @@ export class RestoreHistoryEntryUseCase {
     const { folders, disk, lock } = this.writing;
     const folder = await folders.resolve(command.folder, userId);
     const { entry, path } = await reachableEntry(this.store, folder, command.entryId);
-    const sensitive = confirmSensitive(command.confirmSensitive, path);
+    const sensitive = confirmSensitive(this.writing.sensitive, command.confirmSensitive, path);
     const bytes = entry.entryKind === 'file' ? await keptBytesOf(this.store, entry) : null;
     const realPath = await disk.locate(path);
     const ifMatch =

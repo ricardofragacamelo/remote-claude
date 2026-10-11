@@ -7,7 +7,7 @@ import { IconButton } from '@/shared/components/IconButton';
 import { cn } from '@/shared/lib/utils';
 import type { PanelTabs } from '../../hooks/usePanelTabs';
 import { liveSessionStoreOf } from '../../store/live-session.store';
-import type { PanelTab } from '../../store/claude-panel.store';
+import type { PanelTab } from '../../store/agent-panel.store';
 import { PanelTabMenu } from './PanelTabMenu';
 
 /** How long a tab's name may be before it is cut — the whole of it is in the tooltip. */

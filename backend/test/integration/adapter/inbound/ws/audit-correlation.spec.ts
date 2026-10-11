@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import request from 'supertest';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -17,7 +17,7 @@ import { commandFrame, TestSocket } from '../../../../support/app/ws-client';
 import { waitFor } from '../../../../support/app/wait-for';
 
 /** The one invocation the recorded run asks about, and the narrowest rule that covers it. */
-const RECORDED_PATTERN = 'Write(/workspace/summary.md)';
+const RECORDED_PATTERN = 'file.write(/workspace/summary.md)';
 
 interface EntryDto {
   readonly id: string;

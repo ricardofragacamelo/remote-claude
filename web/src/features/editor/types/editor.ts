@@ -15,7 +15,7 @@ export interface DiffSide {
   readonly version?: { readonly entryId: string; readonly at: string };
 
   /**
-   * For `provided`: a text another feature knows how to read — what a session of Claude changed
+   * For `provided`: a text another feature knows how to read — what a session of the agent changed
    * (plan 08, B-27) — named by the {@link DiffSource} that reads it and a key only it understands.
    */
   readonly provided?: ProvidedSide;
@@ -35,7 +35,7 @@ export interface ProvidedSide {
 
 /**
  * Where a provided side of a diff is read from — registered by the feature that knows the text, so
- * the editor shows Claude's changes without learning what a session is.
+ * the editor shows the agent's changes without learning what a session is.
  */
 export interface DiffSource {
   readonly id: string;
@@ -52,7 +52,7 @@ export interface OpenFileOptions {
   /** Opens in the group to the side, making it when there is none ("Open to the side"). */
   readonly toSide?: boolean;
 
-  /** Puts the cursor on this line, counted from 1 — a path with `:line` in Claude's answer (plan 08). */
+  /** Puts the cursor on this line, from 1 — a `path:line` in the agent's answer (plan 08). */
   readonly line?: number;
 }
 
@@ -116,6 +116,14 @@ export type ReadLineEnding = LineEnding | 'mixed';
 /** Who changed a file on disk, as far as the server could tell — a label, never a decision. */
 export type ChangeOrigin = NonNullable<FolderChange['origin']>;
 
+/** Who changed a file under a dirty buffer — and, when it was an agent, which engine's (B-25). */
+export interface ExternalChange {
+  readonly origin: ChangeOrigin | null;
+
+  /** The engine whose agent wrote it — `null` for anyone else, and when the server did not say. */
+  readonly engine: string | null;
+}
+
 /** The indentation a file is edited with. */
 export interface Indentation {
   readonly insertSpaces: boolean;
@@ -168,7 +176,7 @@ export interface FileDocument {
   /** Why the last save failed, while the buffer stays dirty (S-230). */
   readonly saveError: AppError | null;
 
-  /** The second step of a file that changes what Claude may do is being asked (S-232). */
+  /** The second step of a file that changes what the agent may do is being asked (S-232). */
   readonly sensitiveAsked: boolean;
 
   /**
@@ -178,7 +186,7 @@ export interface FileDocument {
   readonly historyNotKept: 'tooLarge' | 'unavailable' | null;
 
   /** The disk changed under a dirty buffer: the non-blocking warning, and who did it (S-239). */
-  readonly external: { readonly origin: ChangeOrigin | null } | null;
+  readonly external: ExternalChange | null;
 
   /** Deleted on disk while open: the tab says so, and a save offers to recreate (S-240). */
   readonly deleted: boolean;

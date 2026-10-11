@@ -30,7 +30,7 @@ SessionModels? sessionModelsFrom(Object? body) {
   return SessionModels(current: body['current']! as String, models: _modelsIn(body['models']));
 }
 
-/// The use of the context in [body], or `null` when the body is not one.
+/// The use of the context in [body] — a `ContextUsePayload` —, or `null` when the body is not one.
 ContextUse? contextUseFrom(Object? body) {
   if (body is! Map<String, Object?>) {
     return null;
@@ -79,6 +79,8 @@ InstallationModel? _modelOf(Object? entry) {
   );
 }
 
+/// One category: its id, and what names it — our key, or the engine's words. The engine's `name` the
+/// payload still carries is for clients of the previous protocol, and is not read here.
 ContextCategory? _categoryOf(Object? entry) {
   if (entry is! Map<String, Object?> || entry['tokens'] is! num) {
     return null;
@@ -86,9 +88,16 @@ ContextCategory? _categoryOf(Object? entry) {
 
   return ContextCategory(
     id: _text(entry, 'id'),
-    name: _text(entry, 'name'),
+    messageKey: _optional(entry, 'messageKey'),
+    text: _optional(entry, 'text'),
     tokens: (entry['tokens']! as num).round(),
   );
+}
+
+/// The non-empty string at [key], or `null`.
+String? _optional(Map<String, Object?> entry, String key) {
+  final String value = _text(entry, key);
+  return value.isEmpty ? null : value;
 }
 
 String _text(Map<String, Object?> entry, String key) {

@@ -12,6 +12,7 @@ import { FixedClock } from '../../../support/fakes/fixed-clock';
 import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-events';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
 import { stubFolderDisk } from '../../../support/fakes/stub-folder-disk';
+import { PRODUCT_SENSITIVE_FILES } from '../../../support/files/sensitive-files';
 
 const owner = UserId.create('auth|42');
 const folder = WorkspacePath.create('/srv/app');
@@ -40,6 +41,7 @@ function creator(disk: FolderDisk, events = new RecordingAuditEvents()): CreateE
     ),
     limits: { maxEditBytes: 4 },
     writes: new UserWrites(new FixedClock(new Date(0))),
+    sensitive: PRODUCT_SENSITIVE_FILES,
   });
 }
 

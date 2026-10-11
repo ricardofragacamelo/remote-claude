@@ -161,7 +161,7 @@ o usuário passa a escrever prefixos de propósito — e é aí que o furo vira 
 O efeito nas regras que já existem só anda na direção segura (S-20): um `allow` passa a responder
 menos, um `deny` a recusar mais. Vai para a [ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse)?
 Não — não muda a fronteira que ela separou; muda a gramática em
-[backend/04](../../architecture/backend/04-claude-integration.md#a-regra-fala-a-gramática-do-claude-não-uma-nossa),
+[backend/04](../../architecture/backend/04a-claude.md#a-regra-fala-a-gramática-canônica-e-o-dialeto-do-claude-só-traduz-o-passado),
 na B-07.
 
 ### D-08 — Prefixo em tool de caminho

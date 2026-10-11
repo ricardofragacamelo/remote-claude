@@ -123,7 +123,7 @@ describe('the Dependency Rule, as the build enforces it', () => {
       broke(
         found,
         'transcript-reads-through-the-sdk',
-        'adapter/outbound/claude/transcript-parser.ts',
+        'adapter/outbound/engines/claude/transcript-parser.ts',
       ),
     ).toBe(true);
     expect(
@@ -135,9 +135,9 @@ describe('the Dependency Rule, as the build enforces it', () => {
     const found = await violations();
 
     expect(broke(found, 'no-line-reader', 'shared/line-reader.ts')).toBe(true);
-    expect(broke(found, 'no-line-reader', 'adapter/outbound/claude/transcript-parser.ts')).toBe(
-      true,
-    );
+    expect(
+      broke(found, 'no-line-reader', 'adapter/outbound/engines/claude/transcript-parser.ts'),
+    ).toBe(true);
   });
 
   it('leaves the filesystem to the rest of the backend, outside the transcript slice', async () => {
@@ -202,6 +202,85 @@ describe('the Dependency Rule, as the build enforces it', () => {
     ).toBe(false);
     expect(
       broke(found, 'no-cross-domain-internals', 'adapter/outbound/files/reaches-workspace.ts'),
+    ).toBe(false);
+  });
+
+  it('refuses the core importing an engine extension — plan 28, S-17', async () => {
+    expect(
+      broke(
+        await violations(),
+        'engine-extension-is-isolated',
+        'application/session/imports-an-engine.ts',
+      ),
+    ).toBe(true);
+  });
+
+  it('lets the composition import the extension it wires — plan 28, S-18', async () => {
+    const found = await violations();
+
+    expect(
+      broke(
+        found,
+        'engine-extension-is-isolated',
+        'infrastructure/modules/engines/claude.module.ts',
+      ),
+    ).toBe(false);
+    expect(
+      broke(found, 'engine-extension-is-isolated', 'adapter/outbound/engines/claude/adapter.ts'),
+    ).toBe(false);
+  });
+
+  it('refuses one engine extension importing another — plan 28, S-19', async () => {
+    expect(
+      broke(
+        await violations(),
+        'engines-do-not-know-each-other',
+        'adapter/outbound/engines/other/knows-claude.ts',
+      ),
+    ).toBe(true);
+  });
+
+  it('refuses an adapter reaching into the adapter of an engine — plan 28, S-22', async () => {
+    expect(
+      broke(
+        await violations(),
+        'adapters-do-not-know-each-other',
+        'adapter/outbound/notification/knows-the-engine.ts',
+      ),
+    ).toBe(true);
+  });
+
+  it('holds with no exception, the two imports of before refused like any other — plan 28, B-34', async () => {
+    const found = await violations();
+    const guarded = new Set(['adapters-do-not-know-each-other', 'engine-extension-is-isolated']);
+    const excepted = (configuration.forbidden ?? [])
+      .filter((each) => guarded.has(each.name ?? ''))
+      .flatMap((each) => [each.from.pathNot ?? []].flat())
+      .filter((path) => path.endsWith('$'));
+
+    expect(excepted).toEqual([]);
+    for (const file of [
+      'adapter/outbound/diag/installation-versions.reader.ts',
+      'adapter/outbound/permission/permission-resolved.listeners.ts',
+    ]) {
+      expect(broke(found, 'adapters-do-not-know-each-other', file), file).toBe(true);
+      expect(broke(found, 'engine-extension-is-isolated', file), file).toBe(true);
+    }
+  });
+
+  it('refuses the SDK at the old home of the adapter, now that it moved — plan 28, S-31', async () => {
+    expect(
+      broke(await violations(), 'sdk-is-isolated', 'adapter/outbound/claude/talks-to-the-sdk.ts'),
+    ).toBe(true);
+  });
+
+  it('lets the SDK into the adapter of its engine at its new home — plan 28, B-06', async () => {
+    expect(
+      broke(
+        await violations(),
+        'sdk-is-isolated',
+        'adapter/outbound/engines/claude/talks-to-the-sdk.ts',
+      ),
     ).toBe(false);
   });
 

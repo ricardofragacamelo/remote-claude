@@ -17,7 +17,7 @@ Voltar para o [índice do backend](README.md).
 
 **Não duplique o transcript.** O Claude já persiste em `~/.claude/projects/*.jsonl`, e é o
 mesmo arquivo que o VSCode usa. Copiar para o Postgres cria duas fontes de verdade que
-divergem. Leia via funções do SDK. Ver [04-claude-integration.md](04-claude-integration.md).
+divergem. Leia via funções do SDK. Ver [04a-claude.md](04a-claude.md).
 A regra é de máquina: `pnpm lint:arch` reprova (`transcript-is-never-persisted`) qualquer arquivo
 de `adapter/outbound/persistence/` ou `infrastructure/database/` que alcance o que lê uma conversa
 — os casos de uso e o store do `transcript`, os adapters sobre o SDK, o tipo da mensagem. Nomear
@@ -36,6 +36,20 @@ Uma **retomada por fork** grava a linha do id novo antes do `query()`, pela mesm
 de origem, começada fora, continua sem linha — não é nossa. Uma retomada **in-place** não grava
 nada: a linha foi escrita quando a conversa foi aberta.
 
+A migration `0021` ([plano 28 · B-11](../../plans/28-agent-neutral-core/F1-engine-port.md#b-11--conversationref-nas-portas-e-no-banco-)) nomeia a
+conversa por **motor**: `session_origins` ganha `engine` e `conversation_id` (não nulos, com índice
+único por `(engine, conversation_id)`), e as duas tabelas do journal ganham os mesmos dois campos,
+anuláveis juntos como a coluna antiga. Cada linha anterior foi copiada de `claude_session_id`, com
+`engine = 'claude'`, e a própria migration confere a contagem — linha que perdesse a conversa aborta
+tudo. O motor não tem default: o código sempre diz qual. A coluna `claude_session_id` continua escrita
+ao lado das novas, e é lida por ninguém, até a janela do protocolo anterior fechar; uma migration da
+F7 a remove e faz de `(engine, conversation_id)` a chave.
+
+A migration `0022` ([plano 28 · B-26](../../plans/28-agent-neutral-core/F4-modes-and-usage.md#b-26--os-modos-canônicos-no-backend-e-no-banco-))
+guarda os modos **canônicos**: em `claude_defaults.permission_mode`, `default` vira `ask` e `plan` vira
+`readOnly`, e a `CHECK` `claude_defaults_mode_known` dá lugar à `claude_defaults_mode_canonical`
+(`ask`, `acceptEdits`, `readOnly`, `allowAll`). É idempotente: rodada duas vezes, não muda nada.
+
 A migration `0012` acrescenta `session.resumed` e `session.forked` ao CHECK de
 `audit_events.kind`: retomar é fato da trilha, gravado antes do subprocesso, com a conversa
 continuada como sujeito e o workspace como rótulo — nunca o resumo, que é o primeiro prompt.
@@ -43,7 +57,7 @@ continuada como sujeito e o workspace como rótulo — nunca o resumo, que é o 
 **E guarda o estado em que a sessão deixou cada arquivo** — caminho, hash e mtime, gravados no
 hook `PostToolUse`. É o que permite ao desfazer distinguir "como a sessão deixou" de "alterado
 à mão depois", porque o store de checkpoint do CLI guarda conteúdo puro e não sabe quem
-escreveu. Ver [04-claude-integration.md](04-claude-integration.md#desfazer-arquivos--o-store-é-nosso).
+escreveu. Ver [04a-claude.md](04a-claude.md#desfazer-arquivos--o-store-é-nosso).
 
 Esse registro é **tabela própria, dona é `session`**, e **não** entra na trilha de auditoria:
 a linha é sobrescrita a cada nova escrita no mesmo arquivo, e a trigger append-only da trilha

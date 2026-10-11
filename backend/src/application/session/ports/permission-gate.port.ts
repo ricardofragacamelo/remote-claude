@@ -1,5 +1,6 @@
-import type { QuestionAnswer } from '@domain/permission';
+import type { PermissionRequest, QuestionAnswer } from '@domain/permission';
 import type { PermissionMode, SessionId } from '@domain/session';
+import type { CanonicalTool } from '@domain/engine';
 
 /** One question the SDK is holding its loop open for. */
 export interface PermissionQuestion {
@@ -16,6 +17,12 @@ export interface PermissionQuestion {
   readonly toolUseId: string | null;
   readonly toolName: string;
   readonly input: Readonly<Record<string, unknown>>;
+
+  /**
+   * What the adapter of the engine read the call as (plan 28, B-16) — what the request is shown and
+   * graded by.
+   */
+  readonly tool: CanonicalTool;
 
   /** The SDK's cancellation. It fires when the session dies with a request still open. */
   readonly signal: AbortSignal;
@@ -63,3 +70,26 @@ export interface SessionPermissionGate {
 }
 
 export const SESSION_PERMISSION_GATE = Symbol('SessionPermissionGate');
+
+/** A permission request that has just been settled — the request, with its resolution on it. */
+export interface SettledPermission {
+  readonly request: PermissionRequest;
+}
+
+/**
+ * How the agent loop held on a request is let go (plan 28, B-34).
+ *
+ * The other half of {@link SessionPermissionGate}: the gate holds the loop open on a question, and
+ * this releases it when the request is settled — by a person on any device, a rule, a deadline, or
+ * its session ending — so there is exactly one way out of a pending request. The adapter of the
+ * engine implements it, the composition provides it, and the consumer of `permission.resolved`
+ * calls it without knowing which engine is behind it.
+ *
+ * Called for every settlement, including the ones no loop of this process is held on — a rule that
+ * answered before anybody was asked, a request of another session — and those change nothing.
+ */
+export interface AgentLoopRelease {
+  onResolved(settled: SettledPermission): void;
+}
+
+export const AGENT_LOOP_RELEASE = Symbol('AgentLoopRelease');

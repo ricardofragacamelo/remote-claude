@@ -1,8 +1,10 @@
+import { AgentUnavailableError, EngineCapabilityUnavailableError } from '@domain/engine';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   CloseSessionUseCase,
   CommandCatalog,
+  CompactSessionUseCase,
   InterruptSessionUseCase,
   ListSessionCommandsUseCase,
   PromptSessionUseCase,
@@ -13,7 +15,6 @@ import {
 } from '@application/session';
 import { UserId } from '@domain/auth';
 import {
-  ClaudeUnavailableError,
   InvalidSessionIdError,
   SessionForbiddenError,
   SessionLockedError,
@@ -334,7 +335,7 @@ describe('the commands that drive a running session', () => {
       });
 
       it('refuses nothing when the list cannot be had — S-31', async () => {
-        handle.commandsFailWith = new ClaudeUnavailableError(SESSION_ID);
+        handle.commandsFailWith = new AgentUnavailableError('claude', SESSION_ID);
 
         await sent(prompter(), '/whatever');
 
@@ -372,6 +373,39 @@ describe('the commands that drive a running session', () => {
   });
 
   describe('list commands', () => {
+    /** The engines, the session's one ordering its menu by [menu] — or saying nothing of it. */
+    const menuEngines = (menu?: CommandMenu): EngineRegistry => {
+      const engine = new StubEngine();
+      engine.commandMenu = menu;
+      return new EngineRegistry([engine], 'claude');
+    };
+
+    it('orders the menu as the engine of the session says, and plainly when it says nothing — plan 28, B-37', async () => {
+      handle.commands = [aCommand('zeta'), aCommand('init'), aCommand('remote-claude-user:notes')];
+
+      const plain = await new ListSessionCommandsUseCase(
+        registry,
+        new CommandCatalog(),
+        menuEngines(),
+      ).execute(SESSION_ID, owner);
+      const ordered = await new ListSessionCommandsUseCase(
+        registry,
+        new CommandCatalog(),
+        menuEngines({ suggested: ['zeta'], pluginOrigins: { 'remote-claude-user': 'user' } }),
+      ).execute(SESSION_ID, owner);
+
+      expect(plain.commands.map((command) => [command.name, command.origin, command.suggested])).toEqual([
+        ['init', 'project', false],
+        ['remote-claude-user:notes', 'project', false],
+        ['zeta', 'project', false],
+      ]);
+      expect(ordered.commands.map((command) => [command.name, command.origin, command.suggested])).toEqual([
+        ['zeta', 'project', true],
+        ['init', 'project', false],
+        ['remote-claude-user:notes', 'user', false],
+      ]);
+    });
+
     it('answers the menu with the version of the CLI — S-29, S-60', async () => {
       handle.cliVersion = '2.1.277';
       handle.commands = [
@@ -381,10 +415,11 @@ describe('the commands that drive a running session', () => {
         aCommand('extra-usage', { description: 'Renamed to /usage-credits' }),
       ];
 
-      const menu = await new ListSessionCommandsUseCase(registry, new CommandCatalog()).execute(
-        SESSION_ID,
-        owner,
-      );
+      const menu = await new ListSessionCommandsUseCase(
+        registry,
+        new CommandCatalog(),
+        menuEngines({ suggested: ['init'], pluginOrigins: {} }),
+      ).execute(SESSION_ID, owner);
 
       expect(menu.cliVersion).toBe('2.1.277');
       expect(menu.commands.map((command) => [command.name, command.suggested])).toEqual([
@@ -395,7 +430,7 @@ describe('the commands that drive a running session', () => {
 
     it("refuses somebody else's session", async () => {
       await expect(
-        new ListSessionCommandsUseCase(registry, new CommandCatalog()).execute(
+        new ListSessionCommandsUseCase(registry, new CommandCatalog(), menuEngines()).execute(
           SESSION_ID,
           stranger,
         ),
@@ -403,11 +438,95 @@ describe('the commands that drive a running session', () => {
     });
 
     it('lets the failure of the CLI through — S-31', async () => {
-      handle.commandsFailWith = new ClaudeUnavailableError(SESSION_ID);
+      handle.commandsFailWith = new AgentUnavailableError('claude', SESSION_ID);
 
       await expect(
-        new ListSessionCommandsUseCase(registry, new CommandCatalog()).execute(SESSION_ID, owner),
-      ).rejects.toThrow(ClaudeUnavailableError);
+        new ListSessionCommandsUseCase(registry, new CommandCatalog(), menuEngines()).execute(
+          SESSION_ID,
+          owner,
+        ),
+      ).rejects.toThrow(AgentUnavailableError);
+    });
+  });
+
+  describe('compact — plan 28, B-23', () => {
+    const compactor = (): CompactSessionUseCase =>
+      new CompactSessionUseCase(
+        registry,
+        new PromptSessionUseCase(registry, new CommandCatalog(), {
+          ids: new SequentialIds('01J0QUE0000000000000000'),
+          broadcaster,
+          context: aContextResolver(),
+        }),
+      );
+
+    it("sends the engine's own prompt through the queue, once acknowledged — S-69", async () => {
+      handle.compactionPrompt = '/squash';
+      handle.commands = [aCommand('squash')];
+
+      const send = await compactor().execute(SESSION_ID, owner, 'mobile');
+      expect(handle.prompts).toEqual([]);
+      send();
+
+      expect(handle.prompts).toEqual(['/squash']);
+    });
+
+    it('queues the compaction behind a running turn, like any prompt — S-69', async () => {
+      handle.commands = [aCommand('compact')];
+      const prompt = new PromptSessionUseCase(registry, new CommandCatalog(), {
+        ids: new SequentialIds('01J0QUE0000000000000000'),
+        broadcaster,
+        context: aContextResolver(),
+      });
+      const compact = new CompactSessionUseCase(registry, prompt);
+
+      await Promise.all([
+        prompt.execute(SESSION_ID, 'first', owner).then((send) => {
+          send();
+        }),
+        compact.execute(SESSION_ID, owner).then((send) => {
+          send();
+        }),
+      ]);
+
+      expect(handle.prompts).toEqual(['first']);
+      expect(broadcaster.events.map((entry) => entry.event.type)).toContain('prompt.queued');
+      expect(session.prompts.turnEnded()?.text).toBe('/compact');
+    });
+
+    it('refuses an engine without the capability, and sends nothing — S-70', async () => {
+      handle.capabilities = { ...handle.capabilities, compaction: false };
+
+      await expect(compactor().execute(SESSION_ID, owner)).rejects.toMatchObject({
+        code: 'ENGINE_CAPABILITY_UNAVAILABLE',
+        params: { capability: 'compaction' },
+      });
+      expect(handle.prompts).toEqual([]);
+    });
+
+    it('refuses an engine that says it compacts but gave no prompt for it — S-70', async () => {
+      delete handle.compactionPrompt;
+
+      await expect(compactor().execute(SESSION_ID, owner)).rejects.toBeInstanceOf(
+        EngineCapabilityUnavailableError,
+      );
+      expect(handle.prompts).toEqual([]);
+    });
+
+    it("refuses somebody else's session, and a session that is not running", async () => {
+      await expect(compactor().execute(SESSION_ID, stranger)).rejects.toThrow(
+        SessionForbiddenError,
+      );
+      await expect(
+        new CompactSessionUseCase(
+          aRegistry([]).registry,
+          new PromptSessionUseCase(aRegistry([]).registry, new CommandCatalog(), {
+            ids: new SequentialIds(),
+            broadcaster,
+            context: aContextResolver(),
+          }),
+        ).execute(SESSION_ID, owner),
+      ).rejects.toThrow(SessionNotFoundError);
     });
   });
 
@@ -482,12 +601,12 @@ describe('the commands that drive a running session', () => {
 
       await Promise.all([
         switching.execute(SESSION_ID, 'allowAll', owner),
-        switching.execute(SESSION_ID, 'default', owner),
+        switching.execute(SESSION_ID, 'ask', owner),
       ]);
 
-      expect(handle.modes).toEqual(['allowAll', 'default']);
+      expect(handle.modes).toEqual(['allowAll', 'ask']);
       expect(session.permissionMode).toBe(handle.modes.at(-1));
-      expect(gate.modes.at(-1)).toEqual({ sessionId: SESSION_ID, mode: 'default' });
+      expect(gate.modes.at(-1)).toEqual({ sessionId: SESSION_ID, mode: 'ask' });
     });
 
     it('tells the gate nothing when the subprocess refused the mode', async () => {
@@ -495,9 +614,9 @@ describe('the commands that drive a running session', () => {
       handle.failWith = new Error('no such mode');
 
       await expect(
-        new SetSessionPermissionModeUseCase(registry, gate).execute(SESSION_ID, 'plan', owner),
+        new SetSessionPermissionModeUseCase(registry, gate).execute(SESSION_ID, 'readOnly', owner),
       ).rejects.toThrow('no such mode');
-      expect(session.permissionMode).not.toBe('plan');
+      expect(session.permissionMode).not.toBe('readOnly');
       expect(gate.modes).toEqual([]);
     });
   });

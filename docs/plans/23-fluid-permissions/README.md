@@ -102,15 +102,15 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 
 | Requisito | Tarefas | Documento normativo | Cenários |
 |---|---|---|---|
-| A reversão do "nunca permitir tudo" registrada, e as normas dizendo o novo | B-01 | [00-decisions · ADR-022](../../architecture/shared/00-decisions.md) · [backend/04](../../architecture/backend/04-claude-integration.md) | S-01 |
+| A reversão do "nunca permitir tudo" registrada, e as normas dizendo o novo | B-01 | [00-decisions · ADR-022](../../architecture/shared/00-decisions.md) · [backend/04](../../architecture/backend/04a-claude.md) | S-01 |
 | O contrato carrega o modo, os alcances, o alcance escolhido e quem respondeu | B-02 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) | S-02, S-03 |
 | Os textos novos nas duas pontas, presos pelo mapa | B-03 | [shared/02-i18n](../../architecture/shared/02-i18n.md) | S-04 |
-| `allowAll` existe no domínio, e o SDK nunca o recebe | B-04 | [backend/04](../../architecture/backend/04-claude-integration.md) | S-05…S-08 |
-| Em Permitir tudo, toda tool roda sem pergunta, exceto as que são perguntas e as que uma regra recusa | B-05 | [backend/04](../../architecture/backend/04-claude-integration.md) · [backend/03 §permission](../../architecture/backend/03-modules.md) | S-09…S-21 |
+| `allowAll` existe no domínio, e o SDK nunca o recebe | B-04 | [backend/04](../../architecture/backend/04a-claude.md) | S-05…S-08 |
+| Em Permitir tudo, toda tool roda sem pergunta, exceto as que são perguntas e as que uma regra recusa | B-05 | [backend/04](../../architecture/backend/04a-claude.md) · [backend/03 §permission](../../architecture/backend/03-modules.md) | S-09…S-21 |
 | Ligar resolve os pendentes; desligar vale na próxima tool | B-06 | [05-websocket-protocol §permissão](../../architecture/shared/05-websocket-protocol.md#o-fluxo-de-permissão) | S-22…S-27, S-99 |
 | Os handlers aceitam `allowAll` e recusam o resto | B-07 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) · [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-28…S-30, S-100 |
-| Linha composta coberta quando cada comando é coberto | B-08 | [backend/04 §gramática](../../architecture/backend/04-claude-integration.md#a-regra-fala-a-gramática-do-claude-não-uma-nossa) | S-31…S-44 |
-| Os alcances de uma invocação | B-09 | [backend/04 §gramática](../../architecture/backend/04-claude-integration.md#a-regra-fala-a-gramática-do-claude-não-uma-nossa) | S-45…S-54 |
+| Linha composta coberta quando cada comando é coberto | B-08 | [backend/04 §gramática](../../architecture/backend/04a-claude.md#a-regra-fala-a-gramática-canônica-e-o-dialeto-do-claude-só-traduz-o-passado) | S-31…S-44 |
+| Os alcances de uma invocação | B-09 | [backend/04 §gramática](../../architecture/backend/04a-claude.md#a-regra-fala-a-gramática-canônica-e-o-dialeto-do-claude-só-traduz-o-passado) | S-45…S-54 |
 | A resposta com alcance, em todo escopo | B-10 | [05-websocket-protocol §permissão](../../architecture/shared/05-websocket-protocol.md#o-fluxo-de-permissão) | S-55…S-66 |
 | Quem respondeu sem perguntar: regra ou modo | B-11 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) | S-67, S-68 |
 | O web liga e desliga Permitir tudo no chip | B-12 | [web/03-ui-system](../../architecture/web/03-ui-system.md) | S-69…S-74 |

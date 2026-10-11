@@ -1,15 +1,21 @@
 import { z } from 'zod';
-import type { TranscriptToolResultPayload } from '@remote-claude/contracts';
+import type {
+  ListedTranscript as ListedTranscriptPayload,
+  SubagentPagePayload,
+  TranscriptListPayload,
+  TranscriptPagePayload,
+  TranscriptToolResultPayload,
+} from '@remote-claude/contracts';
 
 import type { ListedTranscript, TranscriptPage } from '@application/transcript';
 import type {
   Page,
   SessionListCursor,
   ToolOutput,
-  TranscriptEvent,
   TranscriptMessage,
   VisibleTranscriptSession,
 } from '@domain/transcript';
+import { previousToolFields } from '@shared/protocol/previous-tool-fields';
 
 /**
  * How many items a page holds when the client does not say, and the most it may ask for.
@@ -22,12 +28,17 @@ import type {
 export const DEFAULT_PAGE_SIZE = 25;
 export const MAX_PAGE_SIZE = 100;
 
-/** A UUID in the canonical form the SDK hands out — the id of a conversation, and of a message. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/**
+ * An id an engine handed out — of a conversation, or of a message: opaque here, plain and short.
+ * Whether it is one the engine would hand out is the engine's own rule, asked by the registry.
+ */
+const OPAQUE_ID = /^\S{1,256}$/;
 
-/** `<lastModified>.<sessionId>`: digits without a leading zero, a dot, a UUID. */
-const SESSION_CURSOR =
-  /^(0|[1-9]\d{0,15})\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+/** How an engine is named — the form of an `id` of `GET /engines`. */
+const ENGINE = /^[a-z][a-z0-9-]{0,31}$/;
+
+/** `<lastModified>.<engine>:<id>`: digits without a leading zero, a dot, the conversation. */
+const SESSION_CURSOR = /^(0|[1-9]\d{0,15})\.([a-z][a-z0-9-]{0,31}:\S{1,256})$/;
 
 const limit = z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional();
 
@@ -50,8 +61,11 @@ export const listTranscriptsSchema = z.object({
 
 export type ListTranscriptsQueryDto = z.infer<typeof listTranscriptsSchema>;
 
-/** The conversation a page is asked of: a UUID, or not a conversation this server can name. */
-export const transcriptIdSchema = z.string().regex(UUID);
+/** The conversation a page is asked of, in its engine's own form. */
+export const transcriptIdSchema = z.string().regex(OPAQUE_ID);
+
+/** The engine of the conversation a page is asked of. */
+export const engineSchema = z.string().regex(ENGINE);
 
 /**
  * The tool a subagent hangs off — an id the SDK minted (`toolu_…`), short and plain. Anything else is
@@ -59,9 +73,17 @@ export const transcriptIdSchema = z.string().regex(UUID);
  */
 export const subagentToolSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
 
-/** What `GET /transcripts/:sessionId/messages` may be asked. The cursor is a message id. */
+/** The tool of a route of the previous protocol (plan 28, D-08): its conversation, and the tool. */
+export const previousToolSchema = z.object({
+  sessionId: transcriptIdSchema,
+  toolUseId: subagentToolSchema,
+});
+
+export type PreviousToolParams = z.infer<typeof previousToolSchema>;
+
+/** What `GET /transcripts/:engine/:id/messages` may be asked. The cursor is a message id. */
 export const readTranscriptSchema = z.object({
-  cursor: z.string().regex(UUID).optional(),
+  cursor: z.string().regex(OPAQUE_ID).optional(),
   limit,
 });
 
@@ -75,39 +97,16 @@ export function toSessionListCursor(cursor: string | undefined): SessionListCurs
 }
 
 /** One conversation, as the client sees it. */
-export interface TranscriptSessionDto {
-  /** The id of the conversation in Claude's store — what `session.start` takes as `resumeSessionId`. */
-  readonly sessionId: string;
-  readonly summary: string;
-
-  /** `ours` — opened here, by the caller — or `external`: the editor, or the terminal. */
-  readonly origin: string;
-
-  readonly cwd: string;
-  readonly gitBranch: string | null;
-  readonly createdAt: string | null;
-  readonly lastModified: string;
-}
+export type TranscriptSessionDto = Omit<
+  ListedTranscriptPayload,
+  'activity' | 'liveSessionId' | 'writtenAgoSeconds'
+>;
 
 /** A conversation of the listing: the conversation, and what it is doing now (plan 08, B-08). */
-export interface ListedTranscriptDto extends TranscriptSessionDto {
-  /** `liveHere` · `activeElsewhere` · `idle` — the last an estimate, said to be one. */
-  readonly activity: string;
-
-  /** The caller's live session that holds it, when it is `liveHere`. */
-  readonly liveSessionId: string | null;
-
-  /** How long ago it was last written, in whole seconds. */
-  readonly writtenAgoSeconds: number;
-}
+export type ListedTranscriptDto = ListedTranscriptPayload;
 
 /** A page of the listing. An object, so the next cursor has somewhere to go. */
-export interface TranscriptListDto {
-  readonly sessions: readonly ListedTranscriptDto[];
-
-  /** Opaque to the client: send it back as `cursor` for the next page. `null` on the last one. */
-  readonly nextCursor: string | null;
-}
+export type TranscriptListDto = TranscriptListPayload;
 
 /**
  * A page of a conversation.
@@ -117,22 +116,13 @@ export interface TranscriptListDto {
  * feeds history and the live stream through one reducer (B-03). Oldest first within the page; the
  * page after it, by `nextCursor`, is what came before.
  */
-export interface TranscriptPageDto {
-  readonly session: ListedTranscriptDto;
-  readonly events: readonly TranscriptEvent[];
-  readonly nextCursor: string | null;
-
-  /**
-   * The last entry of the conversation, `null` when it has none — what `transcript.follow` takes as
-   * `afterMessageId`, so nothing written after this page is missed (plan 22, B-10).
-   */
-  readonly lastMessageId: string | null;
-}
+export type TranscriptPageDto = TranscriptPagePayload;
 
 /** The transport shape of a conversation. */
 export function toTranscriptSessionDto(session: VisibleTranscriptSession): TranscriptSessionDto {
   return {
-    sessionId: session.id.value,
+    conversation: { engine: session.id.engine.value, id: session.id.id },
+    sessionId: session.id.id,
     summary: session.summary,
     origin: session.origin,
     // Never `null` here: a session without one is not visible, and so never reaches a DTO.
@@ -171,7 +161,7 @@ export function toTranscriptPageDto({
 }: TranscriptPage): TranscriptPageDto {
   return {
     session: toListedTranscriptDto(session),
-    events: page.items.flatMap((message) => message.events),
+    events: eventsOf(page.items),
     nextCursor: page.next,
     lastMessageId,
   };
@@ -181,9 +171,15 @@ export function toTranscriptPageDto({
  * The block of an image, as its marker names it: `<uuid>:<index>` — the conversation's entry, and the
  * block's place in it (plan 22, D-06). Anything else names no block this server minted.
  */
-export const blockIdSchema = z
-  .string()
-  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{1,4}$/);
+export const blockIdSchema = z.string().regex(/^[^\s:]{1,256}:\d{1,4}$/);
+
+/** The image of a route of the previous protocol (plan 28, D-08): its conversation, and the block. */
+export const previousImageSchema = z.object({
+  sessionId: transcriptIdSchema,
+  blockId: blockIdSchema,
+});
+
+export type PreviousImageParams = z.infer<typeof previousImageSchema>;
 
 /** The whole output of a tool, as `GET /transcripts/:sessionId/tools/:toolUseId/result` answers it. */
 export type ToolResultDto = TranscriptToolResultPayload;
@@ -199,12 +195,24 @@ export function toToolResultDto(output: ToolOutput): ToolResultDto {
 }
 
 /** A page of what a subagent said: the events of its messages, and the cursor of the page before. */
-export interface SubagentPageDto {
-  readonly events: readonly TranscriptEvent[];
-  readonly nextCursor: string | null;
-}
+export type SubagentPageDto = SubagentPagePayload;
 
 /** The transport shape of a page of a subagent. */
 export function toSubagentPageDto(page: Page<TranscriptMessage, string>): SubagentPageDto {
-  return { events: page.items.flatMap((message) => message.events), nextCursor: page.next };
+  return { events: eventsOf(page.items), nextCursor: page.next };
+}
+
+/**
+ * The events of [messages], each `tool.started` with the fields the previous protocol named the call
+ * by beside the canonical ones: a page over HTTP has no version to answer in, and an app on a store
+ * reads it (plan 28, D-22). Gone with the window, in F7 (B-47).
+ */
+function eventsOf(messages: readonly TranscriptMessage[]): TranscriptMessage['events'] {
+  return messages.flatMap((message) =>
+    message.events.map((event) =>
+      event.type === 'tool.started'
+        ? { ...event, payload: { ...event.payload, ...previousToolFields(event.payload) } }
+        : event,
+    ),
+  );
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  engineSchema,
   listTranscriptsSchema,
   MAX_PAGE_SIZE,
   readTranscriptSchema,
@@ -19,7 +20,7 @@ import {
 describe('the transcript transport shapes', () => {
   describe('the listing query', () => {
     it('takes a path, a cursor it handed out and a size', () => {
-      const cursor = `1758800000000.${conversationId(1)}`;
+      const cursor = `1758800000000.claude:${conversationId(1)}`;
 
       expect(
         listTranscriptsSchema.parse({ workspacePath: '/srv/projects', cursor, limit: '10' }),
@@ -30,7 +31,14 @@ describe('the transcript transport shapes', () => {
       ['no path', {}],
       ['an empty path', { workspacePath: '' }],
       ['a cursor it never handed out', { workspacePath: '/p', cursor: '12.nope' }],
-      ['a cursor with a leading zero', { workspacePath: '/p', cursor: `012.${conversationId(1)}` }],
+      [
+        'a cursor with a leading zero',
+        { workspacePath: '/p', cursor: `012.claude:${conversationId(1)}` },
+      ],
+      [
+        'a cursor of a conversation with no engine',
+        { workspacePath: '/p', cursor: `12.${conversationId(1)}` },
+      ],
       ['a page of none', { workspacePath: '/p', limit: '0' }],
       ['a page above the ceiling', { workspacePath: '/p', limit: String(MAX_PAGE_SIZE + 1) }],
     ])('refuses %s', (_case, query) => {
@@ -45,9 +53,21 @@ describe('the transcript transport shapes', () => {
       });
     });
 
-    it('refuses a cursor that is not a message id, and an id that is not a conversation', () => {
-      expect(readTranscriptSchema.safeParse({ cursor: 'm1' }).success).toBe(false);
-      expect(transcriptIdSchema.safeParse('01J0ABCDEFGHJKMNPQRSTVWXYZ').success).toBe(false);
+    it("takes any plain id an engine hands out — its form is the engine's rule — plan 28, B-12", () => {
+      expect(readTranscriptSchema.safeParse({ cursor: 'm1' }).success).toBe(true);
+      expect(transcriptIdSchema.safeParse('01J0ABCDEFGHJKMNPQRSTVWXYZ').success).toBe(true);
+    });
+
+    it('refuses an id with whitespace, empty, or too long', () => {
+      expect(readTranscriptSchema.safeParse({ cursor: 'm 1' }).success).toBe(false);
+      expect(transcriptIdSchema.safeParse('').success).toBe(false);
+      expect(transcriptIdSchema.safeParse('x'.repeat(257)).success).toBe(false);
+    });
+
+    it('takes an engine by the form of its name, and refuses any other', () => {
+      expect(engineSchema.safeParse('claude').success).toBe(true);
+      expect(engineSchema.safeParse('Claude').success).toBe(false);
+      expect(engineSchema.safeParse('').success).toBe(false);
     });
   });
 
@@ -55,12 +75,12 @@ describe('the transcript transport shapes', () => {
     it('round-trips through the opaque string the client sees', () => {
       const dto = toTranscriptListDto({
         items: [],
-        next: { lastModified: 1_758_800_000_000, id: conversationId(1) },
+        next: { lastModified: 1_758_800_000_000, id: `claude:${conversationId(1)}` },
       });
 
       expect(toSessionListCursor(dto.nextCursor ?? undefined)).toEqual({
         lastModified: 1_758_800_000_000,
-        id: conversationId(1),
+        id: `claude:${conversationId(1)}`,
       });
     });
 
@@ -82,6 +102,7 @@ describe('the transcript transport shapes', () => {
         origin: 'ours',
       }),
     ).toEqual({
+      conversation: { engine: 'claude', id: conversationId(1) },
       sessionId: conversationId(1),
       summary: 'a conversation',
       origin: 'ours',

@@ -15,7 +15,7 @@ export interface ThinkingBlockProps {
 }
 
 /**
- * The model's thinking, as the Claude Code shows it (plan 22, B-27): a thinking **summarised** in text
+ * The model's thinking, as the agent shows it (plan 22, B-27): a thinking **summarised** in text
  * is in view, quiet, under "Thought" (D-15) — and can still be folded; one the model **omitted** says
  * "Thought", folded, and opened says the model did not show it; a **redacted** one says it was hidden,
  * and invents nothing (S-83). How long: measured on the stream, "at most" from the history (D-14), and

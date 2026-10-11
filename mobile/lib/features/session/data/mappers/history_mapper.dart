@@ -1,6 +1,6 @@
 /// Reads a page of the history endpoint as a [HistoryPage].
 ///
-/// This is the only file that knows both the wire of `GET /transcripts/:sessionId/messages` and
+/// This is the only file that knows both the wire of `GET /transcripts/:engine/:id/messages` and
 /// the entity. Its events go through [historyEventFrom] — the mapper of the live frames — so the
 /// history and the stream cannot disagree about what a message is.
 ///
@@ -8,6 +8,8 @@
 /// parsed off the UI thread (docs/architecture/mobile/03-state-and-data.md).
 library;
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
+import 'package:remote_claude/core/network/conversation_wire.dart';
 import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/history_page.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
@@ -29,18 +31,18 @@ HistoryPage? historyPageFrom(Object? body) {
     return null;
   }
 
-  final Object? conversationId = conversation['sessionId'];
+  final ConversationKey? key = conversationKeyFrom(conversation['conversation']);
   final Object? cwd = conversation['cwd'];
   final Object? origin = conversation['origin'];
 
   // Both values are checked, not just one: an origin this build does not know is not "ours" by
   // default, and guessing wrong here is the difference between warning about a fork and not.
-  if (conversationId is! String || cwd is! String || (origin != 'ours' && origin != 'external')) {
+  if (key == null || cwd is! String || (origin != 'ours' && origin != 'external')) {
     return null;
   }
 
   return HistoryPage(
-    conversationId: conversationId,
+    conversation: key,
     workspacePath: cwd,
     beganElsewhere: origin == 'external',
     summary: _textOf(conversation['summary']) ?? '',

@@ -1,7 +1,9 @@
 import type { RecordAuditEventUseCase } from '@application/audit';
+import { AgentUnavailableError } from '@domain/engine';
+import type { ConversationRef, EngineCapabilities } from '@domain/engine';
 import type { Clock, IdGenerator } from '@domain/shared';
 import {
-  ClaudeUnavailableError,
+  EffortUnsupportedError,
   forkPointOf,
   refuseUnsupportedEffort,
   resumeStrategyFor,
@@ -11,16 +13,16 @@ import {
   SessionNotFoundError,
 } from '@domain/session';
 import type { PermissionMode, ResumeStrategy, SessionCloseReason } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
 import type { WorkspacePath } from '@domain/workspace';
 import type { ModelCatalog } from './command-catalog';
 import type { StartSessionCommand } from './commands/start-session.command';
+import type { EngineRegistry } from './engine-registry';
 import type {
-  ClaudeSessionPort,
-  ClaudeSessionStart,
+  AgentEnginePort,
+  AgentSessionStart,
   SessionConversation,
   SessionEvent,
-} from './ports/claude-session.port';
+} from './ports/agent-engine.port';
 import type { ResumableConversationSource } from './ports/resumable-conversation.source';
 import type {
   DefaultsFrom,
@@ -34,21 +36,33 @@ import { observedStatus } from './session-status';
 import { handOverPrompt } from './prompt-hand-over';
 import type { LiveSession, SessionRegistry } from './session-registry';
 
-/** What the installation opens a session with when the client states no preference. */
+/**
+ * What the installation opens a session with when the client states no preference: the model of
+ * each engine that configures one — an engine's model means nothing to another (plan 28, B-37) —
+ * and the mode, which is canonical and every engine's.
+ */
 export interface SessionDefaults {
-  readonly model: string;
+  readonly models: Readonly<Record<string, string>>;
   readonly permissionMode: PermissionMode;
 }
 
 /**
- * How a new conversation of Claude is named, and where it is recorded as ours.
- *
- * Together because they are one step: the id is minted to be recorded, and a record without the id
- * handed to the SDK would name a transcript that never exists.
+ * The name a session's model is shown by when neither the client, nor a default, nor the
+ * configuration named one for its engine: the installation's own default model.
+ */
+export const INSTALLATION_DEFAULT_MODEL = 'default';
+
+/** The model a session of [engine] opens with when nobody chose one. */
+export function defaultModelOf(defaults: SessionDefaults, engine: string): string {
+  return defaults.models[engine] ?? INSTALLATION_DEFAULT_MODEL;
+}
+
+/**
+ * Where a new conversation is recorded as ours. The engine mints its id ({@link AgentEnginePort}),
+ * and the record comes before the subprocess: a record without the id handed to the engine would
+ * name a transcript that never exists.
  */
 export interface SessionProvenance {
-  /** Mints the UUID the SDK is told to use. */
-  readonly ids: IdGenerator;
   readonly origins: SessionOriginRepository;
 }
 
@@ -64,6 +78,9 @@ export interface SessionResumption {
 export interface StartedSession {
   readonly session: Session;
   readonly conversation: SessionConversation;
+
+  /** What the session can do, as its engine announced it (ADR-025). */
+  readonly capabilities: EngineCapabilities;
 
   /**
    * The conversation was already live for the caller, and nothing was spawned: the caller joins
@@ -93,7 +110,7 @@ function asChosen(command: StartSessionCommand): SessionConfiguration {
 }
 
 /**
- * Opens a session of Claude on a workspace — a new conversation, or one continued.
+ * Opens a session of a coding agent on a workspace — a new conversation, or one continued.
  *
  * The order of the first two steps is the security of the product: the path clears the allowlist
  * **before** a slot is taken and long before a subprocess exists, because `cwd` of the SDK's
@@ -121,7 +138,7 @@ export class StartSessionUseCase {
   constructor(
     private readonly workspaces: WorkspaceResolver,
     private readonly registry: SessionRegistry,
-    private readonly claude: ClaudeSessionPort,
+    private readonly engines: EngineRegistry,
     private readonly broadcaster: SessionBroadcaster,
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
@@ -134,7 +151,8 @@ export class StartSessionUseCase {
 
   /**
    * @throws {import('@domain/workspace').WorkspaceNotAllowedError} path outside every root (S-23)
-   * @throws {import('@domain/transcript').InvalidClaudeSessionIdError} a resume id that is no UUID
+   * @throws {import('@domain/engine').InvalidConversationRefError} an engine that is not enabled, or
+   *   a resume id that engine never hands out
    * @throws {SessionNotFoundError} a conversation that does not exist in that workspace, or is
    *   somebody else's — the same answer (S-22)
    * @throws {import('@domain/session').SessionLimitReachedError} the installation is full (S-26)
@@ -142,20 +160,50 @@ export class StartSessionUseCase {
    */
   async execute(command: StartSessionCommand): Promise<StartedSession> {
     const workspace = await this.workspaces.resolve(command.workspacePath, command.userId);
+    this.refuseEffortTheEngineLacks(command);
     this.refuseUnsupportedEffort(command, workspace);
 
-    if (command.resumeSessionId === null) {
-      return this.launch(command, workspace, async (session) => ({
-        claudeSessionId: await this.recordOrigin(session),
+    if (command.resumeFrom === null) {
+      const engine =
+        command.engine == null ? this.engines.default : this.engines.require(command.engine);
+      return this.launch(command, workspace, engine, async (session) => ({
+        ref: await this.recordOrigin(engine, session),
         resumedFrom: null,
       }));
     }
 
-    const id = ClaudeSessionId.create(command.resumeSessionId);
+    const id = this.engines.conversation(command.resumeFrom.engine, command.resumeFrom.id);
 
     return command.forkAt == null
       ? this.resume(command, workspace, id)
       : this.fork(command, workspace, id, command.forkAt);
+  }
+
+  /**
+   * An effort the engine does not announce is refused before anything is spawned (plan 28, B-28, S-84):
+   * no model of it takes the level.
+   *
+   * @throws {import('@domain/session').EffortUnsupportedError}
+   */
+  private refuseEffortTheEngineLacks(command: StartSessionCommand): void {
+    const engine = this.engines.require(this.engineNamedBy(command));
+
+    if (command.effort != null && !engine.capabilities.effortLevels.includes(command.effort)) {
+      throw new EffortUnsupportedError(command.effort, this.modelOf(command));
+    }
+  }
+
+  /** The engine [command] opens a session on: the resumed conversation's, the named one, the default. */
+  private engineNamedBy(command: StartSessionCommand): string {
+    return (
+      command.resumeFrom?.engine ??
+      (command.engine == null ? this.engines.default.engine.value : command.engine)
+    );
+  }
+
+  /** The model [command] names, or the default of the engine it opens on. */
+  private modelOf(command: StartSessionCommand): string {
+    return command.model ?? defaultModelOf(this.defaults, this.engineNamedBy(command));
   }
 
   /**
@@ -168,7 +216,7 @@ export class StartSessionUseCase {
     const models = this.models?.latestFor(workspace.value) ?? null;
 
     if (command.effort != null && models !== null) {
-      refuseUnsupportedEffort(models, command.model ?? this.defaults.model, command.effort);
+      refuseUnsupportedEffort(models, this.modelOf(command), command.effort);
     }
   }
 
@@ -183,7 +231,7 @@ export class StartSessionUseCase {
   private async fork(
     command: StartSessionCommand,
     workspace: WorkspacePath,
-    id: ClaudeSessionId,
+    id: ConversationRef,
     messageId: string,
   ): Promise<StartedSession> {
     const { conversations, trail } = this.resumption;
@@ -193,32 +241,35 @@ export class StartSessionUseCase {
       candidate === null ||
       resumeStrategyFor(candidate, { userId: command.userId, workspace }) === null
     ) {
-      throw new SessionNotFoundError(id.value);
+      throw new SessionNotFoundError(id.id);
     }
 
     const point = forkPointOf(await conversations.chainOf(id), messageId);
     const at =
       point.kind === 'after' ? { keepUpTo: point.keepUpTo, dropsTurn: point.dropsTurn } : null;
 
+    const engine = this.engines.require(id.engine);
+
     return this.launch(
       command,
       workspace,
+      engine,
       async (session) => {
-        const claudeSessionId = await this.recordOrigin(session);
+        const ref = await this.recordOrigin(engine, session);
 
         if (at === null) {
-          return { claudeSessionId, resumedFrom: null };
+          return { ref, resumedFrom: null };
         }
 
         await trail.execute({
           userId: session.ownerId,
           kind: 'session.forked',
-          subjectId: id.value,
+          subjectId: id.id,
           subjectLabel: workspace.value,
           at: session.openedAt,
         });
 
-        return { claudeSessionId, resumedFrom: id };
+        return { ref, resumedFrom: id };
       },
       at,
     );
@@ -228,7 +279,7 @@ export class StartSessionUseCase {
   private async resume(
     command: StartSessionCommand,
     workspace: WorkspacePath,
-    id: ClaudeSessionId,
+    id: ConversationRef,
   ): Promise<StartedSession> {
     const live = this.registry.findConversation(id, command.userId);
 
@@ -238,7 +289,7 @@ export class StartSessionUseCase {
 
     // Checked and set with no `await` in between, so two resumes arriving together cannot both
     // find the map empty.
-    const key = `${command.userId.value} ${id.value}`;
+    const key = `${command.userId.value} ${id.key}`;
     const inFlight = this.resuming.get(key);
 
     if (inFlight !== undefined) {
@@ -258,7 +309,7 @@ export class StartSessionUseCase {
   private async continueConversation(
     command: StartSessionCommand,
     workspace: WorkspacePath,
-    id: ClaudeSessionId,
+    id: ConversationRef,
   ): Promise<StartedSession> {
     const candidate = await this.resumption.conversations.find(id);
     const strategy =
@@ -267,16 +318,18 @@ export class StartSessionUseCase {
         : resumeStrategyFor(candidate, { userId: command.userId, workspace });
 
     if (strategy === null) {
-      throw new SessionNotFoundError(id.value);
+      throw new SessionNotFoundError(id.id);
     }
 
-    return this.launch(command, workspace, async (session) => {
-      const conversation = await this.conversationFor(session, id, strategy);
+    const engine = this.engines.require(id.engine);
+
+    return this.launch(command, workspace, engine, async (session) => {
+      const conversation = await this.conversationFor(engine, session, id, strategy);
 
       await this.resumption.trail.execute({
         userId: session.ownerId,
         kind: strategy === 'fork' ? 'session.forked' : 'session.resumed',
-        subjectId: id.value,
+        subjectId: id.id,
         // The workspace, and never the summary: the summary is the first prompt, and nothing the
         // conversation said is copied into this database (S-28).
         subjectLabel: workspace.value,
@@ -289,13 +342,14 @@ export class StartSessionUseCase {
 
   /** In place keeps the id; a fork gets one of ours, recorded as ours before it exists. */
   private async conversationFor(
+    engine: AgentEnginePort,
     session: Session,
-    id: ClaudeSessionId,
+    id: ConversationRef,
     strategy: ResumeStrategy,
   ): Promise<SessionConversation> {
     return strategy === 'fork'
-      ? { claudeSessionId: await this.recordOrigin(session), resumedFrom: id }
-      : { claudeSessionId: id, resumedFrom: id };
+      ? { ref: await this.recordOrigin(engine, session), resumedFrom: id }
+      : { ref: id, resumedFrom: id };
   }
 
   /**
@@ -307,12 +361,13 @@ export class StartSessionUseCase {
   private async launch(
     command: StartSessionCommand,
     workspace: WorkspacePath,
+    engine: AgentEnginePort,
     conversationFor: (session: Session) => Promise<SessionConversation>,
-    forkAt: ClaudeSessionStart['forkAt'] = null,
+    forkAt: AgentSessionStart['forkAt'] = null,
   ): Promise<StartedSession> {
     // The configuration of the owner, put together with what the client chose — before a slot is
     // taken: a session never spawns on defaults nobody could read (plan 13, B-15).
-    const applied = await this.configured(command, workspace);
+    const applied = await this.configured(command, workspace, engine.engine.value);
 
     // Taken before anything is spawned, and given back in the `finally`. Checking the count and
     // only then awaiting a subprocess would let two starts both see room and both spawn, which is
@@ -321,7 +376,7 @@ export class StartSessionUseCase {
       id: SessionId.create(this.ids.next()),
       ownerId: command.userId,
       workspace,
-      model: applied.model ?? this.defaults.model,
+      model: applied.model ?? defaultModelOf(this.defaults, engine.engine.value),
       permissionMode: applied.permissionMode ?? this.defaults.permissionMode,
       openedAt: this.clock.now(),
       openedFrom: command.openedFrom,
@@ -332,7 +387,7 @@ export class StartSessionUseCase {
       const conversation = await conversationFor(session);
       this.registry.announce(session, conversation);
 
-      const handle = await this.claude.start({
+      const handle = await engine.start({
         sessionId: session.id,
         workspace,
         model: applied.model,
@@ -354,9 +409,7 @@ export class StartSessionUseCase {
           // The screen offers the plain resume instead (S-164).
           this.broadcaster.publishError(
             session.id,
-            new SessionForkRejectedError(
-              (conversation.resumedFrom ?? conversation.claudeSessionId).value,
-            ),
+            new SessionForkRejectedError((conversation.resumedFrom ?? conversation.ref).id),
           );
         },
       });
@@ -369,7 +422,13 @@ export class StartSessionUseCase {
       session.observe('idle');
       this.registry.add({ session, handle, conversation });
 
-      return { session, conversation, joined: false, applied: appliedOf(applied) };
+      return {
+        session,
+        conversation,
+        capabilities: handle.capabilities,
+        joined: false,
+        applied: appliedOf(applied),
+      };
     } finally {
       // A start that failed is listed as starting no longer; one that succeeded already moved to
       // the live sessions, and withdrawing it is a no-op.
@@ -382,11 +441,13 @@ export class StartSessionUseCase {
   private configured(
     command: StartSessionCommand,
     workspace: WorkspacePath,
+    engine: string,
   ): Promise<SessionConfiguration> {
     return this.configuration === null
       ? Promise.resolve(asChosen(command))
       : this.configuration.configurationFor({
           userId: command.userId,
+          engine,
           workspace,
           client: {
             model: command.model,
@@ -397,19 +458,19 @@ export class StartSessionUseCase {
         });
   }
 
-  /** Mints the id of a new conversation and records it as ours, before anything is spawned. */
-  private async recordOrigin(session: Session): Promise<ClaudeSessionId> {
-    const claudeSessionId = ClaudeSessionId.create(this.provenance.ids.next());
+  /** The engine mints the id of a new conversation, recorded as ours before anything is spawned. */
+  private async recordOrigin(engine: AgentEnginePort, session: Session): Promise<ConversationRef> {
+    const conversation = engine.newConversation();
 
     await this.provenance.origins.record({
-      claudeSessionId,
+      conversation,
       sessionId: session.id,
       openedBy: session.ownerId,
       workspace: session.workspace,
       openedAt: session.openedAt,
     });
 
-    return claudeSessionId;
+    return conversation;
   }
 
   /**
@@ -420,7 +481,7 @@ export class StartSessionUseCase {
    * to `waitingPermission`, which is the transition it cannot afford to miss.
    */
   private onEvent(session: Session, event: SessionEvent): void {
-    // Claude saying anything is activity: the idle clock counts from the last of it (D-02).
+    // The agent saying anything is activity: the idle clock counts from the last of it (D-02).
     session.recordActivity(this.clock.now());
 
     const moved = observedStatus(session, event.type);
@@ -440,7 +501,7 @@ export class StartSessionUseCase {
   }
 
   /**
-   * The turn ended: the next prompt of the queue goes to Claude as a turn of its own, and everybody
+   * The turn ended: the next prompt of the queue goes to the agent as a turn of its own, and everybody
    * watching is told it left the queue (plan 08, D-14, S-160).
    */
   private nextPrompt(session: Session): void {
@@ -458,9 +519,16 @@ export class StartSessionUseCase {
     handOverPrompt(live, this.broadcaster, next);
   }
 
+  /** The engine a live session runs on — the default, for one already gone from the registry. */
+  private engineOf(session: Session): string {
+    const conversation = this.registry.conversationOf(session.id);
+    return (conversation?.ref.engine ?? this.engines.default.engine).value;
+  }
+
   /** The stream ended, for whatever reason. The entry goes, and everybody watching is told. */
   private onClosed(session: Session, reason: SessionCloseReason): void {
     const wasClosed = session.isClosed;
+    const engine = this.engineOf(session);
 
     session.close(reason);
     this.registry.remove(session.id);
@@ -472,10 +540,13 @@ export class StartSessionUseCase {
     }
 
     // A crash is reported as a failure of its own before the terminal event: `session.closed`
-    // says the session is over, and `CLAUDE_UNAVAILABLE` says whose fault that was. Without it a
+    // says the session is over, and `AGENT_UNAVAILABLE` says whose fault that was. Without it a
     // subprocess that died looks exactly like a turn that finished.
     if (reason === 'failed') {
-      this.broadcaster.publishError(session.id, new ClaudeUnavailableError(session.id.value));
+      this.broadcaster.publishError(
+        session.id,
+        new AgentUnavailableError(engine, session.id.value),
+      );
     }
 
     this.broadcaster.publish(session.id, {
@@ -490,6 +561,7 @@ function joined(live: LiveSession): StartedSession {
   return {
     session: live.session,
     conversation: live.conversation,
+    capabilities: live.handle.capabilities,
     joined: true,
     applied: { effort: null, outputStyle: null, defaultsFrom: 'installation' },
   };

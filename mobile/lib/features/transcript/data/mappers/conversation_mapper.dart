@@ -3,6 +3,8 @@
 /// This is the only file that knows both the wire and the entity. A DTO never leaves `data/`.
 library;
 
+import 'package:remote_claude/core/conversation/conversation_key.dart';
+import 'package:remote_claude/core/network/conversation_wire.dart';
 import 'package:remote_claude/features/transcript/domain/entities/conversation_origin.dart';
 import 'package:remote_claude/features/transcript/domain/entities/conversation_summary.dart';
 
@@ -15,12 +17,14 @@ ConversationSummary? conversationFrom(Object? entry) {
     return null;
   }
 
-  final Object? id = entry['sessionId'];
+  // The conversation, never the bare `sessionId` the previous protocol listed beside it (plan 28,
+  // D-08): an id alone does not say which engine keeps it.
+  final ConversationKey? conversation = conversationKeyFrom(entry['conversation']);
   final Object? cwd = entry['cwd'];
   final ConversationOrigin? origin = ConversationOrigin.fromWire(entry['origin']);
   final DateTime? lastModified = _instant(entry['lastModified']);
 
-  if (id is! String || cwd is! String || origin == null || lastModified == null) {
+  if (conversation == null || cwd is! String || origin == null || lastModified == null) {
     return null;
   }
 
@@ -28,7 +32,7 @@ ConversationSummary? conversationFrom(Object? entry) {
   final Object? gitBranch = entry['gitBranch'];
 
   return ConversationSummary(
-    conversationId: id,
+    conversation: conversation,
     summary: summary is String ? summary : '',
     origin: origin,
     cwd: cwd,

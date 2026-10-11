@@ -30,9 +30,9 @@ function elementOf(tree: HTMLElement | null, key: string): HTMLElement | null {
 
 /**
  * Keeps the DOM focus on the row the keyboard is on, through a virtualized window: the row is
- * always drawn, and focused — which scrolls it into view. When it disappears — deleted on disk, by Claude or by
- * anyone — the keyboard goes to its neighbour, selected, and the focus stays in the tree (S-189).
- * A request of the store — a reveal, a name just given — brings the focus back too.
+ * always drawn, and focused — which scrolls it into view. When it disappears — deleted on disk, by
+ * the agent or by anyone — the keyboard goes to its neighbour, selected, and the focus stays in the
+ * tree (S-189). A request of the store — a reveal, a name just given — brings the focus back too.
  *
  * @returns the way to ask for the DOM focus on the row the store puts the keyboard on next
  */

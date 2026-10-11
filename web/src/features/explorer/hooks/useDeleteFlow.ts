@@ -45,7 +45,7 @@ export type DeleteStep =
       readonly paths: readonly string[];
       readonly counted: readonly CountedFolder[];
 
-      /** Paths that change what Claude may do, which go only with the second step (07 · D-15). */
+      /** Paths that change what the agent may do: they go only with the second step (07 · D-15). */
       readonly sensitive: readonly string[];
       readonly done: readonly ItemResult[];
     };
@@ -67,7 +67,7 @@ export interface DeleteHandlers {
   /** Told with how each entry went, once nothing is left to ask. */
   finished(results: readonly ItemResult[]): void;
 
-  /** Asks the second step of paths that change what Claude may do (07 · D-15). */
+  /** Asks the second step of paths that change what the agent may do (07 · D-15). */
   askSensitive(request: SensitiveRequest): void;
 
   /** Brings back what a delete kept in the history took away — the notification's "Undo". */

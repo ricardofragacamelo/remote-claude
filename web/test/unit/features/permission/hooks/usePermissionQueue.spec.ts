@@ -7,6 +7,7 @@ import { setAccessToken } from '@/shared/api/credentials';
 import { wsClient } from '@/shared/api/ws';
 import { installFakeWebSocket } from '../../../../support/fake-websocket';
 import type { InstalledWebSocket } from '../../../../support/fake-websocket';
+import { aToolCall } from '../../../../support/canonical-tool';
 
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
 const NOW = '2026-09-19T12:00:00.000Z';
@@ -31,10 +32,9 @@ const requestFrame = {
   payload: {
     requestId: 'req-1',
     toolUseId: 'toolu-1',
-    toolName: 'Bash',
-    title: 'permission.tool.Bash',
+    ...aToolCall('Bash', { command: 'rm -rf build/' }),
+    title: 'permission.tool.shell',
     description: 'rm -rf build/',
-    input: { command: 'rm -rf build/' },
     riskHint: 'destructive',
     defaultToNo: true,
     expiresAt: '2999-01-01T00:00:00.000Z',
@@ -211,8 +211,8 @@ const questionFrame = {
   payload: {
     ...requestFrame.payload,
     requestId: 'req-q',
-    toolName: 'AskUserQuestion',
-    title: 'permission.tool.AskUserQuestion',
+    ...aToolCall('AskUserQuestion'),
+    title: 'permission.tool.question',
     defaultToNo: false,
     suggestions: [],
     interaction: {

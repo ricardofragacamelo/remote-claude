@@ -11,6 +11,7 @@ import {
   usePermissionQueue,
 } from '@/features/permission';
 import { setAccessToken } from '@/shared/api/credentials';
+import { nameAgents } from '@/shared/i18n';
 import { wsClient } from '@/shared/api/ws';
 import { render, translator } from '../../../support/render';
 import { installFakeWebSocket } from '../../../support/fake-websocket';
@@ -56,7 +57,7 @@ function Asked(): React.JSX.Element {
           ))}
         </ul>
       )}
-      {last?.interaction != null && (
+      {last?.interaction?.kind === 'question' && (
         <AnsweredQuestions
           interaction={last.interaction}
           answers={last.answers}
@@ -123,6 +124,18 @@ describe('the card of a question of Claude — plan 24, B-13, B-14', () => {
     screen.getByRole('button', { name: t('permission.question.submit') });
   const tab = (header: string): HTMLElement =>
     screen.getByRole('tab', { name: new RegExp(`^${header}`) });
+
+  it('names the agent that asks, by the engine of the call — plan 28, B-18', () => {
+    nameAgents({ defaultEngine: 'claude', engines: [{ id: 'claude', displayName: 'Claude' }] });
+    opened();
+
+    expect(
+      within(card()).getByRole('heading', {
+        name: t('permission.tool.question', { engine: 'claude' }),
+      }),
+    ).toHaveTextContent("Answer Claude's question");
+    nameAgents(null);
+  });
 
   it('offers a single choice as radios: choosing one clears the other, and one question is enough — S-64', async () => {
     const clicks = user();
@@ -534,7 +547,7 @@ describe('the card of a question of Claude — plan 24, B-13, B-14', () => {
   it('shows a question answered where no record was kept, with what the CLI said — D-13', () => {
     render(
       <AnsweredQuestions
-        interaction={{ malformed: false, questions: [] }}
+        interaction={{ kind: 'question', malformed: false, questions: [] }}
         answers={null}
         end="unknown"
         summary="The user answered: tone=dry"
@@ -548,7 +561,7 @@ describe('the card of a question of Claude — plan 24, B-13, B-14', () => {
   it('says nothing of a summary that is empty', () => {
     const { container } = render(
       <AnsweredQuestions
-        interaction={{ malformed: false, questions: [] }}
+        interaction={{ kind: 'question', malformed: false, questions: [] }}
         answers={null}
         end="unknown"
         summary=""

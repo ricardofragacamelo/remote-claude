@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { ErrorState } from '@/shared/components/ErrorState';
+import { conversationKey } from '@/shared/lib/conversation';
 import { ago, agoFrom } from '@/shared/lib/relative-time';
 import { cn } from '@/shared/lib/utils';
 import { refusalFor } from '../../hooks/useSessionsView';
@@ -107,9 +108,15 @@ export function LiveSessionRow({
     rowAction('open', 'sessions.action.open', () => {
       view.openSession(session.sessionId);
     }),
-    rowAction('copy', 'sessions.action.copyId', () => {
-      view.copy.copy(session.claudeSessionId);
-    }),
+    // The id of the conversation the session is, in its engine's store — never ours (S-40).
+    rowAction(
+      'copy',
+      'sessions.action.copyId',
+      () => {
+        view.copy.copy(session.conversation.id);
+      },
+      { agent: view.agentName(session.conversation.engine) },
+    ),
     rowAction('end', 'sessions.action.end', () => {
       view.endSession(session.sessionId);
     }),
@@ -180,12 +187,12 @@ export function ConversationRow({
   const { t, i18n } = useTranslation();
   const name = conversation.summary === '' ? t('transcript.list.untitled') : conversation.summary;
   const below = subfolderOf(view.folder, conversation.cwd);
-  const refusal = refusalFor(view, conversation.conversationId);
+  const refusal = refusalFor(view, conversation.conversation);
   const written = writtenWhen(conversation, i18n.language);
 
   const actions: [RowAction, ...RowAction[]] = [
     rowAction('open', 'sessions.action.read', () => {
-      view.openConversation(conversation.conversationId);
+      view.openConversation(conversation.conversation);
     }),
     rowAction(
       'continue',
@@ -194,16 +201,21 @@ export function ConversationRow({
         view.continueConversation(conversation);
       },
     ),
-    rowAction('copy', 'sessions.action.copyId', () => {
-      view.copy.copy(conversation.conversationId);
-    }),
+    rowAction(
+      'copy',
+      'sessions.action.copyId',
+      () => {
+        view.copy.copy(conversation.conversation.id);
+      },
+      { agent: view.agentName(conversation.conversation.engine) },
+    ),
   ];
 
   return (
     <li className="flex flex-col gap-1">
       <ActionRow
         view={view}
-        id={conversation.conversationId}
+        id={conversationKey(conversation.conversation)}
         title={name}
         labelKey="sessions.row.openConversation"
         actions={actions}

@@ -5,7 +5,7 @@ import { candidateOf, targetsOf, useExplorer } from '@/features/explorer/hooks/u
 import type { EntryRow, TreeRow } from '@/features/explorer/lib/tree-rows';
 import { explorerStore, forgetExplorer } from '@/features/explorer/store/explorer.store';
 import { AppError } from '@/shared/api/errors';
-import { claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentContextTargets } from '@/shared/lib/files-drag';
 import { editorFake, resetEditorFake } from '../../../../support/editor-fake';
 import { FakeFolder } from '../../../../support/files-api';
 import type { FakeEntry } from '../../../../support/files-api';
@@ -176,7 +176,7 @@ describe('the small decisions of the actions', () => {
     });
     expect(explorerStore(APP).getState().announcement?.key).toBe('explorer.context.excluded');
 
-    const unregister = claudeContextTargets.register({ id: 'panel', position: 1, add });
+    const unregister = agentContextTargets.register({ id: 'panel', position: 1, add });
     try {
       act(() => {
         result.current.addToContext();

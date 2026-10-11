@@ -1,6 +1,6 @@
 /**
  * The search of the workbench: which folder the active tab is, which file of it the editor has
- * active, and what the panel of Claude shows.
+ * active, and what the panel of the agent shows.
  *
  * The folder is in the **search** and not in the path
  * ([06 · D-06](../../../docs/plans/06-workbench/decisions.md#d-06--a-url-do-workbench)): an absolute

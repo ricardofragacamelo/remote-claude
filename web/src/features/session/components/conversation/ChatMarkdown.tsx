@@ -15,9 +15,9 @@ export interface ChatMarkdownProps {
 }
 
 /**
- * Claude's answer, rendered — through the one safe renderer of the product (plan 08, B-14): raw HTML
- * never becomes an element, a URL is only `http`, `https`, `mailto` or relative, and a remote image
- * is a link, never loaded (R-01). Loaded on demand, never in the first chunk of the page.
+ * The agent's answer, rendered — through the one safe renderer of the product (plan 08, B-14): raw
+ * HTML never becomes an element, a URL is only `http`, `https`, `mailto` or relative, and a remote
+ * image is a link, never loaded (R-01). Loaded on demand, never in the first chunk of the page.
  *
  * On top of it, what the panel adds: a block of code with its buttons (B-15), and the names of files
  * of the folder as links that open the file in the editor, at the line (B-16).

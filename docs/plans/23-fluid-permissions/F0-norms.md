@@ -23,7 +23,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
   da [D-01](decisions.md#d-01--modo-nosso-não-o-do-sdk)), decisão, e o que **não** muda:
   `allowDangerouslySkipPermissions` segue `false`, `bypassPermissions` segue nunca oferecido nem
   aceito como padrão, e o `scan:security` segue procurando os dois.
-- [backend/04](../../architecture/backend/04-claude-integration.md): o modo `allowAll` (o SDK em
+- [backend/04](../../architecture/backend/04a-claude.md): o modo `allowAll` (o SDK em
   `default`, a ordem idempotência → regras → modo, `HUMAN_ONLY_TOOLS`, os pendentes ao ligar); a
   linha composta da [D-07](decisions.md#d-07--a-linha-composta) no lugar do item 3 da gramática;
   os alcances (`exact`, `prefix`, `tool`) e a [D-08](decisions.md#f2--alcance-das-regras).

@@ -1,5 +1,12 @@
-import { SessionRegistry } from '@application/session';
-import type { ClaudeSessionHandle, SessionConversation } from '@application/session';
+import { payloadRecord, SessionRegistry } from '@application/session';
+import type {
+  AgentSessionHandle,
+  AgentSessionStart,
+  EngineControl,
+  SessionConversation,
+  SessionEvent,
+} from '@application/session';
+import type { EngineCapabilities } from '@domain/engine';
 import { UserId } from '@domain/auth';
 import { Session, SessionId } from '@domain/session';
 import type {
@@ -12,7 +19,7 @@ import type {
   SessionInitialization,
   SlashCommand,
 } from '@domain/session';
-import { ClaudeSessionId } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
 import { FixedClock } from '../fakes/fixed-clock';
 
@@ -24,12 +31,25 @@ export const CONVERSATION_ID = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
 
 /** A conversation of Claude — fresh unless it says what it continues. */
 export function aConversation(
-  claudeSessionId = CONVERSATION_ID,
+  conversation = CONVERSATION_ID,
   resumedFrom: string | null = null,
 ): SessionConversation {
   return {
-    claudeSessionId: ClaudeSessionId.create(claudeSessionId),
-    resumedFrom: resumedFrom === null ? null : ClaudeSessionId.create(resumedFrom),
+    ref: ConversationRef.create('claude', conversation),
+    resumedFrom: resumedFrom === null ? null : ConversationRef.create('claude', resumedFrom),
+  };
+}
+
+/** What an engine is handed to open a session — the defaults of {@link aSession}, callbacks inert. */
+export function aStart(): AgentSessionStart {
+  return {
+    sessionId: SessionId.create(SESSION_ID),
+    workspace: WorkspacePath.create('/srv/projects/app'),
+    model: null,
+    permissionMode: 'ask',
+    conversation: aConversation(),
+    onEvent: () => undefined,
+    onClosed: () => undefined,
   };
 }
 
@@ -50,14 +70,47 @@ export function aSession(
     ownerId: UserId.create(overrides.ownerId ?? 'auth|owner'),
     workspace: WorkspacePath.create(overrides.workspace ?? '/srv/projects/app'),
     model: overrides.model ?? 'claude-sonnet-5',
-    permissionMode: overrides.permissionMode ?? 'default',
+    permissionMode: overrides.permissionMode ?? 'ask',
     openedAt: overrides.openedAt ?? OPENED_AT,
     openedFrom: overrides.openedFrom ?? 'web',
   });
 }
 
+/** Every capability a session can have — what a session of the product had before ADR-025. */
+export const ALL_CAPABILITIES: EngineCapabilities = {
+  resume: true,
+  fork: 'atMessage',
+  history: true,
+  images: true,
+  promptWhileBusy: true,
+  questions: true,
+  planApproval: true,
+  taskList: true,
+  subagents: true,
+  thinking: true,
+  slashCommands: true,
+  modelSwitch: true,
+  effortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
+  contextUse: true,
+  mcp: true,
+  compaction: true,
+  cost: 'usd',
+  permissionModes: ['ask', 'acceptEdits', 'readOnly', 'allowAll'],
+};
+
 /** A handle that records what it was asked to do, instead of driving a subprocess. */
-export class RecordingHandle implements ClaudeSessionHandle {
+export class RecordingHandle implements AgentSessionHandle, EngineControl {
+  /** What the engine can do — every capability, unless a test takes one away. */
+  capabilities: EngineCapabilities = ALL_CAPABILITIES;
+
+  /** The engine's own prompt to compact the conversation — what Claude Code's adapter has. */
+  compactionPrompt?: string = '/compact';
+
+  /** Every control: the handle answers them all itself, like the adapter of the product. */
+  get control(): EngineControl {
+    return this;
+  }
+
   readonly prompts: string[] = [];
   readonly models: string[] = [];
   readonly modes: PermissionMode[] = [];
@@ -224,4 +277,28 @@ export function aCommand(name: string, overrides: Partial<SlashCommand> = {}): S
     aliases: overrides.aliases ?? [],
     ...(overrides.builtin === undefined ? {} : { builtin: overrides.builtin }),
   };
+}
+
+/**
+ * The payload of [event] as a plain record, for a test that reads one field — `{}` for no event.
+ * The contract types each payload; a test reading the field of an event it found by `type` is the
+ * place to read it untyped.
+ */
+export function payloadOf(event: SessionEvent | undefined): Readonly<Record<string, unknown>> {
+  return event === undefined ? {} : payloadRecord(event);
+}
+
+/**
+ * An event as a test writes it: a `type` and only the fields the test is about — what a fake engine
+ * emits to drive a use case, whatever the full payload of that `type` is.
+ */
+export function anEvent(type: string, payload: Record<string, unknown> = {}): SessionEvent {
+  return { type, payload } as unknown as SessionEvent;
+}
+
+/** [events] as plain records, for a test that reads them by field. */
+export function asRecords(
+  events: readonly SessionEvent[],
+): { type: string; payload: Record<string, unknown> }[] {
+  return events.map((event) => ({ type: event.type, payload: { ...payloadRecord(event) } }));
 }

@@ -10,12 +10,12 @@ import type {
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
 import {
-  ClaudeSessionId,
   TranscriptFollowLimitError,
   TranscriptFollowLiveHereError,
   TranscriptNotFoundError,
   TranscriptUnavailableError,
 } from '@domain/transcript';
+import { ConversationRef } from '@domain/engine';
 import type { TranscriptMessage, TranscriptSession } from '@domain/transcript';
 import { WorkspacePath } from '@domain/workspace';
 import { OWNER } from '../../../support/builders/workspace.builder';
@@ -45,11 +45,11 @@ class RecordingSink implements FollowSink {
     | { readonly kind: 'reset'; readonly followId: string; readonly reason: FollowResetReason }
   )[] = [];
 
-  appended(followId: string, _conversationId: string, update: FollowUpdate): void {
+  appended(followId: string, _conversation: ConversationRef, update: FollowUpdate): void {
     this.frames.push({ kind: 'appended', followId, update });
   }
 
-  reset(followId: string, _conversationId: string, reason: FollowResetReason): void {
+  reset(followId: string, _conversation: ConversationRef, reason: FollowResetReason): void {
     this.frames.push({ kind: 'reset', followId, reason });
   }
 
@@ -141,7 +141,7 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
     const following = await follower.follow({
       connectionId: options.connection ?? 'c1',
       userId: owner,
-      conversationId: ClaudeSessionId.create(conversationId(options.n ?? 1)),
+      conversationId: ConversationRef.create('claude', conversationId(options.n ?? 1)),
       afterMessageId: options.after === undefined ? 'm1' : options.after,
       sink,
     });
@@ -168,7 +168,7 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
     const following = await follower.follow({
       connectionId: 'c1',
       userId: owner,
-      conversationId: ClaudeSessionId.create(conversationId(1)),
+      conversationId: ConversationRef.create('claude', conversationId(1)),
       afterMessageId: 'm1',
       sink,
     });
@@ -306,7 +306,9 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
     const failing = store.find.bind(store);
     let fails = true;
     store.find = (id) =>
-      fails ? Promise.reject(new TranscriptUnavailableError('describe a session')) : failing(id);
+      fails
+        ? Promise.reject(new TranscriptUnavailableError('claude', 'describe a session'))
+        : failing(id);
 
     await tick();
     expect(observer.failures).toHaveLength(1);
@@ -321,7 +323,7 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
 
   it('answers a conversation the caller does not read as a missing one — S-60', async () => {
     await origins.record({
-      claudeSessionId: ClaudeSessionId.create(conversationId(1)),
+      conversation: ConversationRef.create('claude', conversationId(1)),
       sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
       openedBy: UserId.create('auth|stranger'),
       workspace: WorkspacePath.create('/srv/projects/app'),
@@ -336,7 +338,7 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
     const { sink } = await follow();
 
     await origins.record({
-      claudeSessionId: ClaudeSessionId.create(conversationId(1)),
+      conversation: ConversationRef.create('claude', conversationId(1)),
       sessionId: SessionId.create('01J0ABCDEFGHJKMNPQRSTVWXYZ'),
       openedBy: UserId.create('auth|stranger'),
       workspace: WorkspacePath.create('/srv/projects/app'),
@@ -410,7 +412,7 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
     const following = await follower.follow({
       connectionId: 'c1',
       userId: owner,
-      conversationId: ClaudeSessionId.create(conversationId(1)),
+      conversationId: ConversationRef.create('claude', conversationId(1)),
       afterMessageId: 'm1',
       sink,
     });
@@ -429,7 +431,7 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
     const late = await follower.follow({
       connectionId: 'c2',
       userId: owner,
-      conversationId: ClaudeSessionId.create(conversationId(1)),
+      conversationId: ConversationRef.create('claude', conversationId(1)),
       afterMessageId: 'm1',
       sink,
     });

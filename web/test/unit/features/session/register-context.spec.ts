@@ -1,20 +1,20 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { registerClaudeContext } from '@/features/session';
+import { registerAgentContext } from '@/features/session';
 import { addToPanelContext } from '@/features/session/register-context';
 import { mentionProviders } from '@/features/session/lib/mention-providers';
 import { MAX_CONTEXT_ITEMS } from '@/features/session/lib/context-set';
-import { claudePanelStore, forgetClaudePanel } from '@/features/session/store/claude-panel.store';
-import { addToClaudeContext, claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentPanelStore, forgetAgentPanel } from '@/features/session/store/agent-panel.store';
+import { addToAgentContext, agentContextTargets } from '@/shared/lib/files-drag';
 import { showView } from '@/features/editor/hooks/views';
 import { editorStoreOf, forgetEditor } from '@/features/editor/store/editor.store';
 import type { CodeView } from '@/features/editor/types/code-editor';
 
 const FOLDER = '/srv/projects/app';
-const panel = () => claudePanelStore(FOLDER).getState();
+const panel = () => agentPanelStore(FOLDER).getState();
 
 afterEach(() => {
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
 });
 
 describe("Claude's context from the tree, the tabs and the editor — plan 08, B-49, B-51", () => {
@@ -27,7 +27,7 @@ describe("Claude's context from the tree, the tabs and the editor — plan 08, B
   });
 
   it('opens a draft when what is on screen is a conversation that only reads', () => {
-    panel().show('conversation', 'c1');
+    panel().show('conversation', { engine: 'claude', id: 'c1' });
 
     addToPanelContext({ folder: FOLDER, entries: [{ path: 'docs', kind: 'directory' }] });
 
@@ -43,7 +43,7 @@ describe("Claude's context from the tree, the tabs and the editor — plan 08, B
   });
 
   it('offers what is selected in the active editor as @selection, one range per cursor — S-226', () => {
-    const undo = registerClaudeContext();
+    const undo = registerAgentContext();
     const store = editorStoreOf(FOLDER);
     const group = store.getState().activeGroup;
     store.setState({
@@ -93,10 +93,10 @@ describe("Claude's context from the tree, the tabs and the editor — plan 08, B
   });
 
   it('registers the panel as the target, and @selection as a provider, until taken back', () => {
-    const undo = registerClaudeContext();
+    const undo = registerAgentContext();
     panel().openDraft();
 
-    expect(addToClaudeContext({ folder: FOLDER, entries: [{ path: 'a.ts', kind: 'file' }] })).toBe(
+    expect(addToAgentContext({ folder: FOLDER, entries: [{ path: 'a.ts', kind: 'file' }] })).toBe(
       true,
     );
     expect(mentionProviders.entries().map((provider) => provider.keyword)).toEqual(['selection']);
@@ -104,7 +104,7 @@ describe("Claude's context from the tree, the tabs and the editor — plan 08, B
     expect(mentionProviders.entries()[0]?.items(FOLDER)).toBeNull();
 
     undo();
-    expect(claudeContextTargets.entries()).toEqual([]);
+    expect(agentContextTargets.entries()).toEqual([]);
     expect(mentionProviders.entries()).toEqual([]);
   });
 });

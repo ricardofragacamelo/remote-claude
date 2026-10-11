@@ -69,8 +69,8 @@ function drawnRows(
  * drawn, each with its level and its place among its siblings (S-161) — walked with the keyboard of
  * the pattern (S-162), with a selection of many (S-181) and a context menu (S-180).
  *
- * Dragging moves entries into a folder, and carries them to Claude's chat too (D-20); "Move to…" is
- * the same without a mouse (S-175).
+ * Dragging moves entries into a folder, and carries them to the agent's chat too (D-20); "Move to…"
+ * is the same without a mouse (S-175).
  */
 export function ExplorerTree({ explorer, actions }: ExplorerTreeProps): React.JSX.Element {
   const { t } = useTranslation();

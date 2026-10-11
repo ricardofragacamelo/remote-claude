@@ -15,6 +15,7 @@ const row = {
   sessionId: '01J0ABCDEFGHJKMNPQRSTVWXYZ',
   toolUseId: 'tu-1',
   toolName: 'Bash',
+  toolKind: 'shell',
   input: { command: 'git status' },
   decision: 'recorded',
   deviceId: 'device-1',
@@ -178,6 +179,13 @@ describe('the audit entry mapper', () => {
         resolvedFrom: written.resolvedFrom ?? null,
       }).snapshot(),
     ).toEqual(toEntity(decisionRow).snapshot());
+  });
+
+  it('carries the kind of the call both ways, and an old row without one as none — plan 28, B-33', () => {
+    expect(toEntity(row).toolKind).toBe('shell');
+    expect(toRow(toEntity(row), null).toolKind).toBe('shell');
+    expect(toEntity({ ...row, toolKind: null }).toolKind).toBeNull();
+    expect(toRow(decisionEntry(null), null).toolKind).toBeNull();
   });
 
   it('has no way to express an update', () => {

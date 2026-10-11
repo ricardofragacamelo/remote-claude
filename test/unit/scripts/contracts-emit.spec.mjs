@@ -10,6 +10,7 @@ const envelope = {
   source: 'envelope.schema.json',
   schema: {
     title: 'Envelope',
+    'x-protocol-version': 3,
     type: 'object',
     required: ['v', 'kind', 'type'],
     properties: {
@@ -40,6 +41,7 @@ const command = {
         properties: { kind: { type: 'string' }, version: { type: 'string' } },
       },
       tags: { type: 'array', items: { type: 'string' } },
+      modes: { type: 'array', items: { type: 'string', enum: ['ask', 'readOnly'] } },
     },
   },
 };
@@ -70,6 +72,10 @@ describe('emitTypeScript', () => {
 
   it('maps an array to a readonly array of the item type', () => {
     expect(typescript).toContain('readonly tags?: readonly string[];');
+  });
+
+  it('parenthesises a union of items, so the array is of the union and not of its last member', () => {
+    expect(typescript).toContain("readonly modes?: readonly ('ask' | 'readOnly')[];");
   });
 
   it('gives the frame the literal kind and type, so a switch narrows on them', () => {
@@ -275,6 +281,7 @@ const conditionalModel = buildModel(
     source: 'envelope.schema.json',
     schema: {
       title: 'Envelope',
+      'x-protocol-version': 1,
       type: 'object',
       required: ['kind'],
       'x-required-when': [
@@ -397,6 +404,7 @@ describe('the Dart shape check of a conditional, per declared type', () => {
           source: 'envelope.schema.json',
           schema: {
             title: 'Envelope',
+            'x-protocol-version': 1,
             type: 'object',
             required: ['kind'],
             'x-required-when': [
@@ -591,7 +599,7 @@ describe('the TypeScript guards, however many fields they check', () => {
         buildModel(
           {
             source: 'envelope.schema.json',
-            schema: { title: 'Envelope', type: 'object', properties: {} },
+            schema: { title: 'Envelope', 'x-protocol-version': 1, type: 'object', properties: {} },
           },
           [],
         ),
@@ -751,5 +759,97 @@ describe('the bound helpers, at runtime', () => {
     ['atLeast', 'one', 1, true],
   ])('%s(%j, %d) is %s', (name, value, bound, expected) => {
     expect(helper(name)(value, bound)).toBe(expected);
+  });
+});
+
+describe('the version, the events and the fields that may be null — plan 28, B-09, B-12', () => {
+  const event = {
+    source: 'events/thing-happened.schema.json',
+    schema: {
+      title: 'ThingHappened',
+      'x-kind': 'event',
+      'x-type': 'thing.happened',
+      type: 'object',
+      required: ['id'],
+      properties: { id: { type: 'string' } },
+    },
+  };
+  const answer = {
+    source: 'http/thing-page.schema.json',
+    schema: {
+      title: 'ThingPage',
+      'x-kind': 'http',
+      'x-type': 'things.page',
+      type: 'object',
+      required: ['next', 'owner'],
+      properties: {
+        next: { type: 'string', 'x-nullable': true },
+        owner: {
+          type: 'object',
+          'x-nullable': true,
+          required: ['name'],
+          properties: { name: { type: 'string' } },
+        },
+        hint: { type: 'string', 'x-nullable': true },
+      },
+    },
+  };
+  const both = buildModel(envelope, [event, answer]);
+  const ts = emitTypeScript(both);
+  const dartOut = emitDart(both);
+
+  it('speaks the version the envelope declares, in both targets', () => {
+    expect(ts).toContain('export const PROTOCOL_VERSION = 3;');
+    expect(dartOut).toContain('const int protocolVersion = 3;');
+  });
+
+  it('refuses an envelope that declares no version, or one that is not a positive integer', () => {
+    const bare = Object.fromEntries(
+      Object.entries(envelope.schema).filter(([key]) => key !== 'x-protocol-version'),
+    );
+    expect(() => buildModel({ ...envelope, schema: bare }, [])).toThrow('x-protocol-version');
+    expect(() =>
+      buildModel({ ...envelope, schema: { ...envelope.schema, 'x-protocol-version': 0 } }, []),
+    ).toThrow('x-protocol-version');
+  });
+
+  it('maps every event to its payload, and nothing that is not an event', () => {
+    expect(ts).toContain(
+      "export interface EventPayloads {\n  'thing.happened': ThingHappenedPayload;\n}",
+    );
+    expect(ts).not.toContain("'things.page': ThingPagePayload;");
+  });
+
+  it('types a field that may be null as such, and its guard takes the null', () => {
+    expect(ts).toContain('readonly next: string | null;');
+    expect(ts).toContain('readonly owner: ThingPagePayloadOwner | null;');
+    expect(ts).toContain('readonly hint?: string | null;');
+    expect(ts).toContain("nullOr(record['next'], typeof record['next'] === 'string')");
+    expect(ts).toContain('function nullOr(value: unknown, passed: boolean): boolean {');
+  });
+
+  it('reads a field that may be null as nullable in Dart, and still requires it in the constructor', () => {
+    expect(dartOut).toContain('final String? next;');
+    expect(dartOut).toContain('required this.next,');
+    expect(dartOut).toContain("next: json['next'] as String?,");
+    expect(dartOut).toContain(
+      "owner: json['owner'] == null ? null : ThingPagePayloadOwner.fromJson(json['owner']! as Map<String, Object?>),",
+    );
+    expect(dartOut).toContain("'owner': owner?.toJson(),");
+  });
+
+  it('refuses an `x-nullable` that is not a boolean', () => {
+    expect(() =>
+      buildModel(envelope, [
+        {
+          ...answer,
+          schema: {
+            ...answer.schema,
+            required: ['next'],
+            properties: { next: { type: 'string', 'x-nullable': 'yes' } },
+          },
+        },
+      ]),
+    ).toThrow('x-nullable');
   });
 });

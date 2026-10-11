@@ -6,26 +6,52 @@
   "x-kind": "event",
   "x-type": "tool.started",
   "type": "object",
-  "required": ["toolUseId", "toolName", "input"],
+  "required": ["toolUseId", "kind", "label", "subject", "changes", "origin", "rawInput"],
   "properties": {
     "toolUseId": {
       "type": "string",
-      "description": "The SDK's id for this invocation. It is what ties started, progress and completed together."
+      "description": "The engine's id for this invocation. It is what ties started, progress and completed together."
     },
-    "toolName": {
-      "type": "string"
+    "kind": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "The canonical kind of the tool, decided by the adapter of the engine: `file.read`, `file.edit`, `file.write`, `file.delete`, `file.move`, `search`, `shell`, `shell.output`, `web.fetch`, `web.search`, `mcp`, `agent`, `question`, `plan`, `tasks`, `other`. **Open**: a kind the client does not know is drawn as the generic line, never an error (ADR-025)."
     },
-    "input": {
+    "label": {
+      "$ref": "../definitions/tool-label.schema.json",
+      "description": "The label of the row, built by the backend."
+    },
+    "subject": {
+      "$ref": "../definitions/tool-subject.schema.json",
+      "description": "What the call is about, normalised."
+    },
+    "changes": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "../definitions/file-change.schema.json"
+      },
+      "description": "The files the call changes — what turns on the diff. Empty for a kind that changes no file."
+    },
+    "origin": {
+      "$ref": "../definitions/engine-origin.schema.json",
+      "description": "The engine and its own name for the tool — opaque."
+    },
+    "rawInput": {
       "type": "object",
-      "description": "The exact input the tool was called with."
+      "description": "The exact input the tool was called with, **opaque**: shown whole as the exact input and exported, and no client reads a field of it (plan 28, D-04). Everything a client draws comes from `label`, `subject` and `changes`."
+    },
+    "interaction": {
+      "$ref": "../definitions/interaction.schema.json",
+      "description": "On a `question` or a `plan`: what it asks, normalised by the adapter — the same the `permission.requested` of the call carries, so the history draws it without the raw input (plan 28, B-21). Absent on every other kind."
     },
     "title": {
       "type": "string",
-      "description": "A short human label for the invocation, already derived by the backend: the `description` the model gave the call (`Bash` always carries one), when it is non-blank text. Absent otherwise, and the client labels the tool as it did before."
+      "description": "A short human label for the invocation, already derived by the backend: the description the model gave the call, when it is non-blank text. Absent otherwise, and the client shows the `label` alone."
     },
     "parentToolUseId": {
       "type": "string",
-      "description": "Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation."
+      "description": "Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation."
     },
     "at": {
       "type": "string",

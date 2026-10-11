@@ -19,7 +19,7 @@ describe('following a folder on disk for the editor', () => {
     const listener = { changed: vi.fn(), resumed: vi.fn() };
 
     const stop = followDisk('/srv/app', listener);
-    subscriber?.onChanges([{ path: 'a', kind: 'changed', origin: 'claude' }], false);
+    subscriber?.onChanges([{ path: 'a', kind: 'changed', origin: 'agent' }], false);
     subscriber?.onWatching(false);
     subscriber?.onWatching(true);
     subscriber?.onStopped('folderDeleted');
@@ -27,7 +27,7 @@ describe('following a folder on disk for the editor', () => {
     stop();
 
     expect(listener.changed).toHaveBeenCalledWith(
-      [{ path: 'a', kind: 'changed', origin: 'claude' }],
+      [{ path: 'a', kind: 'changed', origin: 'agent' }],
       false,
     );
     expect(listener.resumed).toHaveBeenCalledTimes(1);

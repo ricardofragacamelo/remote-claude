@@ -9,9 +9,9 @@ import { SessionsView } from './SessionsView';
 export const SESSIONS_VIEW = 'sessions';
 
 /**
- * Puts the view of Claude's sessions in the workbench — once, at load, before any folder tab is made:
- * it takes over the place of the activity bar plan 06 held for it, and what a reload gives back of
- * it joins the restoration of the tab.
+ * Puts the view of the agent's sessions in the workbench — once, at load, before any folder tab is
+ * made: it takes over the place of the activity bar plan 06 held for it, and what a reload gives
+ * back of it joins the restoration of the tab.
  *
  * @returns the way to take it back out — the place goes back to its placeholder
  */

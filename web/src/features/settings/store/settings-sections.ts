@@ -7,24 +7,25 @@ import { AppearanceSection } from '../components/AppearanceSection';
 import type { SettingsSectionEntry } from '../types/settings';
 
 /**
- * What a section of the **app's** settings may never be about: Claude's model, permission mode and
- * MCP servers are the screen of plan 13, and a section here would put the two in one screen — which
- * the navigation promises they never share (plan 06, S-145).
+ * What a section of the **app's** settings may never be about: the coding agent — its engine, its
+ * model, its permission mode and its MCP servers — is the screen of plan 13, and a section here would
+ * put the two in one screen — which the navigation promises they never share (plan 06, S-145). Said
+ * by what the agent's settings are, never by the name of one engine (plan 28, B-39).
  */
-const CLAUDE_SUBJECT = /claude|model|permission|mcp/i;
+const AGENT_SUBJECT = /agent|engine|model|permission|mcp/i;
 
 /**
- * Refuses a section about Claude — at load, where two plans disagreeing is a bug to see.
+ * Refuses a section about the agent — at load, where two plans disagreeing is a bug to see.
  *
  * @throws {Error} naming the section and the word that gave it away
  */
 export function assertAppSection(entry: SettingsSectionEntry): void {
   const named = [entry.id, entry.labelKey, ...entry.options.flatMap((o) => [o.id, o.labelKey])];
-  const claude = named.find((name) => CLAUDE_SUBJECT.test(name));
+  const word = named.find((name) => AGENT_SUBJECT.test(name));
 
-  if (claude !== undefined) {
+  if (word !== undefined) {
     throw new Error(
-      `settings sections: "${entry.id}" is about Claude ("${claude}") — that is plan 13's screen`,
+      `settings sections: "${entry.id}" is about the agent ("${word}") — that is plan 13's screen`,
     );
   }
 }

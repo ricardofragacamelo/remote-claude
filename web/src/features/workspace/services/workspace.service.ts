@@ -145,7 +145,7 @@ export function openFolder(path: string): Promise<OpenFolder> {
 }
 
 /**
- * Closes a folder tab. Its Claude sessions are not touched: they live in the backend, and closing a
+ * Closes a folder tab. Its agent sessions are not touched: they live in the backend, and closing a
  * tab is not ending them. Answered also when it was not open.
  */
 export async function closeFolder(path: string): Promise<void> {

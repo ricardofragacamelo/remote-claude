@@ -7,8 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { Providers } from '@/app/providers';
 import { useAuthStore } from '@/features/auth';
 import { permissionQueueOf } from '@/features/permission';
-import { liveSessionStoreOf, registerClaudeChanges } from '@/features/session';
-import { claudePanelStore } from '@/features/session/store/claude-panel.store';
+import { liveSessionStoreOf, registerAgentChanges } from '@/features/session';
+import { agentPanelStore } from '@/features/session/store/agent-panel.store';
 import { useFolderTab } from '@/features/workbench';
 import { useDensity } from '@/shared/hooks/useDensity';
 import { useTheme } from '@/shared/hooks/useTheme';
@@ -98,9 +98,9 @@ describe('the providers', () => {
     const conversation = liveSessionStoreOf('S1');
     const questions = permissionQueueOf('S1');
     // The panel keeps its drafts among what a folder tab keeps — registered as the app does at load.
-    const unregister = registerClaudeChanges();
+    const unregister = registerAgentChanges();
     onTestFinished(unregister);
-    const panel = claudePanelStore('/srv/projects/a');
+    const panel = agentPanelStore('/srv/projects/a');
     act(() => {
       panel.getState().setDraft('draft:1', 'the last person’s words');
     });
@@ -113,7 +113,7 @@ describe('the providers', () => {
       expect(liveSessionStoreOf('S1')).not.toBe(conversation);
     });
     expect(permissionQueueOf('S1')).not.toBe(questions);
-    expect(claudePanelStore('/srv/projects/a').getState().drafts).toEqual({});
+    expect(agentPanelStore('/srv/projects/a').getState().drafts).toEqual({});
   });
 
   it('keeps what the tabs held through a page load of somebody still signed in — S-208', async () => {

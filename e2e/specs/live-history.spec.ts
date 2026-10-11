@@ -132,7 +132,7 @@ async function readerOfOneWrittenElsewhere(page: Page): Promise<string> {
   );
 
   await openSignedIn(page, live.user, workbenchAddress(folder));
-  await page.getByRole('button', { name: 'Claude sessions', exact: true }).click();
+  await page.getByRole('button', { name: 'Claude Code sessions', exact: true }).click();
   await page
     .getByRole('region', { name: /^Active elsewhere/ })
     .getByRole('button', { name: `Read the conversation ${expected.planted.title}` })

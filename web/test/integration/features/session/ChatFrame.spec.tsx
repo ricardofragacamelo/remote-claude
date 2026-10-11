@@ -5,11 +5,11 @@ import userEvent from '@testing-library/user-event';
 import { forgetLiveSessions, SessionScreen } from '@/features/session';
 import { DraftView } from '@/features/session/components/panel/DraftView';
 import { MAX_BOX_HEIGHT } from '@/features/session/components/composer/ChatComposer';
-import { claudePanelStore, forgetClaudePanel } from '@/features/session/store/claude-panel.store';
+import { agentPanelStore, forgetAgentPanel } from '@/features/session/store/agent-panel.store';
 import { forgetFolderTabs } from '@/features/workbench';
 import { api } from '@/shared/api/api';
 import { render, translator } from '../../../support/render';
-import { aHistoryPage, claudeUnavailable } from '../../../support/history';
+import { aHistoryPage, agentUnavailable } from '../../../support/history';
 import { ack, aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
 import { aRefusal } from '../../../support/session-tools';
@@ -54,7 +54,7 @@ afterEach(() => {
   live.close();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
   forgetFolderTabs();
 });
 
@@ -92,7 +92,7 @@ function anEndedSession(): void {
     hubEvent(SESSION, 'session.started', 1, {
       sessionId: SESSION,
       workspacePath: FOLDER,
-      claudeSessionId: CONVERSATION,
+      conversation: { engine: 'claude', id: CONVERSATION },
     }),
     hubEvent(SESSION, 'session.closed', 2, { sessionId: SESSION, reason: 'idleTimeout' }),
   );
@@ -134,7 +134,7 @@ describe('the frame of the panel — plan 09, F1', () => {
     await screen.findByText('Said.');
     const written = box();
     await user.type(written, 'half a thought');
-    claudePanelStore(FOLDER)
+    agentPanelStore(FOLDER)
       .getState()
       .setScroll(`session:${SESSION}`, { top: 40, following: false });
 
@@ -170,7 +170,7 @@ describe('the frame of the panel — plan 09, F1', () => {
   });
 
   it('puts a partial replay and a history that failed at the top of the conversation — S-11', async () => {
-    vi.mocked(api.get).mockRejectedValue(claudeUnavailable);
+    vi.mocked(api.get).mockRejectedValue(agentUnavailable);
     render(<SessionScreen sessionId={SESSION} folder={FOLDER} />);
     live.connect();
     live.receive(
@@ -179,13 +179,15 @@ describe('the frame of the panel — plan 09, F1', () => {
         replayed: 0,
         oldestAvailableSeq: 900,
         gap: true,
-        claudeSessionId: CONVERSATION,
+        conversation: { engine: 'claude', id: CONVERSATION },
       }),
       hubEvent(SESSION, 'message.delta', 901, { messageId: 'm9', delta: 'still live' }),
     );
 
     const failed = await within(frame()).findByRole('alert');
-    expect(failed).toHaveTextContent(t('transcript.error.claudeUnavailable'));
+    expect(failed).toHaveTextContent(
+      t('transcript.error.agentUnavailable', agentUnavailable.params),
+    );
     const conversation = within(frame()).getByRole('list', {
       name: t('session.screen.conversation'),
     });
@@ -206,7 +208,7 @@ describe('the frame of the panel — plan 09, F1', () => {
   });
 
   it('frames the draft the same way: the hints in the middle, the box under them — S-12', () => {
-    const key = claudePanelStore(FOLDER).getState().openDraft();
+    const key = agentPanelStore(FOLDER).getState().openDraft();
     render(<DraftView folder={FOLDER} tabKey={key} />);
 
     const draft = screen.getByRole('region', { name: t('sessions.draft.title') });
@@ -234,7 +236,7 @@ describe('a session that ended, whose box resumes it — plan 09, B-06, D-05', (
 
   it('resumes the conversation and sends the prompt there — S-87', async () => {
     const user = userEvent.setup();
-    claudePanelStore(FOLDER).getState().show('session', SESSION);
+    agentPanelStore(FOLDER).getState().show('session', SESSION);
     render(<SessionScreen sessionId={SESSION} folder={FOLDER} />);
     anEndedSession();
 
@@ -242,7 +244,7 @@ describe('a session that ended, whose box resumes it — plan 09, B-06, D-05', (
 
     const resume = live.lastSent('session.start');
     expect(resume).toMatchObject({
-      payload: { workspacePath: FOLDER, resumeSessionId: CONVERSATION },
+      payload: { workspacePath: FOLDER, resumeFrom: { engine: 'claude', id: CONVERSATION } },
     });
     live.receive({
       v: 1,
@@ -252,7 +254,11 @@ describe('a session that ended, whose box resumes it — plan 09, B-06, D-05', (
       ts: AT,
       seq: 1,
       correlationId: resume?.['id'],
-      payload: { sessionId: RESUMED, workspacePath: FOLDER, resumedFrom: CONVERSATION },
+      payload: {
+        sessionId: RESUMED,
+        workspacePath: FOLDER,
+        resumedFrom: { engine: 'claude', id: CONVERSATION },
+      },
     });
 
     await waitFor(() => {
@@ -260,12 +266,12 @@ describe('a session that ended, whose box resumes it — plan 09, B-06, D-05', (
         payload: { sessionId: RESUMED, text: 'go on' },
       });
     });
-    expect(claudePanelStore(FOLDER).getState().active).toBe(`session:${RESUMED}`);
+    expect(agentPanelStore(FOLDER).getState().active).toBe(`session:${RESUMED}`);
   });
 
   it('keeps the text, and says why above the box, when the installation is full — S-89', async () => {
     const user = userEvent.setup();
-    claudePanelStore(FOLDER).getState().show('session', SESSION);
+    agentPanelStore(FOLDER).getState().show('session', SESSION);
     render(<SessionScreen sessionId={SESSION} folder={FOLDER} />);
     anEndedSession();
 

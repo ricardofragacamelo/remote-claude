@@ -232,7 +232,7 @@ export function repositoryGates(full) {
     { number: 10, name: 'security', command: 'pnpm', args: ['run', 'scan:security'] },
     {
       number: 11,
-      name: 'contracts and i18n',
+      name: 'contracts, i18n and neutrality',
       command: 'pnpm',
       args: ['run', 'check:contracts-i18n'],
     },

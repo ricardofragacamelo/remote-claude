@@ -1,5 +1,9 @@
-import type { StoredImage, TranscriptStore } from '@application/transcript';
-import type { ClaudeSessionId, TranscriptMessage, TranscriptSession } from '@domain/transcript';
+import type { EngineTranscriptStore, StoredImage } from '@application/transcript';
+import { ConversationRef, EngineId } from '@domain/engine';
+import type { TranscriptMessage, TranscriptSession } from '@domain/transcript';
+
+/** A UUID in the canonical form — the ids the store of the product hands out. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
  * Claude's store, as the port sees it: sessions filed by directory, and their messages.
@@ -7,7 +11,17 @@ import type { ClaudeSessionId, TranscriptMessage, TranscriptSession } from '@dom
  * What it answers about `[]` is what the SDK answers — an empty conversation and an absent one both
  * have no messages — so a use case that forgot to ask `find` first would be caught here too.
  */
-export class InMemoryTranscriptStore implements TranscriptStore {
+export class InMemoryTranscriptStore implements EngineTranscriptStore {
+  readonly engine: EngineId;
+
+  constructor(engine = 'claude') {
+    this.engine = EngineId.create(engine);
+  }
+
+  conversationOf(id: string): ConversationRef | null {
+    return UUID.test(id) ? ConversationRef.create(this.engine.value, id) : null;
+  }
+
   private readonly byDirectory = new Map<string, TranscriptSession[]>();
   private readonly messagesById = new Map<string, readonly TranscriptMessage[]>();
 
@@ -23,7 +37,7 @@ export class InMemoryTranscriptStore implements TranscriptStore {
     messages: readonly TranscriptMessage[] = [],
   ): this {
     this.byDirectory.set(directory, [...(this.byDirectory.get(directory) ?? []), session]);
-    this.messagesById.set(session.id.value, messages);
+    this.messagesById.set(session.id.id, messages);
     return this;
   }
 
@@ -40,7 +54,7 @@ export class InMemoryTranscriptStore implements TranscriptStore {
     return Promise.resolve([...this.byDirectory.values()].flat());
   }
 
-  find(id: ClaudeSessionId): Promise<TranscriptSession | null> {
+  find(id: ConversationRef): Promise<TranscriptSession | null> {
     const session = [...this.byDirectory.values()].flat().find((each) => each.id.equals(id));
     return Promise.resolve(session ?? null);
   }
@@ -57,7 +71,7 @@ export class InMemoryTranscriptStore implements TranscriptStore {
     session: TranscriptSession,
     toolUseId: string,
   ): Promise<readonly TranscriptMessage[] | null> {
-    return Promise.resolve(this.subagentsByTool.get(`${session.id.value}/${toolUseId}`) ?? null);
+    return Promise.resolve(this.subagentsByTool.get(`${session.id.id}/${toolUseId}`) ?? null);
   }
 
   private readonly results = new Map<string, string>();
@@ -76,11 +90,11 @@ export class InMemoryTranscriptStore implements TranscriptStore {
   }
 
   toolResult(session: TranscriptSession, toolUseId: string): Promise<string | null> {
-    return Promise.resolve(this.results.get(`${session.id.value}/${toolUseId}`) ?? null);
+    return Promise.resolve(this.results.get(`${session.id.id}/${toolUseId}`) ?? null);
   }
 
   promptImage(session: TranscriptSession, blockId: string): Promise<StoredImage | null> {
-    return Promise.resolve(this.images.get(`${session.id.value}/${blockId}`) ?? null);
+    return Promise.resolve(this.images.get(`${session.id.id}/${blockId}`) ?? null);
   }
 
   /** Replaces what a conversation holds — it was written to — and moves its version. */
@@ -89,7 +103,7 @@ export class InMemoryTranscriptStore implements TranscriptStore {
     for (const [directory, sessions] of this.byDirectory) {
       this.byDirectory.set(
         directory,
-        sessions.map((each) => (each.id.value === sessionId ? { ...each, lastModified } : each)),
+        sessions.map((each) => (each.id.id === sessionId ? { ...each, lastModified } : each)),
       );
     }
     return this;
@@ -100,7 +114,7 @@ export class InMemoryTranscriptStore implements TranscriptStore {
     for (const [directory, sessions] of this.byDirectory) {
       this.byDirectory.set(
         directory,
-        sessions.filter((each) => each.id.value !== sessionId),
+        sessions.filter((each) => each.id.id !== sessionId),
       );
     }
     return this;
@@ -108,6 +122,6 @@ export class InMemoryTranscriptStore implements TranscriptStore {
 
   messages(session: TranscriptSession): Promise<readonly TranscriptMessage[]> {
     this.reads += 1;
-    return Promise.resolve(this.messagesById.get(session.id.value) ?? []);
+    return Promise.resolve(this.messagesById.get(session.id.id) ?? []);
   }
 }

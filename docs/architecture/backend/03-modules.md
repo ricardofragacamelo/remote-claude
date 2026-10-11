@@ -256,9 +256,9 @@ observar são linguagem e invariantes próprias, e a primeira linha de defesa co
   Leitura fica fora da trilha e dentro do log.
 - **A trava por caminho real** (`PathLock`, da plataforma): o salvar, o criar, o mover, o copiar e o
   apagar da pessoa e a restauração do desfazer de uma sessão escrevem sob ela, e se serializam.
-- **A origem `claude`:** o hook `PostToolUse` publica `session.fileStateRecorded { path, hash, at }`
-  no barramento, e o `files` guarda as escritas recentes (`ClaudeWrites`) para o watcher rotular a
-  mudança — sem importar `session`.
+- **A origem `agent`:** o gancho depois da ferramenta publica `session.fileStateRecorded { path, hash,
+  at, engine }` no barramento, e o `files` guarda as escritas recentes (`AgentWrites`) para o watcher
+  rotular a mudança, com o motor ao lado — sem importar `session` ([28 · B-25](../../plans/28-agent-neutral-core/F3-interactions.md#b-25--a-origem-agent-da-mudança-de-arquivo-)).
 - **A pasta assistida** ([07 · F3](../../plans/07-explorer-and-editor/F3-file-watch.md)): porta
   `FolderWatcher`, adapter sobre `chokidar` ([07 · D-08](../../plans/07-explorer-and-editor/decisions.md#d-08--a-implementação-do-watcher),
   escolhido pela medida). `.git` e os não assistidos da D-10 (`UNWATCHED_PATHS`, constante do
@@ -281,8 +281,8 @@ observar são linguagem e invariantes próprias, e a primeira linha de defesa co
     (`foldInto`) — rajada num arquivo é um `changed`, criado e apagado é nada, apagado e recriado é
     `changed`, rename é `deleted` + `created` — e saem por assinatura, cortadas no teto por evento
     (`RC_FILES_WATCH_MAX_CHANGES`, `overflow: true`). Uma janela entrega depois da anterior.
-  - **Quem mudou** (`ChangeOrigins`, regra pura `originOf`): o caminho casa com uma marca recente de
-    `ClaudeWrites` ou de `UserWrites` — alimentada pelos use cases de escrita da pessoa depois do
+  - **Quem mudou** (`ChangeOrigins`, regras puras `originOf` e `writerOf`): o caminho casa com uma
+    marca recente de `AgentWrites` ou de `UserWrites` — alimentada pelos use cases de escrita da pessoa depois do
     disco (salvar, criar, mover, copiar, apagar, com o que cada um deixou) — e vale o **hash final**,
     lido só quando há marca com conteúdo para comparar; nada casa → `external`. Rótulo, nunca decisão.
 - **Exporta** o `SaveFileUseCase` — o substituir em lote do [plano 11](../../plans/11-search/README.md)
@@ -501,25 +501,33 @@ estender ao HTTP.
   | `403` `WORKSPACE_NOT_ALLOWED` / `FORBIDDEN` | fora de toda raiz / raiz de outra pessoa |
   | `404` `WORKSPACE_NOT_FOUND` · `422` `WORKSPACE_NOT_A_DIRECTORY` | a pasta não existe / é arquivo |
 
-  **`GET /sessions/:sessionId/tools/:toolUseId/diff`** — antes e depois de um `Edit`, `MultiEdit` ou
-  `Write` (F3), do input da tool e do snapshot que o desfazer já guarda
-  ([08 · D-03](../../plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)). O input vem da
-  `SessionChangeMemory` — o que o `PreToolUse` gravou na trilha, guardado em memória com a sessão viva,
-  porque a trilha é só de escrita para os outros módulos —, com teto de invocações e de tamanho; a que
-  saiu do teto responde como a que nunca existiu. `before.state` diz o que se sabe do lado anterior:
-  `content`, `absent` (arquivo novo), `unavailable` (com `reason`: `laterTouch` — segundo toque no mesmo
-  turno, sem snapshot intermediário —, `noSnapshot`) ou `notRestorable` (`tooLarge`·`unreadable`).
-  `after.state` é `content` — o `content` de um `Write`; de uma edição, o disco **só** enquanto ele ainda
-  é o que a sessão deixou e nenhuma escrita posterior da sessão tocou o arquivo — ou `unavailable`
-  (`laterWrite`·`changedSince`). `scope` diz de que são os trechos: `file` (antes contra depois, os dois
-  conhecidos) ou `edit` (as strings que a edição trocou, um trecho por edição, na ordem). A regra é
-  domínio puro (`toolDiffOf`, `line-diff`).
+  **`GET /sessions/:sessionId/tools/:toolUseId/diff`** — antes e depois de uma chamada cujos `changes`
+  escrevem um arquivo — um `file.write`, ou um `file.edit` com substituições (F3; plano 28, B-16) —, da
+  mudança que a chamada faz e do snapshot que o desfazer já guarda
+  ([08 · D-03](../../plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)). A mudança vem da
+  `SessionChangeMemory` — o que o gancho antes da chamada gravou na trilha, guardado em memória com a
+  sessão viva, porque a trilha é só de escrita para os outros módulos —, com teto de invocações e de
+  tamanho; a que saiu do teto responde como a que nunca existiu. `before.state` diz o que se sabe do
+  lado anterior: `content`, `absent` (arquivo novo), `unavailable` (com `reason`: `laterTouch` — segundo
+  toque no mesmo turno, sem snapshot intermediário —, `noSnapshot`) ou `notRestorable`
+  (`tooLarge`·`unreadable`). `after.state` é `content` — o conteúdo de um `write`; de uma edição, o
+  disco **só** enquanto ele ainda é o que a sessão deixou e nenhuma escrita posterior da sessão tocou o
+  arquivo — ou `unavailable` (`laterWrite`·`changedSince`). `scope` diz de que são os trechos: `file`
+  (antes contra depois, os dois conhecidos) ou `edit` (as strings que a edição trocou, um trecho por
+  edição, na ordem). A regra é domínio puro (`toolDiffOf`, `line-diff`).
+
+  **O pedido pendente** (plano 28, B-17): quando o `toolUseId` é de um pedido de permissão ainda sem
+  resposta, a rota responde com `pending: true` o que a chamada **faria** — o disco agora contra o
+  disco com a mudança aplicada como o agente a aplica (`pendingDiffOf`): uma substituição cujo texto não
+  está lá é `after.reason: 'editMissing'`, a que está mais de uma vez sem "todas as ocorrências" é
+  `'editAmbiguous'`, com `after.edit` (o índice dela). É a prévia que o web calculava a partir do input,
+  e que agora as duas pontas pedem igual. O schema da resposta é o `http/tool-diff.schema.json`.
 
   | Status | Quando |
   |---|---|
-  | `200` `{ path, toolName, scope, before: { state, content?, reason? }, after: { state, content?, reason? }, hunks: [{ id, oldStart, oldLines, newStart, newLines, lines: [{ kind, text }] }] }` | o diff; `path` absoluto, como o desfazer nomeia |
+  | `200` `{ path, kind, pending, scope, before: { state, content?, reason? }, after: { state, content?, reason?, edit? }, hunks: [{ id, oldStart, oldLines, newStart, newLines, lines: [{ kind, text }] }] }` | o diff; `path` absoluto, como o desfazer nomeia |
   | `404` `TOOL_USE_NOT_FOUND` | `toolUseId` que a sessão não tem |
-  | `422` `DIFF_NOT_APPLICABLE` | tool que não escreve arquivo (`Bash`, `Read`), ou cujo input não nomeia caminho absoluto |
+  | `422` `DIFF_NOT_APPLICABLE` | chamada sem `changes` que o diff mostre (`shell`, `file.read`, a célula de um notebook), viva ou pendente, ou cujo caminho não é absoluto |
   | `415` `FILE_NOT_TEXT` | um lado binário ou fora de UTF-8 |
 
   **`GET /sessions/:sessionId/changes`** — os arquivos que a sessão (e a conversa continuada in-place)
@@ -554,10 +562,15 @@ estender ao HTTP.
   `disabled` (F4). **Nunca** `config` nem `error` cru: podem carregar segredo e caminho. `502`/`504` como
   acima.
 
-  **`GET /sessions/:sessionId/context`** — o `getContextUsage({ detail: 'summary' })` reduzido a
-  `{ model, totalTokens, maxTokens, percentage, categories: [{ id, name, tokens, kind }] }`, `kind`
-  `used`·`free`·`buffer`·`deferred` e `id` o nome da categoria em camelCase (F4). O cliente relê a cada
-  `turn.completed` — é quando ele muda, `/compact` incluído. `502`/`504` como acima.
+  **`GET /sessions/:sessionId/context`** — o uso da janela de contexto que o motor informa (no Claude,
+  `getContextUsage({ detail: 'summary' })`) reduzido a `{ model, totalTokens, maxTokens, percentage,
+  categories: [{ id, messageKey?, text?, name, tokens, kind }] }` (`http/context-use.schema.json`),
+  `kind` `used`·`free`·`buffer`·`deferred` (F4). As categorias canônicas — `system`, `tools`,
+  `messages`, `memory`, `free`, `reserved` — vêm com `messageKey` (`sessions.context.<id>`); as demais,
+  com o `text` do motor e um `id` dele, opaco. O `name` (o nome do motor) fica para os clientes da `v1`
+  (D-22). `percentage` é inteiro ([28 · B-24](../../plans/28-agent-neutral-core/F3-interactions.md#b-24--o-contexto-canônico-)).
+  Sem a capacidade `contextUse`, `409` `ENGINE_CAPABILITY_UNAVAILABLE`. O cliente relê a cada
+  `turn.completed` — é quando ele muda, a compactação incluída. `502`/`504` como acima.
 
   As três perguntam à sessão viva por uma control request com prazo; a sessão que acabou é
   `404` `SESSION_NOT_FOUND`, como os outros recursos dela.
@@ -567,7 +580,7 @@ estender ao HTTP.
   e um sem marcador, `/nome` roda o `builtin` qualquer que seja a ordem) (F5); **`GET /catalog?workspacePath=`**
   (`ReadCatalogUseCase`) responde comandos, skills, modelos e os tetos do composer **sem sessão viva**, do
   catálogo por versão do CLI e pasta, e sem cache abre uma `query()` efêmera que só pergunta — pela mesma
-  porta `ClaudeSessionPort`, logo com `settingSources: ['project']` e o `PreToolUse` —, conta no teto
+  porta de motor (`AgentEnginePort` do motor padrão), logo com `settingSources: ['project']` e o `PreToolUse` —, conta no teto
   enquanto dura, uma por vez por pasta, e fecha
   ([08 · D-13](../../plans/08-claude-panel/decisions.md#d-13--o-catálogo-antes-da-sessão)) (F5).
 
@@ -584,8 +597,12 @@ estender ao HTTP.
   texto UTF-8, pelo tipo dos bytes. Vive no `AttachmentStore`, em memória — fora do workspace, da trilha e
   do log (só tipo, tamanho e hash) —, e morre quando a sessão sai do registro (`SessionRegistry.onRemoved`),
   no TTL ou, passada a memória de todos, do mais antigo para o mais novo.
+  **`GET /engines`** (plano 28, B-12): os motores habilitados (`RC_ENGINES_ENABLED`), o padrão primeiro,
+  com nome, estado, versão e capacidades — pelo `EngineRegistry`, sem abrir subprocesso nem gastar cota.
+  A sessão abre no motor do `session.start.engine`, ou no padrão; uma retomada, no da conversa. Ver
+  [04-engine-integration](04-engine-integration.md).
 - **Erros:** `SESSION_NOT_FOUND`, `SESSION_LOCKED`,
-  `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`, `CLAUDE_TIMEOUT`, `INVALID_INPUT`
+  `SESSION_LIMIT_REACHED`, `AGENT_UNAVAILABLE`, `AGENT_TIMEOUT`, `ENGINE_CAPABILITY_UNAVAILABLE`, `INVALID_INPUT`
   (`session.error.unknownCommand`, `session.error.rewindTargetUnknown`,
   `session.error.rewindPathUnknown`, `session.error.forkPointUnknown`,
   `session.error.effortUnsupported`, `session.error.referenceKind`), `NOT_FOUND`
@@ -593,7 +610,7 @@ estender ao HTTP.
   (`session.error.rewindIncomplete`), `CONFLICT` (`session.error.queuedPromptStarted`),
   `SESSION_CHANGE_STALE`, `SESSION_FORK_REJECTED`, `QUEUED_PROMPT_NOT_FOUND`, `TOOL_USE_NOT_FOUND`,
   `DIFF_NOT_APPLICABLE`, `ATTACHMENT_NOT_FOUND`, `ATTACHMENT_TYPE_UNSUPPORTED`
-- Ver [04-claude-integration.md](04-claude-integration.md).
+- Ver [04-engine-integration.md](04-engine-integration.md) e o anexo [04a-claude.md](04a-claude.md).
 
 ### `permission`
 
@@ -607,13 +624,26 @@ estender ao HTTP.
     de notificar alguém
   - **a regra é de um usuário**, nunca da máquina: `userId` entra no casamento, não só na
     criação. Regra de um jamais resolve o pedido de outro
-  - o padrão de input usa a **gramática das settings do Claude Code** — `Bash(git status)` casa
-    exato, `Bash(git status:*)` casa o prefixo, `Bash` casa a tool inteira. Sem glob, sem regex:
-    é a gramática do `PermissionUpdate` do SDK — hoje não devolvido, pela D-09 do plano 03 —, e
-    sintaxe própria faria as duas metades casarem conjuntos diferentes de comando no dia em que for
-    ([a ponte](04-claude-integration.md#a-ponte-de-permissão))
+  - o padrão usa a **gramática canônica** ([28 · B-31](../../plans/28-agent-neutral-core/F5-permission-dialect.md#b-31--a-gramática-canônica-de-regra-e-o-ruledialect-)),
+    `<kind>` ou `<kind>(<matcher>)`, casada sobre o `subject` da ferramenta canônica, nunca sobre o
+    input cru:
+
+    | `kind` | matcher | casa |
+    |---|---|---|
+    | `shell` | `cmd` (exato) ou `cmd:*` (prefixo, em fronteira de token) | o `subject.command`, com as regras de linha composta |
+    | `file.read` · `file.edit` · `file.write` · `file.delete` · `file.move` | glob de caminho (`*` sem `/`, `**` com `/`); começando por `/`, absoluto; senão, relativo à pasta da sessão | o `subject.paths[0]` |
+    | `search` | glob de caminho | o caminho em que se busca; a busca sem caminho só casa o `search` sozinho |
+    | `web.fetch` | `domain:<host>` | o host do `subject.url` |
+    | `mcp` | `<servidor>:<tool>` ou `<servidor>:*` | o `subject.server` e o `subject.tool` |
+    | `web.search` · `agent` | — | o `kind` sozinho |
+
+    O `kind` sozinho é o alcance "a tool inteira" do plano 23, nunca oferecido para o `shell`. Um
+    `kind` fora da gramática — `question`, `plan`, `tasks`, `shell.output`, `other` — não aceita
+    regra: sempre pergunta. Nenhuma regra vai ao motor (D-09 do plano 03); o `RuleDialect` de cada
+    motor só traduz as regras gravadas na gramática dele, uma vez, no boot (D-18, D-43)
   - **padrão fora da gramática é recusado na criação**, não guardado como regra que nunca casa —
-    e o prefixo respeita fronteira de token: `git status:*` não cobre `git statusx`
+    inclusive a forma antiga do Claude (`Bash(…)`) — e o prefixo respeita fronteira de token:
+    `shell(git status:*)` não cobre `git statusx`
   - **toda regra expira.** `expiresAt` é obrigatório; valor default e teto vêm de configuração, e
     pedido acima do teto é recusado, nunca truncado em silêncio. Regra expirada não resolve nada
     e **continua na lista**, marcada — "sumiu" e "deixou de valer" são coisas diferentes para
@@ -677,9 +707,12 @@ estender ao HTTP.
   | | `404` `PERMISSION_RULE_NOT_FOUND` | não existe |
   | | `403` `PERMISSION_NOT_OWNED` | é de outra pessoa, e continua valendo para ela |
 
-  A regra tem `id`, `scope`, `toolName`, `pattern` (a gramática, como escrita), `decision`,
-  `projectPath`, `grantedBy`, `grantedAt`, `expiresAt`, `status` (`active`/`expired`/`revoked`) e
-  `revokedAt`. Conceder e revogar entram na trilha (`permission.ruleGranted`,
+  A regra tem `id`, `scope`, `kind`, `pattern` (a gramática canônica; numa regra desligada, o padrão
+  antigo, como foi escrito), `decision`, `projectPath`, `engine` (`null` vale para todo motor com o
+  `kind`), `grantedBy`, `grantedAt`, `expiresAt`, `status` (`active`/`expired`/`revoked`/`disabled`),
+  `disabled` (`null` ou `{ reason }`) e `revokedAt`. O `toolName` continua ao lado, igual ao `kind`,
+  para o app publicado (D-22). Uma regra **desligada** — gravada na gramática do motor e sem tradução
+  inequívoca — nunca casa, aparece na lista e só pode ser revogada. Conceder e revogar entram na trilha (`permission.ruleGranted`,
   `permission.ruleRevoked`), só quando algo mudou.
 - **Erros:** `PERMISSION_REQUEST_NOT_FOUND`, `PERMISSION_REQUEST_EXPIRED`, `PERMISSION_NOT_OWNED`,
   `PERMISSION_RULE_PATTERN_INVALID`, `PERMISSION_RULE_EXPIRY_TOO_LONG`, `PERMISSION_RULE_NOT_FOUND`,
@@ -748,7 +781,7 @@ estender ao HTTP.
   | `200` `{ sessions: [...], nextCursor }` | uma página, escrita mais recente primeiro; `nextCursor: null` na última |
   | `400` `INVALID_INPUT` | caminho relativo, cursor que não foi emitido aqui, `limit` fora dos limites |
   | `403` `WORKSPACE_NOT_ALLOWED` / `FORBIDDEN` | fora de toda raiz / raiz de outra pessoa — **antes** de chamar o SDK |
-  | `502` `CLAUDE_UNAVAILABLE` · `504` `CLAUDE_TIMEOUT` | o SDK falhou / não respondeu no prazo |
+  | `502` `AGENT_UNAVAILABLE` · `504` `AGENT_TIMEOUT` | o SDK falhou / não respondeu no prazo |
 
   A sessão tem `sessionId` (o id da conversa no store do Claude — o que `session.start` aceita como
   `resumeSessionId`), `summary`, `origin` (`ours`/`external`), `cwd`, `gitBranch`, `createdAt` e
@@ -762,7 +795,7 @@ estender ao HTTP.
   `includeSubfolders` (padrão `false`), pela exceção acima. O que é vivo pergunta-se pela porta que o
   `session` oferece; o `transcript` não importa o registro. O cursor é keyset sobre `(lastModified, sessionId)` descendente: conversa escrita
   entre duas páginas sobe, acima da janela já lida — não repete, e não faz pular nenhuma.
-- **HTTP — `GET /transcripts/:sessionId/messages`** (Bearer). `cursor` (id de mensagem) e `limit`
+- **HTTP — `GET /transcripts/:engine/:id/messages`** (Bearer; e `GET /transcripts/:sessionId/messages`, a rota do protocolo anterior, até a F7 do plano 28 — a mesma página, do motor padrão). `cursor` (id de mensagem) e `limit`
   de 1 a 100 (default 25), **pela cauda**.
 
   | Status | Quando |
@@ -770,7 +803,7 @@ estender ao HTTP.
   | `200` `{ session, events: [...], nextCursor }` | as mensagens mais recentes, em ordem cronológica; a próxima página é o que veio **antes** |
   | `400` `INVALID_INPUT` | id que não é UUID, cursor malformado, `limit` fora dos limites — ou cursor cuja mensagem sumiu (`transcript.error.cursorStale`: a conversa foi compactada; recomeça-se pela cauda) |
   | `404` `NOT_FOUND` | id que não nomeia conversa, **ou** conversa que o chamador não pode ler — a mesma resposta |
-  | `502` `CLAUDE_UNAVAILABLE` · `504` `CLAUDE_TIMEOUT` | o SDK falhou / não respondeu no prazo |
+  | `502` `AGENT_UNAVAILABLE` · `504` `AGENT_TIMEOUT` | o SDK falhou / não respondeu no prazo |
 
   `events` são frames do contrato vivo **sem o envelope** — `{ type, payload }` de
   `message.completed`, `tool.started` e `tool.completed`, produzidos pelas **mesmas** funções do
@@ -784,7 +817,7 @@ estender ao HTTP.
   declarar no tipo) e o **`blockId`** de cada bloco (`<uuid>:<índice>`, o mesmo ao vivo). A ordem
   continua a do SDK, a cadeia `parentUuid`, **nunca** a dos timestamps: o prompt enfileirado tem
   `timestamp` anterior ao do resultado que o precede, e é depois dele que o modelo o leu.
-- **HTTP — `GET /transcripts/:sessionId/tools/:toolUseId/result`** (Bearer, plano 22 · B-11). A saída
+- **HTTP — `GET /transcripts/:engine/:id/tools/:toolUseId/result`** (Bearer, plano 22 · B-11). A saída
   **inteira** de uma ferramenta da cadeia principal, pedida quando o card é aberto — o
   `tool.completed.summary` é curto de propósito.
 
@@ -797,7 +830,7 @@ estender ao HTTP.
 
   O teto é `RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES` (padrão 256 KiB, [22 · D-08](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
   O conteúdo **nunca** vai para o log — só o id, o tamanho e o `truncated`, como no `Read` do `files`.
-- **HTTP — `GET /transcripts/:sessionId/images/:blockId`** (Bearer, plano 22 · B-12). A imagem de um
+- **HTTP — `GET /transcripts/:engine/:id/images/:blockId`** (Bearer, plano 22 · B-12). A imagem de um
   prompt da conversa, pedida quando a pessoa a abre; no stream e na página o bloco `image` vai só com
   `mediaType` e `size` ([22 · D-09](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
   Responde o binário com o `Content-Type` da imagem, `X-Content-Type-Options: nosniff`,
@@ -847,15 +880,15 @@ estender ao HTTP.
   SDK oferece; a cara (`getSessionMessages`, ~50–79 ms e +5–12 MB num transcript de 8,5 MB) só
   acontece quando ele diz que mudou. O custo medido está no `pnpm transcript:follow-bench`
   ([22 · B-19](../../plans/22-live-history/F2-follower.md#b-19--a-medição-)).
-- **HTTP — `GET /transcripts/:sessionId/subagents/:agentId/messages`** (Bearer,
+- **HTTP — `GET /transcripts/:engine/:id/subagents/:agentId/messages`** (Bearer,
   [plano 08 · B-21](../../plans/08-claude-panel/F2-rendering.md)). O transcript de um subagent da
   conversa, pela cauda, pelas funções do SDK (`listSubagents`/`getSubagentMessages`), com as mesmas
   regras de leitura da conversa: a mesma cerca, a mesma paginação, o mesmo cache, e `404` `NOT_FOUND`
   para conversa ou subagent que o chamador não lê — igual ao que não existe. `400` para ids
   malformados; `502`/`504` como acima.
 - **Erros:** `NOT_FOUND` (`transcript.error.notFound`), `INVALID_INPUT`
-  (`transcript.error.invalidSessionId`, `transcript.error.cursorStale`), `CLAUDE_UNAVAILABLE`
-  (`transcript.error.claudeUnavailable`), `CLAUDE_TIMEOUT` (`transcript.error.claudeTimeout`); e, do
+  (`transcript.error.invalidSessionId`, `transcript.error.cursorStale`), `AGENT_UNAVAILABLE`
+  (`transcript.error.agentUnavailable`), `AGENT_TIMEOUT` (`transcript.error.agentTimeout`); e, do
   plano 22, `TRANSCRIPT_FOLLOW_LIMIT` (`transcript.error.followLimit`), `TRANSCRIPT_FOLLOW_LIVE_HERE`
   (`transcript.error.followLiveHere`), `UNSUPPORTED_MEDIA_TYPE` (`transcript.error.imageTypeUnsupported`)
   e `PAYLOAD_TOO_LARGE` (`transcript.error.imageTooLarge`).
@@ -962,8 +995,8 @@ resultado.
 - **Erros:** `MCP_SERVER_NOT_FOUND`, `MCP_SERVER_NAME_TAKEN`, `MCP_SERVER_CONFIG_INVALID`,
   `MCP_APPROVAL_STALE`, `MODEL_NOT_AVAILABLE`, `DEFAULT_MODE_NOT_ALLOWED`, `PLUGIN_NOT_FOUND`,
   `PLUGIN_PATH_INVALID`, `PLUGIN_MARKETPLACE_NOT_ALLOWED`, `PLUGIN_SOURCE_UNAVAILABLE`, e os reusados
-  `INVALID_INPUT`, `FORBIDDEN`, `WORKSPACE_*`, `SESSION_LIMIT_REACHED`, `CLAUDE_UNAVAILABLE`,
-  `CLAUDE_TIMEOUT`, `SERVICE_UNAVAILABLE`.
+  `INVALID_INPUT`, `FORBIDDEN`, `WORKSPACE_*`, `SESSION_LIMIT_REACHED`, `AGENT_UNAVAILABLE`,
+  `AGENT_TIMEOUT`, `SERVICE_UNAVAILABLE`.
 
 #### As rotas HTTP do `claude-config`
 
@@ -980,7 +1013,7 @@ token, caminho de credencial nem conteúdo de arquivo de memória** — só meta
 | `POST /claude/diagnostics/model-check` `{ model? }` | `200` `{ result: ok·notLoggedIn·rateLimited·failed, model, latencyMs, costUsd, reason? }` — o diagnóstico rodou; um em voo por usuário, o segundo recebe o resultado do primeiro | `400`, `401`, `422` `MODEL_NOT_AVAILABLE`, `429`, `502` (o CLI morreu), `504` (não respondeu no prazo) |
 | `GET /claude/models?folder=` | `{ cliVersion, models: [{ value, displayName, description, resolvedModel, supportsEffort, supportedEffortLevels, supportsAdaptiveThinking }], permissionModes }` — da instalação, nunca de lista no código | `401`, `429`, `502`, `504` |
 | `GET /claude/defaults?folder=` | `{ effective: { <campo>: { value, from: folder·user·installation, folder? } }, user: {…}, folder: { path, values } \| null }` | `401` |
-| `PUT /claude/defaults` `{ model?, permissionMode?, effort?, thinking?, outputStyle?, fallbackModel? }` | `200` com o mesmo corpo do `GET`; `null` limpa o campo | `400` (todos os campos em `details[]`), `401`, `422` `MODEL_NOT_AVAILABLE`/`DEFAULT_MODE_NOT_ALLOWED`, `400` `INVALID_INPUT` (esforço, reserva), `502` `CLAUDE_UNAVAILABLE` (catálogo fora: recusa, não grava sem validar), `503` (trilha) |
+| `PUT /claude/defaults` `{ model?, permissionMode?, effort?, thinking?, outputStyle?, fallbackModel? }` | `200` com o mesmo corpo do `GET`; `null` limpa o campo | `400` (todos os campos em `details[]`), `401`, `422` `MODEL_NOT_AVAILABLE`/`DEFAULT_MODE_NOT_ALLOWED`, `400` `INVALID_INPUT` (esforço, reserva), `502` `AGENT_UNAVAILABLE` (catálogo fora: recusa, não grava sem validar), `503` (trilha) |
 | `PUT /claude/defaults/folder` `{ folder, …campos }` · `DELETE /claude/defaults/folder?folder=` | `200` como acima · `204`, também quando não havia | as de cima, e `403` `FORBIDDEN` |
 | `GET /claude/mcp-servers?folder=` | `{ servers: [{ id, name, scope, folder, transport, command, args, url, env: [{ name, set }], headers: [{ name, set }], enabled, description, status?, tools? }], project: { files, state, entries: [{ name, digest, state: pending·approved·rejected·changed, shadowed, description, variables }] }, suggestions }` — o status vem do `mcpServerStatus()` das sessões vivas do chamador na pasta, pelo `source` | `401`, `403` |
 | `POST /claude/mcp-servers/preview` `{ id?, …servidor }` | `200` `{ description, revokes: [{ ruleId, pattern }] }` — sem efeito nenhum | `400`, `401`, `422` `MCP_SERVER_CONFIG_INVALID` |

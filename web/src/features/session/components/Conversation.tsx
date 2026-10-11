@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import type { TFunction } from 'i18next';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,6 @@ import { Button } from '@/shared/components/ui/button';
 import { useConversationSearch } from '../hooks/useConversationSearch';
 import type { ConversationSearch } from '../hooks/useConversationSearch';
 import type { Conversation as ConversationState } from '../types/live-session';
-import { taskListOf } from '../lib/task-list';
 import { TimelineEntries } from './conversation/TimelineEntries';
 import type {
   InlineContext,
@@ -17,6 +16,7 @@ import type {
   TimelineContext,
 } from './conversation/timeline-context';
 import { StateStrip } from './frame/StateStrip';
+import type { ConversationRef } from '@/shared/lib/conversation';
 
 export interface ConversationProps {
   readonly conversation: Pick<ConversationState, 'messages' | 'tools' | 'timeline' | 'turns'>;
@@ -30,8 +30,8 @@ export interface ConversationProps {
   /** The live session — `null` reading the history. */
   readonly sessionId?: string | null;
 
-  /** The conversation in Claude's store — what a subagent of the history is read by. */
-  readonly conversationId?: string | null;
+  /** The conversation it is, in its engine's store — what a subagent of the history is read by. */
+  readonly reference?: ConversationRef | null;
 
   /** Brings the rest of the conversation, for a search of the whole of it (S-101). */
   onSearchEverything?(): void;
@@ -62,7 +62,7 @@ export function Conversation({
   isPartial,
   folder = '',
   sessionId = null,
-  conversationId = null,
+  reference = null,
   onSearchEverything,
   prompts,
   inline,
@@ -70,15 +70,13 @@ export function Conversation({
   const { t } = useTranslation();
   const container = useRef<HTMLDivElement>(null);
   const search = useConversationSearch(conversation.messages, container);
-  const taskList = useMemo(() => taskListOf(conversation.tools), [conversation.tools]);
 
   const context: TimelineContext = {
     folder,
     sessionId,
-    conversationId,
+    reference,
     conversation,
     current: search.found[search.at] ?? null,
-    taskList,
     prompts,
     inline,
   };

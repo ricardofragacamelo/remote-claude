@@ -30,7 +30,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 - [04 — erros e HTTP](../../architecture/shared/04-errors-and-http.md): `PERMISSION_ANSWERS_INVALID`
   (422, `permission.error.answersInvalid`) e `PERMISSION_RULE_TOOL_INTERACTIVE` (422,
   `permission.error.ruleToolInteractive`).
-- [backend/04](../../architecture/backend/04-claude-integration.md): a pergunta passa pelo
+- [backend/04](../../architecture/backend/04a-claude.md): a pergunta passa pelo
   `canUseTool` em qualquer modo, a tradução das respostas para o `updatedInput` mora no runner, e
   `HUMAN_ONLY_TOOLS` não é respondida por regra de allow nem por Permitir tudo.
 - [web/03](../../architecture/web/03-ui-system.md) e [mobile/04](../../architecture/mobile/04-ui.md):

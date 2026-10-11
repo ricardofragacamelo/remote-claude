@@ -119,7 +119,7 @@ class _Row extends StatelessWidget {
       ),
       isThreeLine: true,
       onTap: () => unawaited(
-        context.push(conversationRouteFor(conversation.conversationId, conversation.cwd)),
+        context.push(conversationRouteFor(conversation.conversation, conversation.cwd)),
       ),
     );
   }

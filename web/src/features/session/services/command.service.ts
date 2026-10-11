@@ -18,7 +18,7 @@ interface CommandMenuResponse {
  * over: one malformed row should cost the person that row, not the menu.
  *
  * @throws {import('@/shared/api/errors').AppError} `SESSION_NOT_FOUND` for a session that is not
- *   live, `CLAUDE_UNAVAILABLE` / `CLAUDE_TIMEOUT` when the SDK failed or did not answer in time —
+ *   live, `AGENT_UNAVAILABLE` / `AGENT_TIMEOUT` when the engine failed or did not answer in time —
  *   none of which stops the prompt from being sent
  */
 export async function fetchCommands(sessionId: string): Promise<CommandMenu> {

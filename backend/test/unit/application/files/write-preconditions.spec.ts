@@ -6,8 +6,15 @@ import {
   confirmSensitive,
   underLocks,
 } from '@application/files/write-preconditions';
-import { Etag, FileChangedError, FilePath, PreconditionRequiredError } from '@domain/files';
+import {
+  Etag,
+  FileChangedError,
+  FilePath,
+  PreconditionRequiredError,
+  SensitiveFiles,
+} from '@domain/files';
 import { WorkspacePath } from '@domain/workspace';
+import { PRODUCT_SENSITIVE_FILES } from '../../../support/files/sensitive-files';
 
 const folder = WorkspacePath.create('/srv/app');
 const path = (relative: string): FilePath => FilePath.create(folder, relative);
@@ -15,11 +22,20 @@ const one = Etag.of(Buffer.from('one'));
 
 describe('the preconditions of a write', () => {
   it('asks the second step of any entry that reaches a sensitive file — D-15', () => {
-    expect(() => confirmSensitive(false, path('src'), path('.claude'))).toThrow(
+    expect(() =>
+      confirmSensitive(PRODUCT_SENSITIVE_FILES, false, path('src'), path('.claude')),
+    ).toThrow(PreconditionRequiredError);
+    expect(confirmSensitive(PRODUCT_SENSITIVE_FILES, true, path('.mcp.json'))).toBe(true);
+    expect(confirmSensitive(PRODUCT_SENSITIVE_FILES, false, path('src'))).toBe(false);
+  });
+
+  it('asks it of whatever configuration file the registered engines declare — plan 28, S-103', () => {
+    const declared = SensitiveFiles.of(['.other-agent/config.toml']);
+
+    expect(() => confirmSensitive(declared, false, path('.other-agent'))).toThrow(
       PreconditionRequiredError,
     );
-    expect(confirmSensitive(true, path('.mcp.json'))).toBe(true);
-    expect(confirmSensitive(false, path('src'))).toBe(false);
+    expect(confirmSensitive(declared, false, path('.claude/settings.json'))).toBe(false);
   });
 
   it('checks an optional If-Match only when it names a version — S-98', () => {

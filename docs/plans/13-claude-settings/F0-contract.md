@@ -111,7 +111,7 @@ em 2026-09-26): `['project']` continua obrigatório e não configurável; as ski
 entram por um plugin local sintético, por usuário, que expõe só `skills/`; e, se o shell inline não
 passar pela aprovação, a sessão o desliga por `managedSettings` ([D-21](decisions.md#d-21--shell-inline-de-skills-e-slash-commands)).
 
-Atualiza também [backend/04-claude-integration](../../architecture/backend/04-claude-integration.md#options--o-que-amarramos)
+Atualiza também [backend/04a-claude](../../architecture/backend/04a-claude.md#options--o-que-amarramos)
 (tabela de opções: `strictMcpConfig`, `mcpServers`, `plugins`, `effort`, `thinking`, `fallbackModel`)
 e a seção "Diretório confiado" com o que a B-01 mediu sobre hooks e subagents.
 
@@ -128,7 +128,7 @@ Fronteiras: consulta `workspace` para resolver pasta; o `session` pergunta por u
 escreve em `audit`. Sem ciclo: o `claude-config` não importa o `session` — a lista de sessões vivas do
 usuário numa pasta chega por uma porta que o `session` implementa. Todo contato com o SDK — a sonda, o
 teste de conexão — fica em `adapter/outbound/claude/`, como manda
-[backend/04](../../architecture/backend/04-claude-integration.md#onde-isso-mora). Cenário S-14.
+[backend/04](../../architecture/backend/04a-claude.md#onde-isso-mora). Cenário S-14.
 
 ### B-04 — Contrato HTTP ✅
 

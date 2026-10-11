@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { PermissionRegistry } from '@application/permission';
 import type { PendingPermissions } from '@application/session';
+import type { CanonicalTool } from '@domain/engine';
 import type { SessionId } from '@domain/session';
 
 /**
@@ -17,5 +18,12 @@ export class RegistryPendingPermissions implements PendingPermissions {
 
   countFor(sessionId: SessionId): number {
     return this.registry.pendingFor(sessionId).length;
+  }
+
+  toolOf(sessionId: SessionId, toolUseId: string): CanonicalTool | null {
+    return (
+      this.registry.pendingFor(sessionId).find((request) => request.toolUseId === toolUseId)
+        ?.tool ?? null
+    );
   }
 }

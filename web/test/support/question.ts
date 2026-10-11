@@ -1,3 +1,5 @@
+import { aToolCall } from './canonical-tool';
+
 /**
  * The questions of a recorded `AskUserQuestion` (the `question-turn` fixture of plan 24, B-11), as the
  * server publishes them in `permission.requested.interaction` — three questions: a multiple choice,
@@ -59,9 +61,8 @@ export function anInteraction(
 export function aQuestionPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     toolUseId: 'toolu-q',
-    toolName: 'AskUserQuestion',
-    title: 'permission.tool.AskUserQuestion',
-    input: { questions: [] },
+    ...aToolCall('AskUserQuestion', { questions: [] }),
+    title: 'permission.tool.question',
     riskHint: 'read',
     defaultToNo: false,
     suggestions: [],

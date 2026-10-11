@@ -5,7 +5,7 @@
  *
  * Renaming, moving, creating and copying are undone; deleting is not, until the local history of F8.
  * Each inverse names the version the operation left (`If-Match`), so a file that changed since —
- * Claude wrote to it — is never undone over: the server answers `412`, and the screen says why
+ * the agent wrote to it — is never undone over: the server answers `412`, and the screen says why
  * (S-185).
  */
 

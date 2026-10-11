@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { AppError } from '@/shared/api/errors';
-import { claudePanelStore, tabKeyOf } from '../store/claude-panel.store';
+import type { ConversationRef } from '@/shared/lib/conversation';
+import { agentPanelStore, tabKeyOf } from '../store/agent-panel.store';
 import { liveSessionStoreOf } from '../store/live-session.store';
 import { firstPrompt } from './useDraft';
 import { useResumer } from './useResumeSession';
@@ -34,7 +35,7 @@ export interface ResumeAndSend {
 export function useResumeAndSend(
   folder: string,
   sessionId: string,
-  conversationId: string | null,
+  conversation: ConversationRef | null,
 ): ResumeAndSend {
   const key = tabKeyOf('session', sessionId);
   const text = useRef<string | null>(null);
@@ -44,7 +45,7 @@ export function useResumeAndSend(
     (resumed: string) => {
       const prompt = text.current ?? '';
       text.current = null;
-      void firstPrompt(claudePanelStore(folder), {
+      void firstPrompt(agentPanelStore(folder), {
         folder,
         key,
         sessionId: resumed,
@@ -62,36 +63,36 @@ export function useResumeAndSend(
 
     if (error !== null && given !== null) {
       text.current = null;
-      claudePanelStore(folder).getState().setDraft(key, given);
+      agentPanelStore(folder).getState().setDraft(key, given);
       setRefusals((count) => count + 1);
     }
   }, [error, folder, key]);
 
   return {
-    canResume: conversationId !== null,
+    canResume: conversation !== null,
     isResuming: resumer.isResuming,
     error,
     refusals,
     send: useCallback(
       (prompt: string) => {
-        if (conversationId === null || text.current !== null) {
+        if (conversation === null || text.current !== null) {
           return;
         }
 
         text.current = prompt;
         const left = resume({
-          conversationId,
+          conversation,
           workspacePath: liveSessionStoreOf(sessionId).getState().workspacePath ?? folder,
         });
 
         if (!left) {
           // The socket is down: nothing left, and nothing is lost.
           text.current = null;
-          claudePanelStore(folder).getState().setDraft(key, prompt);
+          agentPanelStore(folder).getState().setDraft(key, prompt);
           setRefusals((count) => count + 1);
         }
       },
-      [conversationId, folder, key, resume, sessionId],
+      [conversation, folder, key, resume, sessionId],
     ),
   };
 }

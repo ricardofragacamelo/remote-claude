@@ -61,11 +61,11 @@ void main() {
     http.adapter
       ..status = 504
       ..body =
-          '{"error":{"code":"CLAUDE_TIMEOUT","messageKey":"session.error.claudeTimeout","traceId":"t"}}';
+          '{"error":{"code":"AGENT_TIMEOUT","messageKey":"session.error.agentTimeout","traceId":"t"}}';
 
     await expectLater(
       source().commands('s-1'),
-      throwsA(isA<Failure>().having((Failure f) => f.code, 'code', 'CLAUDE_TIMEOUT')),
+      throwsA(isA<Failure>().having((Failure f) => f.code, 'code', 'AGENT_TIMEOUT')),
     );
   });
 

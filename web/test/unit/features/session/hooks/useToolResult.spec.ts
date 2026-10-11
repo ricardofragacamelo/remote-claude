@@ -17,9 +17,12 @@ describe('useToolResult', () => {
   it('asks for nothing until the row is unfolded — S-116', () => {
     const get = vi.spyOn(api, 'get').mockResolvedValue(WHOLE);
 
-    const { result } = renderHook(() => useToolResult('c1', 't1', false), {
-      wrapper: providers(),
-    });
+    const { result } = renderHook(
+      () => useToolResult({ engine: 'claude', id: 'c1' }, 't1', false),
+      {
+        wrapper: providers(),
+      },
+    );
 
     expect(get).not.toHaveBeenCalled();
     expect(result.current).toMatchObject({ output: null, isLoading: false, error: null });
@@ -37,7 +40,8 @@ describe('useToolResult', () => {
     const get = vi.spyOn(api, 'get').mockResolvedValue(WHOLE);
 
     const { result, rerender } = renderHook(
-      ({ enabled }: { enabled: boolean }) => useToolResult('c1', 't1', enabled),
+      ({ enabled }: { enabled: boolean }) =>
+        useToolResult({ engine: 'claude', id: 'c1' }, 't1', enabled),
       { wrapper: providers(), initialProps: { enabled: true } },
     );
 
@@ -51,7 +55,7 @@ describe('useToolResult', () => {
     expect(result.current.output?.text).toBe('every line');
     expect(get).toHaveBeenCalledTimes(1);
     expect(get).toHaveBeenCalledWith(
-      '/transcripts/c1/tools/t1/result',
+      '/transcripts/claude/c1/tools/t1/result',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
@@ -62,7 +66,7 @@ describe('useToolResult', () => {
       .mockRejectedValueOnce(new AppError('NETWORK_UNREACHABLE', 'common.error.offline', 'tr'))
       .mockResolvedValueOnce(WHOLE);
 
-    const { result } = renderHook(() => useToolResult('c1', 't1', true), {
+    const { result } = renderHook(() => useToolResult({ engine: 'claude', id: 'c1' }, 't1', true), {
       wrapper: providers(),
     });
 

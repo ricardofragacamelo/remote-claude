@@ -2,7 +2,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ScreenShortcut } from '@/shared/components/HelpPanel';
-import { commandRegistry } from '../store/command-registry';
+import { commandRegistry, currentIdIn } from '../store/command-registry';
 import type { CommandRegistry } from '../store/command-registry';
 import type { Command, ShortcutLabel } from '../types/command';
 import { onMac, shortcutLabel } from './chords';
@@ -20,19 +20,23 @@ export function useShortcutLabels(
   registry: CommandRegistry = commandRegistry,
 ): ReadonlyMap<string, ShortcutLabel> {
   const bindings = useSyncExternalStore(registry.subscribe, registry.bindings);
+  const commands = useRegisteredCommands(registry);
 
   return useMemo(() => {
     const mac = onMac();
     const labels = new Map<string, ShortcutLabel>();
 
+    // By the id the command has now: a binding to an id it had before it was renamed is its own.
     for (const binding of bindings) {
-      if (!labels.has(binding.command)) {
-        labels.set(binding.command, shortcutLabel(binding, mac));
+      const id = currentIdIn(commands, binding.command);
+
+      if (!labels.has(id)) {
+        labels.set(id, shortcutLabel(binding, mac));
       }
     }
 
     return labels;
-  }, [bindings]);
+  }, [bindings, commands]);
 }
 
 /** How a command's shortcut is written — `null` while it has none, or is not registered. */

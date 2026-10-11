@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import type { Envelope } from '@remote-claude/contracts';
+import type { Envelope, PermissionRequestedPayload } from '@remote-claude/contracts';
 
 import { unknownVariants } from './backend-log';
 import { closeSession } from './live-session';
@@ -53,8 +53,11 @@ export async function answeredUntilTheTurnEnds(
     }
 
     answered.add(next.id);
-    const payload = next.payload as { requestId: string; toolName: string; input?: unknown };
-    const allowed = allows({ toolName: payload.toolName, input: payload.input });
+    const payload = next.payload as unknown as PermissionRequestedPayload;
+    // The test decides by the engine's own name, which the fake agent scripted — a fixture, not a
+    // client: the contract carries it as the opaque `origin.native`.
+    const toolName = payload.origin.native;
+    const allowed = allows({ toolName, input: payload.rawInput });
 
     socket.respond(
       next,
@@ -62,7 +65,7 @@ export async function answeredUntilTheTurnEnds(
         ? { requestId: payload.requestId, decision: 'allow', scope: 'once' }
         : { requestId: payload.requestId, decision: 'deny', reason, scope: 'once' },
     );
-    asked.push(`${payload.toolName}:${String(allowed)}`);
+    asked.push(`${toolName}:${String(allowed)}`);
   }
 }
 

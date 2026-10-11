@@ -90,9 +90,9 @@ export class PermissionSettlement {
    * pattern of the reach that was chosen.
    *
    * With no reach chosen, the `exact` pattern; and when there is none either, nothing, rather than
-   * widening. An input with no field a pattern can name would only produce a **whole-tool** rule,
-   * which is far more than what was approved — unless the person chose the `tool` reach, which is
-   * exactly that, said in full on the card.
+   * widening. A call whose subject has nothing a pattern can name would only produce a
+   * **whole-kind** rule, which is far more than what was approved — unless the person chose the
+   * `tool` reach, which is exactly that, said in full on the card.
    */
   private rememberRules(
     request: PermissionRequest,
@@ -103,12 +103,12 @@ export class PermissionSettlement {
     if (
       answer.scope !== 'session' ||
       answer.resolvedBy === null ||
-      !answeredByRule(answer.decision, request.toolName)
+      !answeredByRule(answer.decision, request.tool.kind)
     ) {
       return;
     }
 
-    const exact = patternForInvocation(request.toolName, request.input);
+    const exact = patternForInvocation(request.tool, request.projectPath);
     const patterns = chosen ?? (exact === null ? [] : [exact]);
 
     for (const pattern of patterns) {

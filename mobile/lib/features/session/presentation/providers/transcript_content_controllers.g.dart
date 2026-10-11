@@ -25,7 +25,7 @@ final class ToolResultControllerProvider
   /// (S-113), and it outlives the card for [toolOutputKeptFor].
   ToolResultControllerProvider._({
     required ToolResultControllerFamily super.from,
-    required (String, String) super.argument,
+    required (ConversationKey, String) super.argument,
   }) : super(
          retry: _neverRetry,
          name: r'toolResultControllerProvider',
@@ -59,7 +59,7 @@ final class ToolResultControllerProvider
   }
 }
 
-String _$toolResultControllerHash() => r'7903976025446b70c05ff7649e906a412308e89e';
+String _$toolResultControllerHash() => r'245456e307ee5bd8a9134040967f7c92549f9570';
 
 /// The whole output of one tool of the main conversation, read **once** when its card is first
 /// opened: the card keeps watching it while it is on screen, so folding and unfolding asks nothing
@@ -72,7 +72,7 @@ final class ToolResultControllerFamily extends $Family
           AsyncValue<ToolOutput>,
           ToolOutput,
           FutureOr<ToolOutput>,
-          (String, String)
+          (ConversationKey, String)
         > {
   ToolResultControllerFamily._()
     : super(
@@ -87,8 +87,8 @@ final class ToolResultControllerFamily extends $Family
   /// opened: the card keeps watching it while it is on screen, so folding and unfolding asks nothing
   /// (S-113), and it outlives the card for [toolOutputKeptFor].
 
-  ToolResultControllerProvider call(String conversationId, String toolUseId) =>
-      ToolResultControllerProvider._(argument: (conversationId, toolUseId), from: this);
+  ToolResultControllerProvider call(ConversationKey conversation, String toolUseId) =>
+      ToolResultControllerProvider._(argument: (conversation, toolUseId), from: this);
 
   @override
   String toString() => r'toolResultControllerProvider';
@@ -99,11 +99,11 @@ final class ToolResultControllerFamily extends $Family
 /// (S-113), and it outlives the card for [toolOutputKeptFor].
 
 abstract class _$ToolResultController extends $AsyncNotifier<ToolOutput> {
-  late final _$args = ref.$arg as (String, String);
-  String get conversationId => _$args.$1;
+  late final _$args = ref.$arg as (ConversationKey, String);
+  ConversationKey get conversation => _$args.$1;
   String get toolUseId => _$args.$2;
 
-  FutureOr<ToolOutput> build(String conversationId, String toolUseId);
+  FutureOr<ToolOutput> build(ConversationKey conversation, String toolUseId);
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
@@ -137,7 +137,7 @@ final class PromptImageControllerProvider
   /// not outlive it (S-119).
   PromptImageControllerProvider._({
     required PromptImageControllerFamily super.from,
-    required (String, String) super.argument,
+    required (ConversationKey, String) super.argument,
   }) : super(
          retry: _neverRetry,
          name: r'promptImageControllerProvider',
@@ -171,7 +171,7 @@ final class PromptImageControllerProvider
   }
 }
 
-String _$promptImageControllerHash() => r'a28c2f65e01595405e2a7cb75cc115fa677333aa';
+String _$promptImageControllerHash() => r'3e1002a099ac1805e64111e93aab0a4d92e4125b';
 
 /// The image of one prompt, read when the person opens it — with the credential in the header,
 /// never in a URL (D-10, S-122) — and let go when the screen that shows it closes, so the bytes do
@@ -184,7 +184,7 @@ final class PromptImageControllerFamily extends $Family
           AsyncValue<PromptImageBytes>,
           PromptImageBytes,
           FutureOr<PromptImageBytes>,
-          (String, String)
+          (ConversationKey, String)
         > {
   PromptImageControllerFamily._()
     : super(
@@ -199,8 +199,8 @@ final class PromptImageControllerFamily extends $Family
   /// never in a URL (D-10, S-122) — and let go when the screen that shows it closes, so the bytes do
   /// not outlive it (S-119).
 
-  PromptImageControllerProvider call(String conversationId, String blockId) =>
-      PromptImageControllerProvider._(argument: (conversationId, blockId), from: this);
+  PromptImageControllerProvider call(ConversationKey conversation, String blockId) =>
+      PromptImageControllerProvider._(argument: (conversation, blockId), from: this);
 
   @override
   String toString() => r'promptImageControllerProvider';
@@ -211,11 +211,11 @@ final class PromptImageControllerFamily extends $Family
 /// not outlive it (S-119).
 
 abstract class _$PromptImageController extends $AsyncNotifier<PromptImageBytes> {
-  late final _$args = ref.$arg as (String, String);
-  String get conversationId => _$args.$1;
+  late final _$args = ref.$arg as (ConversationKey, String);
+  ConversationKey get conversation => _$args.$1;
   String get blockId => _$args.$2;
 
-  FutureOr<PromptImageBytes> build(String conversationId, String blockId);
+  FutureOr<PromptImageBytes> build(ConversationKey conversation, String blockId);
   @$mustCallSuper
   @override
   WhenComplete runBuild() {

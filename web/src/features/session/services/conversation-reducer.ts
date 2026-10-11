@@ -1,8 +1,10 @@
 import type { Envelope } from '@remote-claude/contracts';
 
 import { isRecord, readText } from '@/shared/lib/json';
+import { readToolCall } from '@/shared/lib/tool-call';
 import { isTurnRunning } from '../lib/turn';
 import type { HistoryEvent } from '../types/history';
+import { applyTasksChanged } from './tasks-changed';
 import { readToolQuestion } from './tool-question';
 import type {
   BlockKind,
@@ -28,6 +30,7 @@ export const SILENT: Conversation = {
   lastTurn: null,
   ending: null,
   turnSince: null,
+  taskList: null,
 };
 
 /** How one event changes the conversation. */
@@ -61,7 +64,7 @@ function aboutMessage(read: MessageReader): EventReader {
  * ordering rule be tested without a socket, a store or a component.
  *
  * **An unknown event returns the state unchanged.** The same survival rule the backend applies to
- * an unknown `SDKMessage`: a published client has to keep working when the contract gains an event
+ * an unknown message of the engine: a published client has to keep working when the contract gains an event
  * it has never heard of.
  */
 export function readEvent(state: Conversation, frame: Envelope): Conversation {
@@ -130,6 +133,8 @@ export function withHistory(live: Conversation, history: readonly HistoryEvent[]
     tools: layered(past.tools, live.tools, (tool) => tool.toolUseId, always),
     timeline: layered(past.timeline, live.timeline, (entry) => `${entry.kind}:${entry.id}`, always),
     turns: layered(past.turns, live.turns, (turn) => turn.turnId, always),
+    // The list is whole in every event: the stream's, once it said one, is the newer.
+    taskList: live.taskList ?? past.taskList,
   };
 }
 
@@ -292,7 +297,7 @@ function withFragment(
  * A fragment, accumulated **by `messageId`**, into the block it says it is part of.
  *
  * The rule the whole store exists for: two messages in flight must not mix. A delta for a message
- * nothing has announced yet starts one, because the SDK streams before it completes anything. A
+ * nothing has announced yet starts one, because the engine streams before it completes anything. A
  * fragment of thinking goes to a thinking block, never into the answer (plan 08, D-17).
  */
 const applyDelta: MessageReader = (state, messageId, payload, at) => {
@@ -328,11 +333,14 @@ function withMessage(state: Conversation, changed: StreamMessage): Conversation 
   };
 }
 
-/** The kinds of block a message is drawn with, by the `type` the contract carries. */
-const BLOCK_KINDS: ReadonlyMap<string, BlockKind> = new Map([
+/**
+ * The kinds of block a message is drawn with, by the `type` the contract carries — our names (plan
+ * 28, B-30). A `toolUse` and a `toolResult` are drawn as their tool, never as a block of the message.
+ */
+const BLOCK_KINDS: ReadonlyMap<string, BlockKind> = new Map<string, BlockKind>([
   ['text', 'text'],
   ['thinking', 'thinking'],
-  ['redacted_thinking', 'redactedThinking'],
+  ['redactedThinking', 'redactedThinking'],
   ['image', 'image'],
 ]);
 
@@ -461,23 +469,21 @@ function applyToolStarted(
   payload: Readonly<Record<string, unknown>>,
 ): Conversation {
   const toolUseId = readText(payload, 'toolUseId');
-  const toolName = readText(payload, 'toolName');
+  const call = readToolCall(payload);
 
-  if (toolUseId === null || toolName === null) {
+  if (toolUseId === null || call === null) {
     return state;
   }
 
   const title = readText(payload, 'title')?.trim() ?? '';
   const started: ToolExecution = {
     toolUseId,
-    toolName,
+    ...call,
     ...(title === '' ? {} : { title }),
-    input: isRecord(payload['input']) ? payload['input'] : {},
     status: 'running',
     elapsed: null,
     summary: null,
     parentToolUseId: parentOf(payload),
-    taskId: null,
   };
 
   return {
@@ -507,7 +513,6 @@ function outcomeOf(payload: Readonly<Record<string, unknown>>): ToolChange {
           ...tool,
           status: status as ToolStatus,
           summary: readText(payload, 'summary'),
-          taskId: readText(payload, 'taskId'),
           ...(question === null ? {} : { question }),
         };
   };
@@ -544,42 +549,50 @@ function changeTool(
   return { ...state, tools: changed };
 }
 
-/** A count of tokens the SDK may or may not have sent: zero when it did not. */
-function count(usage: Readonly<Record<string, unknown>>, field: string): number {
-  const value = usage[field];
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
+/** The counts of a turn the contract names (plan 28, B-29) — each read only when it came. */
+const USAGE_COUNTS = [
+  'inputTokens',
+  'outputTokens',
+  'cacheReadTokens',
+  'cacheWriteTokens',
+  'reasoningTokens',
+  'webSearches',
+] as const satisfies readonly (keyof TurnUsage)[];
 
-/** The tokens of a turn, or `null` for a turn that ended with none — interrupted, say (S-98). */
+/**
+ * What a turn used — the counts the engine reported, and nothing it did not —, or `null` for a turn
+ * that reported none: interrupted before the model answered (S-98), or an engine that counts nothing
+ * (S-86).
+ */
 function usageOf(payload: Readonly<Record<string, unknown>>): TurnUsage | null {
-  const usage = payload['usage'];
+  const usage = isRecord(payload['usage']) ? payload['usage'] : {};
+  const counts = USAGE_COUNTS.flatMap((field) => {
+    const value = usage[field];
+    return typeof value === 'number' && Number.isFinite(value) ? [[field, value] as const] : [];
+  });
 
-  if (!isRecord(usage) || Object.keys(usage).length === 0) {
-    return null;
-  }
-
-  return {
-    input: count(usage, 'input_tokens'),
-    output: count(usage, 'output_tokens'),
-    cacheRead: count(usage, 'cache_read_input_tokens'),
-    cacheWrite: count(usage, 'cache_creation_input_tokens'),
-  };
+  return counts.length === 0 ? null : (Object.fromEntries(counts) as TurnUsage);
 }
 
 /**
- * The end of a turn: what it cost, how long it took, the tokens — kept **once per turn**, so the
- * cost of the session never counts a turn the replay delivered twice (S-99).
+ * The end of a turn: what it cost — when the engine says (S-86) —, how long it took, the tokens —
+ * kept **once per turn**, so the cost of the session never counts a turn the replay delivered twice
+ * (S-99).
  */
 function applyTurn(state: Conversation, payload: Readonly<Record<string, unknown>>): Conversation {
   const turnId = readText(payload, 'turnId');
-  const costUsd = readText(payload, 'costUsd');
   const durationMs = payload['durationMs'];
 
-  if (turnId === null || costUsd === null || typeof durationMs !== 'number') {
+  if (turnId === null || typeof durationMs !== 'number') {
     return state;
   }
 
-  const turn: TurnSummary = { turnId, costUsd, durationMs, usage: usageOf(payload) };
+  const turn: TurnSummary = {
+    turnId,
+    costUsd: readText(payload, 'costUsd'),
+    durationMs,
+    usage: usageOf(payload),
+  };
 
   return {
     ...state,
@@ -673,7 +686,8 @@ function applyClosed(
  */
 export function sessionCostOf(turns: readonly TurnSummary[]): string {
   const millionths = turns.reduce((sum, turn) => {
-    const value = Number(turn.costUsd);
+    // A turn whose engine reports no cost adds nothing — never a zero it did not say.
+    const value = turn.costUsd === null ? Number.NaN : Number(turn.costUsd);
     return Number.isFinite(value) ? sum + Math.round(value * 1_000_000) : sum;
   }, 0);
 
@@ -701,5 +715,6 @@ const EVENT_READERS: ReadonlyMap<string, EventReader> = new Map<string, EventRea
   ['turn.completed', applyTurn],
   ['session.compacted', applyCompacted],
   ['session.rewound', applyRewound],
+  ['session.tasksChanged', applyTasksChanged],
   ['session.closed', (state, payload, frame) => applyClosed(state, payload, frame.ts)],
 ]);

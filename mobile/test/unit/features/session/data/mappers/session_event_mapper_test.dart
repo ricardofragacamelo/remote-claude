@@ -5,12 +5,15 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/tool_call.dart';
 import 'package:remote_claude/core/network/contracts/frame_codec.dart';
 import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
+import '../../../../../support/builders/conversations.dart';
 import '../../../../../support/builders/frames.dart';
+import '../../../../../support/builders/tools.dart';
 import '../../../../../support/builders/undo.dart';
 
 /// The event carried by one line of wire text.
@@ -23,24 +26,71 @@ void main() {
     expect(event, isA<SessionOpened>());
     final SessionOpened opened = event! as SessionOpened;
     expect(opened.sessionId, 'session-1');
-    expect(opened.claudeSessionId, isNull);
+    expect(opened.conversation, isNull);
     expect(opened.resumedFrom, isNull);
+    expect(opened.engine, isNull);
+    expect(opened.capabilities, isNull);
   });
 
   test('B-11 · a session opening names its conversation, and the one it continues', () {
     final SessionOpened opened =
-        read(
-              sessionStarted(
-                sessionId: 'session-1',
-                claudeSessionId: 'conv-2',
-                resumedFrom: 'conv-1',
-              ),
-            )!
+        read(sessionStarted(sessionId: 'session-1', conversation: 'conv-2', resumedFrom: 'conv-1'))!
             as SessionOpened;
 
-    expect(opened.claudeSessionId, 'conv-2');
-    expect(opened.resumedFrom, 'conv-1');
+    expect(opened.conversation, conversationOf('conv-2'));
+    expect(opened.resumedFrom, conversationOf('conv-1'));
   });
+
+  test(
+    'S-39 · a session opening names its engine, and keeps what the engine declared it can do',
+    () {
+      final SessionOpened opened =
+          read(
+                sessionStarted(
+                  sessionId: 'session-1',
+                  conversation: 'conv-2',
+                  engine: anEngine,
+                  capabilities: capabilitiesJson(),
+                ),
+              )!
+              as SessionOpened;
+
+      expect(opened.engine, anEngine);
+      expect(opened.capabilities, someCapabilities);
+    },
+  );
+
+  test('a declaration of capabilities missing a field is not read as having nothing', () {
+    final Map<String, Object?> partial = capabilitiesJson()..remove('fork');
+    final SessionOpened opened =
+        read(sessionStarted(sessionId: 'session-1', capabilities: partial))! as SessionOpened;
+
+    expect(opened.capabilities, isNull);
+  });
+
+  test(
+    'the previous protocol\'s bare ids are not conversations: no engine says whose they are',
+    () {
+      final SessionOpened opened =
+          read(
+                frame(
+                  kind: 'event',
+                  type: 'session.started',
+                  sessionId: 'session-1',
+                  seq: 1,
+                  payload: <String, Object?>{
+                    'sessionId': 'session-1',
+                    'conversation': 'conv-2',
+                    'resumedFrom': <String, Object?>{'engine': '', 'id': 'conv-1'},
+                  },
+                ),
+              )!
+              as SessionOpened;
+
+      expect(opened.conversation, isNull);
+      expect(opened.resumedFrom, isNull);
+    },
+  );
 
   test('reads each status the contract carries', () {
     const Map<String, SessionStatus> known = <String, SessionStatus>{
@@ -89,15 +139,10 @@ void main() {
 
   test('reads a tool from its invocation to its outcome, keeping the exact input', () {
     final ToolInvoked invoked =
-        read(
-              toolStarted(
-                toolUseId: 't1',
-                seq: 1,
-                input: <String, Object?>{'command': 'rm -rf /tmp/x'},
-              ),
-            )!
+        read(toolStarted(toolUseId: 't1', seq: 1, call: shellCall('rm -rf /tmp/x')))!
             as ToolInvoked;
-    expect(invoked.input['command'], 'rm -rf /tmp/x');
+    expect(invoked.call, shellCall('rm -rf /tmp/x'));
+    expect(invoked.call.rawInput['command'], 'rm -rf /tmp/x');
 
     final ToolOutput output =
         read(toolProgress(toolUseId: 't1', chunk: 'gone', seq: 2))! as ToolOutput;
@@ -109,19 +154,118 @@ void main() {
     expect(finished.summary, 'removed');
   });
 
-  test('a tool with no input at all reads as an empty input rather than throwing', () {
-    final ToolInvoked invoked =
+  group('plan 28, B-19 · a tool is read by its kind and label', () {
+    ToolInvoked? started(Map<String, Object?> payload) =>
         read(
               frame(
                 kind: 'event',
                 type: 'tool.started',
                 seq: 1,
-                payload: <String, Object?>{'toolUseId': 't1', 'toolName': 'Read'},
+                payload: <String, Object?>{'toolUseId': 't1', ...payload},
               ),
-            )!
-            as ToolInvoked;
+            )
+            as ToolInvoked?;
 
-    expect(invoked.input, isEmpty);
+    test('kind, label, subject and changes as the backend built them', () {
+      final ToolCall edit = aToolCall(
+        kind: 'file.edit',
+        messageKey: 'sessions.tool.fileEdit',
+        params: const <String, Object>{'path': 'a.ts', 'added': 2, 'removed': 1},
+        subject: const ToolSubject(
+          paths: <String>['/w/a.ts'],
+          pattern: 'p',
+          url: 'u',
+          query: 'q',
+          server: 's',
+          tool: 't',
+          description: 'd',
+        ),
+        changes: const <FileChange>[
+          FileChange(path: '/w/a.ts', op: 'edit'),
+          FileChange(path: '/w/b.ts', op: 'move', to: '/w/c.ts'),
+        ],
+        rawInput: const <String, Object?>{'whatever': 1},
+      );
+
+      expect(started(toolCallJson(edit))!.call, edit);
+    });
+
+    test('no kind, an empty kind or no readable label: nothing to draw it by — unread', () {
+      final Map<String, Object?> whole = toolCallJson(shellLs);
+
+      for (final Map<String, Object?> payload in <Map<String, Object?>>[
+        <String, Object?>{...whole}..remove('kind'),
+        <String, Object?>{...whole, 'kind': ''},
+        <String, Object?>{...whole}..remove('label'),
+        <String, Object?>{...whole, 'label': 'Shell'},
+        <String, Object?>{
+          ...whole,
+          'label': <String, Object?>{'params': <String, Object?>{}},
+        },
+        // The engine's own name alone is not enough: the app never draws by it.
+        <String, Object?>{'toolName': 'Bash', 'input': <String, Object?>{}},
+      ]) {
+        expect(
+          read(
+            frame(
+              kind: 'event',
+              type: 'tool.started',
+              seq: 4,
+              payload: <String, Object?>{'toolUseId': 't1', ...payload},
+            ),
+          ),
+          const UnreadEvent(4),
+        );
+      }
+    });
+
+    test('what is missing or out of shape around the label reads as nothing, never a throw', () {
+      final ToolInvoked invoked = started(<String, Object?>{
+        'kind': 'other',
+        'label': <String, Object?>{
+          'messageKey': 'sessions.tool.other',
+          'params': <String, Object?>{'name': 'X', 'count': 2, 'nested': <String, Object?>{}},
+        },
+        'subject': <String, Object?>{
+          'paths': <Object?>['/a', 3],
+          'command': 7,
+        },
+        'changes': <Object?>[
+          'not a change',
+          <String, Object?>{'path': '/a'},
+          <String, Object?>{'op': 'edit'},
+          <String, Object?>{'path': '/b', 'op': 'write'},
+        ],
+        'rawInput': 'not an object',
+      })!;
+
+      expect(invoked.call.label.params, <String, Object>{'name': 'X', 'count': 2});
+      expect(invoked.call.subject, const ToolSubject(paths: <String>['/a']));
+      expect(invoked.call.changes, const <FileChange>[FileChange(path: '/b', op: 'write')]);
+      expect(invoked.call.rawInput, isEmpty);
+
+      final ToolInvoked bare = started(<String, Object?>{
+        'kind': 'plan',
+        'label': <String, Object?>{'messageKey': 'sessions.tool.plan'},
+        'changes': 'none',
+      })!;
+      expect(
+        bare.call,
+        aToolCall(kind: 'plan', messageKey: 'sessions.tool.plan', params: const <String, Object>{}),
+      );
+    });
+
+    test(
+      'a kind this build does not know is read all the same — drawing it is the generic line',
+      () {
+        expect(
+          started(
+            toolCallJson(aToolCall(kind: 'vcs.commit', messageKey: 'sessions.tool.vcs')),
+          )!.call.kind,
+          'vcs.commit',
+        );
+      },
+    );
   });
 
   test('reads each outcome a tool can have', () {
@@ -346,7 +490,7 @@ void main() {
             ts: '2026-09-14T12:00:09.000Z',
             content: <Map<String, Object?>>[
               <String, Object?>{'type': 'thinking', 'thinking': 'let me see'},
-              <String, Object?>{'type': 'redacted_thinking'},
+              <String, Object?>{'type': 'redactedThinking'},
               <String, Object?>{'type': 'thinking'},
               <String, Object?>{'type': 'text', 'text': 'Done.'},
             ],
@@ -370,7 +514,8 @@ void main() {
           messageId: 'm',
           seq: 5,
           content: <Map<String, Object?>>[
-            <String, Object?>{'type': 'tool_use', 'toolUseId': 't1', 'text': 'not this'},
+            <String, Object?>{'type': 'toolUse', 'toolUseId': 't1', 'text': 'not this'},
+            <String, Object?>{'type': 'toolResult', 'toolUseId': 't1', 'text': 'nor that'},
             <String, Object?>{'type': 'hologram', 'text': 'nor this'},
           ],
         ),
@@ -454,8 +599,8 @@ void main() {
             'sessionId': 'session-1',
             'workspacePath': '/srv/app',
             'model': 'sonnet',
-            'permissionMode': 'default',
-            'claudeSessionId': 'conv-1',
+            'permissionMode': 'ask',
+            'conversation': conversationJson('conv-1'),
             'effort': 'high',
             'outputStyle': 'Concise',
             'defaultsFrom': 'folder',
@@ -484,7 +629,7 @@ void main() {
                 sessionStarted(
                   sessionId: 's',
                   model: 'sonnet',
-                  permissionMode: 'plan',
+                  permissionMode: 'readOnly',
                   correlationId: 'cmd-7',
                   workspacePath: '/home/someone/project',
                 ),
@@ -492,7 +637,7 @@ void main() {
               as SessionOpened;
 
       expect(opened.model, 'sonnet');
-      expect(opened.permissionMode, 'plan');
+      expect(opened.permissionMode, 'readOnly');
       expect(opened.commandId, 'cmd-7');
       expect(opened.workspacePath, '/home/someone/project');
     });
@@ -528,12 +673,7 @@ void main() {
     test('a historical tool and its outcome read as the live ones do', () {
       expect(
         historyEventFrom(historyEntry(toolStarted(toolUseId: 't1', seq: 3))),
-        const ToolInvoked(
-          historySeq,
-          toolUseId: 't1',
-          toolName: 'Bash',
-          input: <String, Object?>{'command': 'ls'},
-        ),
+        const ToolInvoked(historySeq, toolUseId: 't1', call: shellLs),
       );
       expect(
         historyEventFrom(historyEntry(toolCompleted(toolUseId: 't1', seq: 4, summary: 'ok'))),
@@ -599,14 +739,106 @@ void main() {
 
     test('B-23 · a tool of a subagent says so; a task call ends with its task', () {
       final SessionEvent? started = read(
-        toolStarted(toolUseId: 't1', seq: 1, toolName: 'TaskCreate', parentToolUseId: 'task-0'),
+        toolStarted(
+          toolUseId: 't1',
+          seq: 1,
+          call: tasksCall('sessions.tool.taskCreate', const <String, Object?>{'subject': 'x'}),
+          parentToolUseId: 'task-0',
+        ),
       );
       expect((started! as ToolInvoked).isSubagent, isTrue);
       expect((read(toolStarted(toolUseId: 't2', seq: 2))! as ToolInvoked).isSubagent, isFalse);
 
+      // The task the call made is the previous protocol's: the list comes in an event of its own.
       expect(
         read(toolCompleted(toolUseId: 't1', seq: 3, taskId: '7')),
-        const ToolFinished(3, toolUseId: 't1', status: ToolStatus.succeeded, taskId: '7'),
+        const ToolFinished(3, toolUseId: 't1', status: ToolStatus.succeeded),
+      );
+    });
+  });
+
+  group('plan 28, B-22 · the task list, in an event of its own', () {
+    test('S-66 · the whole list, in the canonical states, the active title when there is one', () {
+      expect(
+        read(
+          sessionTasksChanged(
+            seq: 4,
+            tasks: <Map<String, Object?>>[
+              taskJson('1', 'Read', status: 'completed'),
+              taskJson('2', 'Test', status: 'inProgress', activeTitle: 'Testing'),
+              taskJson('3', 'Ship'),
+            ],
+          ),
+        ),
+        const TasksChanged(4, <SessionTask>[
+          SessionTask(id: '1', title: 'Read', status: TaskStatus.completed),
+          SessionTask(
+            id: '2',
+            title: 'Test',
+            status: TaskStatus.inProgress,
+            activeTitle: 'Testing',
+          ),
+          SessionTask(id: '3', title: 'Ship', status: TaskStatus.pending),
+        ]),
+      );
+    });
+
+    test('S-66 · an empty list is a list cleared, not nothing', () {
+      expect(read(sessionTasksChanged(seq: 5)), const TasksChanged(5, <SessionTask>[]));
+    });
+
+    test('a task this build cannot read is left out; a payload with no list is unread', () {
+      expect(
+        read(
+          sessionTasksChanged(
+            seq: 6,
+            tasks: <Map<String, Object?>>[
+              taskJson('1', 'Kept'),
+              taskJson('2', 'A state from later', status: 'blocked'),
+              <String, Object?>{'id': '3', 'status': 'pending'},
+              <String, Object?>{'title': 'No id', 'status': 'pending'},
+            ],
+          ),
+        ),
+        const TasksChanged(6, <SessionTask>[
+          SessionTask(id: '1', title: 'Kept', status: TaskStatus.pending),
+        ]),
+      );
+      expect(
+        read(
+          frame(kind: 'event', type: 'session.tasksChanged', seq: 7, payload: <String, Object?>{}),
+        ),
+        const UnreadEvent(7),
+      );
+      expect(
+        read(
+          frame(
+            kind: 'event',
+            type: 'session.tasksChanged',
+            seq: 8,
+            payload: <String, Object?>{
+              'tasks': <Object?>['nope'],
+            },
+          ),
+        ),
+        const TasksChanged(8, <SessionTask>[]),
+      );
+    });
+
+    test('S-67 · in the history it is read the same way, dated, with no seq of its own', () {
+      expect(
+        historyEventFrom(
+          historyEntry(
+            sessionTasksChanged(
+              seq: 9,
+              at: '2026-09-14T12:00:00.000Z',
+              tasks: <Map<String, Object?>>[taskJson('1', 'Read')],
+            ),
+          ),
+        ),
+        const TasksChanged(historySeq, <SessionTask>[
+          SessionTask(id: '1', title: 'Read', status: TaskStatus.pending),
+        ], writtenAt: '2026-09-14T12:00:00.000Z'),
       );
     });
   });
@@ -620,7 +852,7 @@ void main() {
           'role': 'assistant',
           'content': <Object?>[
             <String, Object?>{'type': 'thinking', 'blockId': 'u1:0'},
-            <String, Object?>{'type': 'redacted_thinking', 'blockId': 'u1:1'},
+            <String, Object?>{'type': 'redactedThinking', 'blockId': 'u1:1'},
             <String, Object?>{'type': 'text', 'text': 'A', 'blockId': 'u1:2'},
             <String, Object?>{'type': 'text', 'text': 'B'},
           ],
@@ -709,8 +941,7 @@ void main() {
                 'type': 'tool.started',
                 'payload': <String, Object?>{
                   'toolUseId': 't1',
-                  'toolName': 'Bash',
-                  'input': <String, Object?>{'command': 'pnpm test'},
+                  ...toolCallJson(shellCall('pnpm test')),
                   'title': ?title,
                 },
               })!
@@ -750,6 +981,135 @@ void main() {
       expect(read(toolCompleted(toolUseId: 't1', seq: 4))!.writtenAt, isEmpty);
       expect(historyEventFrom(historyEntry(toolStarted(toolUseId: 't1', seq: 3)))!.writtenAt, '');
       expect(read(sessionStarted(sessionId: 'session-1'))!.writtenAt, isEmpty);
+    });
+  });
+
+  group('plan 28, F4 · modes, usage and blocks in our names', () {
+    String? modeOf(String mode) =>
+        (read(sessionStarted(sessionId: 's', permissionMode: mode))! as SessionOpened)
+            .permissionMode;
+
+    test('S-82 · a mode of the previous protocol is read as the canonical one, once', () {
+      expect(modeOf('default'), 'ask');
+      expect(modeOf('plan'), 'readOnly');
+      for (final String mode in <String>['ask', 'acceptEdits', 'readOnly', 'allowAll']) {
+        expect(modeOf(mode), mode);
+      }
+    });
+
+    test('S-82 · a mode this build does not know is dropped, never offered', () {
+      expect(modeOf('bypassPermissions'), isNull);
+      expect(modeOf('dontAsk'), isNull);
+    });
+
+    test('S-86 · a turn with no cost and no usage is still a turn — with no cost', () {
+      final TurnFinished turn =
+          read(turnCompleted(seq: 1, costUsd: null, usage: const <String, Object?>{}))!
+              as TurnFinished;
+
+      expect(turn.turn.costUsd, isNull);
+      expect(turn.turn.turnId, 'turn-1');
+      expect(turn.turn.durationMs, 1200);
+    });
+
+    test('S-87 · a cost of zero is zero, not absent', () {
+      final TurnFinished turn = read(turnCompleted(seq: 1, costUsd: '0.000000'))! as TurnFinished;
+
+      expect(turn.turn.costUsd, '0.000000');
+    });
+
+    test('a turn with no id or no duration is unread, cost or not', () {
+      final SessionEvent? noId = read(
+        frame(
+          kind: 'event',
+          type: 'turn.completed',
+          seq: 7,
+          payload: <String, Object?>{'usage': <String, Object?>{}, 'durationMs': 1},
+        ),
+      );
+      final SessionEvent? noDuration = read(
+        frame(
+          kind: 'event',
+          type: 'turn.completed',
+          seq: 8,
+          payload: <String, Object?>{'turnId': 't', 'usage': <String, Object?>{}},
+        ),
+      );
+
+      expect(noId, isA<UnreadEvent>());
+      expect(noDuration, isA<UnreadEvent>());
+    });
+
+    test('S-88 · redactedThinking, toolUse and toolResult read as the old names did — live and in '
+        'the history', () {
+      final List<Map<String, Object?>> content = <Map<String, Object?>>[
+        <String, Object?>{'type': 'redactedThinking', 'blockId': 'b0'},
+        <String, Object?>{'type': 'toolUse', 'toolUseId': 't1', 'text': 'not the answer'},
+        <String, Object?>{'type': 'toolResult', 'toolUseId': 't1', 'text': 'nor this'},
+        <String, Object?>{'type': 'text', 'text': 'Done.', 'blockId': 'b3'},
+      ];
+      final MessageFinished live =
+          read(messageBlocks(messageId: 'm', seq: 4, content: content))! as MessageFinished;
+      final MessageFinished history =
+          historyEventFrom(<String, Object?>{
+                'type': 'message.completed',
+                'payload': <String, Object?>{
+                  'messageId': 'm',
+                  'role': 'assistant',
+                  'content': content,
+                },
+              })!
+              as MessageFinished;
+
+      for (final MessageFinished finished in <MessageFinished>[live, history]) {
+        expect(finished.text, 'Done.');
+        expect(finished.textBlockIds, <String>['b3']);
+        expect(finished.thoughts, const <Thought>[Thought('', isRedacted: true, blockId: 'b0')]);
+      }
+    });
+
+    test('S-88 · the names of the previous protocol are no blocks of ours any more', () {
+      final MessageFinished finished =
+          read(
+                messageBlocks(
+                  messageId: 'm',
+                  seq: 4,
+                  content: <Map<String, Object?>>[
+                    <String, Object?>{'type': 'redacted_thinking'},
+                    <String, Object?>{'type': 'text', 'text': 'A'},
+                  ],
+                ),
+              )!
+              as MessageFinished;
+
+      expect(finished.thoughts, isEmpty);
+      expect(finished.text, 'A');
+    });
+
+    test('S-89 · a message with no thinking carries no thought at all', () {
+      final MessageFinished finished =
+          read(messageCompleted(messageId: 'm', text: 'Hi', seq: 2))! as MessageFinished;
+
+      expect(finished.thoughts, isEmpty);
+    });
+
+    test('S-90 · a block of a kind this build does not know does not take the answer with it', () {
+      final MessageFinished finished =
+          read(
+                messageBlocks(
+                  messageId: 'm',
+                  seq: 4,
+                  content: <Map<String, Object?>>[
+                    <String, Object?>{'type': 'text', 'text': 'Before. '},
+                    <String, Object?>{'type': 'hologram', 'text': 'unknown'},
+                    <String, Object?>{'type': 'text', 'text': 'After.'},
+                  ],
+                ),
+              )!
+              as MessageFinished;
+
+      expect(finished.text, 'Before. After.');
+      expect(finished.thoughts, isEmpty);
     });
   });
 }

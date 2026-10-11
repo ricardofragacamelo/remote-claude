@@ -9,7 +9,8 @@ import { TraceMiddleware } from '@shared/logging/trace.middleware';
 import { AuthModule } from '@infra/modules/auth.module';
 import { AuditModule } from '@infra/modules/audit.module';
 import { AuditQueryModule } from '@infra/modules/audit-query.module';
-import { ClaudeConfigModule } from '@infra/modules/claude-config.module';
+import { AgentSettingsModule } from '@infra/modules/agent-settings.module';
+import { ENGINE_MODULES } from '@infra/modules/engines';
 import { DatabaseModule } from '@infra/modules/database.module';
 import { GatewayModule } from '@infra/modules/gateway.module';
 import { HealthModule } from '@infra/modules/health.module';
@@ -46,7 +47,9 @@ import { WorkspaceModule } from '@infra/modules/workspace.module';
     DiagModule,
     PermissionModule,
     NotificationModule,
-    ClaudeConfigModule,
+    AgentSettingsModule,
+    // What only one engine has: each extension's module, registered by the composition.
+    ...ENGINE_MODULES,
     SessionModule,
     TranscriptModule,
     GatewayModule,

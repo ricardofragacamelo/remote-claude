@@ -5,7 +5,7 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { wsClient } from '@/shared/api/ws';
 import { folderName } from '@/shared/lib/folder-name';
-import { isRecord } from '@/shared/lib/json';
+import { asksQuestion } from '@/features/permission';
 import { readVisitor, writeVisitor } from '@/shared/lib/visitor-storage';
 import { folderOfSession } from '../store/session-folders.store';
 
@@ -67,10 +67,10 @@ const SAYS = {
   turn: 'sessions.browserNotice.turn',
 } as const;
 
-/** What a frame is worth a notification for — a question of Claude said apart (plan 24, B-16). */
+/** What a frame is worth a notification for — the agent's question said apart (plan 24, B-16). */
 function whatOf(frame: Envelope): keyof typeof SAYS | null {
   if (frame.type === 'permission.requested') {
-    return isRecord(frame.payload?.['interaction']) ? 'question' : 'permission';
+    return asksQuestion(frame.payload) ? 'question' : 'permission';
   }
 
   return frame.type === 'turn.completed' ? 'turn' : null;

@@ -1,9 +1,9 @@
 import { diffSources } from '@/features/editor';
 import { folderTabBadges, statusBarItems, tabRestorers } from '@/features/workbench';
 import { SESSION_DIFF_READER } from './services/session-diff-source';
-import { CLAUDE_PANEL_RESTORER } from './store/claude-panel-restorer';
+import { AGENT_PANEL_RESTORER } from './store/agent-panel-restorer';
 import { ChangesStatusItem } from './components/changes/ChangesStatusItem';
-import { ClaudeStatusItem } from './components/panel/ClaudeStatusItem';
+import { AgentStatusItem } from './components/panel/AgentStatusItem';
 import { PermissionCount } from './components/panel/PermissionBadges';
 
 /**
@@ -13,10 +13,10 @@ import { PermissionCount } from './components/panel/PermissionBadges';
  *
  * @returns the way to take it back out
  */
-export function registerClaudeChanges(): () => void {
+export function registerAgentChanges(): () => void {
   const undo = [
     diffSources.register(SESSION_DIFF_READER),
-    tabRestorers.register(CLAUDE_PANEL_RESTORER as Parameters<typeof tabRestorers.register>[0]),
+    tabRestorers.register(AGENT_PANEL_RESTORER as Parameters<typeof tabRestorers.register>[0]),
     statusBarItems.register({
       id: 'session.changes',
       side: 'left',
@@ -24,10 +24,10 @@ export function registerClaudeChanges(): () => void {
       component: ChangesStatusItem,
     }),
     statusBarItems.register({
-      id: 'session.claude',
+      id: 'session.agent',
       side: 'left',
       position: 200,
-      component: ClaudeStatusItem,
+      component: AgentStatusItem,
     }),
     folderTabBadges.register({
       id: 'session.permissions',

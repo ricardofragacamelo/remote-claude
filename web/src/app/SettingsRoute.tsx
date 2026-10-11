@@ -10,8 +10,8 @@ import { useShellShortcuts } from './screen-shortcuts';
  * `/settings/$section` — the app's Settings, one section at a time, with the section in the URL so
  * the link reproduces the screen (docs/architecture/web/04-state-and-data.md#a-url-é-estado).
  *
- * The route has already sent an unknown section to the first one. Claude's settings are never here:
- * they are the screen plan 13 registers at its own place in the navigation.
+ * The route has already sent an unknown section to the first one. The agent's settings are never
+ * here: they are the screen plan 13 registers at its own place in the navigation.
  */
 export function SettingsRoute(): React.JSX.Element {
   const { t } = useTranslation();
@@ -34,7 +34,7 @@ export function SettingsRoute(): React.JSX.Element {
       shortcuts={shortcuts}
     >
       <SettingsScreen section={section} onSection={goTo} />
-      {/* Claude's own settings are not a section here: they have a screen of their own (13 · D-27). */}
+      {/* The agent's own settings are not a section here: they have a screen (13 · D-27). */}
       <p className="text-ui-sm text-muted-foreground">
         <Link
           to="/claude-settings"

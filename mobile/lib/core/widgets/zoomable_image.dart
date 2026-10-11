@@ -60,7 +60,7 @@ class ZoomableImage extends StatelessWidget {
       ),
       AsyncValue<Uint8List>(:final Object error, isLoading: false) => _refusal(
         context,
-        translateFailure(l10n, asFailure(error)),
+        failureText(context, asFailure(error)),
         finalCodes.contains(asFailure(error).code) ? null : onRetry,
       ),
       _ => LoadingView(label: loadingLabel),

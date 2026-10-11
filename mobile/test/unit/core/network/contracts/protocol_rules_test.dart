@@ -94,9 +94,18 @@ void main() {
       sessionStartPayloadConditionalsHold(<String, Object?>{
         'workspacePath': '/w',
         'forkAt': 'm',
-        'resumeSessionId': 'c',
+        'resumeFrom': <String, Object?>{'engine': 'e', 'id': 'c'},
       }),
       isTrue,
+    );
+    // The previous protocol's bare id is no conversation to fork from.
+    expect(
+      sessionStartPayloadConditionalsHold(<String, Object?>{
+        'workspacePath': '/w',
+        'forkAt': 'm',
+        'resumeFrom': 'c',
+      }),
+      isFalse,
     );
     expect(sessionStartPayloadConditionalsHold(<String, Object?>{'workspacePath': '/w'}), isTrue);
   });

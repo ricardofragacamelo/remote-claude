@@ -41,7 +41,7 @@ class FoldersHomeController extends _$FoldersHomeController {
     state = await AsyncValue.guard<FoldersHome>(_read);
   }
 
-  /// Closes [path]'s tab. No session of Claude ends.
+  /// Closes [path]'s tab. No session of the agent ends.
   Future<Failure?> close(String path) => _change(() => ref.read(manageFoldersProvider).close(path));
 
   Future<Failure?> pin(String path, {required bool pinned}) =>

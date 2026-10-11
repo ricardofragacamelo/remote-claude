@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
@@ -16,23 +17,24 @@ import 'package:remote_claude/features/session/presentation/widgets/tool_output_
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import 'package:remote_claude/core/conversation/tool_call.dart';
+
 import '../../../support/fakes/fake_transcript_content_repository.dart';
 import '../../../support/builders/questions.dart';
+import '../../../support/builders/tools.dart';
 import '../../../support/pump_app.dart';
 
 ToolExecution tool({
   ToolStatus status = ToolStatus.running,
   String output = '',
   String? summary,
-  String toolName = 'Bash',
-  Map<String, Object?> input = const <String, Object?>{'command': 'rm -rf /tmp/scratch'},
+  ToolCall? call,
   String? title,
   bool isSubagent = false,
   Map<String, Object?>? question,
 }) => ToolExecution(
   toolUseId: 't1',
-  toolName: toolName,
-  input: input,
+  call: call ?? shellCall('rm -rf /tmp/scratch'),
   status: status,
   output: output,
   summary: summary,
@@ -40,6 +42,9 @@ ToolExecution tool({
   isSubagent: isSubagent,
   question: question,
 );
+
+/// The conversation the content is read from.
+const ConversationKey c1 = ConversationKey(engine: 'engine-a', id: 'c-1');
 
 void main() {
   late AppLocalizations l10n;
@@ -51,11 +56,14 @@ void main() {
 
   setUp(() => content = FakeTranscriptContentRepository());
 
-  Future<void> pump(WidgetTester tester, ToolExecution shown, {String? conversationId = 'c-1'}) =>
-      tester.pumpApp(
-        ToolCard(tool: shown, conversationId: conversationId),
-        overrides: <Override>[transcriptContentRepositoryProvider.overrideWithValue(content)],
-      );
+  Future<void> pump(
+    WidgetTester tester,
+    ToolExecution shown, {
+    ConversationKey? conversationKey = c1,
+  }) => tester.pumpApp(
+    ToolCard(tool: shown, conversationKey: conversationKey),
+    overrides: <Override>[transcriptContentRepositoryProvider.overrideWithValue(content)],
+  );
 
   /// Opens or folds the card by its line.
   Future<void> toggle(WidgetTester tester) async {
@@ -71,9 +79,9 @@ void main() {
     testWidgets('starts folded, with what it is and how it is going', (WidgetTester tester) async {
       await pump(tester, tool());
 
-      expect(find.text('Bash'), findsOneWidget);
+      expect(find.text('Shell: rm -rf /tmp/scratch'), findsOneWidget);
       expect(find.text(l10n.sessionToolStatusRunning), findsOneWidget);
-      expect(find.textContaining('rm -rf /tmp/scratch'), findsNothing);
+      expect(find.text('rm -rf /tmp/scratch'), findsNothing);
     });
 
     testWidgets('opens by a tap, and folds again', (WidgetTester tester) async {
@@ -92,7 +100,10 @@ void main() {
       final SemanticsHandle semantics = tester.ensureSemantics();
       await pump(tester, tool(status: ToolStatus.succeeded));
 
-      final String name = l10n.sessionToolRowLabel('Bash', l10n.sessionToolStatusSucceeded);
+      final String name = l10n.sessionToolRowLabel(
+        'Shell: rm -rf /tmp/scratch',
+        l10n.sessionToolStatusSucceeded,
+      );
       final Finder line = find.bySemanticsLabel(name);
       expect(
         tester.getSemantics(line),
@@ -137,30 +148,44 @@ void main() {
   });
 
   group('S-111 · the label says what the call is for', () {
-    testWidgets('with a title: the tool and the description the model gave', (
+    testWidgets('with a title: the short name of the kind and the description the model gave', (
       WidgetTester tester,
     ) async {
       await pump(tester, tool(title: 'Remove the scratch folder'));
 
-      expect(find.text('Bash · Remove the scratch folder'), findsOneWidget);
+      expect(find.text('Shell · Remove the scratch folder'), findsOneWidget);
     });
 
-    test(
-      'without one, its name, as before; a subagent keeps its name; MCP says server and tool',
-      () {
-        expect(toolLabel(l10n, tool()), 'Bash');
-        expect(toolLabel(l10n, tool(toolName: 'Agent', title: 'Explore')), 'Agent');
-        expect(toolLabel(l10n, tool(toolName: 'Task', title: 'Explore')), 'Task');
-        expect(
-          toolLabel(l10n, tool(toolName: 'mcp__github__create_issue', title: 'Open the bug')),
-          'github · create_issue · Open the bug',
-        );
-        expect(
-          toolLabel(l10n, tool(toolName: 'mcp__github__create_issue')),
-          'mcp__github__create_issue',
-        );
-      },
-    );
+    testWidgets('S-58 · the label the backend built, never the engine name of the tool', (
+      WidgetTester tester,
+    ) async {
+      await pump(tester, tool(call: agentCall(), title: 'Explore'));
+      expect(find.text('Subagent (general-purpose): Explore'), findsOneWidget);
+
+      await pump(tester, tool(call: mcpCall(), title: 'Open the bug'));
+      expect(find.text('github · create_issue · Open the bug'), findsOneWidget);
+    });
+
+    testWidgets('S-59 · a kind this build does not know is the generic line, and still opens', (
+      WidgetTester tester,
+    ) async {
+      await pump(
+        tester,
+        tool(
+          call: aToolCall(
+            kind: 'file.copy',
+            messageKey: 'sessions.tool.fileCopy',
+            params: const <String, Object>{'path': 'a.txt'},
+            rawInput: const <String, Object?>{'from': 'a.txt'},
+          ),
+        ),
+      );
+
+      expect(find.text('file.copy'), findsOneWidget);
+
+      await toggle(tester);
+      expect(find.text('{\n  "from": "a.txt"\n}'), findsOneWidget);
+    });
   });
 
   group('S-112 · IN and OUT of a shell command', () {
@@ -211,9 +236,8 @@ void main() {
       await pump(
         tester,
         tool(
-          toolName: 'Read',
+          call: readCall(rawInput: const <String, Object?>{'file_path': '/w/a.txt', 'limit': 3}),
           status: ToolStatus.succeeded,
-          input: const <String, Object?>{'file_path': '/w/a.txt', 'limit': 3},
         ),
       );
       await toggle(tester);
@@ -228,17 +252,27 @@ void main() {
     ) async {
       await pump(
         tester,
-        tool(toolName: 'Custom', input: <String, Object?>{'at': DateTime.utc(2026, 10, 7)}),
+        tool(call: aToolCall(rawInput: <String, Object?>{'at': DateTime.utc(2026, 10, 7)})),
       );
       await toggle(tester);
 
       expect(find.text('{\n  "at": "2026-10-07 00:00:00.000Z"\n}'), findsOneWidget);
     });
 
-    testWidgets('a Bash call without a command string is shown as its input', (
+    testWidgets('a shell call whose subject has no command is shown as its input', (
       WidgetTester tester,
     ) async {
-      await pump(tester, tool(input: const <String, Object?>{'command': 3}));
+      await pump(
+        tester,
+        tool(
+          call: aToolCall(
+            kind: 'shell',
+            messageKey: 'sessions.tool.shell',
+            params: const <String, Object>{'command': ''},
+            rawInput: const <String, Object?>{'command': 3},
+          ),
+        ),
+      );
       await toggle(tester);
 
       expect(find.text('{\n  "command": 3\n}'), findsOneWidget);
@@ -261,7 +295,7 @@ void main() {
       await toggle(tester);
       await toggle(tester);
 
-      expect(content.toolReads, <(String, String)>[('c-1', 't1')]);
+      expect(content.toolReads, <(ConversationKey, String)>[(c1, 't1')]);
       expect(find.text('every line\nof it'), findsOneWidget);
     });
   });
@@ -332,7 +366,11 @@ void main() {
     testWidgets('no conversation known yet: the end the timeline keeps, and no request', (
       WidgetTester tester,
     ) async {
-      await pump(tester, tool(status: ToolStatus.succeeded, summary: 'done'), conversationId: null);
+      await pump(
+        tester,
+        tool(status: ToolStatus.succeeded, summary: 'done'),
+        conversationKey: null,
+      );
       await toggle(tester);
 
       expect(find.text('done'), findsOneWidget);
@@ -348,7 +386,7 @@ void main() {
       await pump(tester, tool(status: ToolStatus.succeeded));
       await tester.pumpAndSettle();
 
-      expect(content.toolReads, <(String, String)>[('c-1', 't1')]);
+      expect(content.toolReads, <(ConversationKey, String)>[(c1, 't1')]);
       expect(find.text('finished'), findsOneWidget);
     });
   });
@@ -366,8 +404,7 @@ void main() {
     );
 
     final ToolExecution asked = tool(
-      toolName: 'AskUserQuestion',
-      input: const <String, Object?>{'questions': <Object?>[]},
+      call: questionCall(rawInput: const <String, Object?>{'questions': <Object?>[]}),
       status: ToolStatus.succeeded,
       summary: 'answered',
     );
@@ -391,7 +428,7 @@ void main() {
         ),
       );
 
-      expect(find.text(l10n.permissionQuestionAskedMany(3)), findsOneWidget);
+      expect(find.text(l10n.sessionToolQuestions('3')), findsOneWidget);
       expect(find.byType(AnsweredQuestions), findsOneWidget);
       expect(find.text(l10n.permissionQuestionOtherAnswer('dry')), findsOneWidget);
       expect(find.textContaining('{questions'), findsNothing);
@@ -400,12 +437,7 @@ void main() {
     testWidgets('S-95 · refused, it says why', (WidgetTester tester) async {
       await pumpQuestion(
         tester,
-        tool(
-          toolName: 'AskUserQuestion',
-          input: const <String, Object?>{},
-          status: ToolStatus.denied,
-          summary: 'ask me later',
-        ),
+        tool(call: questionCall(), status: ToolStatus.denied, summary: 'ask me later'),
         const PermissionOutcome(
           requestId: 'r',
           decision: PermissionDecision.deny,
@@ -415,20 +447,19 @@ void main() {
       );
 
       expect(find.text(l10n.permissionQuestionDeclined('ask me later')), findsOneWidget);
-      expect(find.text(l10n.permissionQuestionAsked('Tone')), findsOneWidget);
+      expect(find.text(l10n.sessionToolQuestion('Tone')), findsOneWidget);
     });
 
     testWidgets('S-96 · still open, it waits for an answer rather than running', (
       WidgetTester tester,
     ) async {
-      await pump(tester, tool(toolName: 'AskUserQuestion', input: const <String, Object?>{}));
+      await pump(tester, tool(call: questionCall()));
 
       expect(find.text(l10n.permissionQuestionPending), findsOneWidget);
     });
 
     ToolExecution reopened(Map<String, Object?> question, {String summary = 'answered'}) => tool(
-      toolName: 'AskUserQuestion',
-      input: const <String, Object?>{},
+      call: questionCall(),
       status: ToolStatus.succeeded,
       summary: summary,
       question: question,
@@ -468,7 +499,7 @@ void main() {
         }),
       );
 
-      expect(find.text(l10n.permissionQuestionAsked('Tone')), findsOneWidget);
+      expect(find.text(l10n.sessionToolQuestion('Tone')), findsOneWidget);
       expect(find.byType(AnsweredQuestions), findsOneWidget);
       expect(find.textContaining('{'), findsNothing);
     });

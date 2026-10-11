@@ -7,9 +7,9 @@ import type { Envelope } from '@remote-claude/contracts';
 
 import { SessionRegistry } from '@application/session';
 import { SessionId } from '@domain/session';
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
-import type { QueryFactory } from '@adapter/outbound/claude/query.factory';
-import { TRANSCRIPT_SDK } from '@adapter/outbound/claude/transcript-sdk';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
+import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
+import { TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { SnapshotPurgeJob } from '@infra/jobs/snapshot-purge.job';
@@ -147,7 +147,7 @@ describe('undoing what a session wrote', () => {
 
     return {
       sessionId: String(frame.payload?.['sessionId']),
-      conversation: String(frame.payload?.['claudeSessionId']),
+      conversation: String((frame.payload?.['conversation'] as { id?: string } | undefined)?.id),
     };
   }
 
@@ -446,7 +446,9 @@ describe('undoing what a session wrote', () => {
     await until(socket, 'session.closed');
     store.add({ sessionId: first.conversation, directory: workspace, cwd: workspace });
 
-    const resumed = await started(socket, { resumeSessionId: first.conversation });
+    const resumed = await started(socket, {
+      resumeFrom: { engine: 'claude', id: first.conversation },
+    });
     expect(resumed.conversation).toBe(first.conversation);
 
     const points = await checkpoints(resumed.sessionId);

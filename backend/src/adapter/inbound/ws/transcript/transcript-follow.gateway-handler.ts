@@ -1,21 +1,24 @@
 import { z } from 'zod';
 
 import type { FollowTranscriptUseCase } from '@application/transcript';
-import { ClaudeSessionId } from '@domain/transcript';
+import type { TranscriptStoreRegistry } from '@application/transcript';
 import type { Logger } from '@shared/logging/logger';
 import type { WsCommandContext, WsCommandHandler, WsCommandOutcome } from '../ws-command';
 import { ContractCommandHandler } from '../contract-command.gateway-handler';
 import { payloadOf } from '../frame-payload';
 import type { SocketFollowSinks } from './socket-follow.sinks';
 
-/** A UUID in the canonical form the SDK hands out — the id of a conversation, and of an entry. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+import { conversationRef } from '../session/session-commands';
+import { conversationRefPayload } from '../../conversation-ref.payload';
 
 /** The payloads of the `transcript.*` commands, as the contract declares them. */
 export const transcriptFollowSchemas = {
   follow: z.object({
-    conversationId: z.string().regex(UUID),
-    afterMessageId: z.string().regex(UUID).optional(),
+    conversation: conversationRef,
+    afterMessageId: z
+      .string()
+      .regex(/^\S{1,256}$/)
+      .optional(),
   }),
   unfollow: z.object({ followId: z.string().min(1).max(128) }),
 };
@@ -38,6 +41,7 @@ export class TranscriptFollowHandler implements WsCommandHandler {
     private readonly follower: FollowTranscriptUseCase,
     private readonly sinks: SocketFollowSinks,
     private readonly logger: Logger,
+    private readonly engines: TranscriptStoreRegistry,
   ) {}
 
   async handle(context: WsCommandContext): Promise<WsCommandOutcome> {
@@ -46,7 +50,11 @@ export class TranscriptFollowHandler implements WsCommandHandler {
     const following = await this.follower.follow({
       connectionId,
       userId,
-      conversationId: ClaudeSessionId.create(command.conversationId),
+      // An engine that is not enabled, or an id it never hands out, is `INVALID_INPUT`.
+      conversationId: this.engines.conversation(
+        command.conversation.engine,
+        command.conversation.id,
+      ),
       afterMessageId: command.afterMessageId ?? null,
       sink: this.sinks.open(connectionId),
     });
@@ -57,7 +65,7 @@ export class TranscriptFollowHandler implements WsCommandHandler {
         layer: 'adapter',
         connectionId,
         followId: following.followId,
-        conversationId: following.conversationId,
+        conversation: following.conversation.key,
         afterMessageId: command.afterMessageId ?? null,
         activity: following.activity,
         conversations: this.follower.followedConversations,
@@ -71,7 +79,7 @@ export class TranscriptFollowHandler implements WsCommandHandler {
         type: 'transcript.following',
         payload: {
           followId: following.followId,
-          conversationId: following.conversationId,
+          conversation: conversationRefPayload(following.conversation),
           activity: following.activity,
         },
       },

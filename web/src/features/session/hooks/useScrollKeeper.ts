@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { claudePanelStore } from '../store/claude-panel.store';
+import { agentPanelStore } from '../store/agent-panel.store';
 import type { ScrollKeeper } from './useFollowTail';
 
 /**
@@ -15,7 +15,7 @@ export function useScrollKeeper(folder: string, key: string | null): ScrollKeepe
       return null;
     }
 
-    const panel = claudePanelStore(folder);
+    const panel = agentPanelStore(folder);
 
     return {
       key,

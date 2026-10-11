@@ -4,8 +4,8 @@ import { RouterProvider } from '@tanstack/react-router';
 
 import { registerExplorer } from '@/features/explorer';
 import {
-  registerClaudeChanges,
-  registerClaudeContext,
+  registerAgentChanges,
+  registerAgentContext,
   registerSessionsView,
 } from '@/features/session';
 import { Providers } from './app/providers';
@@ -16,8 +16,8 @@ import '@/styles/globals.css';
 // what it kept the moment it is made (plan 07, B-24).
 registerExplorer();
 registerSessionsView();
-registerClaudeChanges();
-registerClaudeContext();
+registerAgentChanges();
+registerAgentContext();
 
 const container = document.querySelector('#root');
 

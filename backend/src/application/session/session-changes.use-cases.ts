@@ -2,17 +2,18 @@ import type { RecordAuditEventUseCase } from '@application/audit';
 import type { PathLock } from '@application/shared';
 import type { UserId } from '@domain/auth';
 import { FileNotTextError, isUtf8, looksBinary } from '@domain/files';
+import type { CanonicalTool } from '@domain/engine';
 import type { Clock } from '@domain/shared';
 import {
+  diffableChangeOf,
   DiffNotApplicableError,
-  diffablePathOf,
   fileChangeOf,
   firstCheckpoints,
   hunksBetween,
   isAsLeft,
-  isDiffableTool,
   latestBaselines,
   lineCounts,
+  pendingDiffOf,
   SessionChangeNotFoundError,
   SessionChangeStaleError,
   SessionFileState,
@@ -27,11 +28,13 @@ import type {
   DiskText,
   FileChange,
   FileObservation,
+  PendingDisk,
   SnapshotText,
   ToolDiff,
   TurnFileCheckpoint,
 } from '@domain/session';
 import { WorkspaceNotAllowedError } from '@domain/workspace';
+import type { PendingPermissions } from './ports/pending-permissions.port';
 import type { FileContent, UndoDisk, UndoJournal, UndoReach } from './ports/undo.ports';
 import { reachOf, recordFilesRewound } from './rewind-files.use-cases';
 import type { RewindOutcome } from './rewind-files.use-cases';
@@ -118,7 +121,8 @@ export interface ChangeWriting {
 /**
  * The diff of one tool invocation of a live session — plan 08, B-25.
  *
- * From the input the hook saw, the snapshot of its turn and the disk as the session left it; the
+ * From the change the hook saw, the snapshot of its turn and the disk as the session left it — or,
+ * for a call still waiting for an answer, from its change and the disk now (plan 28, B-17). The
  * rule of which side is known is the domain's ({@link toolDiffOf}). Contents never reach the log —
  * the adapter at the edge logs the path and the sizes.
  */
@@ -127,27 +131,34 @@ export class ShowToolDiffUseCase {
     private readonly registry: SessionRegistry,
     private readonly memory: SessionChangeMemory,
     private readonly stores: ChangeStores,
+    private readonly pending: PendingPermissions,
   ) {}
 
   /**
    * @throws {import('@domain/session').SessionNotFoundError} unknown or closed (S-110)
    * @throws {import('@domain/session').SessionForbiddenError} somebody else's (S-110)
    * @throws {ToolUseNotFoundError} an invocation this session does not have (S-108)
-   * @throws {DiffNotApplicableError} a tool that writes no file (S-109)
+   * @throws {DiffNotApplicableError} a call that changes no file the diff can show (S-109, S-54)
    * @throws {FileNotTextError} a side that is not text (S-111)
    */
   async execute(rawSessionId: string, toolUseId: string, userId: UserId): Promise<ToolDiff> {
     const live = this.registry.require(SessionId.create(rawSessionId), userId);
+    const pending = this.pending.toolOf(live.session.id, toolUseId);
+
+    if (pending !== null) {
+      return this.pendingDiff(pending);
+    }
+
     const tool = this.memory.toolOf(live.session, toolUseId);
 
     if (tool === null) {
       throw new ToolUseNotFoundError(toolUseId);
     }
 
-    const path = diffablePathOf(tool.input);
+    const change = tool.change;
 
-    if (!isDiffableTool(tool.toolName) || path === null) {
-      throw new DiffNotApplicableError(tool.toolName);
+    if (change === null) {
+      throw new DiffNotApplicableError(tool.kind);
     }
 
     const reach = reachOf(live);
@@ -155,22 +166,51 @@ export class ShowToolDiffUseCase {
       (candidate) =>
         candidate.sessionId.value === live.session.id.value &&
         candidate.promptId === tool.promptId &&
-        candidate.path === path,
+        candidate.path === change.path,
     );
 
     return toolDiffOf({
-      toolName: tool.toolName,
-      path,
-      input: tool.input,
+      kind: tool.kind,
+      change,
       firstTouchInTurn: tool.firstTouchInTurn,
       lastWrite: tool.lastWrite,
       snapshot: await this.snapshotText(checkpoint),
-      // A `Write` says its own "after"; the disk is read only for an edit that may still be it.
+      // A `write` says its own "after"; the disk is read only for an edit that may still be it.
       disk:
-        tool.toolName !== 'Write' && tool.lastWrite
-          ? await this.diskText(reach, path)
+        change.op !== 'write' && tool.lastWrite
+          ? await this.diskText(reach, change.path)
           : { kind: 'other' },
     });
+  }
+
+  /**
+   * The diff of a call still waiting for an answer, against the disk now (B-17) — the preview a
+   * client used to compute from the raw input.
+   */
+  private async pendingDiff(tool: CanonicalTool): Promise<ToolDiff> {
+    const change = diffableChangeOf(tool);
+
+    if (change === null) {
+      throw new DiffNotApplicableError(tool.kind);
+    }
+
+    return pendingDiffOf(tool.kind, change, await this.diskNow(change.path));
+  }
+
+  /** The file at [path] as it is now, for the diff of a pending call. */
+  private async diskNow(path: string): Promise<PendingDisk> {
+    const content = await this.stores.disk.read(path, this.stores.limits.maxFileBytes);
+
+    switch (content.kind) {
+      case 'file':
+        return { kind: 'text', content: textOf(path, content.bytes) };
+      case 'absent':
+        return { kind: 'absent' };
+      case 'tooLarge':
+        return { kind: 'notRestorable', reason: 'tooLarge' };
+      default:
+        return { kind: 'notRestorable', reason: 'unreadable' };
+    }
   }
 
   private async snapshotText(checkpoint: TurnFileCheckpoint | undefined): Promise<SnapshotText> {
@@ -550,7 +590,7 @@ async function putDown(
   await stores.journal.recordBaseline(
     SessionFileState.record({
       sessionId: live.session.id,
-      claudeSessionId: live.conversation.claudeSessionId,
+      conversation: live.conversation.ref,
       path,
       ...left,
       updatedAt: stores.clock.now(),

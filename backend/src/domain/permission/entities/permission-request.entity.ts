@@ -1,11 +1,11 @@
 import type { UserId } from '@domain/auth';
+import type { CanonicalTool, Interaction, QuestionAnswer } from '@domain/engine';
 import type { SessionId } from '@domain/session';
 import { PermissionExtensionLimitReachedError } from '../errors/permission-extension-limit.error';
 import { PermissionReasonRequiredError } from '../errors/permission-reason-required.error';
 import { PermissionRequestExpiredError } from '../errors/permission-request-expired.error';
 import { PermissionRequestNotFoundError } from '../errors/permission-request-not-found.error';
 import type { PermissionScope } from '../value-objects/permission-scope.value-object';
-import type { QuestionAnswer, QuestionInteraction } from '../value-objects/question.value-object';
 import type { RiskHint } from '../value-objects/risk-hint.value-object';
 
 /** Yes or no. There is no third value: silence is handled by the deadline, and it denies. */
@@ -18,7 +18,7 @@ export type PermissionOrigin = 'web' | 'mobile';
 export type PermissionRequestStatus = 'pending' | 'resolved' | 'expired';
 
 /** What answered a request nobody was asked about. */
-export type PermissionVia = 'rule' | 'allowAll';
+export type PermissionVia = 'rule' | 'allowAll' | 'readOnly';
 
 /** How a request was settled. */
 export interface PermissionAnswer {
@@ -109,12 +109,14 @@ export interface PermissionRequestOpening {
   readonly toolUseId: string | null;
   readonly toolName: string;
   readonly input: Readonly<Record<string, unknown>>;
+  /** The call as the core reads it — what the request is shown, and its risk decided, by. */
+  readonly tool: CanonicalTool;
 
   /**
    * The questions, when the request is Claude asking the person something rather than asking leave
    * to run a tool — absent or `null` for every other request (plan 24).
    */
-  readonly interaction?: QuestionInteraction | null;
+  readonly interaction?: Interaction | null;
   readonly riskHint: RiskHint;
   readonly requestedAt: Date;
   readonly expiresAt: Date;
@@ -148,7 +150,8 @@ export class PermissionRequest {
     readonly toolUseId: string | null,
     readonly toolName: string,
     readonly input: Readonly<Record<string, unknown>>,
-    readonly interaction: QuestionInteraction | null,
+    readonly tool: CanonicalTool,
+    readonly interaction: Interaction | null,
     readonly riskHint: RiskHint,
     readonly requestedAt: Date,
     expiresAt: Date,
@@ -165,6 +168,7 @@ export class PermissionRequest {
       opening.toolUseId,
       opening.toolName,
       opening.input,
+      opening.tool,
       opening.interaction ?? null,
       opening.riskHint,
       opening.requestedAt,

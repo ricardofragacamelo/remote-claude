@@ -34,7 +34,7 @@ import { transferActions } from './transfer-actions';
 import type { Explorer } from './useExplorer';
 
 /** Where an action sits in the context menu of the tree — separated by group, in this order. */
-export type ActionGroup = 'new' | 'open' | 'transfer' | 'edit' | 'path' | 'claude';
+export type ActionGroup = 'new' | 'open' | 'transfer' | 'edit' | 'path' | 'agent';
 
 /** One thing the Explorer does: in its context menu, in the palette, on a shortcut (S-180). */
 export interface ExplorerAction {
@@ -242,10 +242,10 @@ function edit(
   };
 }
 
-/** The actions on paths and on Claude's context. */
+/** The actions on paths and on the agent's context. */
 function pointing(explorer: Explorer): ExplorerAction[] {
   const some = explorer.targets.some((row) => !row.entry.unreadableName);
-  const forClaude = explorer.targets.some((row) => isOperable(row.entry));
+  const forAgent = explorer.targets.some((row) => isOperable(row.entry));
 
   return [
     {
@@ -274,9 +274,9 @@ function pointing(explorer: Explorer): ExplorerAction[] {
       id: 'explorer.addToContext',
       labelKey: 'explorer.action.addToContext',
       icon: MessageSquarePlus,
-      group: 'claude',
+      group: 'agent',
       // Only with somebody to take it: the panel of plan 08 (S-276).
-      available: () => explorer.claudeTakesFiles && forClaude,
+      available: () => explorer.agentTakesFiles && forAgent,
       run: explorer.addToContext,
       keys: [inTree('Shift+Alt+A')],
     },

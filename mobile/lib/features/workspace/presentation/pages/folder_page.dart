@@ -1,6 +1,6 @@
 /// One folder: a new session, the sessions open in it, and its history (plan 10, F8, D-24).
 ///
-/// In the mould of the web's "Claude sessions" view. Each section loads on its own, so a failure
+/// In the mould of the web's sessions view. Each section loads on its own, so a failure
 /// of the history never hides the open sessions, nor the other way round (S-159).
 library;
 
@@ -13,6 +13,7 @@ import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/help_button.dart';
@@ -44,7 +45,7 @@ class FolderPage extends ConsumerWidget {
       endDrawer: FilesPanel(folder: workspacePath),
       actions: <Widget>[
         FilesPanel.button(),
-        HelpButton(tooltip: l10n.folderHelpOpen, body: l10n.folderHelpBody),
+        HelpButton(tooltip: l10n.folderHelpOpen, body: l10n.folderHelpBody(agentNameIn(context))),
       ],
       body: RefreshIndicator(
         onRefresh: () async {
@@ -146,7 +147,7 @@ class FolderPage extends ConsumerWidget {
                 conversation.summary.isEmpty ? l10n.historyUntitled : conversation.summary,
               ),
               onTap: () => unawaited(
-                context.push(conversationRouteFor(conversation.conversationId, conversation.cwd)),
+                context.push(conversationRouteFor(conversation.conversation, conversation.cwd)),
               ),
             ),
           ListTile(

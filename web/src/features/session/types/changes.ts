@@ -1,6 +1,6 @@
 import type { Hunk } from '@/shared/lib/diff-hunk';
 
-/** What is known of one side of a file Claude changed. */
+/** What is known of one side of a file the agent changed. */
 export type ChangeSideState = 'content' | 'absent' | 'unavailable' | 'notRestorable';
 
 /** One side of a diff, as the backend reads it — the text when it is known. */
@@ -12,16 +12,27 @@ export interface ChangeSide {
   readonly reason: string | null;
 }
 
-/** The diff of one `Edit`, `MultiEdit` or `Write` (plan 08, B-25). */
+/** The side after a call — or after it would run —, with the replacement that would not apply. */
+export interface ToolDiffAfter extends ChangeSide {
+  /** Which replacement would not apply, from 0 — on `editMissing` and `editAmbiguous`. */
+  readonly edit: number | null;
+}
+
+/** The diff of one call that edits or writes a file (plan 08, B-25; plan 28, B-17). */
 export interface ToolDiff {
   /** Absolute, as the tool wrote it. */
   readonly path: string;
-  readonly toolName: string;
+
+  /** The kind of the call — `file.edit` or `file.write`. */
+  readonly kind: string;
+
+  /** The call still waits for an answer: before is the disk now, after the disk with the change. */
+  readonly pending: boolean;
 
   /** `file` — hunks of the whole file; `edit` — of the strings the tool replaced. */
   readonly scope: 'file' | 'edit';
   readonly before: ChangeSide;
-  readonly after: ChangeSide;
+  readonly after: ToolDiffAfter;
   readonly hunks: readonly Hunk[];
 }
 

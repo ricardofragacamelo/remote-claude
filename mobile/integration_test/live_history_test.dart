@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:remote_claude/app/router_provider.dart';
 import 'package:remote_claude/core/config/app_config.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
 import 'package:remote_claude/features/session/presentation/widgets/fold_line.dart';
@@ -171,8 +172,11 @@ void main() {
   /// Plants the conversation in a folder of its own — made for the test inside the first root, and
   /// gone after it — and opens it in the reader, with what was already said on screen.
   ///
-  /// @returns the id of the conversation, and the folder it runs in
-  Future<(String, String)> readerOfOneWrittenElsewhere(WidgetTester tester, SignedInApp app) async {
+  /// @returns the conversation — kept by the default engine — and the folder it runs in
+  Future<(ConversationKey, String)> readerOfOneWrittenElsewhere(
+    WidgetTester tester,
+    SignedInApp app,
+  ) async {
     final String root = await app.browser.firstWorkspace();
     final String name = 'e2e-live-${DateTime.now().microsecondsSinceEpoch}';
     final String folder = await app.browser.makeFolder(root, name);
@@ -186,9 +190,13 @@ void main() {
       title: planted['title']! as String,
     );
 
-    app.container.read(routerProvider).go(conversationRouteFor(conversationId, folder));
+    final ConversationKey conversation = ConversationKey(
+      engine: await app.browser.defaultEngine(),
+      id: conversationId,
+    );
+    app.container.read(routerProvider).go(conversationRouteFor(conversation, folder));
     await seen(tester, inConversation(find.textContaining(planted['answer']! as String)));
-    return (conversationId, folder);
+    return (conversation, folder);
   }
 
   testWidgets(
@@ -198,7 +206,8 @@ void main() {
     (WidgetTester tester) async {
       final SignedInApp app = await anApprovedApp(tester, config, live);
       final AppLocalizations l10n = app.l10n;
-      final (String conversationId, _) = await readerOfOneWrittenElsewhere(tester, app);
+      final (ConversationKey conversation, _) = await readerOfOneWrittenElsewhere(tester, app);
+      final String conversationId = conversation.id;
       final State<ConversationHistoryPage> reader = tester.state(
         find.byType(ConversationHistoryPage),
       );
@@ -284,7 +293,10 @@ void main() {
     (WidgetTester tester) async {
       final SignedInApp app = await anApprovedApp(tester, config, live);
       final AppLocalizations l10n = app.l10n;
-      final (String conversationId, String folder) = await readerOfOneWrittenElsewhere(tester, app);
+      final (ConversationKey conversation, String folder) = await readerOfOneWrittenElsewhere(
+        tester,
+        app,
+      );
       expect(onReader(find.text(text(l10n, 'activeElsewhere'))), findsOneWidget);
 
       await tapOnScreen(tester, onReader(find.text(text(l10n, 'resume'))));
@@ -295,7 +307,7 @@ void main() {
       await seen(tester, dialog, present: false);
 
       // Nothing left: no command pending, no session continuing it, and the reader still open.
-      expect(app.container.read(resumeControllerProvider(conversationId)), const ResumeState());
+      expect(app.container.read(resumeControllerProvider(conversation)), const ResumeState());
       expect(await app.browser.liveSessions(folder), isEmpty);
       expect(find.byType(ConversationHistoryPage), findsOneWidget);
     },

@@ -4,6 +4,7 @@ import { useStore } from 'zustand';
 import { wsClient } from '@/shared/api/ws';
 import type { ConnectionStatus } from '@/shared/api/ws-client';
 import { useConnectionStatus } from '@/shared/hooks/useConnectionStatus';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { sessionCostOf } from '../services/conversation-reducer';
 import { closeSession } from '../services/live-session.service';
 import { liveSessionStoreOf } from '../store/live-session.store';
@@ -24,8 +25,8 @@ export interface SessionHeaderState {
   readonly isOwner: boolean;
   readonly ended: boolean;
 
-  /** The conversation of Claude it is, once known — what exporting reads. */
-  readonly conversationId: string | null;
+  /** The conversation it is, once known — what exporting reads, and what "copy id" copies. */
+  readonly conversation: ConversationRef | null;
 
   /** Ends the session — once, however often it is asked (plan 09, S-39). */
   close(): void;
@@ -42,7 +43,7 @@ export function useSessionHeader(sessionId: string): SessionHeaderState {
   const status = useStore(store, (state) => state.status);
   const turns = useStore(store, (state) => state.turns);
   const ended = useStore(store, (state) => state.ending !== null);
-  const conversationId = useStore(store, (state) => state.conversationId);
+  const conversation = useStore(store, (state) => state.conversation);
   const isOwner = useOwnedSessionsStore((state) => state.owned.includes(sessionId));
   const connection = useConnectionStatus();
   const closed = useRef(false);
@@ -55,7 +56,7 @@ export function useSessionHeader(sessionId: string): SessionHeaderState {
     turns: turns.length,
     isOwner,
     ended,
-    conversationId,
+    conversation,
     close: useCallback(() => {
       if (!closed.current) {
         closed.current = closeSession(wsClient, sessionId);

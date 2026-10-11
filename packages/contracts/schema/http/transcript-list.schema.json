@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/transcript-list.json",
+  "title": "TranscriptList",
+  "description": "What `GET /transcripts?workspacePath=…` answers: a page of the conversations of a folder, of every engine enabled, newest first (plan 28, B-12).",
+  "x-kind": "http",
+  "x-type": "transcripts.list",
+  "type": "object",
+  "required": ["sessions", "nextCursor"],
+  "properties": {
+    "sessions": {
+      "type": "array",
+      "items": {
+        "$ref": "../definitions/listed-transcript.schema.json"
+      },
+      "description": "The conversations of the page."
+    },
+    "nextCursor": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Opaque: sent back as `cursor` for the next page. `null` on the last one."
+    }
+  }
+}

@@ -6,16 +6,31 @@
 /// would otherwise reach a screen as a raw dotted string.
 library;
 
+import 'package:flutter/widgets.dart';
 import 'package:remote_claude/core/error/failure.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/byte_size.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
+
+/// The translated message for [failure] in [context], with the engine it names said as the app
+/// knows it — what every widget calls.
+String failureText(BuildContext context, Failure failure) =>
+    translateFailure(AppLocalizations.of(context), failure, agents: AgentNamesScope.of(context));
 
 /// The translated message for a failure.
 ///
 /// An unmapped key falls back to the generic message rather than showing the key itself: a user
 /// looking at `session.error.notFound` learns nothing, and the `traceId` next to it is what makes
 /// the report actionable anyway.
-String translateFailure(AppLocalizations l10n, Failure failure) {
+///
+/// A refusal about the engine carries its id in `params.engine`; the sentence names it by the
+/// display name [agents] holds for it (plan 28, B-13) — the default engine's without one, and the
+/// word for any agent while no name is known (B-40).
+String translateFailure(
+  AppLocalizations l10n,
+  Failure failure, {
+  AgentNames agents = AgentNames.none,
+}) {
   switch (failure.messageKey) {
     case 'common.error.offline':
       return l10n.commonErrorOffline;
@@ -51,14 +66,13 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
       return l10n.sessionErrorInvalidSessionId(failure.params['sessionId'] ?? '');
     case 'session.error.limitReached':
       return l10n.sessionErrorLimitReached(failure.params['limit'] ?? '');
-    case 'session.error.claudeUnavailable':
-      return l10n.sessionErrorClaudeUnavailable;
-    case 'session.error.claudeTimeout':
-      return l10n.sessionErrorClaudeTimeout;
     case 'session.error.resumeTimeout':
       return l10n.sessionErrorResumeTimeout;
     case 'session.error.unknownCommand':
-      return l10n.sessionErrorUnknownCommand(failure.params['command'] ?? '');
+      return l10n.sessionErrorUnknownCommand(
+        agents.said(l10n, failure.params['engine']),
+        failure.params['command'] ?? '',
+      );
     case 'session.error.locked':
       return l10n.sessionErrorLocked;
     case 'session.error.queuedPromptStarted':
@@ -71,7 +85,7 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
         failure.params['level'] ?? '',
       );
     case 'session.error.forkRejected':
-      return l10n.sessionErrorForkRejected;
+      return l10n.sessionErrorForkRejected(agents.said(l10n, failure.params['engine']));
     case 'session.error.forkPointUnknown':
       return l10n.sessionErrorForkPointUnknown;
     case 'session.error.rewindTargetUnknown':
@@ -82,10 +96,6 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
       return l10n.transcriptErrorNotFound;
     case 'transcript.error.invalidSessionId':
       return l10n.transcriptErrorInvalidSessionId(failure.params['sessionId'] ?? '');
-    case 'transcript.error.claudeUnavailable':
-      return l10n.transcriptErrorClaudeUnavailable;
-    case 'transcript.error.claudeTimeout':
-      return l10n.transcriptErrorClaudeTimeout;
     case 'transcript.error.cursorStale':
       return l10n.transcriptErrorCursorStale;
     case 'permission.error.requestNotFound':
@@ -99,17 +109,33 @@ String translateFailure(AppLocalizations l10n, Failure failure) {
     case 'permission.error.answersInvalid':
       return l10n.permissionErrorAnswersInvalid;
     default:
-      return _groupedMessage(l10n, failure);
+      return _groupedMessage(l10n, failure, agents);
   }
 }
 
-/// The words of a refusal that a group of its own translates — the folder's, the history's — or the
-/// generic one when no group knows the key.
-String _groupedMessage(AppLocalizations l10n, Failure failure) =>
+/// The words of a refusal that a group of its own translates — the folder's, the history's, the
+/// engine's — or the generic one when no group knows the key.
+String _groupedMessage(AppLocalizations l10n, Failure failure, AgentNames agents) =>
+    _agentMessage(l10n, failure, agents) ??
     _workspaceMessage(l10n, failure) ??
     _followMessage(l10n, failure) ??
     _filesMessage(l10n, failure) ??
     l10n.commonErrorUnexpected;
+
+/// The words of a refusal about the engine itself — it did not answer, or cannot do what was asked —,
+/// or `null` when [failure] is not one. The engine is named by `params.engine` (plan 28, B-13).
+String? _agentMessage(AppLocalizations l10n, Failure failure, AgentNames agents) {
+  final String agent = agents.nameOf(failure.params['engine']);
+
+  return switch (failure.messageKey) {
+    'session.error.agentUnavailable' => l10n.sessionErrorAgentUnavailable(agent),
+    'session.error.agentTimeout' => l10n.sessionErrorAgentTimeout(agent),
+    'transcript.error.agentUnavailable' => l10n.transcriptErrorAgentUnavailable(agent),
+    'transcript.error.agentTimeout' => l10n.transcriptErrorAgentTimeout(agent),
+    'engine.error.capabilityUnavailable' => l10n.engineErrorCapabilityUnavailable(agent),
+    _ => null,
+  };
+}
 
 /// The words of a refusal about a folder, or `null` when [failure] is not one — apart, so the switch
 /// above stays readable as the folder screens add theirs (plan 10, F7).

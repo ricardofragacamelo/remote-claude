@@ -15,10 +15,11 @@ import { useTranslation } from 'react-i18next';
 import { formatBytes } from '@/features/editor';
 import { AnsweredQuestions, PermissionOutcomeLine } from '@/features/permission';
 import { Button } from '@/shared/components/ui/button';
+import { changesFileText, commandOf } from '@/shared/lib/tool-call';
+import { toolLine } from '@/shared/lib/tool-label';
+import type { ToolLine as ToolLineText } from '@/shared/lib/tool-label';
 import { useToolResult } from '../../hooks/useToolResult';
 import type { ToolOutput, ToolResult } from '../../hooks/useToolResult';
-import { opensSubagent, questionLabel, toolLabel } from '../../lib/tool-labels';
-import type { ToolLabel } from '../../lib/tool-labels';
 import type { ToolExecution, ToolStatus } from '../../types/live-session';
 import { AnsiText } from './AnsiText';
 import { ScrollingPre } from './ScrollingPre';
@@ -28,9 +29,6 @@ import { ToolDiffView } from './ToolDiffView';
 import { questionOf } from './question-of';
 import type { QuestionView } from './question-of';
 
-/** The tools whose change the chat shows as a diff (plan 08, B-27). */
-const DIFFABLE = new Set(['Edit', 'MultiEdit', 'Write']);
-
 /** The icon of each state of a tool — beside its words, never instead of them (S-75). */
 const STATUS_ICON: Readonly<Record<ToolStatus, LucideIcon>> = {
   running: LoaderCircle,
@@ -39,7 +37,7 @@ const STATUS_ICON: Readonly<Record<ToolStatus, LucideIcon>> = {
   denied: CircleSlash,
 };
 
-/** How long a tool has run, while it runs and the SDK said — `null` otherwise. */
+/** How long a tool has run, while it runs and the engine said — `null` otherwise. */
 function runningFor(tool: ToolExecution): string | null {
   return tool.status === 'running' ? tool.elapsed : null;
 }
@@ -53,24 +51,14 @@ function hasResult(tool: ToolExecution): boolean {
   return (tool.status === 'succeeded' || tool.status === 'failed') && tool.parentToolUseId === null;
 }
 
-/** The command of a shell call, when its input has one. */
-function commandOf(tool: ToolExecution): string | null {
-  const command = tool.input['command'];
-  return tool.toolName === 'Bash' && typeof command === 'string' ? command : null;
-}
-
 /**
  * The accessible name of the line: what it says, its state — and, under a title, the line it would
  * have without it, so the command is still read whole (plan 08, S-74; plan 22, B-29).
  */
-function accessibleName(label: ToolLabel, text: string, status: string, t: TFunction): string {
-  return label.detail === undefined
-    ? t('sessions.toolRow.label', { tool: text, status })
-    : t('sessions.toolRow.labelTitled', {
-        tool: text,
-        detail: t(label.detail.key, label.detail.params),
-        status,
-      });
+function accessibleName(line: ToolLineText, status: string, t: TFunction): string {
+  return line.detail === null
+    ? t('sessions.toolRow.label', { tool: line.text, status })
+    : t('sessions.toolRow.labelTitled', { tool: line.text, detail: line.detail, status });
 }
 
 export interface ToolRowProps {
@@ -79,10 +67,11 @@ export interface ToolRowProps {
 }
 
 /**
- * One tool, as **one line** — "Read src/x.ts", "Bash: pnpm test" — with its state by icon and by
- * word, the way the editor's extension shows it (plan 08, B-17). The line may cut what does not fit,
- * but the whole command is in its accessible name, and unfolding it shows the **exact** input,
- * never truncated (S-74). A subagent's tool unfolds into what the subagent said (B-21).
+ * One tool, as **one line** — "Read src/x.ts", "Shell: pnpm test" — with its state by icon and by
+ * word, the way the editor's extension shows it (plan 08, B-17). The line is the label the server
+ * built, translated (plan 28, B-18); it may cut what does not fit, but the whole command is in its
+ * accessible name, and unfolding it shows the **exact** input, never truncated (S-74). A subagent's
+ * tool unfolds into what the subagent said (B-21).
  *
  * A permission is never drawn like this: while it asks, the card stands in the place of this line,
  * whole (S-76, plan 09, B-23); once settled, the line comes back with the decision in words under it.
@@ -90,8 +79,9 @@ export interface ToolRowProps {
 export function ToolRow({ tool, context }: ToolRowProps): React.JSX.Element {
   const { t } = useTranslation();
   const outcome = context.inline?.requests.settledByTool.get(tool.toolUseId);
-  // A question of Claude is its questions and what was answered, open, in the place of the generic
-  // input and output — and its decision is the answers, not "allowed by you" (plan 24, B-15).
+  // A question of the agent is its questions and what was answered, open, in the place of the
+  // generic input and output — and its decision is the answers, not "allowed by you" (plan 24,
+  // B-15).
   const question = questionOf(tool, outcome);
   // The decision in words, under the line — a question says it with its answers instead.
   const decision = question === null ? outcome : undefined;
@@ -99,11 +89,11 @@ export function ToolRow({ tool, context }: ToolRowProps): React.JSX.Element {
   // end arrives — until the person folds or unfolds it.
   const [toggled, setToggled] = useState<boolean | null>(null);
   const open = toggled ?? question !== null;
-  const { text, name, status } = lineOf(tool, question, context, t);
+  const { text, name, status } = lineOf(tool, question, t);
   // Here, and not in the details: the answer lives as long as the row, so folding it and unfolding
   // it again asks for nothing (S-113).
   const result = useToolResult(
-    context.conversationId,
+    context.reference,
     tool.toolUseId,
     open && question === null && hasResult(tool),
   );
@@ -127,30 +117,32 @@ export function ToolRow({ tool, context }: ToolRowProps): React.JSX.Element {
   );
 }
 
-/** The diff of a tool that changed a file and succeeded, under its line (plan 08, B-27). */
+/**
+ * The diff of a call that changed a file and succeeded, under its line (plan 08, B-27) — by the files
+ * it changes, never by the name of the tool (plan 28, B-18).
+ */
 function DiffOf({ tool, context }: ToolRowProps): React.JSX.Element | null {
-  return DIFFABLE.has(tool.toolName) &&
+  return changesFileText(tool.changes) &&
     tool.status === 'succeeded' &&
     context.sessionId !== null ? (
-    <ToolDiffView tool={tool} sessionId={context.sessionId} folder={context.folder} />
+    <ToolDiffView
+      toolUseId={tool.toolUseId}
+      sessionId={context.sessionId}
+      folder={context.folder}
+    />
   ) : null;
 }
 
-/** What the line says, its state, and its accessible name — a question's from its questions. */
+/** What the line says, its state, and its accessible name. */
 function lineOf(
   tool: ToolExecution,
   question: QuestionView | null,
-  context: TimelineContext,
   t: TFunction,
 ): { readonly text: string; readonly name: string; readonly status: string } {
-  const label =
-    question === null
-      ? toolLabel(tool, context.folder, context.taskList.absorbed)
-      : questionLabel(question.interaction.questions);
-  const text = t(label.key, label.params);
+  const line = toolLine(tool, t);
   const status = stateOf(tool, question, t);
 
-  return { text, status, name: accessibleName(label, text, status, t) };
+  return { text: line.text, status, name: accessibleName(line, status, t) };
 }
 
 /** The row opened: the questions answered, or the input and what the tool said. */
@@ -177,7 +169,7 @@ function ToolBody({
  * not what a question does.
  */
 function stateOf(tool: ToolExecution, question: QuestionView | null, t: TFunction): string {
-  return tool.toolName === 'AskUserQuestion' && tool.status === 'running' && question === null
+  return tool.kind === 'question' && tool.status === 'running' && question === null
     ? t('permission.question.pending')
     : t(`session.toolStatus.${tool.status}`);
 }
@@ -222,7 +214,7 @@ function ToolLine({
   );
 }
 
-/** One side of a shell call — what went in, what came out — under its tag, as the Claude Code does. */
+/** One side of a shell call — what went in, what came out — under its tag, as the agent does. */
 function Side({
   tag,
   label,
@@ -293,6 +285,20 @@ function ToolOutputView({
   );
 }
 
+/**
+ * The exact input of a call, whole, as JSON — the one view of it, whatever its kind: a kind this
+ * build does not know is drawn here too, never an error (plan 28, S-56).
+ */
+function ExactInput({ tool }: { readonly tool: ToolExecution }): React.JSX.Element {
+  const { t } = useTranslation();
+
+  return (
+    <ScrollingPre label={t('sessions.toolRow.input')}>
+      {JSON.stringify(tool.rawInput, null, 2)}
+    </ScrollingPre>
+  );
+}
+
 /** The exact input, how it ended, what it said, the way to the trail — and a subagent's own words. */
 function ToolDetails({
   tool,
@@ -300,7 +306,8 @@ function ToolDetails({
   result,
 }: ToolRowProps & { readonly result: ToolResult }): React.JSX.Element {
   const { t } = useTranslation();
-  const command = commandOf(tool);
+  // A call with a command line is drawn as it went in and what came out (plan 22, B-29).
+  const command = commandOf(tool.subject);
   const said =
     tool.status === 'denied' ? (
       <p className="text-ui-xs text-destructive">
@@ -314,9 +321,7 @@ function ToolDetails({
     <div className="ml-5 flex flex-col gap-2 border-l border-border pl-2">
       {command === null ? (
         <>
-          <ScrollingPre label={t('sessions.toolRow.input')}>
-            {JSON.stringify(tool.input, null, 2)}
-          </ScrollingPre>
+          <ExactInput tool={tool} />
           {said}
         </>
       ) : (
@@ -331,11 +336,13 @@ function ToolDetails({
           )}
         </>
       )}
-      {opensSubagent(tool.toolName) && <SubagentChildren tool={tool} context={context} />}
+      {tool.kind === 'agent' && <SubagentChildren tool={tool} context={context} />}
       {context.sessionId !== null && (
         <Link
           to="/audit"
-          search={{ sessionId: context.sessionId, toolName: tool.toolName }}
+          // The trail is still kept by the engine's own name of the tool (plan 28, F7): handed
+          // over as the filter, never read.
+          search={{ sessionId: context.sessionId, toolName: tool.origin.native }}
           className="self-start text-ui-xs underline underline-offset-4"
         >
           {t('sessions.toolRow.trail')}

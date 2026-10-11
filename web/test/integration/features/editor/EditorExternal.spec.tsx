@@ -40,7 +40,7 @@ async function opened(path: string): Promise<HTMLTextAreaElement> {
 }
 
 describe('when the disk changes under the editor — plan 07, B-35', () => {
-  it('reloads a clean tab Claude changed, keeping the cursor (S-238)', async () => {
+  it('reloads a clean tab the agent changed, keeping the cursor (S-238)', async () => {
     const disk = fakeDisk(FOLDER, { 'a.ts': 'line one\nline two' });
     renderEditor();
     const area = await opened('a.ts');
@@ -51,13 +51,15 @@ describe('when the disk changes under the editor — plan 07, B-35', () => {
       area.dispatchEvent(new Event('select'));
     });
     disk.write('a.ts', 'line ONE\nline two\nline three');
-    folder.changed([{ path: 'a.ts', kind: 'changed', origin: 'claude' }]);
+    folder.changed([{ path: 'a.ts', kind: 'changed', origin: 'agent', engine: 'claude' }]);
 
     await waitFor(() => {
       expect(area.value).toBe('line ONE\nline two\nline three');
     });
     expect(area.selectionStart).toBe(5);
-    expect(screen.queryByText(t('editor.external.claude', { path: 'a.ts' }))).toBeNull();
+    expect(
+      screen.queryByText(t('editor.external.agent', { path: 'a.ts', engine: 'claude' })),
+    ).toBeNull();
   });
 
   it('warns about a dirty tab without blocking — Compare, Reload, Keep — and loses nothing (S-239)', async () => {
@@ -69,9 +71,11 @@ describe('when the disk changes under the editor — plan 07, B-35', () => {
 
     typeInto(area, 'mine');
     disk.write('a.ts', 'claude');
-    folder.changed([{ path: 'a.ts', kind: 'changed', origin: 'claude' }]);
+    folder.changed([{ path: 'a.ts', kind: 'changed', origin: 'agent', engine: 'claude' }]);
 
-    const warning = await screen.findByText(t('editor.external.claude', { path: 'a.ts' }));
+    const warning = await screen.findByText(
+      t('editor.external.agent', { path: 'a.ts', engine: 'claude' }),
+    );
     expect(warning.closest('[role="status"]')).not.toBeNull();
     expect(area.value).toBe('mine');
 
@@ -81,13 +85,49 @@ describe('when the disk changes under the editor — plan 07, B-35', () => {
       within(stripOf()).getByRole('button', { name: `a.ts, ${t('editor.tab.dirty')}` }),
     );
     await user.click(await screen.findByRole('button', { name: t('editor.external.keep') }));
-    expect(screen.queryByText(t('editor.external.claude', { path: 'a.ts' }))).toBeNull();
+    expect(
+      screen.queryByText(t('editor.external.agent', { path: 'a.ts', engine: 'claude' })),
+    ).toBeNull();
 
     // Kept: the next save meets the conflict — never an overwrite in silence.
     pressSave(await editorOf('a.ts'));
     expect(
       await screen.findByRole('dialog', { name: t('editor.conflict.title', { name: 'a.ts' }) }),
     ).toBeVisible();
+  });
+
+  it('names the agent of the engine that wrote it — plan 28, S-73', async () => {
+    const disk = fakeDisk(FOLDER, { 'a.ts': 'one' });
+    renderEditor();
+    const area = await opened('a.ts');
+    const folder = await watched(socket);
+
+    typeInto(area, 'mine');
+    disk.write('a.ts', 'theirs');
+    folder.changed([{ path: 'a.ts', kind: 'changed', origin: 'agent', engine: 'other' }]);
+
+    expect(
+      await screen.findByText(t('editor.external.agent', { path: 'a.ts', engine: 'other' })),
+    ).toBeVisible();
+    expect(editorState().docs['a.ts']?.external).toEqual({ origin: 'agent', engine: 'other' });
+  });
+
+  it('still says the agent after two of its writes in a row — plan 28, S-75', async () => {
+    const disk = fakeDisk(FOLDER, { 'a.ts': 'one' });
+    renderEditor();
+    const area = await opened('a.ts');
+    const folder = await watched(socket);
+
+    typeInto(area, 'mine');
+    disk.write('a.ts', 'first');
+    folder.changed([{ path: 'a.ts', kind: 'changed', origin: 'agent', engine: 'claude' }]);
+    disk.write('a.ts', 'second');
+    folder.changed([{ path: 'a.ts', kind: 'changed', origin: 'agent', engine: 'claude' }]);
+
+    expect(
+      await screen.findByText(t('editor.external.agent', { path: 'a.ts', engine: 'claude' })),
+    ).toBeVisible();
+    expect(area.value).toBe('mine');
   });
 
   it('reloads from the warning when asked', async () => {
@@ -115,7 +155,7 @@ describe('when the disk changes under the editor — plan 07, B-35', () => {
     const folder = await watched(socket);
 
     disk.remove('a.ts');
-    folder.changed([{ path: 'a.ts', kind: 'deleted', origin: 'claude' }]);
+    folder.changed([{ path: 'a.ts', kind: 'deleted', origin: 'agent', engine: 'claude' }]);
     expect(await screen.findByText(t('editor.deleted.notice', { path: 'a.ts' }))).toBeVisible();
     expect(
       within(stripOf()).getByRole('button', { name: `a.ts, ${t('editor.tab.deleted')}` }),

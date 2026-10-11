@@ -9,7 +9,7 @@ import {
 } from '@application/permission';
 import { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { scriptedSdk } from '../../../../fakes/agent-sdk/scripted-query';
@@ -20,6 +20,7 @@ import type { IdentityServer } from '../../../../support/identity/identity-serve
 import { startTestApp, SUBJECT, writeTestAllowlist } from '../../../../support/app/test-app';
 import type { TestApp } from '../../../../support/app/test-app';
 import { commandFrame, TestSocket } from '../../../../support/app/ws-client';
+import { claudeTool } from '../../../../support/builders/tool.builder';
 
 /**
  * The reach of a rule left by an answer, over the real socket and the real tables — plan 23, F2.
@@ -36,6 +37,7 @@ describe('the reach of an answer', () => {
   let root: string;
   const open: TestSocket[] = [];
   const started: { socket: TestSocket; sessionId: string }[] = [];
+  let scripted: ReturnType<typeof scriptedSdk>;
 
   beforeAll(async () => {
     database = await startPostgres();
@@ -45,7 +47,7 @@ describe('the reach of an answer', () => {
     const allowlist = writeTestAllowlist([SUBJECT]);
     root = allowlist.root;
 
-    const scripted = scriptedSdk({ fixture: 'tool-turn' });
+    scripted = scriptedSdk({ fixture: 'tool-turn' });
 
     harness = await startTestApp(
       database.url,
@@ -135,12 +137,37 @@ describe('the reach of an answer', () => {
 
     const reaches = request.payload?.['reaches'] as { reach: string; patterns: string[] }[];
     expect(reaches.map((reach) => reach.reach)).toEqual(['exact', 'tool']);
-    expect(reaches[1]?.patterns).toEqual(['Write']);
+    expect(reaches[1]?.patterns).toEqual(['file.write']);
     expect(
       (request.payload?.['suggestions'] as { scope: string }[]).map(
         (suggestion) => suggestion.scope,
       ),
     ).toEqual(['once', 'session', 'project', 'always']);
+  });
+
+  it('sends no rule to the engine, and reads none of its suggestions — S-132', async () => {
+    const socket = await connect();
+    const { request } = await asked(socket);
+    const requestId = String(request.payload?.['requestId']);
+
+    expect(JSON.stringify(request.payload)).not.toContain('native-suggestion');
+    expect(
+      (request.payload?.['suggestions'] as { pattern?: string }[]).flatMap((suggestion) =>
+        suggestion.pattern === undefined ? [] : [suggestion.pattern],
+      ),
+    ).toEqual([expect.stringMatching(/^file\.write\(/), expect.stringMatching(/^file\.write\(/)]);
+
+    socket.send(
+      commandFrame('permission.resolve', { requestId, decision: 'allow', scope: 'always' }),
+    );
+    await until(socket, 'turn.completed');
+
+    const verdict = scripted.record.verdicts.find((each) => each.requestId === requestId);
+    expect(verdict?.result).toMatchObject({ behavior: 'allow' });
+    expect(verdict?.result).not.toHaveProperty('updatedPermissions');
+    expect((await rules()).map((rule) => rule.pattern)).toEqual([
+      expect.stringMatching(/^file\.write\(/),
+    ]);
   });
 
   it('remembers the whole tool for the session, and the next turn is not asked — S-58', async () => {
@@ -220,7 +247,7 @@ describe('the reach of an answer', () => {
     await until(socket, 'turn.completed');
 
     expect((await rules()).map((rule) => rule.pattern)).toEqual([
-      expect.stringMatching(/^Write\(.+\)$/),
+      expect.stringMatching(/^file\.write\(.+\)$/),
     ]);
   });
 
@@ -251,7 +278,7 @@ describe('the reach of an answer', () => {
     await until(first, 'turn.completed');
     await until(second, 'turn.completed');
 
-    expect(await rules()).toEqual([{ pattern: 'Write', scope: 'always', decision: 'allow' }]);
+    expect(await rules()).toEqual([{ pattern: 'file.write', scope: 'always', decision: 'allow' }]);
   });
 
   describe('a shell line, through the use cases', () => {
@@ -268,10 +295,11 @@ describe('the reach of an answer', () => {
         sessionId: session,
         userId: owner,
         projectPath: root,
-        permissionMode: 'default',
+        permissionMode: 'ask',
         toolUseId: `toolu-${requestId}`,
         toolName: 'Bash',
         input: { command },
+        tool: claudeTool('Bash', { command }, root),
       });
 
     const answer = (requestId: string) =>
@@ -291,8 +319,8 @@ describe('the reach of an answer', () => {
       await answer('reach-1');
 
       expect(await rules()).toEqual([
-        { pattern: 'Bash(git push:*)', scope: 'project', decision: 'allow' },
-        { pattern: 'Bash(tail:*)', scope: 'project', decision: 'allow' },
+        { pattern: 'shell(git push:*)', scope: 'project', decision: 'allow' },
+        { pattern: 'shell(tail:*)', scope: 'project', decision: 'allow' },
       ]);
 
       const next = await ask('reach-2', 'git push origin main 2>&1 | tail -20');
@@ -306,9 +334,9 @@ describe('the reach of an answer', () => {
       await answer('reach-4');
 
       expect((await rules()).map((rule) => rule.pattern)).toEqual([
-        'Bash(git push:*)',
-        'Bash(tail:*)',
-        'Bash(echo done:*)',
+        'shell(git push:*)',
+        'shell(tail:*)',
+        'shell(echo done:*)',
       ]);
     });
   });

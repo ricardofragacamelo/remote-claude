@@ -113,7 +113,7 @@ void main() {
     final (_, Map<String, Object?> resolved) = await answeredBy(tester, (SignedInApp app) async {
       await tapLabel(tester, app.l10n.permissionQuestionDecline);
       await tester.enterText(
-        fieldLabelled(app.l10n.permissionQuestionDeclineReason),
+        fieldLabelled(app.l10n.permissionQuestionDeclineReason(app.robot(tester).agent)),
         questions.text('reason'),
       );
       await tester.pump(const Duration(milliseconds: 300));

@@ -13,7 +13,7 @@ import { showView } from '@/features/editor/hooks/views';
 import { createPlainEngine } from '@/features/editor/lib/plain-engine';
 import { editorStoreOf, isDirty } from '@/features/editor/store/editor.store';
 import { useEditorUi } from '@/features/editor/store/ui.store';
-import { claudeContextTargets } from '@/shared/lib/files-drag';
+import { agentContextTargets } from '@/shared/lib/files-drag';
 import { FOLDER, editorState, openedModel } from '../../../../support/editor';
 import { fakeDisk } from '../../../../support/editor-disk';
 import { providers } from '../../../../support/render';
@@ -88,7 +88,7 @@ describe('the commands of the editor — plan 07, S-265', () => {
       'editor.find',
       'editor.undo',
       'editor.changeEol',
-      'editor.addToClaude',
+      'editor.addToAgent',
       'editor.revealInExplorer',
       'editor.openRecentFile',
     ]) {
@@ -104,7 +104,7 @@ describe('the commands of the editor — plan 07, S-265', () => {
       'editor.closeTab',
       'editor.closeOthers',
       'editor.openToSide',
-      'editor.addToClaude',
+      'editor.addToAgent',
       'editor.changeEol',
     ]) {
       await run(id);
@@ -227,10 +227,10 @@ describe('the commands of the editor — plan 07, S-265', () => {
     const add = vi.fn();
     const reveal = vi.fn();
 
-    expect(available('editor.addToClaude')).toBe(false);
-    stops.push(claudeContextTargets.register({ id: 'chat', position: 1, add }));
-    expect(available('editor.addToClaude')).toBe(true);
-    await run('editor.addToClaude');
+    expect(available('editor.addToAgent')).toBe(false);
+    stops.push(agentContextTargets.register({ id: 'chat', position: 1, add }));
+    expect(available('editor.addToAgent')).toBe(true);
+    await run('editor.addToAgent');
     expect(add).toHaveBeenCalledWith({ folder: FOLDER, entries: [{ path: 'a.ts', kind: 'file' }] });
 
     const explorer = renderHook(

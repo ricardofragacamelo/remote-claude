@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/app/router_provider.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
 import 'package:remote_claude/features/session/session.dart';
@@ -111,10 +112,13 @@ class SessionRobot {
   Finder get cardInConversation =>
       find.descendant(of: find.byType(ConversationView), matching: find.byType(PermissionPanel));
 
+  /// How the app names the engine — the `{agent}` of its texts, read where the app put it.
+  String get agent => agentNameIn(tester.element(find.byType(Navigator).first));
+
   /// The pill over the box, while a question is out of view (plan 10, B-22) — the chip that says
-  /// Claude waits, whatever the count.
+  /// the agent waits, whatever the count.
   Finder get pill => find.ancestor(
-    of: find.textContaining(l10n.sessionPendingPill('').split('(').first.trim()),
+    of: find.textContaining(l10n.sessionPendingPill(agent, '').split('(').first.trim()),
     matching: find.byType(ActionChip),
   );
 

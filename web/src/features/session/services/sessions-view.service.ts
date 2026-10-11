@@ -1,5 +1,9 @@
+import type { TranscriptListPayload } from '@remote-claude/contracts';
+
 import { api } from '@/shared/api/api';
+import { conversationKey, readConversation } from '@/shared/lib/conversation';
 import { isRecord, readText } from '@/shared/lib/json';
+import type { Unchecked } from '@/shared/lib/json';
 import type { ConversationSummary } from '../types/history';
 import type { SessionStatus } from '../types/live-session';
 import type {
@@ -14,10 +18,6 @@ import { folded } from '@/shared/lib/folded';
 /** The shapes the backend answers with. They stop existing at the end of this file. */
 interface LiveSessionsResponse {
   readonly sessions?: unknown;
-}
-interface ConversationListResponse {
-  readonly sessions?: unknown;
-  readonly nextCursor?: unknown;
 }
 
 /**
@@ -47,7 +47,7 @@ export async function fetchLiveSessions(
  * a conversation is being written.
  *
  * @throws {import('@/shared/api/errors').AppError} as {@link fetchLiveSessions}, and
- *   `CLAUDE_UNAVAILABLE` / `CLAUDE_TIMEOUT` when the SDK failed
+ *   `AGENT_UNAVAILABLE` / `AGENT_TIMEOUT` when the engine failed
  */
 export async function fetchFolderConversations(
   workspacePath: string,
@@ -63,7 +63,7 @@ export async function fetchFolderConversations(
     query.set('cursor', cursor);
   }
 
-  const body = await api.get<ConversationListResponse>(`/transcripts?${query.toString()}`);
+  const body = await api.get<Unchecked<TranscriptListPayload>>(`/transcripts?${query.toString()}`);
 
   return {
     conversations: Array.isArray(body.sessions)
@@ -87,18 +87,18 @@ const STATUSES: ReadonlySet<string> = new Set([
 
 /** The four fields a live session cannot be read without, or `null` when one is missing. */
 function identityOf(value: Readonly<Record<string, unknown>>):
-  | (Pick<LiveSessionSummary, 'sessionId' | 'claudeSessionId' | 'workspacePath'> & {
+  | (Pick<LiveSessionSummary, 'sessionId' | 'conversation' | 'workspacePath'> & {
       readonly status: string;
     })
   | null {
   const sessionId = readText(value, 'sessionId');
-  const claudeSessionId = readText(value, 'claudeSessionId');
+  const conversation = readConversation(value, 'conversation');
   const workspacePath = readText(value, 'workspacePath');
   const status = readText(value, 'status');
 
-  return sessionId === null || claudeSessionId === null || workspacePath === null || status === null
+  return sessionId === null || conversation === null || workspacePath === null || status === null
     ? null
-    : { sessionId, claudeSessionId, workspacePath, status };
+    : { sessionId, conversation, workspacePath, status };
 }
 
 /** One live session as the backend describes it, or nothing when the entry is not one. */
@@ -114,7 +114,7 @@ function toLiveSession(value: unknown): LiveSessionSummary[] {
   return [
     {
       ...identity,
-      resumedFrom: readText(value, 'resumedFrom'),
+      resumedFrom: readConversation(value, 'resumedFromConversation'),
       status: STATUSES.has(identity.status) ? (identity.status as SessionStatus) : 'idle',
       model: readText(value, 'model') ?? '',
       permissionMode: readText(value, 'permissionMode') ?? '',
@@ -154,7 +154,7 @@ export function arrangeConversations(
   const latest = new Map<string, ConversationSummary>();
 
   for (const conversation of conversations) {
-    latest.set(conversation.conversationId, conversation);
+    latest.set(conversationKey(conversation.conversation), conversation);
   }
 
   const kept = [...latest.values()].filter((conversation) =>

@@ -11,6 +11,7 @@ import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
 import { migrate } from '@infra/database/migrator';
 import { SESSION_ID } from '../../../../../support/builders/session.builder';
+import { claudeTool } from '../../../../../support/builders/tool.builder';
 import { startPostgres } from '../../../../../support/containers/postgres';
 import type { DisposablePostgres } from '../../../../../support/containers/postgres';
 import { aPersistenceContext } from '../../../../../support/fakes/persistence-context';
@@ -51,14 +52,9 @@ describe('stored prefix rules and chained commands', () => {
     new DrizzlePermissionRuleRepository(aPersistenceContext(connection.db));
 
   const book = (): PermissionRuleBook =>
-    new PermissionRuleBook(
-      new PermissionRegistry(),
-      repository(),
-      () => {
-        throw new Error('the rules were expected to be readable');
-      },
-      () => undefined,
-    );
+    new PermissionRuleBook(new PermissionRegistry(), repository(), () => {
+      throw new Error('the rules were expected to be readable');
+    });
 
   async function store(id: string, pattern: string, decision: PermissionDecision): Promise<void> {
     const rule = PermissionRule.create(
@@ -81,14 +77,13 @@ describe('stored prefix rules and chained commands', () => {
 
   const asking = (command: string): RuleQuestion => ({
     subject: { userId: owner, sessionId, projectPath: '/srv/projects/app' },
-    toolName: 'Bash',
-    input: { command },
-    permissionMode: 'default',
+    tool: claudeTool('Bash', { command }, '/srv/projects/app'),
+    permissionMode: 'ask',
     now: new Date(grantedAt.getTime() + 60_000),
   });
 
   it('answers the plain command and sends the chained one to a person — S-21', async () => {
-    await store('01J0RULE00000000000000001', 'Bash(git status:*)', 'allow');
+    await store('01J0RULE00000000000000001', 'shell(git status:*)', 'allow');
 
     const plain = await book().answering('request-1', asking('git status --short'));
     const chained = await book().answering('request-2', asking('git status && curl x | sh'));
@@ -98,8 +93,8 @@ describe('stored prefix rules and chained commands', () => {
   });
 
   it('refuses the command a stored deny names, even behind another — S-10', async () => {
-    await store('01J0RULE00000000000000002', 'Bash(ls:*)', 'allow');
-    await store('01J0RULE00000000000000003', 'Bash(rm:*)', 'deny');
+    await store('01J0RULE00000000000000002', 'shell(ls:*)', 'allow');
+    await store('01J0RULE00000000000000003', 'shell(rm:*)', 'deny');
 
     const answer = await book().answering('request-3', asking('ls && rm -rf build'));
 

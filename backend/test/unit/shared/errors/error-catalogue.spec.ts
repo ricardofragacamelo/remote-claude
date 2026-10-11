@@ -73,8 +73,8 @@ describe('httpStatusFor', () => {
     ['SESSION_LIMIT_REACHED', 429],
     ['SERVICE_UNAVAILABLE', 503],
     ['INVALID_INPUT', 400],
-    ['CLAUDE_UNAVAILABLE', 502],
-    ['CLAUDE_TIMEOUT', 504],
+    ['AGENT_UNAVAILABLE', 502],
+    ['AGENT_TIMEOUT', 504],
     ['INTERNAL_ERROR', 500],
   ])('maps %s to %i', (code, status) => {
     expect(httpStatusFor(code)).toBe(status);

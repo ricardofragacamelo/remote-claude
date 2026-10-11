@@ -1,3 +1,4 @@
+import { AgentUnavailableError } from '@domain/engine';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -7,7 +8,7 @@ import {
 } from '@application/claude-config';
 import type { InstallationProbe, LiveInstallation } from '@application/claude-config';
 import { UserId } from '@domain/auth';
-import { ClaudeUnavailableError } from '@domain/session';
+
 import type { SessionInitialization } from '@domain/session';
 import { WorkspacePath } from '@domain/workspace';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
@@ -135,12 +136,12 @@ describe('ClaudeInstallationCatalog — plan 13, B-10', () => {
     let fail = true;
     const counted = probeOf(() =>
       fail
-        ? Promise.reject(new ClaudeUnavailableError('/srv/repo'))
+        ? Promise.reject(new AgentUnavailableError('claude', '/srv/repo'))
         : Promise.resolve({ cliVersion: null, initialization: init() }),
     );
     const catalog = catalogOf(counted.probe);
 
-    await expect(catalog.of(USER, folder())).rejects.toThrow(ClaudeUnavailableError);
+    await expect(catalog.of(USER, folder())).rejects.toThrow(AgentUnavailableError);
     fail = false;
     await catalog.of(USER, folder());
     await catalog.of(USER, folder());

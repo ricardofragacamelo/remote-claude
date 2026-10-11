@@ -1,5 +1,7 @@
 import { api } from '@/shared/api/api';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { isRecord } from '@/shared/lib/json';
+import { transcriptPath } from './history.service';
 
 /**
  * The whole output of a tool, as the transcript keeps it (plan 22, B-11) — or, above the server's
@@ -37,13 +39,6 @@ function toToolOutput(body: unknown): ToolOutput {
   };
 }
 
-/** The path of a conversation's content on the server — every id escaped. */
-function transcriptPath(conversationId: string, ...rest: readonly string[]): string {
-  return ['/transcripts', conversationId, ...rest]
-    .map((part, index) => (index === 0 ? part : encodeURIComponent(part)))
-    .join('/');
-}
-
 /**
  * The whole output of one tool of the main conversation, asked for when its row is unfolded (plan 22,
  * B-29): the timeline keeps only its end (`summary`, D-07). The content never reaches a log — the
@@ -53,12 +48,12 @@ function transcriptPath(conversationId: string, ...rest: readonly string[]): str
  *   of, or a conversation the caller does not read; `NETWORK_UNREACHABLE` when it did not arrive
  */
 export async function fetchToolResult(
-  conversationId: string,
+  conversation: ConversationRef,
   toolUseId: string,
   signal?: AbortSignal,
 ): Promise<ToolOutput> {
   const body = await api.get<unknown>(
-    transcriptPath(conversationId, 'tools', toolUseId, 'result'),
+    transcriptPath(conversation, 'tools', toolUseId, 'result'),
     signal === undefined ? {} : { signal },
   );
 
@@ -76,12 +71,12 @@ export async function fetchToolResult(
  *   no image of the conversation, or of one the caller does not read
  */
 export async function fetchPromptImage(
-  conversationId: string,
+  conversation: ConversationRef,
   blockId: string,
   signal?: AbortSignal,
 ): Promise<Blob> {
   const response = await api.bytes(
-    transcriptPath(conversationId, 'images', blockId),
+    transcriptPath(conversation, 'images', blockId),
     signal === undefined ? {} : { signal },
   );
 

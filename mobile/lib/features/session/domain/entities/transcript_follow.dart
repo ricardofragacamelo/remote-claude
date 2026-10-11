@@ -6,13 +6,14 @@
 library;
 
 import 'package:equatable/equatable.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
 /// What a conversation is doing now, by the rule of the listing.
 ///
-/// `activeElsewhere` is an estimate — something wrote to it a moment ago —, never a fact about which
-/// client has it open.
+/// `activeElsewhere` is an estimate — something wrote to it a moment ago —, never a fact about
+/// which client has it open.
 enum ConversationActivity {
   /// A live session of this backend holds it.
   liveHere,
@@ -26,7 +27,8 @@ enum ConversationActivity {
 
 /// Why a subscription ended without being asked to.
 enum FollowResetReason {
-  /// The entry the client had is no longer in the chain: a rewind, a compaction or a fork rebuilt it.
+  /// The entry the client had is no longer in the chain: a rewind, a compaction or a fork rebuilt
+  /// it.
   rewritten,
 
   /// The store no longer has the conversation.
@@ -45,7 +47,7 @@ final class FollowStarted extends FollowUpdate {
   const FollowStarted({
     required this.commandId,
     required this.followId,
-    required this.conversationId,
+    required this.conversation,
     this.activity,
   });
 
@@ -55,20 +57,20 @@ final class FollowStarted extends FollowUpdate {
   /// The subscription. Every frame of it carries this id.
   final String followId;
 
-  final String conversationId;
+  final ConversationKey conversation;
 
   /// What the conversation is doing now; `null` for a value this build does not know.
   final ConversationActivity? activity;
 
   @override
-  List<Object?> get props => <Object?>[commandId, followId, conversationId, activity];
+  List<Object?> get props => <Object?>[commandId, followId, conversation, activity];
 }
 
 /// What a followed conversation gained since the last frame of its subscription.
 final class FollowAppended extends FollowUpdate {
   const FollowAppended({
     required this.followId,
-    required this.conversationId,
+    required this.conversation,
     required this.seq,
     required this.working,
     this.events = const <SessionEvent>[],
@@ -77,13 +79,13 @@ final class FollowAppended extends FollowUpdate {
   });
 
   final String followId;
-  final String conversationId;
+  final ConversationKey conversation;
 
   /// The subscription's own numbering, from one. A hole in it is a frame lost.
   final int seq;
 
-  /// The new entries, oldest first, in the order of the SDK's chain. Empty when only [activity] or
-  /// [working] changed.
+  /// The new entries, oldest first, in the order of the engine's chain. Empty when only [activity]
+  /// or [working] changed.
   final List<SessionEvent> events;
 
   /// The last entry of the conversation now — what a later follow starts after.
@@ -92,14 +94,14 @@ final class FollowAppended extends FollowUpdate {
   /// What the conversation is doing now; `null` for a value this build does not know.
   final ConversationActivity? activity;
 
-  /// Whether Claude **seems** to be working on it in another client — an inference from the
+  /// Whether the agent **seems** to be working on it in another client — an inference from the
   /// transcript, which records no state of the turn (plan 22, D-12).
   final bool working;
 
   @override
   List<Object?> get props => <Object?>[
     followId,
-    conversationId,
+    conversation,
     seq,
     events,
     lastMessageId,
@@ -112,18 +114,18 @@ final class FollowAppended extends FollowUpdate {
 final class FollowReset extends FollowUpdate {
   const FollowReset({
     required this.followId,
-    required this.conversationId,
+    required this.conversation,
     required this.seq,
     required this.reason,
   });
 
   final String followId;
-  final String conversationId;
+  final ConversationKey conversation;
   final int seq;
   final FollowResetReason reason;
 
   @override
-  List<Object?> get props => <Object?>[followId, conversationId, seq, reason];
+  List<Object?> get props => <Object?>[followId, conversation, seq, reason];
 }
 
 /// The server refused a `transcript.follow` — or any other command; [commandId] says whose.

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CONTEXT_CATEGORIES,
   categoryIdOf,
+  contextCategory,
   EffortUnsupportedError,
   ForkPointUnknownError,
   forkPointOf,
@@ -14,7 +16,6 @@ const model = (overrides: Partial<InstallationModel> = {}): InstallationModel =>
   resolvedModel: 'claude-sonnet-5',
   displayName: 'Sonnet',
   description: 'Sonnet 5',
-  supportsEffort: true,
   supportedEffortLevels: ['low', 'high'],
   ...overrides,
 });
@@ -26,7 +27,6 @@ describe('what the installation says about itself — plan 08, F4', () => {
       model({
         value: 'haiku',
         resolvedModel: null,
-        supportsEffort: false,
         supportedEffortLevels: [],
       }),
     ];
@@ -69,5 +69,38 @@ describe('where an edit-and-resend forks from — D-19', () => {
   it('refuses a message that is not a prompt of the conversation — S-163', () => {
     expect(() => forkPointOf(chain, 'a1')).toThrow(ForkPointUnknownError);
     expect(() => forkPointOf(chain, 'nowhere')).toThrow(ForkPointUnknownError);
+  });
+});
+
+describe('a category of the context window — plan 28, B-24, S-71', () => {
+  it('names the six canonical categories', () => {
+    expect([...CONTEXT_CATEGORIES]).toEqual([
+      'system',
+      'tools',
+      'messages',
+      'memory',
+      'free',
+      'reserved',
+    ]);
+  });
+
+  it.each(CONTEXT_CATEGORIES)('gives the canonical %s its id and key, and keeps the name', (id) => {
+    expect(contextCategory('engineId', 'The engine words', 7, 'used', id)).toEqual({
+      id,
+      messageKey: `sessions.context.${id}`,
+      name: 'The engine words',
+      tokens: 7,
+      kind: 'used',
+    });
+  });
+
+  it('keeps the id and the words of a category that is not canonical, with no key', () => {
+    expect(contextCategory('skills', 'Skills', 0, 'deferred', null)).toEqual({
+      id: 'skills',
+      messageKey: null,
+      name: 'Skills',
+      tokens: 0,
+      kind: 'deferred',
+    });
   });
 });

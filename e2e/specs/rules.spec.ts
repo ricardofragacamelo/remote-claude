@@ -55,7 +55,7 @@ test('S-68 — the scope the question offers becomes the rule /rules lists, and 
     const offered = payload.suggestions.find((suggestion) => suggestion.scope === 'project');
     expect(offered).toMatchObject({
       labelKey: 'permission.scope.project',
-      pattern: expect.stringMatching(/^Write\(.+\)$/),
+      pattern: expect.stringMatching(/^file\.[a-z]+\(.+\)$/),
       lifetimeMs: expect.any(Number),
     });
     expect(payload.suggestions.map((suggestion) => suggestion.scope)).toEqual([

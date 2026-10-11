@@ -28,7 +28,7 @@ afterEach(() => {
 
 describe('the small hooks of the panel — plan 08, F3 and F4', () => {
   it('exports nothing before the conversation is known', () => {
-    const hook = renderHook(() => useExportConversation(null, FOLDER), { wrapper: providers() });
+    const hook = renderHook(() => useExportConversation(null), { wrapper: providers() });
 
     act(() => {
       hook.result.current.run({ outputs: false });

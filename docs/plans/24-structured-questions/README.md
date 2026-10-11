@@ -112,15 +112,15 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 
 | Requisito | Tarefas | Documento normativo | Cenários |
 |---|---|---|---|
-| As normas dizem o que é uma pergunta, como se responde e onde mora a exceção ao `x-required-when` | B-01 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) · [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) · [backend/04](../../architecture/backend/04-claude-integration.md) | S-01 |
+| As normas dizem o que é uma pergunta, como se responde e onde mora a exceção ao `x-required-when` | B-01 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) · [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) · [backend/04](../../architecture/backend/04a-claude.md) | S-01 |
 | O contrato carrega a `interaction`, as `answers` e os dois códigos novos, igual em TS e Dart | B-02 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md) | S-02, S-03 |
 | Os textos novos nas três pontas, presos pelo mapa | B-03 | [shared/02-i18n](../../architecture/shared/02-i18n.md) | S-04 |
-| As perguntas do SDK viram uma `interaction` nossa, truncada ou marcada como malformada | B-04 | [backend/04](../../architecture/backend/04-claude-integration.md) | S-05…S-12 |
+| As perguntas do SDK viram uma `interaction` nossa, truncada ou marcada como malformada | B-04 | [backend/04](../../architecture/backend/04a-claude.md) | S-05…S-12 |
 | Resposta inválida é recusada sem tocar o SDK | B-05 | [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-13…S-23 |
 | O pedido de pergunta: risco, sugestões, alcances, título e prazo próprios | B-06 | [05 §permissão](../../architecture/shared/05-websocket-protocol.md#o-fluxo-de-permissão) | S-24…S-28 |
-| Regra de allow não responde pergunta; a API e o card não criam uma | B-07 | [backend/04 §gramática](../../architecture/backend/04-claude-integration.md#a-regra-fala-a-gramática-do-claude-não-uma-nossa) | S-29…S-34 |
+| Regra de allow não responde pergunta; a API e o card não criam uma | B-07 | [backend/04 §gramática](../../architecture/backend/04a-claude.md#a-regra-fala-a-gramática-canônica-e-o-dialeto-do-claude-só-traduz-o-passado) | S-29…S-34 |
 | A resolução com respostas: validada, gravada, auditada, publicada, idempotente | B-08 | [05 §permissão](../../architecture/shared/05-websocket-protocol.md#o-fluxo-de-permissão) · [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-35…S-45 |
-| O Claude recebe as respostas no formato do SDK, e uma mensagem clara no vencimento | B-09 | [backend/04](../../architecture/backend/04-claude-integration.md) | S-46…S-51 |
+| O Claude recebe as respostas no formato do SDK, e uma mensagem clara no vencimento | B-09 | [backend/04](../../architecture/backend/04a-claude.md) | S-46…S-51 |
 | Push e `GET` de estado dizem que é pergunta, sem o texto dela | B-10 | [shared/08-authentication](../../architecture/shared/08-authentication.md) · [05](../../architecture/shared/05-websocket-protocol.md) | S-52…S-55 |
 | As fixtures mostram uma pergunta respondida, e o veredito é verificável | B-11, B-12 | [shared/06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-56…S-59 |
 | O web lê a pergunta e envia as respostas, com rascunho que sobrevive a reconexão | B-13 | [web/04-state-and-data](../../architecture/web/04-state-and-data.md) | S-60…S-63 |
@@ -131,7 +131,7 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | O app mostra o card de pergunta, inline e pela chegada do push | B-18 | [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-86…S-94 |
 | O app mostra a pergunta respondida na linha da tool | B-19 | [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-95, S-96 |
 | O app avisa "aguardando sua resposta" | B-20 | [mobile/04-ui](../../architecture/mobile/04-ui.md) | S-97 |
-| O histórico traz as respostas, casadas pelo `toolUseId` | B-21, B-22 | [backend/04](../../architecture/backend/04-claude-integration.md) | S-98…S-103 |
+| O histórico traz as respostas, casadas pelo `toolUseId` | B-21, B-22 | [backend/04](../../architecture/backend/04a-claude.md) | S-98…S-103 |
 | Tudo pela porta do usuário, nas duas pontas | B-23…B-25 | [06-testing-strategy](../../architecture/shared/06-testing-strategy.md#e2e--o-sistema-inteiro-pela-porta-do-usuário) | S-104…S-111 |
 
 Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).

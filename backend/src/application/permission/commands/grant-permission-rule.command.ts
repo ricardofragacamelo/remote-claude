@@ -5,8 +5,11 @@ import type { PermissionDecision, PersistedPermissionScope } from '@domain/permi
 export interface GrantPermissionRuleCommand {
   readonly userId: UserId;
 
-  /** In the grammar of the Claude Code settings. Validated by the domain, not here. */
+  /** In the canonical grammar — `shell(git status:*)`. Validated by the domain, not here. */
   readonly pattern: string;
+
+  /** The engine the rule is restricted to; absent or `null` for every engine with the kind. */
+  readonly engine?: string | null;
 
   readonly decision: PermissionDecision;
   readonly scope: PersistedPermissionScope;

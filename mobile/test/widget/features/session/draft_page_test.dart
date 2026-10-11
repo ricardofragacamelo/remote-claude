@@ -20,7 +20,9 @@ import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
+import '../../../support/builders/conversations.dart';
 import '../../../support/builders/frames.dart';
+import '../../../support/fakes/fake_engine_repository.dart';
 import '../../../support/fakes/fake_insight_repository.dart';
 import '../../../support/fakes/fake_session_repository.dart';
 import '../../../support/fakes/stub_device_controller.dart';
@@ -43,6 +45,7 @@ void main() {
     ConnectionStatus connection = ConnectionStatus.ready,
     double width = 900,
     bool fromTheFolders = false,
+    EngineCapabilities capabilities = someCapabilities,
   }) async {
     tester.view.physicalSize = Size(width, 900);
     tester.view.devicePixelRatio = 1;
@@ -76,6 +79,20 @@ void main() {
       initialLocation: fromTheFolders ? '/' : draftRouteFor(folder),
       overrides: <Override>[
         sessionRepositoryProvider.overrideWithValue(sessions),
+        engineRepositoryProvider.overrideWithValue(
+          FakeEngineRepository()
+            ..catalogue = EngineCatalogue(
+              defaultEngine: anEngine,
+              engines: <Engine>[
+                Engine(
+                  id: anEngine,
+                  displayName: anEngineName,
+                  isAvailable: true,
+                  capabilities: capabilities,
+                ),
+              ],
+            ),
+        ),
         insightRepositoryProvider.overrideWithValue(insight as InsightRepository),
         deviceControllerAnswering(AsyncValue<RegisteredDevice?>.data(aRegisteredDevice())),
         pushControllerAnswering(AsyncValue<PushReach>.data(aReach())),
@@ -113,14 +130,14 @@ void main() {
   ) async {
     await pumpDraft(tester);
 
-    expect(find.text(l10n.draftDescription), findsOneWidget);
+    expect(find.text(l10n.draftDescription(l10n.engineNameFallback)), findsOneWidget);
     expect(find.text(l10n.draftCommands), findsOneWidget);
     expect(find.text(folder), findsOneWidget);
     expect(insight.asked, <String>['catalog:$folder']);
     expect(sessions.commands, isEmpty);
     // The installation's default until something is chosen.
     expect(find.text(l10n.modelDefault), findsOneWidget);
-    expect(find.text(l10n.modeDefault), findsOneWidget);
+    expect(find.text(l10n.modeAsk), findsOneWidget);
   });
 
   testWidgets('S-19 · S-116 · the first send opens the session with the choices, and moves there', (
@@ -136,9 +153,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10n.effortHigh));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.modeDefault));
+    await tester.tap(find.text(l10n.modeAsk));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.modePlan));
+    await tester.tap(find.text(l10n.modeReadOnly));
     await tester.pumpAndSettle();
 
     await send(tester, 'fix the build');
@@ -146,7 +163,7 @@ void main() {
     expect(sessions.commands.single.$2, <String, Object?>{
       'workspacePath': folder,
       'model': 'opus',
-      'permissionMode': 'plan',
+      'permissionMode': 'readOnly',
       'effort': 'high',
     });
     // The text stays while the session opens, and the box says what it waits for.
@@ -161,6 +178,84 @@ void main() {
       'text': 'fix the build',
     });
     expect(find.text('opened session-7'), findsOneWidget);
+  });
+
+  group('plan 28, B-27, B-28 · what the default engine announces', () {
+    EngineCapabilities announcing({
+      List<String> modes = const <String>['ask', 'readOnly'],
+      List<String> levels = const <String>['high'],
+    }) => EngineCapabilities(
+      resume: true,
+      fork: 'atMessage',
+      history: true,
+      images: true,
+      promptWhileBusy: true,
+      questions: true,
+      planApproval: true,
+      taskList: true,
+      subagents: true,
+      thinking: true,
+      slashCommands: true,
+      modelSwitch: true,
+      effortLevels: levels,
+      contextUse: true,
+      mcp: true,
+      compaction: true,
+      cost: 'usd',
+      permissionModes: modes,
+    );
+
+    testWidgets('S-81 · the draft offers only the modes the default engine announced', (
+      WidgetTester tester,
+    ) async {
+      await pumpDraft(tester, capabilities: announcing());
+
+      await tester.tap(find.text(l10n.modeAsk));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.modeReadOnly), findsOneWidget);
+      expect(find.text(l10n.modeAcceptEdits), findsNothing);
+      expect(find.text(l10n.modeAllowAll), findsNothing);
+    });
+
+    testWidgets('S-81 · an engine with one mode leaves nothing to choose: no mode chip', (
+      WidgetTester tester,
+    ) async {
+      await pumpDraft(tester, capabilities: announcing(modes: const <String>['ask']));
+
+      expect(find.text(l10n.modeLabel), findsNothing);
+      expect(find.text(l10n.modeAsk), findsNothing);
+      expect(find.text(l10n.modelDefault), findsOneWidget);
+    });
+
+    testWidgets('S-83 · an engine that announces no level has no effort chip, whatever the model', (
+      WidgetTester tester,
+    ) async {
+      await pumpDraft(tester, capabilities: announcing(levels: const <String>[]));
+
+      await tester.tap(find.text(l10n.modelDefault));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Opus'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.effortDefault), findsNothing);
+    });
+
+    testWidgets('S-83 · the levels offered are the ones the engine announced', (
+      WidgetTester tester,
+    ) async {
+      await pumpDraft(tester, capabilities: announcing());
+
+      await tester.tap(find.text(l10n.modelDefault));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Opus'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.effortDefault));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.effortHigh), findsOneWidget);
+      expect(find.text(l10n.effortLow), findsNothing);
+    });
   });
 
   testWidgets('S-20 · two taps on send open one session', (WidgetTester tester) async {

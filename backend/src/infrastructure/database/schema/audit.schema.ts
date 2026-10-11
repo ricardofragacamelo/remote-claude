@@ -1,5 +1,5 @@
 import { boolean, check, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 
 import { invocationColumns, keysetIndexes, trailColumns } from './columns';
 
@@ -54,6 +54,12 @@ export const auditEntries = pgTable(
     ...keysetIndexes('audit_entries', table, { name: 'session_id', column: table.sessionId }),
     // The retention purge takes the oldest rows before its cutoff, one batch at a time.
     index('audit_entries_at_idx').on(table.at),
+    // The trail filtered by kind walks the owner's entries of that kind, newest first (plan 28, B-33).
+    index('audit_entries_user_id_tool_kind_seq_idx').on(
+      table.userId,
+      table.toolKind,
+      desc(table.seq),
+    ),
     // One record per invocation **per fact**. A redelivered tool call writes `recorded` again and
     // collides with the entry it repeats, so the trail never claims a command ran twice; a
     // permission decision about the same invocation is a different fact and gets its own row.

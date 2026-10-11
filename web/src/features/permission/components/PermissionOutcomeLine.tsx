@@ -29,14 +29,23 @@ function sentenceOf(outcome: PermissionOutcome, t: TFunction): string {
   }
 }
 
+/** Why nobody was asked about a refusal: the deadline passed, the session is read-only, or a rule. */
+const AUTOMATIC_REFUSALS: Readonly<Record<NonNullable<PermissionOutcome['via']> | 'none', string>> =
+  {
+    none: 'permission.outcome.expired',
+    readOnly: 'permission.outcome.readOnly',
+    rule: 'permission.outcome.ruleDenied',
+    allowAll: 'permission.outcome.ruleDenied',
+  };
+
 /**
- * A decision nobody made: the deadline's refusal, Permitir tudo's yes, or a rule's answer — and an
- * automatic yes this build cannot name reads as a rule, the sentence there was before the mode
- * existed (plan 23, S-81, S-82).
+ * A decision nobody made: the deadline's refusal, a read-only session's refusal (plan 28, B-26),
+ * Permitir tudo's yes, or a rule's answer — and an automatic yes this build cannot name reads as a
+ * rule, the sentence there was before the mode existed (plan 23, S-81, S-82).
  */
 function automaticSentence(outcome: PermissionOutcome, t: TFunction): string {
   if (outcome.decision === 'deny') {
-    return t(outcome.via === null ? 'permission.outcome.expired' : 'permission.outcome.ruleDenied');
+    return t(AUTOMATIC_REFUSALS[outcome.via ?? 'none']);
   }
 
   return t(outcome.via === 'allowAll' ? 'permission.outcome.allowAll' : 'permission.outcome.rule');

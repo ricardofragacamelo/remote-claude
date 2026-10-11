@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import type { Envelope } from '@remote-claude/contracts';
 
-import { QUERY_FACTORY } from '@adapter/outbound/claude/query.factory';
+import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import { DrizzleAuditRepository } from '@adapter/outbound/persistence/audit/drizzle-audit.repository';
 import { AUDIT_REPOSITORY } from '@application/audit';
 import type { AuditRepository } from '@application/audit';

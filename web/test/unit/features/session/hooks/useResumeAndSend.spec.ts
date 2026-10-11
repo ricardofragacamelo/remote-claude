@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useResumeAndSend } from '@/features/session/hooks/useResumeAndSend';
-import { claudePanelStore, forgetClaudePanel } from '@/features/session/store/claude-panel.store';
+import { agentPanelStore, forgetAgentPanel } from '@/features/session/store/agent-panel.store';
 import { forgetLiveSessions } from '@/features/session';
 import { forgetFolderTabs } from '@/features/workbench';
 import { aLiveSocket } from '../../../../support/live-socket';
@@ -13,26 +13,26 @@ import { aRefusal } from '../../../../support/session-tools';
 const FOLDER = '/srv/projects/app';
 const ENDED = '01J0ENDEDENDEDENDEDENDED00';
 const RESUMED = '01J0RESUMEDRESUMEDRESUMED0';
-const CONVERSATION = '6b41b192-a41b-46c2-b8d7-5098d8c825be';
+const CONVERSATION = { engine: 'claude', id: '6b41b192-a41b-46c2-b8d7-5098d8c825be' };
 const AT = '2026-10-02T12:00:00.000Z';
 
 let live: LiveSocket;
 
 beforeEach(() => {
   live = aLiveSocket();
-  claudePanelStore(FOLDER).getState().show('session', ENDED);
+  agentPanelStore(FOLDER).getState().show('session', ENDED);
 });
 
 afterEach(() => {
   live.close();
-  forgetClaudePanel(null);
+  forgetAgentPanel(null);
   forgetFolderTabs();
   forgetLiveSessions();
 });
 
 /** The box of the ended session, with the conversation it was — or not known. */
-function anEndedBox(conversationId: string | null = CONVERSATION) {
-  return renderHook(() => useResumeAndSend(FOLDER, ENDED, conversationId), {
+function anEndedBox(conversation: typeof CONVERSATION | null = CONVERSATION) {
+  return renderHook(() => useResumeAndSend(FOLDER, ENDED, conversation), {
     wrapper: providers(),
   });
 }
@@ -53,7 +53,7 @@ function resumedFrame(correlationId: unknown): Record<string, unknown> {
     payload: {
       sessionId: RESUMED,
       workspacePath: FOLDER,
-      claudeSessionId: 'a-new-one',
+      conversation: { engine: 'claude', id: 'a-new-one' },
       resumedFrom: CONVERSATION,
     },
   };
@@ -81,7 +81,7 @@ describe('sending in a session that ended resumes it — plan 09, B-06, D-05', (
     });
     expect(resumes()).toHaveLength(1);
     expect(resumes()[0]).toMatchObject({
-      payload: { workspacePath: FOLDER, resumeSessionId: CONVERSATION },
+      payload: { workspacePath: FOLDER, resumeFrom: CONVERSATION },
     });
     expect(box.result.current.isResuming).toBe(true);
 
@@ -91,7 +91,7 @@ describe('sending in a session that ended resumes it — plan 09, B-06, D-05', (
       expect(prompts()).toHaveLength(1);
     });
     expect(prompts()[0]).toMatchObject({ payload: { sessionId: RESUMED, text: 'go on' } });
-    const panel = claudePanelStore(FOLDER).getState();
+    const panel = agentPanelStore(FOLDER).getState();
     expect(panel.active).toBe(`session:${RESUMED}`);
     expect(panel.tabs.map((tab) => tab.key)).toEqual([`session:${RESUMED}`]);
   });
@@ -122,7 +122,7 @@ describe('sending in a session that ended resumes it — plan 09, B-06, D-05', (
     expect(box.result.current.error?.code).toBe('SESSION_LIMIT_REACHED');
     expect(box.result.current.isResuming).toBe(false);
     expect(box.result.current.refusals).toBe(1);
-    expect(claudePanelStore(FOLDER).getState().drafts[`session:${ENDED}`]).toBe('go on');
+    expect(agentPanelStore(FOLDER).getState().drafts[`session:${ENDED}`]).toBe('go on');
     expect(prompts()).toEqual([]);
 
     // Free again: the next send is a resume of its own.
@@ -140,7 +140,7 @@ describe('sending in a session that ended resumes it — plan 09, B-06, D-05', (
     });
 
     expect(box.result.current.refusals).toBe(1);
-    expect(claudePanelStore(FOLDER).getState().drafts[`session:${ENDED}`]).toBe('go on');
+    expect(agentPanelStore(FOLDER).getState().drafts[`session:${ENDED}`]).toBe('go on');
     live.connect();
     expect(resumes()).toEqual([]);
   });

@@ -1,6 +1,6 @@
-/// "Claude is waiting for your answer (n)", over the box, whenever a question's card is out of view
-/// (plan 10, B-22, R-03) — and the way to it. Tapping it scrolls to the oldest question and puts the
-/// focus there.
+/// "The agent is waiting for your answer (n)", over the box, whenever a question's card is out of
+/// view (plan 10, B-22, R-03) — and the way to it. Tapping it scrolls to the oldest question and
+/// puts the focus there.
 ///
 /// It is how a question that arrives while somebody writes is said without taking the box from them
 /// (09 · D-13): the live region announces it, and nothing here answers anything (S-73).
@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// Where the cards of the questions are on screen, and the way to them.
@@ -15,7 +16,8 @@ import 'package:remote_claude/l10n/generated/app_localizations.dart';
 /// The conversation is the only one that knows where things are drawn — it owns the one scroll —
 /// so it measures and reports here; the pill and the working indicator read from here and ask here.
 class QuestionsInView extends ChangeNotifier {
-  /// The focus of each card drawn — what the pill puts the focus on, and what tells where the card is.
+  /// The focus of each card drawn — what the pill puts the focus on, and what tells where the card
+  /// is.
   final Map<String, FocusNode> _nodes = <String, FocusNode>{};
 
   bool _outOfView = false;
@@ -77,6 +79,7 @@ class PendingPill extends StatelessWidget {
     required this.onGoTo,
     super.key,
     this.questionsOnly = false,
+    this.engine,
   });
 
   /// How many questions wait.
@@ -85,8 +88,12 @@ class PendingPill extends StatelessWidget {
   /// The card of one of them is out of view.
   final bool outOfView;
 
-  /// Every one of them is a question of Claude — "Claude asked you something (n)" (plan 24, B-20).
+  /// Every one of them is a question of the agent — "{agent} asked you something (n)" (plan 24,
+  /// B-20).
   final bool questionsOnly;
+
+  /// The engine of the session, which the pill names — the default engine's when `null`.
+  final String? engine;
 
   /// Takes the person to the oldest.
   final VoidCallback onGoTo;
@@ -94,9 +101,10 @@ class PendingPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final String agent = agentNameIn(context, engine);
     final String label = questionsOnly
-        ? l10n.permissionQuestionPill('$count')
-        : l10n.sessionPendingPill('$count');
+        ? l10n.permissionQuestionPill(agent, '$count')
+        : l10n.sessionPendingPill(agent, '$count');
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
     // Announced whenever a question is open — in view or not — so a question that arrives while the

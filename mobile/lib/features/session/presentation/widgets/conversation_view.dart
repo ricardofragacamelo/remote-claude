@@ -12,13 +12,14 @@
 ///
 /// Reading a followed conversation of the history (plan 22, B-26), it also **counts** what arrives
 /// below somebody who scrolled up: a pill says how many messages are new and takes them to the end.
-/// It counts as the web does (S-84, S-99): **messages** of the conversation with something drawn — a
-/// thinking and an answer of one reply are one, a reply that only calls a tool is none —, from the
-/// last one there was when the person left the end, so an earlier page read meanwhile, which goes
-/// before, is never new.
+/// It counts as the web does (S-84, S-99): **messages** of the conversation with something drawn —
+/// a thinking and an answer of one reply are one, a reply that only calls a tool is none —, from
+/// the last one there was when the person left the end, so an earlier page read meanwhile, which
+/// goes before, is never new.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
@@ -45,6 +46,7 @@ class InlineQuestions {
     required this.sessionId,
     required this.queue,
     required this.inView,
+    this.modes = const <String>[],
     this.onPlanApproved,
   });
 
@@ -53,6 +55,9 @@ class InlineQuestions {
 
   /// Where the cards are on screen — what the pill reads.
   final QuestionsInView inView;
+
+  /// The modes the session's engine announced — what an approved plan goes on in (plan 28, B-27).
+  final List<String> modes;
 
   /// A plan was approved, to go on in a mode — the chip of the mode changes with it (B-21).
   final void Function(String mode)? onPlanApproved;
@@ -77,14 +82,14 @@ class ConversationView extends StatefulWidget {
     this.working,
     this.prompts,
     this.countsUnseen = false,
-    this.conversationId,
+    this.conversationKey,
   });
 
   final Conversation conversation;
 
-  /// The conversation in Claude's store this is — what a tool's whole output and a prompt's image
-  /// are read from (plan 22, B-32, B-33). `null` while nothing said which.
-  final String? conversationId;
+  /// The conversation in the engine's store this is — what a tool's whole output and a prompt's
+  /// image are read from (plan 22, B-32, B-33). `null` while nothing said which.
+  final ConversationKey? conversationKey;
 
   /// Whether what arrives below a reader who scrolled up is counted, with a pill that takes them to
   /// the end — "*N* new" (docs/architecture/mobile/04-ui.md, plan 22 · F4).
@@ -385,7 +390,7 @@ class _ConversationViewState extends State<ConversationView> {
               entry: entry,
               decision: entry is ToolExecution ? inline?.decisionFor(entry.toolUseId) : null,
               prompts: widget.prompts,
-              conversationId: widget.conversationId,
+              conversationKey: widget.conversationKey,
             )
           : _InlineCard(card: card, inline: inline),
       requestId: card?.requestId,
@@ -425,8 +430,8 @@ int countAfter(List<ConversationEntry> entries, String? mark) {
   return at < 0 ? 0 : shown.length - 1 - at;
 }
 
-/// "*N* new", over a followed conversation scrolled up: what arrived below, and the way to it. It is
-/// announced as the count changes, without taking the focus.
+/// "*N* new", over a followed conversation scrolled up: what arrived below, and the way to it. It
+/// is announced as the count changes, without taking the focus.
 class UnseenPill extends StatelessWidget {
   const UnseenPill({required this.count, required this.onTap, super.key});
 
@@ -465,6 +470,7 @@ class _InlineCard extends StatelessWidget {
       sessionId: inline.sessionId,
       card: card,
       now: inline.queue.asOf ?? DateTime.now(),
+      modes: inline.modes,
       onPlanApproved: inline.onPlanApproved,
     ),
   );
@@ -477,13 +483,13 @@ class EntryView extends StatelessWidget {
     super.key,
     this.decision,
     this.prompts,
-    this.conversationId,
+    this.conversationKey,
   });
 
   final ConversationEntry entry;
 
   /// The conversation a tool's output and a prompt's image are read from.
-  final String? conversationId;
+  final ConversationKey? conversationKey;
 
   /// How the question about this tool was settled, when it is a tool that asked.
   final PermissionOutcome? decision;
@@ -498,7 +504,7 @@ class EntryView extends StatelessWidget {
     final ToolExecution tool => ToolCard(
       tool: tool,
       decision: decision,
-      conversationId: conversationId,
+      conversationKey: conversationKey,
     ),
     final TurnSummary turn => TurnLine(turn: turn),
     final CompactionLine compaction => CompactedLine(line: compaction),
@@ -508,10 +514,10 @@ class EntryView extends StatelessWidget {
 
   Widget _message(StreamMessage message) {
     final PromptActions? actions = prompts;
-    final Widget bubble = MessageBubble(message: message, conversationId: conversationId);
+    final Widget bubble = MessageBubble(message: message, conversationKey: conversationKey);
 
     // A prompt of the person, whole, is what an action can start from: the one still arriving has
-    // no id in Claude's store yet.
+    // no id in the engine's store yet.
     return actions == null || !message.isFromUser || !message.isComplete
         ? bubble
         : PromptHold(prompt: message, actions: actions, child: bubble);
@@ -521,12 +527,12 @@ class EntryView extends StatelessWidget {
 /// One message. Still streaming, or whole — with a marker for each image a prompt carried, and no
 /// empty bubble for a prompt of only an image (plan 22, S-118, S-121).
 class MessageBubble extends StatelessWidget {
-  const MessageBubble({required this.message, super.key, this.conversationId});
+  const MessageBubble({required this.message, super.key, this.conversationKey});
 
   final StreamMessage message;
 
   /// The conversation an image of the prompt is read from.
-  final String? conversationId;
+  final ConversationKey? conversationKey;
 
   @override
   Widget build(BuildContext context) {
@@ -549,7 +555,7 @@ class MessageBubble extends StatelessWidget {
                     if (message.text.isNotEmpty)
                       Text(message.text, style: theme.textTheme.bodyMedium),
                     for (final PromptImage image in message.images)
-                      ImageMarker(image: image, conversationId: conversationId),
+                      ImageMarker(image: image, conversationKey: conversationKey),
                   ],
                 ),
         ),
