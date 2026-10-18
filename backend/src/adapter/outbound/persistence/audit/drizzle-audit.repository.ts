@@ -16,7 +16,7 @@ import { toRow } from './audit-entry.mapper';
  * that offered an update would be offering an operation the table's trigger refuses.
  *
  * The insert ignores a conflict on `(session_id, tool_use_id, decision)` and only on that triple.
- * The SDK redelivers a pending tool call after a transport gap, and a second `recorded` row for
+ * The engine redelivers a pending tool call after a transport gap, and a second `recorded` row for
  * the same invocation would make the trail claim the command ran twice. The `decision` is part of
  * the key because one invocation produces two different facts — the hook saw it, and a human
  * allowed or refused it — and a key without it would silently drop the second.

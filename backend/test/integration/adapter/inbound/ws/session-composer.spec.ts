@@ -310,7 +310,7 @@ describe('the composer of the panel', () => {
       ]);
       await until(socket, ofType('turn.completed'));
 
-      const input = harness.log.withOp('claude.input').at(-1);
+      const input = harness.log.withOp('engine.input').at(-1);
       expect(input).toMatchObject({
         prompt: 'look',
         context: [

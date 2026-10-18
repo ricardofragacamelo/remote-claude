@@ -1,20 +1,22 @@
+import type {
+  AuditEventPagePayload,
+  AuditEventPagePayloadEventsItem,
+} from '@remote-claude/contracts';
+
 import { api } from '@/shared/api/api';
 import { FILE_ACTS } from '../types/file-facts';
 import type { FileAct, FileFact, FileFactPage } from '../types/file-facts';
 
-/** One account fact, as `GET /audit-events` answers it. */
-interface AuditEventDto {
-  readonly id: string;
-  readonly kind: string;
-  readonly subjectLabel: string;
-  readonly details: Readonly<Record<string, unknown>> | null;
-  readonly at: string;
-}
+/** One account fact, as `GET /audit-events` answers it — without the `subjectId`, which this
+ * feature never shows: a file fact names its path, `subjectLabel`, and nothing of the real one. */
+type AuditEventDto = Pick<
+  AuditEventPagePayloadEventsItem,
+  'id' | 'kind' | 'subjectLabel' | 'details' | 'at'
+>;
 
-interface AuditEventPageDto {
+type AuditEventPageDto = Pick<AuditEventPagePayload, 'nextCursor'> & {
   readonly events: readonly AuditEventDto[];
-  readonly nextCursor: string | null;
-}
+};
 
 function actOf(kind: string): FileAct | null {
   const act = kind.slice('file.'.length);

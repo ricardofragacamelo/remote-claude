@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/output-style-view.json",
+  "title": "OutputStyleView",
+  "description": "`GET/PUT /engines/claude/output-style` and `PUT/DELETE /engines/claude/output-style/folder`: the output style as the screen shows it — what applies, the user's own, and the folder's (plan 13, D-04, D-06; plan 28, D-06).",
+  "x-kind": "http",
+  "x-type": "engines.claude.outputStyle",
+  "x-route": [
+    { "method": "GET", "path": "/engines/claude/output-style" },
+    { "method": "PUT", "path": "/engines/claude/output-style" },
+    { "method": "PUT", "path": "/engines/claude/output-style/folder" }
+  ],
+  "type": "object",
+  "required": ["effective", "user", "folder"],
+  "properties": {
+    "effective": {
+      "type": "object",
+      "required": ["value", "from"],
+      "description": "What applies in the folder asked, and where it came from.",
+      "properties": {
+        "value": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "from": {
+          "type": "string",
+          "enum": ["folder", "user", "installation"]
+        },
+        "folder": {
+          "type": "string",
+          "description": "The folder whose override set it, when `from` is `folder`."
+        }
+      }
+    },
+    "user": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "folder": {
+      "type": "object",
+      "x-nullable": true,
+      "required": ["folder", "value"],
+      "description": "The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own.",
+      "properties": {
+        "folder": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

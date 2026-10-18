@@ -636,6 +636,8 @@
   "composerBlocked": "Nada pode ser enviado agora: {reason}",
   "composerChoice": "{label}: {value}",
   "composerChoicePending": "Trocando…",
+  "engineLabel": "Agente",
+  "engineDefault": "Padrão da instalação",
   "modeLabel": "Modo",
   "modeAsk": "Perguntar",
   "modeAskDescription": "O {agent} pergunta antes de cada tool que precisa da sua palavra.",

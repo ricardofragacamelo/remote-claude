@@ -3,6 +3,10 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
+// Registers the engine whose files this suite treats as sensitive — `.claude/`, `.mcp.json` — the
+// same side-effecting import the app itself makes (plan 28, B-39).
+import '@/app/engines';
+
 import { openFile } from '@/features/editor';
 import { useEditorPreferences } from '@/features/editor/store/preferences.store';
 import { AUTO_SAVE_DELAY_MS } from '@/features/editor/hooks/documents';

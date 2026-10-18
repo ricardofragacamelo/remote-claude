@@ -31,7 +31,7 @@ export interface PushTarget {
 export type PushParams = Readonly<Record<string, string>>;
 
 /**
- * What a request asks of the person: leave to run a tool, or an answer to a question of Claude
+ * What a request asks of the person: leave to run a tool, or an answer to a question of the agent
  * (plan 24, D-22). It chooses the words; the tap opens the same screen either way.
  */
 export type PushSubject = 'permission' | 'question';
@@ -77,14 +77,20 @@ export class PushMessage {
   }
 
   /**
-   * Claude asked the person something.
+   * The agent asked the person something.
    *
    * It carries **nothing** of the question — not its text, not an option: a push passes through
-   * somebody else's server, and the question is Claude's words about somebody's work
+   * somebody else's server, and the question is the agent's words about somebody's work
    * ([workflow §14](../../../../docs/discovery/02-workflow-de-sessoes.md)). The tap opens the same card.
+   *
+   * @param params what the sentence interpolates — the agent's **name**, nothing from the question
    */
-  static questionAsked(target: PushTarget, reference: PermissionReference): PushMessage {
-    return new PushMessage('permissionRequested', target, reference, {}, 'question');
+  static questionAsked(
+    target: PushTarget,
+    reference: PermissionReference,
+    params: PushParams,
+  ): PushMessage {
+    return new PushMessage('permissionRequested', target, reference, params, 'question');
   }
 
   /**

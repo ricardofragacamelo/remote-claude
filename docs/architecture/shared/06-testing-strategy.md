@@ -209,6 +209,31 @@ Estes cobrem os caminhos que, se quebrarem, tornam o produto inútil:
 
 ---
 
+## A dimensão motor (plano 28, ADR-025)
+
+Desde o núcleo neutro de agente, a matriz de cenários de uma sessão ganha uma dimensão a mais, ao
+lado das seis de [Como enumerar cenários](#como-enumerar-cenários): **motor**. Nenhum cenário sobre
+`AgentSessionHandle`/`AgentEnginePort` — uma sessão abre, um prompt enfileira, uma chamada de
+ferramenta passa pela permissão, `interrupt` encerra um turno preso, `close` é idempotente — prova
+a abstração do port rodando só contra o Claude: prova, na melhor das hipóteses, que **o adapter do
+Claude** está certo. O portão de neutralidade (`pnpm neutral:check`) prova que o núcleo não _fala_
+de um motor; só um segundo motor de verdade, com outras ferramentas e menos capacidades, prova que
+ele não _depende_ de um.
+
+O backend constrói esse segundo motor só para teste — `backend/test/fakes/engine/`, nunca
+alcançável por um build de produção — e roda a mesma bateria universal contra os dois, pela porta do
+gateway real. O [testing do backend](../backend/07-testing.md#a-dimensão-motor--a-suíte-de-contrato-da-porta-plano-28-b-43)
+tem o detalhe: o que entra na bateria universal, o que fica específico do Claude e por quê, e como um
+motor real futuro (Codex, Copilot — discovery 03) se encaixa no mesmo molde.
+
+Web e app herdam a mesma dimensão pela porta do usuário (plano 28, B-44/B-45): a mesma conversa,
+pelo mesmo motor de teste, tem que desenhar cada `kind` igual ao do Claude, com os controles de
+capacidade ausente simplesmente **não existindo** — nunca desabilitados, nunca mostrando o nome de
+um motor onde hoje se lê "Claude". Até lá, o princípio vale como regra para qualquer tela que
+leia `capabilities` ou `kind`: nada ali pode supor que o motor é o Claude, só que ele é _um_ motor.
+
+---
+
 ## Cobertura
 
 **Mínimo de 90 % em todas as dimensões, nas três pontas.** Dimensão significa cada uma das

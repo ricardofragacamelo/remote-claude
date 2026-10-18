@@ -381,7 +381,7 @@ export class FollowTranscriptUseCase {
     }
 
     const lastMessageId = entries.at(-1)?.id ?? null;
-    // The questions of Claude it carries, with what was answered here — the same path as a page read
+    // The questions of the agent it carries, with what was answered here — the same path as a page read
     // (plan 24, D-27). The person's own record, never another's.
     const shown = await this.questions.of(subscriber.userId, tail.entries, entries);
     subscriber.sink.appended(subscriber.followId, subscriber.followed.id, {

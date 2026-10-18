@@ -26,7 +26,7 @@ export type PromptAttachment =
       readonly content: string;
     };
 
-/** A prompt ready for Claude: the text it reads, and what goes beside it. */
+/** A prompt ready for the agent: the text it reads, and what goes beside it. */
 export interface OutgoingPrompt {
   readonly text: string;
 
@@ -43,7 +43,7 @@ type Resolved =
 /**
  * The context of a prompt, checked and composed — plan 08, B-44 and B-45.
  *
- * **All or nothing**, before anything reaches Claude: one item that does not pass refuses the whole
+ * **All or nothing**, before anything reaches the agent: one item that does not pass refuses the whole
  * prompt, with the refusal of the first of them in the order they were chosen — never a prompt sent
  * with part of what the person chose (S-199). A file or a folder is checked against the session's
  * own folder, by the fence of `files`; an upload is one this session holds; a text is already
@@ -122,7 +122,7 @@ export class PromptContextResolver {
   }
 }
 
-/** A file or a folder, as the line Claude reads and as the log says it. */
+/** A file or a folder, as the line the agent reads and as the log says it. */
 function referenceTo(
   kind: 'file' | 'folder',
   inspected: InspectedReference,

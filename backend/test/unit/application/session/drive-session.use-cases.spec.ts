@@ -5,6 +5,7 @@ import {
   CloseSessionUseCase,
   CommandCatalog,
   CompactSessionUseCase,
+  EngineRegistry,
   InterruptSessionUseCase,
   ListSessionCommandsUseCase,
   PromptSessionUseCase,
@@ -21,7 +22,7 @@ import {
   SessionNotFoundError,
   UnknownCommandError,
 } from '@domain/session';
-import type { Session } from '@domain/session';
+import type { CommandMenu, Session } from '@domain/session';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
 import {
   aClock,
@@ -33,6 +34,7 @@ import {
 } from '../../../support/builders/session.builder';
 import { RecordingBroadcaster } from '../../../support/fakes/recording-broadcaster';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
+import { StubEngine } from '../../../support/fakes/stub-engine';
 import { StubPermissionGate } from '../../../support/fakes/stub-permission-gate';
 import {
   aContextResolver,
@@ -394,12 +396,16 @@ describe('the commands that drive a running session', () => {
         menuEngines({ suggested: ['zeta'], pluginOrigins: { 'remote-claude-user': 'user' } }),
       ).execute(SESSION_ID, owner);
 
-      expect(plain.commands.map((command) => [command.name, command.origin, command.suggested])).toEqual([
+      expect(
+        plain.commands.map((command) => [command.name, command.origin, command.suggested]),
+      ).toEqual([
         ['init', 'project', false],
         ['remote-claude-user:notes', 'project', false],
         ['zeta', 'project', false],
       ]);
-      expect(ordered.commands.map((command) => [command.name, command.origin, command.suggested])).toEqual([
+      expect(
+        ordered.commands.map((command) => [command.name, command.origin, command.suggested]),
+      ).toEqual([
         ['zeta', 'project', true],
         ['init', 'project', false],
         ['remote-claude-user:notes', 'user', false],

@@ -36,7 +36,7 @@ import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-eve
 const owner = UserId.create('auth|owner');
 const now = new Date('2026-09-18T12:00:00.000Z');
 
-const defaults = { model: 'claude-sonnet-5', permissionMode: 'ask' } as const;
+const defaults = { models: { claude: 'claude-sonnet-5' }, permissionMode: 'ask' } as const;
 
 /** The engine of these tests: the port of ADR-025, recording what it was asked. */
 class StubClaude extends StubEngine {}

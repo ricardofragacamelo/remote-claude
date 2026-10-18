@@ -275,7 +275,7 @@ describe('the mode, the model and the effort in the bar — plan 09, B-11', () =
     served();
     const panel = agentPanelStore(A).getState();
     const draft = panel.openDraft();
-    panel.setChoices(draft, { model: 'opus', mode: 'ask', effort: 'high' });
+    panel.setChoices(draft, { engine: null, model: 'opus', mode: 'ask', effort: 'high' });
     panel.promote(draft, SESSION);
     opened();
 
@@ -328,7 +328,7 @@ describe('what the engine announces, in the bar — plan 28, B-27, B-28', () => 
     served();
     const panel = agentPanelStore(A).getState();
     const draft = panel.openDraft();
-    panel.setChoices(draft, { model: 'opus', mode: 'ask', effort: 'high' });
+    panel.setChoices(draft, { engine: null, model: 'opus', mode: 'ask', effort: 'high' });
     panel.promote(draft, SESSION);
     opened({ ...CAPABILITIES, effortLevels: [] });
 
@@ -349,7 +349,7 @@ describe('what the engine announces, in the bar — plan 28, B-27, B-28', () => 
     served();
     const panel = agentPanelStore(A).getState();
     const draft = panel.openDraft();
-    panel.setChoices(draft, { model: 'opus', mode: 'ask', effort: 'turbo' });
+    panel.setChoices(draft, { engine: null, model: 'opus', mode: 'ask', effort: 'turbo' });
     panel.promote(draft, SESSION);
     opened();
 

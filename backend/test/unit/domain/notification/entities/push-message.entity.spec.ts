@@ -45,15 +45,15 @@ describe('PushMessage', () => {
     });
   });
 
-  describe('a question of Claude — plan 24, D-22', () => {
-    it('opens the same card, and carries nothing of the question — S-52', () => {
-      const message = PushMessage.questionAsked(target, reference);
+  describe('a question of the agent — plan 24, D-22', () => {
+    it('opens the same card, and carries nothing of the question but the agent — S-52', () => {
+      const message = PushMessage.questionAsked(target, reference, { agent: 'Claude' });
 
       expect(message).toMatchObject({
         kind: 'permissionRequested',
         subject: 'question',
         reference,
-        params: {},
+        params: { agent: 'Claude' },
         isSilent: false,
         tag: 'req-1',
       });

@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
 import type {
+  HistoryOutcome,
+  HistoryPagePayload,
+  KeptDeletePayload,
+  RestoredEntryPayload,
+} from '@remote-claude/contracts';
+
+import type {
   FileKeeping,
   HistoryPage,
   KeptBatch,
@@ -9,7 +16,6 @@ import type {
 } from '@application/files';
 import type { UserId } from '@domain/auth';
 import { Etag, HISTORY_REASONS, authorOf } from '@domain/files';
-import type { HistoryEntryKind, HistoryKept, HistoryReason } from '@domain/files';
 import { DEFAULT_PAGE_SIZE, pageQuery } from '../audit/audit.dto';
 import { flag, folderPath } from '../workspace/workspace.dto';
 
@@ -50,64 +56,17 @@ export const restoreBodySchema = z.object({
 
 export type RestoreBodyDto = z.infer<typeof restoreBodySchema>;
 
-/** One version, as the Timeline shows it. Never the contents. */
-export interface HistoryEntryDto {
-  readonly id: string;
-  /** Relative to the folder asked. */
-  readonly path: string;
-  readonly entryKind: HistoryEntryKind;
-  readonly reason: HistoryReason;
-  readonly kept: HistoryKept;
-  readonly sizeBytes: number | null;
-  /** In the form of an `ETag`, so a client compares it with the current file's as it is. */
-  readonly hash: string | null;
-  /** The server only knows the `sub` of whoever wrote: `self` says whether it is the caller. */
-  readonly author: { readonly self: boolean; readonly id: string };
-  /** ISO-8601. */
-  readonly at: string;
-  readonly batchId: string | null;
-}
-
-export interface HistoryPageDto {
-  readonly entries: readonly HistoryEntryDto[];
-  /** Opaque to the client: send it back as `cursor`. `null` on the last page. */
-  readonly nextCursor: string | null;
-}
-
-/** How keeping the replaced version ended, as a save and a restore answer it. */
-export type HistoryOutcomeDto =
-  | { readonly kept: true; readonly entryId: string }
-  | { readonly kept: false; readonly reason: 'tooLarge' | 'unavailable' };
-
-/** What a delete with `keepInHistory` kept, for the client's **Undo**. */
-export interface KeptDeleteDto {
-  readonly kept: {
-    readonly batchId: string;
-    readonly entries: readonly {
-      readonly id: string;
-      readonly path: string;
-      readonly entryKind: HistoryEntryKind;
-    }[];
-  };
-}
-
-/** What a restore left: `etag` and `size` `null` for a folder. */
-export interface RestoredEntryDto {
-  readonly path: string;
-  readonly etag: string | null;
-  readonly size: number | null;
-  readonly written: boolean;
-  readonly history: HistoryOutcomeDto | null;
-}
-
-export function toHistoryPageDto(page: HistoryPage, caller: UserId): HistoryPageDto {
+export function toHistoryPageDto(page: HistoryPage, caller: UserId): HistoryPagePayload {
   return {
     entries: page.entries.map((visible) => toHistoryEntryDto(visible, caller)),
     nextCursor: page.nextCursor,
   };
 }
 
-function toHistoryEntryDto({ entry, path }: VisibleEntry, caller: UserId): HistoryEntryDto {
+function toHistoryEntryDto(
+  { entry, path }: VisibleEntry,
+  caller: UserId,
+): HistoryPagePayload['entries'][number] {
   return {
     id: entry.id,
     path: path.relative,
@@ -122,18 +81,18 @@ function toHistoryEntryDto({ entry, path }: VisibleEntry, caller: UserId): Histo
   };
 }
 
-export function toHistoryOutcomeDto(keeping: FileKeeping | null): HistoryOutcomeDto | null {
+export function toHistoryOutcomeDto(keeping: FileKeeping | null): HistoryOutcome | null {
   return keeping === null ? null : toKeepingDto(keeping);
 }
 
 /** One keeping that did happen — a replace of an upload always has one. */
-export function toKeepingDto(keeping: FileKeeping): HistoryOutcomeDto {
+export function toKeepingDto(keeping: FileKeeping): HistoryOutcome {
   return keeping.kept
     ? { kept: true, entryId: keeping.entryId }
     : { kept: false, reason: keeping.reason };
 }
 
-export function toKeptDeleteDto(batch: KeptBatch): KeptDeleteDto {
+export function toKeptDeleteDto(batch: KeptBatch): KeptDeletePayload {
   return {
     kept: {
       batchId: batch.batchId,
@@ -146,7 +105,7 @@ export function toKeptDeleteDto(batch: KeptBatch): KeptDeleteDto {
   };
 }
 
-export function toRestoredEntryDto(restored: RestoredEntry): RestoredEntryDto {
+export function toRestoredEntryDto(restored: RestoredEntry): RestoredEntryPayload {
   return {
     path: restored.path.relative,
     etag: restored.etag?.value ?? null,

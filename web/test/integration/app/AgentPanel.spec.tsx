@@ -9,7 +9,11 @@ import { rememberModels, useKnownModels } from '@/features/session/store/known-m
 import { folderTabStore } from '@/features/workbench';
 import { onNotify } from '@/shared/lib/notify';
 import type { Notification as AppNotification } from '@/shared/lib/notify';
-import { agentAside, startedFrame, startFromDraft } from '../../support/agent-panel';
+import {
+  agentAside as agentAsideOf,
+  startedFrame,
+  startFromDraft as startFromDraftOf,
+} from '../../support/agent-panel';
 import { aLiveSocket, hubEvent } from '../../support/live-socket';
 import type { LiveSocket } from '../../support/live-socket';
 import { translator } from '../../support/render';
@@ -59,6 +63,15 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
+
+/** This file's installation always lists `claude`, named "Claude" (`listedEngines`). */
+const AGENT_NAME = 'Claude';
+const agentAside = () => agentAsideOf(AGENT_NAME);
+const startFromDraft = (
+  user: Parameters<typeof startFromDraftOf>[0],
+  live: Parameters<typeof startFromDraftOf>[1],
+  session: Parameters<typeof startFromDraftOf>[2],
+) => startFromDraftOf(user, live, session, AGENT_NAME);
 
 /** The workbench of `folder` over the tabs of A and B, connected, the draft of its panel on screen. */
 async function onWorkbench(folder = A, other = listedEngines) {
@@ -266,7 +279,7 @@ describe('a new conversation is a draft — plan 08, B-33, D-07', () => {
     const panel = agentPanelStore(A).getState();
     act(() => {
       const draft = panel.active ?? '';
-      panel.setChoices(draft, { model: null, mode: 'readOnly', effort: 'max' });
+      panel.setChoices(draft, { engine: null, model: null, mode: 'readOnly', effort: 'max' });
     });
 
     expect(
@@ -517,20 +530,16 @@ describe('the keys of the panel — plan 08, B-40, S-185', () => {
 
     await user.click(toggle);
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: t('workbench.agent.label') })).toBeNull();
+      expect(screen.queryByRole('complementary', { name: AGENT_NAME })).toBeNull();
     });
 
     press('b', 'KeyB');
-    expect(
-      await screen.findByRole('complementary', { name: t('workbench.agent.label') }),
-    ).toBeVisible();
+    expect(await screen.findByRole('complementary', { name: AGENT_NAME })).toBeVisible();
 
     // The prompt box, from anywhere: the panel opens if it is not.
     await user.click(toggle);
     press('l', 'KeyL');
-    expect(
-      await screen.findByRole('complementary', { name: t('workbench.agent.label') }),
-    ).toBeVisible();
+    expect(await screen.findByRole('complementary', { name: AGENT_NAME })).toBeVisible();
     // …and the focus lands in its box — the one of this folder tab (plan 09, B-15).
     await waitFor(() => {
       expect(within(agentAside()).getByLabelText(t('composer.box.label'))).toHaveFocus();

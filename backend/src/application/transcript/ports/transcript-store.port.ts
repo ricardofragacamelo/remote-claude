@@ -2,16 +2,16 @@ import type { ConversationRef, EngineId } from '@domain/engine';
 import type { TranscriptMessage, TranscriptSession } from '@domain/transcript';
 
 /**
- * Claude's own store of conversations, read — never written, never parsed by us.
+ * The engine's own store of conversations, read — never written, never parsed by us.
  *
  * The one implementation calls `listSessions`, `getSessionInfo` and `getSessionMessages` of the
- * Agent SDK. The JSONL behind them is internal to Claude Code, changes without notice and is the
- * same file the editor uses; a parser of our own would break on the next SDK release, silently
- * (docs/architecture/backend/03-modules.md#transcript). `pnpm lint:arch` holds the line: nothing
- * in this module may reach for the filesystem.
+ * engine. The JSONL behind them is internal to the engine's own installation, changes without notice
+ * and is the same file the editor uses; a parser of our own would break on the next release of the
+ * engine, silently (docs/architecture/backend/03-modules.md#transcript). `pnpm lint:arch` holds the
+ * line: nothing in this module may reach for the filesystem.
  *
- * Every method throws `TranscriptUnavailableError` when the SDK fails and `TranscriptTimeoutError`
- * when it does not answer in time — never a raw error of the SDK.
+ * Every method throws `TranscriptUnavailableError` when the engine fails and `TranscriptTimeoutError`
+ * when it does not answer in time — never a raw error of the engine.
  */
 export interface TranscriptStore {
   /**
@@ -41,7 +41,7 @@ export interface TranscriptStore {
   /**
    * Every message of a session, oldest first, as events of our contract.
    *
-   * Whole, and not a page: the SDK re-parses the entire file on every call whatever `limit` says —
+   * Whole, and not a page: the engine re-parses the entire file on every call whatever `limit` says —
    * measured, ~30 MB of heap with or without one — so slicing is done on a result that is cached
    * by `session.id` and `session.lastModified` (S-64).
    */
@@ -52,7 +52,7 @@ export interface TranscriptStore {
    * contract — or `null` when the conversation has no subagent of that tool (plan 08, B-21).
    *
    * By the tool and not by the subagent's own id: the tool is what the conversation names, and the
-   * id of the subagent is said only in the text of its result. The SDK lists the subagents, and the
+   * id of the subagent is said only in the text of its result. The engine lists the subagents, and the
    * one whose messages hang off that tool is it.
    */
   subagentMessages(

@@ -5,6 +5,7 @@
   "description": "`GET /sessions/:sessionId/tools/:toolUseId/diff`: the diff of one tool call of a live session — of what it did, or, while its permission request is pending, of what it would do, the disk now against the disk with the change applied (plan 28, B-17). Served for a call whose `changes` write one file; any other is `422 DIFF_NOT_APPLICABLE`. One side may be unknown, and the answer says which and why rather than inventing it.",
   "x-kind": "http",
   "x-type": "tool.diff",
+  "x-route": [{ "method": "GET", "path": "/sessions/:sessionId/tools/:toolUseId/diff" }],
   "type": "object",
   "required": ["path", "kind", "pending", "scope", "before", "after", "hunks"],
   "properties": {

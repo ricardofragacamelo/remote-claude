@@ -14,9 +14,9 @@ export interface DiagSessionSnapshot {
 /**
  * The counter behind `diag.ping`.
  *
- * It is **not** a session of Claude — see {@link import('@domain/session').Session} for that one.
+ * It is **not** a session of the agent — see {@link import('@domain/session').Session} for that one.
  * This is the diagnostic round trip of the gateway: the cheapest smoke test of the whole rail, and
- * the only one that needs no Claude subprocess (D-01 of the live-session plan).
+ * the only one that needs no agent subprocess (D-01 of the live-session plan).
  *
  * Deliberately trivial in business terms and complete in structure: the value of the slice is in
  * the rail it proves, not in what it computes. The rule it does own — the pong carries the

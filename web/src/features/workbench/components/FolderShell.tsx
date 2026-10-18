@@ -26,6 +26,9 @@ export interface FolderShellProps {
 
   /** The chat with the agent for this folder — the host's to compose. */
   readonly agent: ReactNode;
+
+  /** How the side bar of {@link agent} names the agent — the host's to resolve (plan 28, B-44). */
+  readonly agentName: string;
 }
 
 /** A size limit as the panel library reads it: a string with no unit is a percentage. */
@@ -44,18 +47,18 @@ function bounds(limit: Pick<SizeLimit, 'min' | 'max'>): { minSize: string; maxSi
  * Below `md`, one view at a time, switched by a bar at the bottom — still the same tab and the same
  * store, so changing the width of the window loses nothing (S-117, S-118).
  */
-export function FolderShell({ folder, agent }: FolderShellProps): React.JSX.Element {
+export function FolderShell({ folder, agent, agentName }: FolderShellProps): React.JSX.Element {
   const desktop = useIsDesktop();
 
   return desktop ? (
-    <DesktopShell folder={folder} agent={agent} />
+    <DesktopShell folder={folder} agent={agent} agentName={agentName} />
   ) : (
-    <PhoneShell folder={folder} agent={agent} />
+    <PhoneShell folder={folder} agent={agent} agentName={agentName} />
   );
 }
 
 /** The panels side by side. */
-function DesktopShell({ folder, agent }: FolderShellProps): React.JSX.Element {
+function DesktopShell({ folder, agent, agentName }: FolderShellProps): React.JSX.Element {
   const tab = useFolderTab(folder);
   const view = useActiveView(tab.view);
   const { layout, columnsChanged, rowsChanged } = useWorkbenchLayout(folder);
@@ -110,7 +113,7 @@ function DesktopShell({ folder, agent }: FolderShellProps): React.JSX.Element {
           <>
             <ResizableHandle />
             <ResizablePanel id="secondary" {...bounds(LAYOUT_LIMITS.secondary)}>
-              <SecondarySideBar>{agent}</SecondarySideBar>
+              <SecondarySideBar agentName={agentName}>{agent}</SecondarySideBar>
             </ResizablePanel>
           </>
         )}
@@ -120,7 +123,7 @@ function DesktopShell({ folder, agent }: FolderShellProps): React.JSX.Element {
 }
 
 /** One view at a time, and the bar that switches it. */
-function PhoneShell({ folder, agent }: FolderShellProps): React.JSX.Element {
+function PhoneShell({ folder, agent, agentName }: FolderShellProps): React.JSX.Element {
   const tab = useFolderTab(folder);
   const view = useActiveView(tab.view);
 
@@ -138,7 +141,7 @@ function PhoneShell({ folder, agent }: FolderShellProps): React.JSX.Element {
       </div>
     ),
     editor: <EditorArea folder={folder} />,
-    agent: <SecondarySideBar>{agent}</SecondarySideBar>,
+    agent: <SecondarySideBar agentName={agentName}>{agent}</SecondarySideBar>,
     panel: <BottomPanel folder={folder} />,
   };
 

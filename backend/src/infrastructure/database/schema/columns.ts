@@ -16,6 +16,17 @@ export const auditColumns = {
 };
 
 /**
+ * The three columns that open a row owned by one user, of one engine — an id of its own, never the
+ * database's: a ULID minted by the domain's `IdGenerator`, so the database never decides who a row
+ * is (plan 28, B-36).
+ */
+export const engineOwnerColumns = {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  engine: text('engine').notNull(),
+};
+
+/**
  * What identifies one invocation of a tool, in the two tables that record one.
  *
  * `audit_entries` says the tool was about to run; `permission_requests` says what was asked about
@@ -27,7 +38,7 @@ export const auditColumns = {
 export const invocationColumns = {
   userId: text('user_id').notNull(),
   sessionId: text('session_id').notNull(),
-  /** Nullable because the SDK does not always give one. */
+  /** Nullable because the engine does not always give one. */
   toolUseId: text('tool_use_id'),
   toolName: text('tool_name').notNull(),
   /**

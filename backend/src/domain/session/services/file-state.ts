@@ -5,7 +5,7 @@ import type { SessionFileState } from '../entities/session-file-state.entity';
  *
  * `unsafe` is a path the undo will not write through: it became a symbolic link, a hard link or
  * something other than a regular file, or its directory no longer resolves to where it did. It was
- * the SDK's `skippedLinks`; writing the files ourselves, the check is ours, and without it a
+ * the engine's `skippedLinks`; writing the files ourselves, the check is ours, and without it a
  * restore is a way of writing outside the workspace
  * ([D-06](../../../../../docs/plans/04-transcript-and-resume/decisions.md#d-06--desfazer-sem-destruir)).
  */

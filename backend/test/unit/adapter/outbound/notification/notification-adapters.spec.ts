@@ -5,6 +5,7 @@ import { NotifyDeviceApprovedUseCase, NotifyPermissionUseCase } from '@applicati
 import { ForgetPushTokenUseCase, ListApprovedDevicesUseCase } from '@application/auth';
 import type { DeviceContext } from '@application/auth';
 import { RecordAuditEventUseCase } from '@application/audit';
+import { EngineRegistry } from '@application/session';
 import { normalizeQuestion } from '@adapter/outbound/engines/claude/question-input';
 import { PermissionRequest } from '@domain/permission';
 import { SessionId } from '@domain/session';
@@ -12,12 +13,14 @@ import { UserId } from '@domain/auth';
 import type { Device } from '@domain/auth';
 import { DEVICE_APPROVED, EmitterDeviceEvents } from '@adapter/outbound/auth/emitter-device.events';
 import { NotifyOnDeviceApproved } from '@adapter/outbound/notification/device-notification.listener';
+import { RegistryDefaultEngineName } from '@adapter/outbound/notification/registry-default-engine.name';
 import {
   CancelOnPermissionResolved,
   NotifyOnPermissionRequested,
 } from '@adapter/outbound/notification/permission-notification.listeners';
 import { RegistryPushAudience } from '@adapter/outbound/notification/registry-push.audience';
 import { RepositoryPushTokenRegistry } from '@adapter/outbound/notification/repository-push-token.registry';
+import { StubEngine } from '../../../../support/fakes/stub-engine';
 import { ConnectionRegistry } from '@infra/websocket/connection-registry';
 import type { Sendable } from '@infra/websocket/connection-registry';
 import {
@@ -98,6 +101,25 @@ describe('who can be reached', () => {
 
   it('says nobody is watching when nothing is connected', () => {
     expect(audience().isWatching(deviceOwner, 'ses-1')).toBe(false);
+  });
+});
+
+describe('the name a push gives the agent — plan 28, B-41', () => {
+  it("reads the default engine's own display name", async () => {
+    const registry = new EngineRegistry([new StubEngine('claude')], 'claude');
+
+    expect(await new RegistryDefaultEngineName(registry).read()).toBe('Stub');
+  });
+
+  it('asks the engine the registry defaults to, and no other', async () => {
+    const claude = new StubEngine('claude');
+    const other = new StubEngine('other');
+    const registry = new EngineRegistry([claude, other], 'claude');
+
+    await new RegistryDefaultEngineName(registry).read();
+
+    expect(claude.describedTimes).toBe(1);
+    expect(other.describedTimes).toBe(0);
   });
 });
 

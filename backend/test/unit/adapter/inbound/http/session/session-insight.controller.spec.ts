@@ -27,18 +27,12 @@ const USE: ContextUse = {
 };
 
 describe('the use of the context window, on the wire — plan 28, B-24', () => {
-  it('sends a canonical category by its key and any other by the engine words, the name beside both — S-71', () => {
+  it('sends a canonical category by its key, and any other by the engine words — S-71', () => {
     const dto = toContextUseDto(USE);
 
     expect(dto.categories).toEqual([
-      {
-        id: 'free',
-        messageKey: 'sessions.context.free',
-        name: 'Free space',
-        tokens: 190_000,
-        kind: 'free',
-      },
-      { id: 'skills', text: 'Skills', name: 'Skills', tokens: 34, kind: 'used' },
+      { id: 'free', messageKey: 'sessions.context.free', tokens: 190_000, kind: 'free' },
+      { id: 'skills', text: 'Skills', tokens: 34, kind: 'used' },
     ]);
     expect(dto.categories[0]).not.toHaveProperty('text');
     expect(dto.categories[1]).not.toHaveProperty('messageKey');

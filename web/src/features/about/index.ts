@@ -3,7 +3,8 @@ export { AboutScreen, DOCUMENTATION_URL } from './components/AboutScreen';
 export { versionKeys } from './hooks/useVersions';
 export type {
   ComponentVersion,
-  InstallationComponent,
+  EngineVersions,
+  EngineVersionsState,
   InstallationVersions,
   VersionUnavailableReason,
 } from './types/about';

@@ -41,7 +41,6 @@ function allowlistOfTwo(): TestAllowlist & { readonly theirs: string; readonly o
 
 interface LiveSessionRow {
   readonly sessionId: string;
-  readonly claudeSessionId: string;
   readonly workspacePath: string;
   readonly status: string;
   readonly model: string;
@@ -157,7 +156,7 @@ describe('the live sessions of a folder', () => {
       permissionMode: 'ask',
       openedFrom: 'web',
       pendingPermissions: 0,
-      claudeSessionId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      conversation: { engine: 'claude', id: expect.stringMatching(/^[0-9a-f-]{36}$/) },
       startedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
     });
   });

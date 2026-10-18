@@ -182,11 +182,13 @@ describe('sending a question', () => {
   });
 });
 
-describe('sending a question of Claude — plan 24, D-22', () => {
+describe('sending a question of the agent — plan 24, D-22', () => {
   it('says there is a question, in the device language, and nothing of what it asks — S-52', async () => {
-    await sender().send(PushMessage.questionAsked(target, reference));
+    await sender().send(PushMessage.questionAsked(target, reference, { agent: 'Claude' }));
 
-    expect(provider.message['notification']).toEqual(new PushTranslator().question('pt-BR'));
+    expect(provider.message['notification']).toEqual(
+      new PushTranslator().question('pt-BR', { agent: 'Claude' }),
+    );
     expect(provider.message['data']).toEqual({
       kind: 'permissionRequested',
       sessionId: 'ses-1',

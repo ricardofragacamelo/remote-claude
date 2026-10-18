@@ -14,12 +14,12 @@ const CONTEXT = { op: 'checkpoint.restore', layer: 'adapter' } as const;
 /**
  * The disk, as the undo is allowed to touch it — plan 04, B-21.
  *
- * Three requirements became ours the moment the revert stopped being the SDK's
+ * Three requirements became ours the moment the revert stopped being the engine's
  * ([D-06](../../../../../docs/plans/04-transcript-and-resume/decisions.md#d-06--desfazer-sem-destruir)):
  *
  * - **never through a link** (S-65). A path that became a symbolic link, a hard link or anything
  *   but a regular file, or whose directory no longer resolves to itself, is `unsafe`, and the undo
- *   leaves it. The SDK reported these as `skippedLinks`; without the check, a restore is a way of
+ *   leaves it. The engine reported these as `skippedLinks`; without the check, a restore is a way of
  *   writing wherever a link points;
  * - **atomic per file** (S-66). The snapshot is written to a temporary file **in the same
  *   directory** and renamed over the path — a rename within one filesystem is atomic, so a failure

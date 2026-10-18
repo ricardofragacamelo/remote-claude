@@ -17,7 +17,7 @@
     "v": {
       "type": "integer",
       "minimum": 1,
-      "description": "Protocol version — `x-protocol-version` is the one this build speaks. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does. The server also accepts the version before it, during the window of deprecation, and answers each connection in the version it speaks (plan 28, D-08)."
+      "description": "Protocol version — `x-protocol-version` is the one this build speaks. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does."
     },
     "id": { "type": "string", "description": "ULID unique to this frame." },
     "kind": {

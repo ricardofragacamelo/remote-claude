@@ -36,7 +36,7 @@ export class ReleaseAgentLoopOnResolved {
  * two different facts, and the question "who authorised this command?" is answered by the second.
  *
  * It never refuses anything, and it is not awaited. Unlike the hook — which may stop a tool that
- * cannot be recorded — this runs after the decision has already reached the SDK, so the only
+ * cannot be recorded — this runs after the decision has already reached the engine, so the only
  * honest thing a failure here can do is be loud.
  *
  * That is safe because neither durable record depends on it. What was **executed** is written by
@@ -158,7 +158,7 @@ export class LogQuestionAnswered {
         questions: answers.length,
         withOther: answers.some((answer) => answer.other !== null),
       },
-      'a question of Claude was answered',
+      'a question of the agent was answered',
     );
     this.logger.debug(
       {

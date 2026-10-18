@@ -20,6 +20,7 @@ function version(id: string, at: string): HistoryEntry {
     reason: 'save',
     kept: 'yes',
     sizeBytes: 1,
+    hash: null,
     author: { self: true, id: 'me' },
     at,
     batchId: null,

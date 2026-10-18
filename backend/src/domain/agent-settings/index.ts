@@ -9,6 +9,7 @@ export { ModelNotAvailableError } from './errors/model-not-available.error';
 export {
   effectiveDefaults,
   effectiveValue,
+  exactOverride,
   isWithin,
   nearestOverride,
   valuesOf,

@@ -1437,6 +1437,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get composerChoicePending => 'Changing…';
 
   @override
+  String get engineLabel => 'Agent';
+
+  @override
+  String get engineDefault => 'Installation default';
+
+  @override
   String get modeLabel => 'Mode';
 
   @override

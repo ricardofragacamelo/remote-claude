@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule.json",
+  "title": "PermissionRule",
+  "description": "`GET /permission-rules/:ruleId`, `POST /permission-rules` and `DELETE /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48).",
+  "x-kind": "http",
+  "x-type": "permissionRules.detail",
+  "x-route": [
+    { "method": "GET", "path": "/permission-rules/:ruleId" },
+    { "method": "POST", "path": "/permission-rules" },
+    { "method": "DELETE", "path": "/permission-rules/:ruleId" }
+  ],
+  "$ref": "../definitions/permission-rule.schema.json"
+}

@@ -29,7 +29,7 @@ export interface HeldAttachment {
   readonly kind: 'image' | 'text';
   readonly mediaType: string;
 
-  /** The name the person's file had — what a text is introduced to Claude by. */
+  /** The name the person's file had — what a text is introduced to the agent by. */
   readonly name: string;
   readonly size: number;
   readonly sha256: string;

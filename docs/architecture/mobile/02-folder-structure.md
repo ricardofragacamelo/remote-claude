@@ -161,9 +161,9 @@ JSON Schema de `packages/contracts/`, e cai em `lib/core/network/contracts/`.
 
 ---
 
-## Alvo do plano 28 — `engines/` e a composição
+## `engines/` e a composição
 
-> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)). Já valendo desde a F0.
+[Plano 28](../../plans/28-agent-neutral-core/README.md) ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)).
 
 ```
 mobile/lib/

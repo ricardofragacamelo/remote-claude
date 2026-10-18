@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
@@ -16,6 +16,7 @@ import type { Conversation as ConversationState } from '@/features/session/types
 import { api } from '@/shared/api/api';
 import type { BytesResponse } from '@/shared/api/api';
 import { AppError } from '@/shared/api/errors';
+import { nameAgents } from '@/shared/i18n';
 import { fakeObjectUrls } from '../../../support/raw-api';
 import { render, translator } from '../../../support/render';
 import { aToolCall } from '../../../support/canonical-tool';
@@ -24,8 +25,19 @@ const t = translator('en');
 const T0 = '2026-10-07T12:00:00.000Z';
 const CONVERSATION = { engine: 'claude', id: '3f2a6c1e-0000-4000-8000-000000000001' };
 
+beforeEach(() => {
+  // The author's line names the conversation's own engine (plan 28, B-44): known here the same
+  // way `QuestionCard.spec.tsx`/`RuleList.spec.tsx` already keep it, so `t('session.role.assistant')`
+  // below — computed with no `engine` of its own — still resolves to this suite's one engine.
+  nameAgents({
+    defaultEngine: CONVERSATION.engine,
+    engines: [{ id: CONVERSATION.engine, displayName: 'Claude' }],
+  });
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
+  nameAgents(null);
 });
 
 function at(seconds: number): string {

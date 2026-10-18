@@ -271,7 +271,7 @@ Testar conexão com o resultado inline. Cenários S-131…S-136.
 ### B-29 — Tela: plugins 🔲
 
 Seção "Plugins", da **extensão do Claude**: em `web/src/engines/claude/settings/`, registrada pelo
-`web/src/engines/claude/index.ts` nos registros do núcleo (via `web/src/app/engines.ts`, o único arquivo que
+`web/src/engines/claude/index.ts` nos registros do núcleo (via `web/src/app/engines/index.ts`, o único arquivo que
 importa `engines/*`), com chaves `engines.claude.*` e o service falando com `/engines/claude/plugins…`. Lista
 (nome, origem local/marketplace, versão declarada, caminho ou commit, estado, o
 que traz), adicionar escolhendo o diretório pelo diálogo "Abrir pasta" do plano 06 (nunca caminho

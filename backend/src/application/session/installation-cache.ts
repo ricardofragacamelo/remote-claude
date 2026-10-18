@@ -15,7 +15,7 @@ export const MAX_CACHED_LISTS = 16;
  * Keyed by **the version of the CLI the session spawned and the workspace it runs in**. The version,
  * because the answer changes with the CLI and one cached across an update would offer what no longer
  * exists ([D-05](../../../../docs/plans/04-transcript-and-resume/decisions.md#d-05--o-menu-é-descoberta-não-fronteira));
- * the workspace, because a project's `.claude/` brings commands and skills of its own.
+ * the workspace, because a project's own configuration folder brings commands and skills of its own.
  *
  * Two sessions asking together make **one** call (S-36, S-167): the second waits on the first. An
  * answer whose version is unknown is shared while it is being asked and never kept — nothing would

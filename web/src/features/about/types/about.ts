@@ -6,10 +6,26 @@ export type ComponentVersion =
   | { readonly version: string; readonly reason: null }
   | { readonly version: null; readonly reason: VersionUnavailableReason };
 
-/** The components of the installation whose versions the backend reads. */
-export const INSTALLATION_COMPONENTS = ['backend', 'agentSdk', 'claudeCli', 'node'] as const;
+/** Whether an engine's installation answered at all. */
+export type EngineVersionsState = 'available' | 'unavailable';
 
-export type InstallationComponent = (typeof INSTALLATION_COMPONENTS)[number];
+/**
+ * One engine enabled, as the "About" screen lists it: its binary and the library it drives it
+ * through — the library is `null` for an engine that has none to report (plan 28, B-37).
+ */
+export interface EngineVersions {
+  readonly engine: string;
+  readonly displayName: string;
+  readonly state: EngineVersionsState;
+  readonly binary: ComponentVersion;
+  readonly library: ComponentVersion | null;
+}
 
 /** What somebody pastes into a bug report: the versions this installation runs. */
-export type InstallationVersions = Readonly<Record<InstallationComponent, ComponentVersion>>;
+export interface InstallationVersions {
+  readonly backend: ComponentVersion;
+  readonly node: ComponentVersion;
+
+  /** A line per engine enabled — never one fixed shape, so a second engine needs nothing here. */
+  readonly engines: readonly EngineVersions[];
+}

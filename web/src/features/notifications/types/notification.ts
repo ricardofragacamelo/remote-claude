@@ -1,32 +1,31 @@
 import type {
+  Notification as ContractNotification,
+  NotificationPagePayload,
+} from '@remote-claude/contracts';
+
+import type {
   NotificationAction,
   NotificationParams,
   NotificationSeverity,
 } from '@/shared/lib/notify';
 
-/** One entry of the notification centre, as the server keeps it. */
-export interface NotificationEntry {
-  readonly id: string;
+/**
+ * One entry of the notification centre, as the server keeps it (`GET /notifications` and friends).
+ *
+ * `severity` and `params` are narrowed from the contract's open shape to this feature's own, tighter
+ * ones: in the domain every parameter is a string, a number or a boolean, which the generator's
+ * open-object subset cannot express (plan 28, B-48) — the same narrowing `notify.ts` already does
+ * for a notification raised client-side.
+ */
+export type NotificationEntry = Omit<ContractNotification, 'severity' | 'params'> & {
   readonly severity: NotificationSeverity;
-  readonly messageKey: string;
   readonly params: NotificationParams;
-
-  /** How many times it happened in the burst it stands for. */
-  readonly count: number;
-
-  /** ISO-8601. */
-  readonly createdAt: string;
-
-  /** ISO-8601, or `null` while unread. */
-  readonly readAt: string | null;
-}
+};
 
 /** A page of the centre, newest first. */
-export interface NotificationPage {
+export type NotificationPage = Omit<NotificationPagePayload, 'items'> & {
   readonly items: readonly NotificationEntry[];
-  readonly unread: number;
-  readonly nextCursor: string | null;
-}
+};
 
 /**
  * Where a notification this window raised stands on its way to the server.

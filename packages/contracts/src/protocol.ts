@@ -45,6 +45,7 @@ export const FRAME_TYPES = [
   'prompt.dequeued',
   'prompt.queued',
   'session.closed',
+  'session.commandsChanged',
   'session.compacted',
   'session.mcpStatusChanged',
   'session.rewound',
@@ -64,7 +65,7 @@ export const FRAME_TYPES = [
 
 /** Shape shared by every frame, in both directions. See docs/architecture/shared/05-websocket-protocol.md. */
 export interface Envelope {
-  /** Protocol version — `x-protocol-version` is the one this build speaks. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does. The server also accepts the version before it, during the window of deprecation, and answers each connection in the version it speaks (plan 28, D-08). */
+  /** Protocol version — `x-protocol-version` is the one this build speaks. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does. */
   readonly v: number;
   /** ULID unique to this frame. */
   readonly id: string;
@@ -86,12 +87,59 @@ export interface Envelope {
   readonly payload?: Readonly<Record<string, unknown>>;
 }
 
+/** What a default sets for the sessions of one engine — for the user, or for a folder and its subfolders (plan 13, D-04, D-06; plan 28, D-06). Every field `null` is "not set here": the next layer down decides, and at the bottom the installation's own default. */
+export interface AgentDefaults {
+  readonly model: string | null;
+  readonly permissionMode: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll' | null;
+  readonly effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | null;
+  readonly thinking: 'on' | 'off' | null;
+  readonly fallbackModel: string | null;
+}
+
+/** A model of an engine's installation, as the clients read it (plan 13, B-13; plan 28, B-36) — discovered from the engine, never a list in the code. */
+export interface AgentModel {
+  /** What `setModel` and `session.start.model` take. */
+  readonly value: string;
+  /** The id an alias resolves to, when the installation says. */
+  readonly resolvedModel: string | null;
+  /** Data of the installation, shown as it is — like the description of a slash command. */
+  readonly displayName: string;
+  readonly description: string;
+  /** The levels of effort this model takes — empty when it takes none. */
+  readonly supportedEffortLevels: readonly ('low' | 'medium' | 'high' | 'xhigh' | 'max')[];
+  /** Whether the model takes an effort at all, said by whether `supportedEffortLevels` is empty — kept on the wire for clients that read the flag rather than the list. */
+  readonly supportsEffort: boolean;
+}
+
+/** One component's version, for `GET /diag/versions` (plan 06, B-12; plan 28, B-37): the number, or `null` and a closed, stable reason — never a failure, because the screen exists precisely for when something is wrong. */
+export interface ComponentVersion {
+  readonly version: string | null;
+  /** Set exactly when `version` is `null`. */
+  readonly reason: 'notInstalled' | 'unreadable' | null;
+}
+
 /** Which conversation of which coding agent: the engine, and the id the conversation has in that engine's own store. It is not the `sessionId` of a live session, which names a subprocess and ends with it; this one outlives every session that ever continued it, and is what the history reads and a resume takes (ADR-025). */
 export interface ConversationRef {
   /** The engine — an `id` of `GET /engines`. Opaque to the client, which never decides by it. */
   readonly engine: string;
   /** The id of the conversation in the engine's store, in the engine's own form — opaque. */
   readonly id: string;
+}
+
+/** One installation of the app, as the client sees it (plan 02). The push token never crosses: not truncated, not hashed — a value that is in a response is a value that is in a browser's network tab. */
+export interface Device {
+  readonly id: string;
+  readonly name: string;
+  readonly platform: 'android' | 'ios';
+  readonly appVersion: string;
+  readonly locale: 'en' | 'pt-BR';
+  readonly status: 'pending' | 'approved' | 'revoked';
+  /** Whether this device has a push token at all — which is what the screen can act on. */
+  readonly pushEnabled: boolean;
+  readonly registeredAt: string;
+  readonly lastSeenAt: string;
+  readonly approvedAt: string | null;
+  readonly revokedAt: string | null;
 }
 
 /** What the engine of a session can do, declared and never supposed (ADR-025). The client hides the controls of what the engine does not have, rather than disabling them: the engine will never have it. Per session, since the version of the binary or the model can change what holds; `GET /engines` gives the engine's before a session exists. */
@@ -152,6 +200,16 @@ export interface FileChange {
   readonly to?: string;
 }
 
+/** How keeping the version a write replaced, in the local history, ended (plan 07, F8). In the domain this is a discriminated union — `{ kept: true, entryId }` or `{ kept: false, reason }` — which the generator cannot express as a `oneOf`; flattened here into one shape with `entryId` present only when `kept` is `true` and `reason` only when it is `false` (plan 28, B-48). */
+export interface HistoryOutcome {
+  /** Whether the replaced version was kept in the local history. */
+  readonly kept: boolean;
+  /** The entry the version was kept under. Present exactly when `kept` is `true`. */
+  readonly entryId?: string;
+  /** Why it was not kept. Present exactly when `kept` is `false`. */
+  readonly reason?: 'tooLarge' | 'unavailable';
+}
+
 export interface InteractionQuestionsItemOptionsItem {
   /** Shown and answered exactly as it is — a label ending in "(Recommended)" keeps it, and a screen may highlight it but never pre-select it. */
   readonly label: string;
@@ -191,8 +249,6 @@ export interface Interaction {
 export interface ListedTranscript {
   /** The conversation — what `session.start` takes as `resumeFrom`. */
   readonly conversation: ConversationRef;
-  /** The id of the conversation alone, for the published app of the previous protocol — gone when its window closes (plan 28, D-08). */
-  readonly sessionId: string;
   /** What the conversation is about, as the engine summarises it. */
   readonly summary: string;
   /** `ours` — opened here, by the caller — or `external`: begun elsewhere on the machine. */
@@ -213,7 +269,72 @@ export interface ListedTranscript {
   readonly writtenAgoSeconds: number;
 }
 
-/** The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the SDK's joined string. */
+/** One turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). Shared by an engine's own diagnostics route and by its installation view's `lastModelCheck` (plan 28, B-48). */
+export interface ModelCheckOutcome {
+  /** What the test of the connection found — data of the answer, never an error. */
+  readonly result: 'ok' | 'notLoggedIn' | 'rateLimited' | 'failed';
+  /** The model that answered, when one did. */
+  readonly model: string | null;
+  readonly latencyMs: number;
+  /** What the turn cost in US dollars, as a decimal string — the money convention this contract already uses for `turn.completed`'s `costUsd` (a float would round where nobody looked). `null` when the CLI said nothing. */
+  readonly costUsd: string | null;
+  /** Why it did not pass, as a stable word the screen translates (`authentication`, `billing`…). */
+  readonly reason: string | null;
+  /** ISO-8601. */
+  readonly at: string;
+}
+
+/** One entry of the notification centre, as the client reads it (plan 06, B-40). */
+export interface Notification {
+  readonly id: string;
+  readonly severity: 'info' | 'warning' | 'error';
+  readonly messageKey: string;
+  /** The parameters of the message — in the domain each value is a string, a number or a boolean; the generator's open-object subset cannot bound the value type further, so this is carried as a generic open object. */
+  readonly params: Readonly<Record<string, unknown>>;
+  readonly count: number;
+  readonly createdAt: string;
+  readonly readAt: string | null;
+}
+
+/** One folder tab, revalidated on every read (plan 06). */
+export interface OpenFolderEntry {
+  readonly path: string;
+  /** The label of the root it lives under, or `null` once it lives under none. */
+  readonly rootLabel: string | null;
+  /** Whether the tab can still be used, revalidated on every read. */
+  readonly state: 'available' | 'notAllowed' | 'missing';
+}
+
+export interface PermissionRuleDisabled {
+  /** Why the rule was switched off — a rule written in an engine's grammar that had no unambiguous canonical translation. */
+  readonly reason: string;
+}
+
+/** One rule that outlives a session, as the client sees it (plan 03; plan 28, B-33). `status` is computed at the moment of the answer, because the list shows an expired rule marked and not missing. */
+export interface PermissionRule {
+  readonly id: string;
+  /** The scope of a granted rule. `session` is part of the domain's type but every rule reachable from these routes is `project` or `always`: a `session` rule lives in memory only and is never persisted or listed here. */
+  readonly scope: 'session' | 'project' | 'always';
+  /** The canonical kind the pattern names — `shell`, `file.edit` —, `null` on a disabled rule. */
+  readonly kind: string | null;
+  /** The kind again, or the engine's pattern of a disabled rule — kept beside for the published app, which reads it (plan 28, D-22). */
+  readonly toolName: string;
+  /** The pattern exactly as written, in the canonical grammar — or, on a disabled rule, the engine's grammar it was written in. */
+  readonly pattern: string;
+  readonly decision: 'allow' | 'deny';
+  readonly projectPath: string | null;
+  /** The engine the rule is restricted to, or `null` for every engine whose calls have the kind. */
+  readonly engine: string | null;
+  /** Who granted it. Always the caller, since nobody sees another person's rules. */
+  readonly grantedBy: string;
+  readonly grantedAt: string;
+  readonly expiresAt: string;
+  readonly status: 'active' | 'expired' | 'revoked' | 'disabled';
+  readonly revokedAt: string | null;
+  readonly disabled: PermissionRuleDisabled | null;
+}
+
+/** The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the engine's own joined string. */
 export interface QuestionAnswer {
   /** The `id` of the question in the request's `interaction`. */
   readonly questionId: string;
@@ -221,6 +342,13 @@ export interface QuestionAnswer {
   readonly selected: readonly string[];
   /** The free answer ("Other"), when there is one. Never blank. */
   readonly other?: string;
+}
+
+/** A version of a part of an engine's installation, as `GET /engines/:engine/installation` reads it (plan 13, B-11) — or why there is none, in the engine's own open-ended words. Never a failure. Distinct from `ComponentVersion` (diag's, with a closed two-value reason): this `reason` is whatever string the installation facts read off the engine, not one of a fixed set. */
+export interface ReadVersion {
+  readonly version: string | null;
+  /** Why there is no version — open-ended, unlike `ComponentVersion`'s. */
+  readonly reason: string | null;
 }
 
 /** The label of a tool call, built by the backend from what the engine sent, which the client translates and never builds (plan 28, D-02). The adapter of the engine is the one that reads the call; a client that met an unknown `messageKey` shows the generic line. */
@@ -257,6 +385,15 @@ export interface TranscriptEvent {
   readonly type: string;
   /** The payload that `type` carries on the socket. */
   readonly payload: Readonly<Record<string, unknown>>;
+}
+
+/** One allowed root, as the client sees it (plan 06). `authorisedUsers` deliberately never crosses: who else may reach a root is nobody's business but the operator's. */
+export interface Workspace {
+  /** Absolute path of the root, with every symlink already resolved. */
+  readonly path: string;
+  readonly label: string;
+  /** ISO-8601, or `null` when this user has never opened anything under it. */
+  readonly lastUsedAt: string | null;
 }
 
 /** A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream. */
@@ -357,7 +494,7 @@ export interface DeviceRegisterPayload {
   readonly locale?: 'en' | 'pt-BR';
 }
 
-/** Diagnostics of the gateway: it crosses every layer without touching the Agent SDK, and is the only smoke test that needs no Claude subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session. */
+/** Diagnostics of the gateway: it crosses every layer without touching the engine's own library, and is the only smoke test that needs no engine subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session. */
 export interface DiagPingPayload {
   /** Session to ping. Absent opens a new one, and the pong carries the id it got. */
   readonly sessionId?: string;
@@ -426,18 +563,18 @@ export interface SessionPromptPayloadAttachmentsItem {
   readonly attachmentId?: string;
   /** The provider that holds the `text` — the integrated terminal of plan 12, when it exists. An enum read as a string, so a provider added later does not break a client already published. */
   readonly source?: 'terminal';
-  /** How the `text` is introduced to Claude and shown on the chip: "terminal: bash". */
+  /** How the `text` is introduced to the agent and shown on the chip: "terminal: bash". */
   readonly label?: string;
   /** The text itself, for a `text`. Bounded so that even at four bytes a character it fits the 64 KB frame beside the rest of the prompt. */
   readonly content?: string;
 }
 
-/** Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way the Claude Code UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`). */
+/** Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way a coding agent's own UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`). */
 export interface SessionPromptPayload {
   readonly sessionId: string;
   /** What the user typed. Empty only when `attachments` carries something: the context alone is a prompt, and nothing at all is refused with `INVALID_INPUT` (plan 08, S-215). */
   readonly text: string;
-  /** The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and Claude reads it through `Read`, which the trail records; its content never travels here (plan 08, D-01). */
+  /** The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and the agent reads it through its own `Read`-kind tool, which the trail records; its content never travels here (plan 08, D-01). */
   readonly attachments?: readonly SessionPromptPayloadAttachmentsItem[];
 }
 
@@ -466,7 +603,7 @@ export interface SessionRestoreChangePayload {
   readonly path: string;
 }
 
-/** Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`. */
+/** Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not the engine's own checkpoint restore: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`. */
 export interface SessionRewindFilesPayload {
   readonly sessionId: string;
   /** The turn to go back to, as `GET /sessions/:sessionId/checkpoints` names it — the `prompt_id` the hooks carry, never a message id of the transcript. */
@@ -484,14 +621,14 @@ export interface SessionSetLocalePayload {
 /** Changes the model of a running session. */
 export interface SessionSetModelPayload {
   readonly sessionId: string;
-  /** Model identifier, as the Agent SDK names it. */
+  /** Model identifier, as the engine names it. */
   readonly model: string;
 }
 
 /** Changes the permission mode of a running session. */
 export interface SessionSetPermissionModePayload {
   readonly sessionId: string;
-  /** The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused. */
+  /** The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. */
   readonly mode: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll';
 }
 
@@ -501,7 +638,7 @@ export interface SessionStartPayload {
   readonly workspacePath: string;
   /** Model to open with. Absent means the server default. */
   readonly model?: string;
-  /** The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused. */
+  /** The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. */
   readonly permissionMode?: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll';
   /** How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client. Only a level the engine announces in `capabilities.effortLevels` — any other is `INVALID_INPUT`. */
   readonly effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
@@ -584,14 +721,14 @@ export interface MessageCompletedPayloadContentItem {
   readonly type: string;
   /** The text of a `text` block. */
   readonly text?: string;
-  /** What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redacted_thinking` block has neither: it says the model thought, and nothing it thought. */
+  /** What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redactedThinking` block has neither: it says the model thought, and nothing it thought. */
   readonly thinking?: string;
   readonly toolUseId?: string;
   /** The identity of the block: `<uuid>:<index>` — the uuid of the transcript entry the block is in, which the live message carries too, and its place in that entry. The same block has the same id live and in the history, read twice or a hundred times. A client keeps one block per id: two blocks equal in kind and text — two thinkings the model did not show — are still two. Absent from a server older than it; the client then compares kind and text. */
   readonly blockId?: string;
   /** The type of an `image` block, as the prompt declared it (`image/png`, …). Absent when it declared none. */
   readonly mediaType?: string;
-  /** The size of an `image` block in bytes, decoded. The bytes themselves never travel on the stream or in a page: the image is fetched on demand, by `GET /transcripts/:sessionId/images/:blockId`. Absent for an image given by URL. */
+  /** The size of an `image` block in bytes, decoded. The bytes themselves never travel on the stream or in a page: the image is fetched on demand, by `GET /transcripts/:engine/:id/images/:blockId`. Absent for an image given by URL. */
   readonly size?: number;
 }
 
@@ -609,13 +746,13 @@ export interface MessageCompletedPayload {
   readonly parentToolUseId?: string;
 }
 
-/** A fragment of the assistant's answer, from the SDK's `stream_event`. The client accumulates by `messageId`; it never concatenates blindly in arrival order. */
+/** A fragment of the assistant's answer, from the engine's own streaming event. The client accumulates by `messageId`; it never concatenates blindly in arrival order. */
 export interface MessageDeltaPayload {
   /** What the fragments of one message are grouped by. */
   readonly messageId: string;
   /** The text of this fragment, and only of this one. */
   readonly delta: string;
-  /** What the fragment is part of: the answer, or Claude's thinking before it. Absent reads as `text`. An enum read as a string, so a block kind added later is not a crash. */
+  /** What the fragment is part of: the answer, or the model's thinking before it. Absent reads as `text`. An enum read as a string, so a block kind added later is not a crash. */
   readonly blockType?: 'text' | 'thinking';
   /** Set when the fragment comes from a subagent: the `toolUseId` of the `Task` that opened it. The client nests it there instead of in the conversation. */
   readonly parentToolUseId?: string;
@@ -695,7 +832,7 @@ export interface PermissionResolvedPayload {
   readonly resolvedBy?: string;
   /** Which client answered. */
   readonly resolvedFrom?: 'web' | 'mobile';
-  /** The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`. */
+  /** The tool call the request was about, when the engine named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`. */
   readonly toolUseId?: string;
   /** Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), the session running in Permitir tudo (`allowAll`), or a call that changes something refused because the session is read-only (`readOnly`, plan 28, B-26). Absent when a human answered or the deadline passed. */
   readonly via?: 'rule' | 'allowAll' | 'readOnly';
@@ -710,7 +847,7 @@ export interface PromptDequeuedPayload {
   readonly reason: 'started' | 'cancelled';
 }
 
-/** A prompt is waiting for the running turn to end. The queue is the backend's, not the SDK's — a prompt handed to the SDK cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`. */
+/** A prompt is waiting for the running turn to end. The queue is the backend's, not the engine's — a prompt handed to the engine cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`. */
 export interface PromptQueuedPayload {
   /** What `session.cancelQueuedPrompt` names it by. */
   readonly queueId: string;
@@ -729,11 +866,36 @@ export interface SessionClosedPayload {
   readonly reason: 'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown' | 'idleTimeout';
 }
 
-/** The conversation was compacted: what came before is now a summary Claude carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there. */
+export interface SessionCommandsChangedPayloadCommandsItem {
+  /** Without the leading slash. */
+  readonly name: string;
+  readonly description: string;
+  /** What the command takes after its name — `<file>`, `[on|off]` — or empty. */
+  readonly argumentHint: string;
+  /** Other names that run the same command: `/cost` and `/stats` both run `/usage`. */
+  readonly aliases: readonly string[];
+  /** Whether it is the engine's own. Absent or `false` for a command or a skill of the project, of a plugin or of an MCP server. */
+  readonly builtin?: boolean;
+  /** Whether it belongs to the group shown first. */
+  readonly suggested: boolean;
+  /** Where a command or a skill comes from — the badge of the menu. */
+  readonly origin: 'builtin' | 'project' | 'user' | 'system';
+  /** The name a person reads — without the namespace of a plugin. */
+  readonly label: string;
+  /** `/name` runs another row: an unmarked row whose name a command of the engine's own also has. Listed, so nothing vanishes in silence. */
+  readonly shadowed: boolean;
+}
+
+/** The slash commands of a session, menu-ordered and badged — the whole list, every time, so a client never patches: pushed when the engine's own menu changes mid-session (a skill discovered as the agent works in a subdirectory, say). A client that does not know it ignores it. */
+export interface SessionCommandsChangedPayload {
+  readonly commands: readonly SessionCommandsChangedPayloadCommandsItem[];
+}
+
+/** The conversation was compacted: what came before is now a summary the agent carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there. */
 export interface SessionCompactedPayload {
-  /** `manual` — somebody sent `/compact`; `auto` — the context was full and Claude compacted it. */
+  /** `manual` — somebody sent `/compact`; `auto` — the context was full and the agent compacted it. */
   readonly trigger: 'manual' | 'auto';
-  /** How many tokens the context held before, when the SDK says. */
+  /** How many tokens the context held before, when the engine says. */
   readonly preTokens?: number;
 }
 
@@ -742,7 +904,7 @@ export interface SessionMcpStatusChangedPayloadServersItem {
   readonly name: string;
   /** `needs-auth` asks for a browser on the machine (OAuth); no OAuth address ever travels through the product. */
   readonly status: 'connected' | 'failed' | 'needs-auth' | 'pending' | 'disabled';
-  /** Where the definition came from, read off the SDK's `source` and never off the name: `ours` is a server of the store, `project` an approved entry of `.mcp.json` (both reach the CLI as `dynamic`), `plugin` one a plugin brought, `other` anything else — never trusted as ours. */
+  /** Where the definition came from, read off the engine's own `source` and never off the name: `ours` is a server of the store, `project` an approved entry of `.mcp.json` (both reach the CLI as `dynamic`), `plugin` one a plugin brought, `other` anything else — never trusted as ours. */
   readonly source: 'ours' | 'project' | 'plugin' | 'other';
   readonly toolCount: number;
   /** Why it failed, redacted — a URL with a token in it never reaches a client. Absent unless `failed`. */
@@ -796,7 +958,7 @@ export interface SessionStartedPayload {
   /** The workspace the session runs in, already normalised and already inside the allowlist. */
   readonly workspacePath: string;
   readonly model: string;
-  /** The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused. */
+  /** The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. */
   readonly permissionMode: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll';
   /** The engine the session runs on — an `id` of `GET /engines`, whose `displayName` is how a screen names it. The client never decides by it. */
   readonly engine: string;
@@ -814,7 +976,7 @@ export interface SessionStartedPayload {
   readonly defaultsFrom?: 'client' | 'folder' | 'user' | 'installation';
 }
 
-/** Where the session stands. Derived by us, not read off a single SDK message. */
+/** Where the session stands. Derived by us, not read off a single message of the engine. */
 export interface SessionStatusChangedPayload {
   /** `waitingPermission` is the one that matters: the agent loop is blocked on a human. */
   readonly status: 'idle' | 'thinking' | 'running' | 'waitingPermission' | 'closed';
@@ -855,12 +1017,10 @@ export interface ToolCompletedPayload {
   readonly toolUseId: string;
   /** `denied` is not a failure of the tool: it is a human having said no, and the UI reads the two differently. */
   readonly status: 'succeeded' | 'failed' | 'denied';
-  /** A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:sessionId/tools/:toolUseId/result`. */
+  /** A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:engine/:id/tools/:toolUseId/result`. */
   readonly summary?: string;
   /** Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation. */
   readonly parentToolUseId?: string;
-  /** The task a call that creates or changes one made or changed, taken from the call's result. Kept for the previous protocol, whose clients rebuild the list themselves; the list is `session.tasksChanged` now (plan 28, B-22), and this goes with the window, in F7 (B-47). */
-  readonly taskId?: string;
   /** When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for. */
   readonly at?: string;
   /** On an `AskUserQuestion` of the **history** (`transcript.appended`, the follower): the questions, normalised, and how they ended — joined by `toolUseId` with what the backend recorded. Live, a screen already has the `permission.requested` and `permission.resolved`, and this is absent. */
@@ -912,13 +1072,13 @@ export interface TranscriptAppendedPayload {
   readonly followId: string;
   /** The conversation the entries are of. */
   readonly conversation: ConversationRef;
-  /** The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:sessionId/messages` carries, oldest first, in the order of the SDK's chain and never of the clock. A client folds them with the same reducer as the page. */
+  /** The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:engine/:id/messages` carries, oldest first, in the order of the engine's own chain and never of the clock. A client folds them with the same reducer as the page. */
   readonly events: readonly TranscriptAppendedPayloadEventsItem[];
   /** The last entry of the conversation now — what a reconnect follows again from. Absent while the conversation has no entry. */
   readonly lastMessageId?: string;
   /** What the conversation is doing now, as `transcript.following` says it. */
   readonly activity: 'liveHere' | 'activeElsewhere' | 'idle';
-  /** Whether Claude seems to be working on it in another client: the conversation is `activeElsewhere` **and** its last entry leaves the turn open — a tool call without its result, a thinking, or a prompt without an answer. An inference from the transcript, which records no state of the turn; the screen says it is one. */
+  /** Whether the agent seems to be working on it in another client: the conversation is `activeElsewhere` **and** its last entry leaves the turn open — a tool call without its result, a thinking, or a prompt without an answer. An inference from the transcript, which records no state of the turn; the screen says it is one. */
   readonly working: boolean;
 }
 
@@ -963,7 +1123,7 @@ export interface WorkspaceFilesChangedPayloadChangesItem {
   /** Relative to the folder, POSIX. */
   readonly path: string;
   readonly kind: 'created' | 'changed' | 'deleted';
-  /** Who changed it, as far as the server can tell: a write of the agent of a session, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say. (`claude` until plan 28, B-25; a connection of the previous protocol still reads that.) */
+  /** Who changed it, as far as the server can tell: a write of the agent of a session, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say. */
   readonly origin?: 'agent' | 'user' | 'external';
   /** On `agent`: the engine whose agent wrote it — an `id` of `GET /engines`, opaque, for naming the agent in the text. Absent on every other origin. */
   readonly engine?: string;
@@ -985,6 +1145,63 @@ export interface WorkspaceWatchStoppedPayload {
   readonly reason: 'allowlistChanged' | 'folderDeleted' | 'systemLimit';
 }
 
+/** One fact, as the client sees it. The owner is the caller, so it is not here. */
+export interface AuditEventPagePayloadEventsItem {
+  readonly id: string;
+  /** A genuinely open vocabulary — `file.`, `file.written`, a device or a rule event — never a fixed enum. */
+  readonly kind: string;
+  /** What the fact is about — for a file, its real path. */
+  readonly subjectId: string;
+  /** How to show the subject — for a file, its path relative to the open folder. */
+  readonly subjectLabel: string;
+  /** Sizes, hashes, origin and destination, counts — never the contents of a file. Open: shaped by the kind. */
+  readonly details: Readonly<Record<string, unknown>> | null;
+  readonly at: string;
+}
+
+/** `GET /audit-events`: the account facts, read — devices, rules, conversations, undos, file writes (plan 06, B-40; plan 07, B-17). */
+export interface AuditEventPagePayload {
+  readonly events: readonly AuditEventPagePayloadEventsItem[];
+  /** Opaque to the client: send it back as `cursor`. `null` on the last page. */
+  readonly nextCursor: string | null;
+}
+
+/** What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one. */
+export interface AuditTrailPagePayloadEntriesItemVerdict {
+  readonly requestId: string;
+  readonly auto: boolean;
+  readonly ruleId: string | null;
+  readonly scope: 'once' | 'session' | 'project' | 'always';
+  readonly resolvedBy: string | null;
+  readonly resolvedFrom: string | null;
+}
+
+/** One entry of the trail, as the client sees it. The owner is not here: it is always the caller. */
+export interface AuditTrailPagePayloadEntriesItem {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly toolUseId: string | null;
+  /** The engine's own name of the tool, kept beside the kind. */
+  readonly toolName: string;
+  /** The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33). */
+  readonly kind: string;
+  /** Exactly as the tool was called — except a `file.read`, which shows its path and window alone. Open: shaped by the tool, never fixed. */
+  readonly input: Readonly<Record<string, unknown>>;
+  readonly decision: 'recorded' | 'allowed' | 'denied';
+  readonly at: string;
+  /** What leads from the entry to the log and the events of the same turn. */
+  readonly traceId: string | null;
+  /** What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one. */
+  readonly verdict: AuditTrailPagePayloadEntriesItemVerdict | null;
+}
+
+/** `GET /audit-entries`: the caller's trail, newest first, one page at a time — "what ran on my machine, and who let it?" (plan 03). */
+export interface AuditTrailPagePayload {
+  readonly entries: readonly AuditTrailPagePayloadEntriesItem[];
+  /** Opaque to the client: send it back as `cursor` for the next page. `null` on the last one. */
+  readonly nextCursor: string | null;
+}
+
 export interface ContextUsePayloadCategoriesItem {
   /** `system`, `tools`, `messages`, `memory`, `free` or `reserved` — the canonical categories, each with a `messageKey` — or an id of the engine's own, opaque, for what only it counts apart. */
   readonly id: string;
@@ -992,8 +1209,6 @@ export interface ContextUsePayloadCategoriesItem {
   readonly messageKey?: string;
   /** The engine's own name for a category with no key — its words, shown as they are. Absent on a canonical one. */
   readonly text?: string;
-  /** The engine's own name, always — kept for the clients of the previous protocol, which read it for an id they do not know (plan 28, D-22). Goes with the window, in F7. */
-  readonly name: string;
   readonly tokens: number;
   /** What the category is: in use, free, kept aside, or deferred until needed. */
   readonly kind: 'used' | 'free' | 'buffer' | 'deferred';
@@ -1011,6 +1226,87 @@ export interface ContextUsePayload {
   readonly percentage: number;
   /** What the window holds, by category. */
   readonly categories: readonly ContextUsePayloadCategoriesItem[];
+}
+
+export interface DefaultsViewPayloadEffectiveModel {
+  readonly value: string | null;
+  readonly from: 'folder' | 'user' | 'installation';
+  /** The folder whose override set it, when `from` is `folder`. */
+  readonly folder?: string;
+}
+
+export interface DefaultsViewPayloadEffectivePermissionMode {
+  readonly value: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll' | null;
+  readonly from: 'folder' | 'user' | 'installation';
+  readonly folder?: string;
+}
+
+export interface DefaultsViewPayloadEffectiveEffort {
+  readonly value: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | null;
+  readonly from: 'folder' | 'user' | 'installation';
+  readonly folder?: string;
+}
+
+export interface DefaultsViewPayloadEffectiveThinking {
+  readonly value: 'on' | 'off' | null;
+  readonly from: 'folder' | 'user' | 'installation';
+  readonly folder?: string;
+}
+
+export interface DefaultsViewPayloadEffectiveFallbackModel {
+  readonly value: string | null;
+  readonly from: 'folder' | 'user' | 'installation';
+  readonly folder?: string;
+}
+
+/** Every field as it applies in the folder asked — the nearest folder override, the user's default, or the installation's. */
+export interface DefaultsViewPayloadEffective {
+  readonly model: DefaultsViewPayloadEffectiveModel;
+  readonly permissionMode: DefaultsViewPayloadEffectivePermissionMode;
+  readonly effort: DefaultsViewPayloadEffectiveEffort;
+  readonly thinking: DefaultsViewPayloadEffectiveThinking;
+  readonly fallbackModel: DefaultsViewPayloadEffectiveFallbackModel;
+}
+
+/** The folder's own override — mirrors `FolderDefaults`, inlined because the field is nullable and the generator refuses any sibling beside a `$ref` (plan 28, B-48). `null` when the folder has none of its own. */
+export interface DefaultsViewPayloadFolder {
+  readonly folder: string;
+  readonly values: AgentDefaults;
+}
+
+/** `GET/PUT /engines/:engine/defaults` and `PUT/DELETE /engines/:engine/defaults/folder`: the defaults as the screen shows them — what applies, the user's own, and the folder's override (plan 13, B-14; plan 28, B-36). `EffectiveValue<T>` is generic in TypeScript; JSON Schema has no generics, so `effective` is five independent properties, one per field, each typed to that field's own value type (plan 28, B-48). */
+export interface DefaultsViewPayload {
+  /** Every field as it applies in the folder asked — the nearest folder override, the user's default, or the installation's. */
+  readonly effective: DefaultsViewPayloadEffective;
+  readonly user: AgentDefaults;
+  /** The folder's own override — mirrors `FolderDefaults`, inlined because the field is nullable and the generator refuses any sibling beside a `$ref` (plan 28, B-48). `null` when the folder has none of its own. */
+  readonly folder: DefaultsViewPayloadFolder | null;
+}
+
+/** `GET /devices`: this caller's devices, most recently seen first. Only theirs (plan 02). */
+export interface DeviceListPayload {
+  readonly devices: readonly Device[];
+}
+
+export interface DirectoryListingPayloadEntriesItem {
+  readonly name: string;
+  /** Absolute path of the entry as listed — for a symlink, the link, not its target. */
+  readonly path: string;
+  /** The name starts with `.`. Listed only when `hidden=true` was asked. */
+  readonly hidden: boolean;
+  /** A symlink whose target is a directory inside the same root. One that escapes is omitted. */
+  readonly symlink: boolean;
+}
+
+/** `GET /workspaces/directories`: one level of one directory, never the tree (plan 06, D-05). */
+export interface DirectoryListingPayload {
+  readonly path: string;
+  readonly root: Workspace;
+  /** `null` at the root: the picker never climbs above it. */
+  readonly parent: string | null;
+  readonly entries: readonly DirectoryListingPayloadEntriesItem[];
+  /** The ceiling cut the listing; `prefix` reaches what was left out. */
+  readonly truncated: boolean;
 }
 
 export interface EngineListPayloadEnginesItem {
@@ -1034,6 +1330,283 @@ export interface EngineListPayload {
   readonly defaultEngine: string;
   /** The engines enabled, in the order the configuration lists them. */
   readonly engines: readonly EngineListPayloadEnginesItem[];
+}
+
+/** `GET /engines/:engine/models`: the models of an engine's installation, and the modes it runs in (plan 13, B-13; plan 28, B-36) — from the engine's installation, never a list in the code. */
+export interface EngineModelsPayload {
+  /** The version of the engine that answered, or `null` when it could not tell. */
+  readonly version: string | null;
+  readonly models: readonly AgentModel[];
+  /** The modes the engine runs in, every one of them — the screen says which can be a default. */
+  readonly permissionModes: readonly ('ask' | 'acceptEdits' | 'readOnly' | 'allowAll')[];
+}
+
+/** `GET /engines/claude/account`: who Claude bills on this machine (plan 13, B-11, D-07). Never a token, never the path of a credential — of the sources of the credential only their names. */
+export interface AccountViewPayload {
+  readonly email: string | null;
+  readonly organization: string | null;
+  readonly plan: string | null;
+  readonly provider: string | null;
+  readonly tokenSource: string | null;
+  readonly apiKeySource: string | null;
+  readonly state: 'ready' | 'loginRequired';
+}
+
+/** The `claude` on `PATH`, when there is one — often another version. Mirrors `ReadVersion` plus `differs`, inlined because the generator refuses any sibling beside a `$ref` (plan 28, B-48). */
+export interface InstallationViewPayloadPathCli {
+  readonly version: string | null;
+  readonly reason: string | null;
+  /** Whether the version on `PATH` differs from the bundled one. */
+  readonly differs: boolean;
+}
+
+/** The configuration directory the CLI reads: `CLAUDE_CONFIG_DIR`, or `~/.claude` without it. */
+export interface InstallationViewPayloadConfigDir {
+  readonly path: string;
+  readonly fromEnvironment: boolean;
+}
+
+/** `GET /engines/claude/installation`: "why does Claude not work here?" Never fails because the CLI did not answer: every part says what it could read and why not (plan 13, B-11). */
+export interface InstallationViewPayload {
+  readonly agentSdk: ReadVersion;
+  /** The binary the SDK spawns, from its manifest. */
+  readonly bundledCli: ReadVersion;
+  /** The `claude` on `PATH`, when there is one — often another version. Mirrors `ReadVersion` plus `differs`, inlined because the generator refuses any sibling beside a `$ref` (plan 28, B-48). */
+  readonly pathCli: InstallationViewPayloadPathCli;
+  /** The configuration directory the CLI reads: `CLAUDE_CONFIG_DIR`, or `~/.claude` without it. */
+  readonly configDir: InstallationViewPayloadConfigDir;
+  /** What the last answer of the installation said of the login — `unknown` before any. */
+  readonly login: 'ready' | 'loginRequired' | 'unknown';
+  /** The test of the connection most recently run, by user. `null` before any. */
+  readonly lastModelCheck: ModelCheckOutcome | null;
+}
+
+/** What applies in the folder asked, and where it came from. */
+export interface OutputStyleViewPayloadEffective {
+  readonly value: string | null;
+  readonly from: 'folder' | 'user' | 'installation';
+  /** The folder whose override set it, when `from` is `folder`. */
+  readonly folder?: string;
+}
+
+/** The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own. */
+export interface OutputStyleViewPayloadFolder {
+  readonly folder: string;
+  readonly value: string;
+}
+
+/** `GET/PUT /engines/claude/output-style` and `PUT/DELETE /engines/claude/output-style/folder`: the output style as the screen shows it — what applies, the user's own, and the folder's (plan 13, D-04, D-06; plan 28, D-06). */
+export interface OutputStyleViewPayload {
+  /** What applies in the folder asked, and where it came from. */
+  readonly effective: OutputStyleViewPayloadEffective;
+  readonly user: string | null;
+  /** The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own. */
+  readonly folder: OutputStyleViewPayloadFolder | null;
+}
+
+/** `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only. */
+export interface FileContentPayload {
+  readonly path: string;
+  readonly content: string;
+  readonly etag: string;
+  readonly encoding: string;
+  readonly bom: boolean;
+  readonly eol: 'lf' | 'crlf' | 'mixed';
+  readonly size: number;
+  /** ISO-8601. */
+  readonly mtime: string;
+  readonly largeFile: boolean;
+}
+
+/** `POST /files`, `POST /files/move` and `POST /files/copy`: an entry a create, a move or a copy left — one shape for all three. */
+export interface FileEntryPayload {
+  readonly path: string;
+  /** Set for a file; `null` for a folder. */
+  readonly etag: string | null;
+}
+
+/** `GET /files/limits`: the ceilings a client has to know before it starts — editing, download, zip, upload, history (plan 07, F7). Said before the client starts, so a refusal is a sentence on the screen before the transfer, not a `413` after it. */
+export interface FileLimitsPayload {
+  /** Above this, a file is not opened for editing at all, and a save is refused. */
+  readonly maxEditBytes: number;
+  /** Above this, a file opens in the light mode of the editor. */
+  readonly largeFileBytes: number;
+  /** The most bytes one download takes out: a file, or the measure of a zip. */
+  readonly downloadMaxBytes: number;
+  /** The most entries one zip carries. */
+  readonly archiveMaxEntries: number;
+  /** The largest file one upload writes. */
+  readonly uploadMaxBytes: number;
+  /** The most files one upload writes. */
+  readonly uploadMaxEntries: number;
+  /** The most bytes one upload writes, all files together. */
+  readonly uploadMaxTotalBytes: number;
+  /** Above this, a version is not kept, and its entry says so. */
+  readonly historyMaxFileBytes: number;
+}
+
+export interface FileTreePayloadEntriesItem {
+  readonly name: string;
+  /** Relative to the open folder. */
+  readonly path: string;
+  readonly kind: 'file' | 'directory' | 'symlink' | 'other';
+  readonly size: number;
+  /** ISO-8601. */
+  readonly mtime: string;
+  /** One of the names the explorer hides unless "show hidden" is on — marked, never left out. */
+  readonly hidden: boolean;
+  /** Not UTF-8 on disk: shown, and never operated on. */
+  readonly unreadableName: boolean;
+  /** A link that leads outside the open folder: not navigable. `false` for anything but a link. */
+  readonly outside: boolean;
+  /** What a link inside leads to — `missing` when it is broken; `null` outside and for non-links. */
+  readonly targetKind: 'file' | 'directory' | 'other' | 'missing' | null;
+}
+
+/** `GET /files/tree`: one level of one folder, never the whole tree (plan 07, F1). */
+export interface FileTreePayload {
+  readonly folder: string;
+  /** Relative to the open folder. */
+  readonly path: string;
+  readonly entries: readonly FileTreePayloadEntriesItem[];
+  readonly truncated: boolean;
+}
+
+/** The server only knows the `sub` of whoever wrote: `self` says whether it is the caller. */
+export interface HistoryPagePayloadEntriesItemAuthor {
+  readonly self: boolean;
+  readonly id: string;
+}
+
+/** One version, as the Timeline shows it. Never the contents. */
+export interface HistoryPagePayloadEntriesItem {
+  readonly id: string;
+  /** Relative to the folder asked. */
+  readonly path: string;
+  readonly entryKind: 'file' | 'directory';
+  readonly reason: 'save' | 'delete' | 'restore' | 'upload';
+  readonly kept: 'yes' | 'tooLarge';
+  readonly sizeBytes: number | null;
+  /** In the form of an `ETag`, so a client compares it with the current file's as it is. */
+  readonly hash: string | null;
+  /** The server only knows the `sub` of whoever wrote: `self` says whether it is the caller. */
+  readonly author: HistoryPagePayloadEntriesItemAuthor;
+  /** ISO-8601. */
+  readonly at: string;
+  readonly batchId: string | null;
+}
+
+/** `GET /files/history`: a page of versions, newest first — one path's, the whole folder's, or the recently deleted (plan 07, B-58). */
+export interface HistoryPagePayload {
+  readonly entries: readonly HistoryPagePayloadEntriesItem[];
+  /** Opaque to the client: send it back as `cursor`. `null` on the last page. */
+  readonly nextCursor: string | null;
+}
+
+export interface KeptDeletePayloadKeptEntriesItem {
+  readonly id: string;
+  readonly path: string;
+  readonly entryKind: 'file' | 'directory';
+}
+
+export interface KeptDeletePayloadKept {
+  readonly batchId: string;
+  readonly entries: readonly KeptDeletePayloadKeptEntriesItem[];
+}
+
+/** `DELETE /files` with `keepInHistory`: what the delete kept, for the client's Undo (plan 07, F8). Absent on the plain `204` — this is the present shape only. */
+export interface KeptDeletePayload {
+  readonly kept: KeptDeletePayloadKept;
+}
+
+/** `GET /notifications`: a page of the centre, newest first, with how many are unread (plan 06, B-40). */
+export interface NotificationPagePayload {
+  readonly items: readonly Notification[];
+  readonly unread: number;
+  readonly nextCursor: string | null;
+}
+
+/** `GET /workspaces/open-folders`: the folder tabs, in the order the user left them, each revalidated (plan 06). */
+export interface OpenFoldersPayload {
+  readonly folders: readonly OpenFolderEntry[];
+}
+
+/** `GET /permission-rules`: the caller's rules, newest first — expired ones included and marked, revoked ones gone (plan 03). */
+export interface PermissionRuleListPayload {
+  readonly rules: readonly PermissionRule[];
+}
+
+export interface PermissionStatePayloadAnswersItem {
+  readonly questionId: string;
+  readonly selected: readonly string[];
+  readonly other?: string;
+}
+
+/** `GET /sessions/:sessionId/permissions/:requestId`: the state of one permission request, for a client that was told about it by somebody else — a push may be minutes late, so the app asks before it renders (plan 02, D-22). In the domain this is a discriminated union by `status` (`pending` carries `request` and `remainingExtensions`; `resolved` carries the rest), which the generator cannot express as a `oneOf`; flattened here with every field but `status` optional, paired by `status` (plan 28, B-48). `request` is carried as a generic open object — exactly `permission.requested`'s payload — rather than a precise nested shape, because the domain type behind it (`Readonly<Record<string, unknown>>`) is already open at the TypeScript boundary. */
+export interface PermissionStatePayload {
+  readonly status: 'pending' | 'resolved';
+  /** Present exactly when `status` is `pending`. Exactly the `permission.requested` payload — the card renders from this and nothing else. */
+  readonly request?: Readonly<Record<string, unknown>>;
+  /** Present exactly when `status` is `pending`. What stops a card offering an extension that no longer exists. */
+  readonly remainingExtensions?: number;
+  /** Present exactly when `status` is `resolved`. The request that was settled. */
+  readonly requestId?: string;
+  /** Present exactly when `status` is `resolved`. */
+  readonly decision?: 'allow' | 'deny';
+  /** Present exactly when `status` is `resolved`. The server decided it, with nobody answering. */
+  readonly auto?: boolean;
+  /** Present when `status` is `resolved` and a human answered. */
+  readonly resolvedBy?: string;
+  /** Present when `status` is `resolved` and a human answered. */
+  readonly resolvedFrom?: 'web' | 'mobile';
+  /** Present when `status` is `resolved` and the engine named a tool call. */
+  readonly toolUseId?: string;
+  /** Present when `status` is `resolved` and nobody was asked. */
+  readonly via?: 'rule' | 'allowAll' | 'readOnly';
+  /** Present when `status` is `resolved`, the request was a question and the decision `allow`. */
+  readonly answers?: readonly PermissionStatePayloadAnswersItem[];
+  /** Present when `status` is `resolved` and the request was a question — the phone a push opened draws it with what was answered. */
+  readonly interaction?: Interaction;
+}
+
+export interface RecentFoldersPayloadFoldersItem {
+  readonly path: string;
+  /** The label of the root it lives under now, or `null` once it lives under none. */
+  readonly rootLabel: string | null;
+  /** ISO-8601. */
+  readonly lastOpenedAt: string;
+  readonly pinned: boolean;
+  /** `false` for a folder that left the allowlist or the disk — marked, rather than dropped. */
+  readonly available: boolean;
+}
+
+/** `GET /workspaces/recent`: the folders this caller opened, pinned first — each marked when it can no longer be used (plan 06). */
+export interface RecentFoldersPayload {
+  readonly folders: readonly RecentFoldersPayloadFoldersItem[];
+}
+
+/** `GET /workspaces/resolve`: a path that cleared every check, and the root it cleared under (plan 06). */
+export interface ResolvedWorkspacePayload {
+  readonly path: string;
+  readonly root: Workspace;
+}
+
+/** `POST /files/history/:entryId/restore`: what a restore left. `etag` and `size` are `null` for a folder. */
+export interface RestoredEntryPayload {
+  readonly path: string;
+  readonly etag: string | null;
+  readonly size: number | null;
+  readonly written: boolean;
+  readonly history: HistoryOutcome | null;
+}
+
+/** `PUT /files/content`: a file as a save left it, and how keeping the version it replaced ended. */
+export interface SavedFilePayload {
+  readonly path: string;
+  readonly etag: string;
+  readonly size: number;
+  /** `null`: nothing was written to the history. */
+  readonly history: HistoryOutcome | null;
 }
 
 /** What `GET /transcripts/:engine/:id/subagents/:toolUseId/messages` answers: a page of what a subagent said, from the tail (plan 28, B-12). */
@@ -1107,7 +1680,7 @@ export interface TranscriptListPayload {
   readonly nextCursor: string | null;
 }
 
-/** What `GET /transcripts/:engine/:id/messages` answers: a page of a conversation, newest page first and oldest first within it (plan 28, B-12). The route of the previous protocol, `GET /transcripts/:sessionId/messages`, answers the same during its window. */
+/** What `GET /transcripts/:engine/:id/messages` answers: a page of a conversation, newest page first and oldest first within it (plan 28, B-12). */
 export interface TranscriptPagePayload {
   /** The conversation the page is of. */
   readonly session: ListedTranscript;
@@ -1131,6 +1704,71 @@ export interface TranscriptToolResultPayload {
   readonly cutAt?: number;
 }
 
+export interface UploadPreflightPayloadItemsItemExisting {
+  readonly kind: 'file' | 'directory' | 'symlink' | 'other';
+  readonly etag: string | null;
+}
+
+export interface UploadPreflightPayloadItemsItem {
+  /** Relative to the open folder. */
+  readonly path: string;
+  readonly existing: UploadPreflightPayloadItemsItemExisting | null;
+}
+
+/** `POST /files/upload/preflight`: what is already where each item of an upload would go — asked before anything is sent (plan 07, F7). */
+export interface UploadPreflightPayload {
+  readonly items: readonly UploadPreflightPayloadItemsItem[];
+}
+
+/** Present exactly when `status` is `failed`. The envelope of an error, without the parts that belong to a whole response. */
+export interface UploadResultPayloadItemsItemError {
+  readonly code: string;
+  readonly messageKey: string;
+  /** Open: the parameters of the message, by key. */
+  readonly params?: Readonly<Record<string, unknown>>;
+}
+
+export interface UploadResultPayloadItemsItem {
+  /** Relative to the open folder. */
+  readonly path: string;
+  readonly status: 'created' | 'renamed' | 'replaced' | 'failed';
+  /** Present when `status` is `created`, `renamed` or `replaced`. */
+  readonly etag?: string;
+  /** How keeping the version it replaced in the local history ended. Present exactly when `status` is `replaced`. */
+  readonly history?: HistoryOutcome;
+  /** Present exactly when `status` is `failed`. The envelope of an error, without the parts that belong to a whole response. */
+  readonly error?: UploadResultPayloadItemsItemError;
+}
+
+/** `POST /files/upload`: `200` when every item was written, `207` when any failed, each with its own outcome. In the domain `items` is a discriminated union by `status` (`created`/`renamed` carry `etag`; `replaced` carries `etag` and `history`; `failed` carries `error`), which the generator cannot express as a `oneOf`; flattened here, with the pairing documented per field (plan 28, B-48). */
+export interface UploadResultPayload {
+  readonly items: readonly UploadResultPayloadItemsItem[];
+}
+
+export interface VersionsPayloadEnginesItem {
+  readonly engine: string;
+  readonly displayName: string;
+  readonly state: 'available' | 'unavailable';
+  readonly binary: ComponentVersion;
+  /** `null` for an engine driven with no library. */
+  readonly library: ComponentVersion | null;
+}
+
+/** `GET /diag/versions`: what somebody pastes into a bug report (plan 06, B-12; plan 28, B-37). Always `200` — a version that could not be read is `null` with the reason, never a `500`. */
+export interface VersionsPayload {
+  readonly backend: ComponentVersion;
+  readonly node: ComponentVersion;
+  /** The engine a session opens on when the client names none — one of `engines`. */
+  readonly defaultEngine: string;
+  /** One per engine enabled, in the order the configuration lists them (S-108). */
+  readonly engines: readonly VersionsPayloadEnginesItem[];
+}
+
+/** `GET /workspaces`: the roots this caller may use. Only theirs: a root of somebody else is not listed at all (plan 06). */
+export interface WorkspaceListPayload {
+  readonly workspaces: readonly Workspace[];
+}
+
 /** The answer to `permission.requested`, carrying its `id` in `correlationId`. Resolving the same `requestId` twice is a silent ack and **one** execution, never an error and never a double run — several clients watch one session, and a client may resend after reconnecting. */
 export interface PermissionResolvePayload {
   /** The request being answered. Idempotency keys on it, so resending after a reconnect costs nothing. */
@@ -1150,6 +1788,11 @@ export interface PermissionResolvePayload {
 /** The bounds the schema gives the fields of {@link Envelope}. */
 export const ENVELOPE_LIMITS = {
   v: { minimum: 1 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link AgentModel}. */
+export const AGENT_MODEL_LIMITS = {
+  supportedEffortLevels: { maxItems: 16 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link ConversationRef}. */
@@ -1252,6 +1895,16 @@ export const PERMISSION_RESOLVED_PAYLOAD_LIMITS = {
   answers: { maxItems: 4 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link SessionCommandsChangedPayloadCommandsItem}. */
+export const SESSION_COMMANDS_CHANGED_PAYLOAD_COMMANDS_ITEM_LIMITS = {
+  aliases: { maxItems: 16 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SessionCommandsChangedPayload}. */
+export const SESSION_COMMANDS_CHANGED_PAYLOAD_LIMITS = {
+  commands: { maxItems: 256 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link SessionMcpStatusChangedPayloadServersItem}. */
 export const SESSION_MCP_STATUS_CHANGED_PAYLOAD_SERVERS_ITEM_LIMITS = {
   toolCount: { minimum: 0 },
@@ -1304,6 +1957,16 @@ export const WORKSPACE_FILES_CHANGED_PAYLOAD_CHANGES_ITEM_LIMITS = {
   engine: { maxLength: 32 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link AuditEventPagePayload}. */
+export const AUDIT_EVENT_PAGE_PAYLOAD_LIMITS = {
+  events: { maxItems: 100 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link AuditTrailPagePayload}. */
+export const AUDIT_TRAIL_PAGE_PAYLOAD_LIMITS = {
+  entries: { maxItems: 100 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link ContextUsePayloadCategoriesItem}. */
 export const CONTEXT_USE_PAYLOAD_CATEGORIES_ITEM_LIMITS = {
   id: { maxLength: 128 },
@@ -1315,6 +1978,67 @@ export const CONTEXT_USE_PAYLOAD_LIMITS = {
   categories: { maxItems: 64 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link DeviceListPayload}. */
+export const DEVICE_LIST_PAYLOAD_LIMITS = {
+  devices: { maxItems: 256 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link DirectoryListingPayload}. */
+export const DIRECTORY_LISTING_PAYLOAD_LIMITS = {
+  entries: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link EngineModelsPayload}. */
+export const ENGINE_MODELS_PAYLOAD_LIMITS = {
+  models: { maxItems: 256 },
+  permissionModes: { maxItems: 16 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link FileTreePayload}. */
+export const FILE_TREE_PAYLOAD_LIMITS = {
+  entries: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link HistoryPagePayload}. */
+export const HISTORY_PAGE_PAYLOAD_LIMITS = {
+  entries: { maxItems: 1000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link KeptDeletePayloadKept}. */
+export const KEPT_DELETE_PAYLOAD_KEPT_LIMITS = {
+  entries: { maxItems: 100000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link NotificationPagePayload}. */
+export const NOTIFICATION_PAGE_PAYLOAD_LIMITS = {
+  items: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link OpenFoldersPayload}. */
+export const OPEN_FOLDERS_PAYLOAD_LIMITS = {
+  folders: { maxItems: 256 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRuleListPayload}. */
+export const PERMISSION_RULE_LIST_PAYLOAD_LIMITS = {
+  rules: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionStatePayloadAnswersItem}. */
+export const PERMISSION_STATE_PAYLOAD_ANSWERS_ITEM_LIMITS = {
+  selected: { maxItems: 64 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionStatePayload}. */
+export const PERMISSION_STATE_PAYLOAD_LIMITS = {
+  answers: { maxItems: 4 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link RecentFoldersPayload}. */
+export const RECENT_FOLDERS_PAYLOAD_LIMITS = {
+  folders: { maxItems: 1000 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link ToolDiffPayloadAfter}. */
 export const TOOL_DIFF_PAYLOAD_AFTER_LIMITS = {
   edit: { minimum: 0 },
@@ -1323,6 +2047,26 @@ export const TOOL_DIFF_PAYLOAD_AFTER_LIMITS = {
 /** The bounds the schema gives the fields of {@link ToolDiffPayload}. */
 export const TOOL_DIFF_PAYLOAD_LIMITS = {
   kind: { maxLength: 64 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link UploadPreflightPayload}. */
+export const UPLOAD_PREFLIGHT_PAYLOAD_LIMITS = {
+  items: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link UploadResultPayload}. */
+export const UPLOAD_RESULT_PAYLOAD_LIMITS = {
+  items: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link VersionsPayload}. */
+export const VERSIONS_PAYLOAD_LIMITS = {
+  engines: { maxItems: 32 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link WorkspaceListPayload}. */
+export const WORKSPACE_LIST_PAYLOAD_LIMITS = {
+  workspaces: { maxItems: 256 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link PermissionResolvePayload}. */
@@ -1389,6 +2133,62 @@ export function isEnvelope(value: unknown): value is Envelope {
 }
 
 /**
+ * Whether `value` carries every required field of {@link AgentDefaults}. Unknown fields are accepted.
+ */
+export function isAgentDefaults(value: unknown): value is AgentDefaults {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['model'], typeof record['model'] === 'string'),
+    nullOr(record['permissionMode'], typeof record['permissionMode'] === 'string'),
+    nullOr(record['effort'], typeof record['effort'] === 'string'),
+    nullOr(record['thinking'], typeof record['thinking'] === 'string'),
+    nullOr(record['fallbackModel'], typeof record['fallbackModel'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link AgentModel}. Unknown fields are accepted.
+ */
+export function isAgentModel(value: unknown): value is AgentModel {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['value'] === 'string',
+    nullOr(record['resolvedModel'], typeof record['resolvedModel'] === 'string'),
+    typeof record['displayName'] === 'string',
+    typeof record['description'] === 'string',
+    Array.isArray(record['supportedEffortLevels']),
+    typeof record['supportsEffort'] === 'boolean',
+    withinMaxItems(record['supportedEffortLevels'], 16),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ComponentVersion}. Unknown fields are accepted.
+ */
+export function isComponentVersion(value: unknown): value is ComponentVersion {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['version'], typeof record['version'] === 'string'),
+    nullOr(record['reason'], typeof record['reason'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link ConversationRef}. Unknown fields are accepted.
  */
 export function isConversationRef(value: unknown): value is ConversationRef {
@@ -1403,6 +2203,31 @@ export function isConversationRef(value: unknown): value is ConversationRef {
     typeof record['id'] === 'string',
     withinMaxLength(record['engine'], 32),
     withinMaxLength(record['id'], 256),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link Device}. Unknown fields are accepted.
+ */
+export function isDevice(value: unknown): value is Device {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['name'] === 'string',
+    typeof record['platform'] === 'string',
+    typeof record['appVersion'] === 'string',
+    typeof record['locale'] === 'string',
+    typeof record['status'] === 'string',
+    typeof record['pushEnabled'] === 'boolean',
+    typeof record['registeredAt'] === 'string',
+    typeof record['lastSeenAt'] === 'string',
+    nullOr(record['approvedAt'], typeof record['approvedAt'] === 'string'),
+    nullOr(record['revokedAt'], typeof record['revokedAt'] === 'string'),
   ].every(Boolean);
 }
 
@@ -1471,6 +2296,21 @@ export function isFileChange(value: unknown): value is FileChange {
   return [
     typeof record['path'] === 'string',
     typeof record['op'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link HistoryOutcome}. Unknown fields are accepted.
+ */
+export function isHistoryOutcome(value: unknown): value is HistoryOutcome {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['kept'] === 'boolean',
   ].every(Boolean);
 }
 
@@ -1556,7 +2396,6 @@ export function isListedTranscript(value: unknown): value is ListedTranscript {
 
   return [
     isConversationRef(record['conversation']),
-    typeof record['sessionId'] === 'string',
     typeof record['summary'] === 'string',
     typeof record['origin'] === 'string',
     typeof record['cwd'] === 'string',
@@ -1566,6 +2405,107 @@ export function isListedTranscript(value: unknown): value is ListedTranscript {
     typeof record['activity'] === 'string',
     nullOr(record['liveSessionId'], typeof record['liveSessionId'] === 'string'),
     typeof record['writtenAgoSeconds'] === 'number',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ModelCheckOutcome}. Unknown fields are accepted.
+ */
+export function isModelCheckOutcome(value: unknown): value is ModelCheckOutcome {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['result'] === 'string',
+    nullOr(record['model'], typeof record['model'] === 'string'),
+    typeof record['latencyMs'] === 'number',
+    nullOr(record['costUsd'], typeof record['costUsd'] === 'string'),
+    nullOr(record['reason'], typeof record['reason'] === 'string'),
+    typeof record['at'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link Notification}. Unknown fields are accepted.
+ */
+export function isNotification(value: unknown): value is Notification {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['severity'] === 'string',
+    typeof record['messageKey'] === 'string',
+    isNonNullObject(record['params']),
+    typeof record['count'] === 'number',
+    typeof record['createdAt'] === 'string',
+    nullOr(record['readAt'], typeof record['readAt'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link OpenFolderEntry}. Unknown fields are accepted.
+ */
+export function isOpenFolderEntry(value: unknown): value is OpenFolderEntry {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    nullOr(record['rootLabel'], typeof record['rootLabel'] === 'string'),
+    typeof record['state'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleDisabled}. Unknown fields are accepted.
+ */
+export function isPermissionRuleDisabled(value: unknown): value is PermissionRuleDisabled {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRule}. Unknown fields are accepted.
+ */
+export function isPermissionRule(value: unknown): value is PermissionRule {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['scope'] === 'string',
+    nullOr(record['kind'], typeof record['kind'] === 'string'),
+    typeof record['toolName'] === 'string',
+    typeof record['pattern'] === 'string',
+    typeof record['decision'] === 'string',
+    nullOr(record['projectPath'], typeof record['projectPath'] === 'string'),
+    nullOr(record['engine'], typeof record['engine'] === 'string'),
+    typeof record['grantedBy'] === 'string',
+    typeof record['grantedAt'] === 'string',
+    typeof record['expiresAt'] === 'string',
+    typeof record['status'] === 'string',
+    nullOr(record['revokedAt'], typeof record['revokedAt'] === 'string'),
+    nullOr(record['disabled'], isPermissionRuleDisabled(record['disabled'])),
   ].every(Boolean);
 }
 
@@ -1585,6 +2525,22 @@ export function isQuestionAnswer(value: unknown): value is QuestionAnswer {
     withinMaxLength(record['questionId'], 8),
     withinMaxItems(record['selected'], 4),
     withinMaxLength(record['other'], 2000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ReadVersion}. Unknown fields are accepted.
+ */
+export function isReadVersion(value: unknown): value is ReadVersion {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['version'], typeof record['version'] === 'string'),
+    nullOr(record['reason'], typeof record['reason'] === 'string'),
   ].every(Boolean);
 }
 
@@ -1633,6 +2589,23 @@ export function isTranscriptEvent(value: unknown): value is TranscriptEvent {
   return [
     typeof record['type'] === 'string',
     isNonNullObject(record['payload']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link Workspace}. Unknown fields are accepted.
+ */
+export function isWorkspace(value: unknown): value is Workspace {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['label'] === 'string',
+    nullOr(record['lastUsedAt'], typeof record['lastUsedAt'] === 'string'),
   ].every(Boolean);
 }
 
@@ -1953,7 +2926,7 @@ export function isSessionPromptPayloadAttachmentsItemRange(value: unknown): valu
  *
  * `attachmentId` is also required when `kind` is `upload` — an uploaded attachment travels over HTTP, and the prompt carries only the id the upload answered.
  *
- * `source` is also required when `kind` is `text` — text a provider holds goes to Claude labelled with where it came from, never as if the user had typed it.
+ * `source` is also required when `kind` is `text` — text a provider holds goes to the agent labelled with where it came from, never as if the user had typed it.
  *
  * `label` is also required when `kind` is `text` — the label is what the delimited block is introduced by, and what the chip showed.
  *
@@ -2455,6 +3428,45 @@ export function isSessionClosedPayload(value: unknown): value is SessionClosedPa
 }
 
 /**
+ * Whether `value` carries every required field of {@link SessionCommandsChangedPayloadCommandsItem}. Unknown fields are accepted.
+ */
+export function isSessionCommandsChangedPayloadCommandsItem(value: unknown): value is SessionCommandsChangedPayloadCommandsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    typeof record['description'] === 'string',
+    typeof record['argumentHint'] === 'string',
+    Array.isArray(record['aliases']),
+    typeof record['suggested'] === 'boolean',
+    typeof record['origin'] === 'string',
+    typeof record['label'] === 'string',
+    typeof record['shadowed'] === 'boolean',
+    withinMaxItems(record['aliases'], 16),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SessionCommandsChangedPayload}. Unknown fields are accepted.
+ */
+export function isSessionCommandsChangedPayload(value: unknown): value is SessionCommandsChangedPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['commands']),
+    withinMaxItems(record['commands'], 256),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link SessionCompactedPayload}. Unknown fields are accepted.
  */
 export function isSessionCompactedPayload(value: unknown): value is SessionCompactedPayload {
@@ -2867,6 +3879,104 @@ export function isWorkspaceWatchStoppedPayload(value: unknown): value is Workspa
 }
 
 /**
+ * Whether `value` carries every required field of {@link AuditEventPagePayloadEventsItem}. Unknown fields are accepted.
+ */
+export function isAuditEventPagePayloadEventsItem(value: unknown): value is AuditEventPagePayloadEventsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['kind'] === 'string',
+    typeof record['subjectId'] === 'string',
+    typeof record['subjectLabel'] === 'string',
+    nullOr(record['details'], isNonNullObject(record['details'])),
+    typeof record['at'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link AuditEventPagePayload}. Unknown fields are accepted.
+ */
+export function isAuditEventPagePayload(value: unknown): value is AuditEventPagePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['events']),
+    nullOr(record['nextCursor'], typeof record['nextCursor'] === 'string'),
+    withinMaxItems(record['events'], 100),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link AuditTrailPagePayloadEntriesItemVerdict}. Unknown fields are accepted.
+ */
+export function isAuditTrailPagePayloadEntriesItemVerdict(value: unknown): value is AuditTrailPagePayloadEntriesItemVerdict {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['requestId'] === 'string',
+    typeof record['auto'] === 'boolean',
+    nullOr(record['ruleId'], typeof record['ruleId'] === 'string'),
+    typeof record['scope'] === 'string',
+    nullOr(record['resolvedBy'], typeof record['resolvedBy'] === 'string'),
+    nullOr(record['resolvedFrom'], typeof record['resolvedFrom'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link AuditTrailPagePayloadEntriesItem}. Unknown fields are accepted.
+ */
+export function isAuditTrailPagePayloadEntriesItem(value: unknown): value is AuditTrailPagePayloadEntriesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['sessionId'] === 'string',
+    nullOr(record['toolUseId'], typeof record['toolUseId'] === 'string'),
+    typeof record['toolName'] === 'string',
+    typeof record['kind'] === 'string',
+    isNonNullObject(record['input']),
+    typeof record['decision'] === 'string',
+    typeof record['at'] === 'string',
+    nullOr(record['traceId'], typeof record['traceId'] === 'string'),
+    nullOr(record['verdict'], isAuditTrailPagePayloadEntriesItemVerdict(record['verdict'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link AuditTrailPagePayload}. Unknown fields are accepted.
+ */
+export function isAuditTrailPagePayload(value: unknown): value is AuditTrailPagePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['entries']),
+    nullOr(record['nextCursor'], typeof record['nextCursor'] === 'string'),
+    withinMaxItems(record['entries'], 100),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link ContextUsePayloadCategoriesItem}. Unknown fields are accepted.
  */
 export function isContextUsePayloadCategoriesItem(value: unknown): value is ContextUsePayloadCategoriesItem {
@@ -2878,7 +3988,6 @@ export function isContextUsePayloadCategoriesItem(value: unknown): value is Cont
 
   return [
     typeof record['id'] === 'string',
-    typeof record['name'] === 'string',
     typeof record['tokens'] === 'number',
     typeof record['kind'] === 'string',
     withinMaxLength(record['id'], 128),
@@ -2903,6 +4012,192 @@ export function isContextUsePayload(value: unknown): value is ContextUsePayload 
     typeof record['percentage'] === 'number',
     Array.isArray(record['categories']),
     withinMaxItems(record['categories'], 64),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DefaultsViewPayloadEffectiveModel}. Unknown fields are accepted.
+ */
+export function isDefaultsViewPayloadEffectiveModel(value: unknown): value is DefaultsViewPayloadEffectiveModel {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['value'], typeof record['value'] === 'string'),
+    typeof record['from'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DefaultsViewPayloadEffectivePermissionMode}. Unknown fields are accepted.
+ */
+export function isDefaultsViewPayloadEffectivePermissionMode(value: unknown): value is DefaultsViewPayloadEffectivePermissionMode {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['value'], typeof record['value'] === 'string'),
+    typeof record['from'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DefaultsViewPayloadEffectiveEffort}. Unknown fields are accepted.
+ */
+export function isDefaultsViewPayloadEffectiveEffort(value: unknown): value is DefaultsViewPayloadEffectiveEffort {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['value'], typeof record['value'] === 'string'),
+    typeof record['from'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DefaultsViewPayloadEffectiveThinking}. Unknown fields are accepted.
+ */
+export function isDefaultsViewPayloadEffectiveThinking(value: unknown): value is DefaultsViewPayloadEffectiveThinking {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['value'], typeof record['value'] === 'string'),
+    typeof record['from'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DefaultsViewPayloadEffectiveFallbackModel}. Unknown fields are accepted.
+ */
+export function isDefaultsViewPayloadEffectiveFallbackModel(value: unknown): value is DefaultsViewPayloadEffectiveFallbackModel {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['value'], typeof record['value'] === 'string'),
+    typeof record['from'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DefaultsViewPayloadEffective}. Unknown fields are accepted.
+ */
+export function isDefaultsViewPayloadEffective(value: unknown): value is DefaultsViewPayloadEffective {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isDefaultsViewPayloadEffectiveModel(record['model']),
+    isDefaultsViewPayloadEffectivePermissionMode(record['permissionMode']),
+    isDefaultsViewPayloadEffectiveEffort(record['effort']),
+    isDefaultsViewPayloadEffectiveThinking(record['thinking']),
+    isDefaultsViewPayloadEffectiveFallbackModel(record['fallbackModel']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DefaultsViewPayloadFolder}. Unknown fields are accepted.
+ */
+export function isDefaultsViewPayloadFolder(value: unknown): value is DefaultsViewPayloadFolder {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['folder'] === 'string',
+    isAgentDefaults(record['values']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DefaultsViewPayload}. Unknown fields are accepted.
+ */
+export function isDefaultsViewPayload(value: unknown): value is DefaultsViewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isDefaultsViewPayloadEffective(record['effective']),
+    isAgentDefaults(record['user']),
+    nullOr(record['folder'], isDefaultsViewPayloadFolder(record['folder'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DeviceListPayload}. Unknown fields are accepted.
+ */
+export function isDeviceListPayload(value: unknown): value is DeviceListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['devices']),
+    withinMaxItems(record['devices'], 256),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DirectoryListingPayloadEntriesItem}. Unknown fields are accepted.
+ */
+export function isDirectoryListingPayloadEntriesItem(value: unknown): value is DirectoryListingPayloadEntriesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    typeof record['path'] === 'string',
+    typeof record['hidden'] === 'boolean',
+    typeof record['symlink'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link DirectoryListingPayload}. Unknown fields are accepted.
+ */
+export function isDirectoryListingPayload(value: unknown): value is DirectoryListingPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    isWorkspace(record['root']),
+    nullOr(record['parent'], typeof record['parent'] === 'string'),
+    Array.isArray(record['entries']),
+    typeof record['truncated'] === 'boolean',
+    withinMaxItems(record['entries'], 10000),
   ].every(Boolean);
 }
 
@@ -2939,6 +4234,528 @@ export function isEngineListPayload(value: unknown): value is EngineListPayload 
   return [
     typeof record['defaultEngine'] === 'string',
     Array.isArray(record['engines']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link EngineModelsPayload}. Unknown fields are accepted.
+ */
+export function isEngineModelsPayload(value: unknown): value is EngineModelsPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['version'], typeof record['version'] === 'string'),
+    Array.isArray(record['models']),
+    Array.isArray(record['permissionModes']),
+    withinMaxItems(record['models'], 256),
+    withinMaxItems(record['permissionModes'], 16),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link AccountViewPayload}. Unknown fields are accepted.
+ */
+export function isAccountViewPayload(value: unknown): value is AccountViewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['email'], typeof record['email'] === 'string'),
+    nullOr(record['organization'], typeof record['organization'] === 'string'),
+    nullOr(record['plan'], typeof record['plan'] === 'string'),
+    nullOr(record['provider'], typeof record['provider'] === 'string'),
+    nullOr(record['tokenSource'], typeof record['tokenSource'] === 'string'),
+    nullOr(record['apiKeySource'], typeof record['apiKeySource'] === 'string'),
+    typeof record['state'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link InstallationViewPayloadPathCli}. Unknown fields are accepted.
+ */
+export function isInstallationViewPayloadPathCli(value: unknown): value is InstallationViewPayloadPathCli {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['version'], typeof record['version'] === 'string'),
+    nullOr(record['reason'], typeof record['reason'] === 'string'),
+    typeof record['differs'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link InstallationViewPayloadConfigDir}. Unknown fields are accepted.
+ */
+export function isInstallationViewPayloadConfigDir(value: unknown): value is InstallationViewPayloadConfigDir {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['fromEnvironment'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link InstallationViewPayload}. Unknown fields are accepted.
+ */
+export function isInstallationViewPayload(value: unknown): value is InstallationViewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isReadVersion(record['agentSdk']),
+    isReadVersion(record['bundledCli']),
+    isInstallationViewPayloadPathCli(record['pathCli']),
+    isInstallationViewPayloadConfigDir(record['configDir']),
+    typeof record['login'] === 'string',
+    nullOr(record['lastModelCheck'], isModelCheckOutcome(record['lastModelCheck'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link OutputStyleViewPayloadEffective}. Unknown fields are accepted.
+ */
+export function isOutputStyleViewPayloadEffective(value: unknown): value is OutputStyleViewPayloadEffective {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    nullOr(record['value'], typeof record['value'] === 'string'),
+    typeof record['from'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link OutputStyleViewPayloadFolder}. Unknown fields are accepted.
+ */
+export function isOutputStyleViewPayloadFolder(value: unknown): value is OutputStyleViewPayloadFolder {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['folder'] === 'string',
+    typeof record['value'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link OutputStyleViewPayload}. Unknown fields are accepted.
+ */
+export function isOutputStyleViewPayload(value: unknown): value is OutputStyleViewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isOutputStyleViewPayloadEffective(record['effective']),
+    nullOr(record['user'], typeof record['user'] === 'string'),
+    nullOr(record['folder'], isOutputStyleViewPayloadFolder(record['folder'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link FileContentPayload}. Unknown fields are accepted.
+ */
+export function isFileContentPayload(value: unknown): value is FileContentPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['content'] === 'string',
+    typeof record['etag'] === 'string',
+    typeof record['encoding'] === 'string',
+    typeof record['bom'] === 'boolean',
+    typeof record['eol'] === 'string',
+    typeof record['size'] === 'number',
+    typeof record['mtime'] === 'string',
+    typeof record['largeFile'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link FileEntryPayload}. Unknown fields are accepted.
+ */
+export function isFileEntryPayload(value: unknown): value is FileEntryPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    nullOr(record['etag'], typeof record['etag'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link FileLimitsPayload}. Unknown fields are accepted.
+ */
+export function isFileLimitsPayload(value: unknown): value is FileLimitsPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['maxEditBytes'] === 'number',
+    typeof record['largeFileBytes'] === 'number',
+    typeof record['downloadMaxBytes'] === 'number',
+    typeof record['archiveMaxEntries'] === 'number',
+    typeof record['uploadMaxBytes'] === 'number',
+    typeof record['uploadMaxEntries'] === 'number',
+    typeof record['uploadMaxTotalBytes'] === 'number',
+    typeof record['historyMaxFileBytes'] === 'number',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link FileTreePayloadEntriesItem}. Unknown fields are accepted.
+ */
+export function isFileTreePayloadEntriesItem(value: unknown): value is FileTreePayloadEntriesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    typeof record['path'] === 'string',
+    typeof record['kind'] === 'string',
+    typeof record['size'] === 'number',
+    typeof record['mtime'] === 'string',
+    typeof record['hidden'] === 'boolean',
+    typeof record['unreadableName'] === 'boolean',
+    typeof record['outside'] === 'boolean',
+    nullOr(record['targetKind'], typeof record['targetKind'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link FileTreePayload}. Unknown fields are accepted.
+ */
+export function isFileTreePayload(value: unknown): value is FileTreePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['folder'] === 'string',
+    typeof record['path'] === 'string',
+    Array.isArray(record['entries']),
+    typeof record['truncated'] === 'boolean',
+    withinMaxItems(record['entries'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link HistoryPagePayloadEntriesItemAuthor}. Unknown fields are accepted.
+ */
+export function isHistoryPagePayloadEntriesItemAuthor(value: unknown): value is HistoryPagePayloadEntriesItemAuthor {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['self'] === 'boolean',
+    typeof record['id'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link HistoryPagePayloadEntriesItem}. Unknown fields are accepted.
+ */
+export function isHistoryPagePayloadEntriesItem(value: unknown): value is HistoryPagePayloadEntriesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['path'] === 'string',
+    typeof record['entryKind'] === 'string',
+    typeof record['reason'] === 'string',
+    typeof record['kept'] === 'string',
+    nullOr(record['sizeBytes'], typeof record['sizeBytes'] === 'number'),
+    nullOr(record['hash'], typeof record['hash'] === 'string'),
+    isHistoryPagePayloadEntriesItemAuthor(record['author']),
+    typeof record['at'] === 'string',
+    nullOr(record['batchId'], typeof record['batchId'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link HistoryPagePayload}. Unknown fields are accepted.
+ */
+export function isHistoryPagePayload(value: unknown): value is HistoryPagePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['entries']),
+    nullOr(record['nextCursor'], typeof record['nextCursor'] === 'string'),
+    withinMaxItems(record['entries'], 1000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link KeptDeletePayloadKeptEntriesItem}. Unknown fields are accepted.
+ */
+export function isKeptDeletePayloadKeptEntriesItem(value: unknown): value is KeptDeletePayloadKeptEntriesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['path'] === 'string',
+    typeof record['entryKind'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link KeptDeletePayloadKept}. Unknown fields are accepted.
+ */
+export function isKeptDeletePayloadKept(value: unknown): value is KeptDeletePayloadKept {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['batchId'] === 'string',
+    Array.isArray(record['entries']),
+    withinMaxItems(record['entries'], 100000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link KeptDeletePayload}. Unknown fields are accepted.
+ */
+export function isKeptDeletePayload(value: unknown): value is KeptDeletePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isKeptDeletePayloadKept(record['kept']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link NotificationPagePayload}. Unknown fields are accepted.
+ */
+export function isNotificationPagePayload(value: unknown): value is NotificationPagePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['items']),
+    typeof record['unread'] === 'number',
+    nullOr(record['nextCursor'], typeof record['nextCursor'] === 'string'),
+    withinMaxItems(record['items'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link OpenFoldersPayload}. Unknown fields are accepted.
+ */
+export function isOpenFoldersPayload(value: unknown): value is OpenFoldersPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['folders']),
+    withinMaxItems(record['folders'], 256),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleListPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleListPayload(value: unknown): value is PermissionRuleListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['rules']),
+    withinMaxItems(record['rules'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionStatePayloadAnswersItem}. Unknown fields are accepted.
+ */
+export function isPermissionStatePayloadAnswersItem(value: unknown): value is PermissionStatePayloadAnswersItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['questionId'] === 'string',
+    Array.isArray(record['selected']),
+    withinMaxItems(record['selected'], 64),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionStatePayload}. Unknown fields are accepted.
+ */
+export function isPermissionStatePayload(value: unknown): value is PermissionStatePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['status'] === 'string',
+    withinMaxItems(record['answers'], 4),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link RecentFoldersPayloadFoldersItem}. Unknown fields are accepted.
+ */
+export function isRecentFoldersPayloadFoldersItem(value: unknown): value is RecentFoldersPayloadFoldersItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    nullOr(record['rootLabel'], typeof record['rootLabel'] === 'string'),
+    typeof record['lastOpenedAt'] === 'string',
+    typeof record['pinned'] === 'boolean',
+    typeof record['available'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link RecentFoldersPayload}. Unknown fields are accepted.
+ */
+export function isRecentFoldersPayload(value: unknown): value is RecentFoldersPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['folders']),
+    withinMaxItems(record['folders'], 1000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ResolvedWorkspacePayload}. Unknown fields are accepted.
+ */
+export function isResolvedWorkspacePayload(value: unknown): value is ResolvedWorkspacePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    isWorkspace(record['root']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link RestoredEntryPayload}. Unknown fields are accepted.
+ */
+export function isRestoredEntryPayload(value: unknown): value is RestoredEntryPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    nullOr(record['etag'], typeof record['etag'] === 'string'),
+    nullOr(record['size'], typeof record['size'] === 'number'),
+    typeof record['written'] === 'boolean',
+    nullOr(record['history'], isHistoryOutcome(record['history'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SavedFilePayload}. Unknown fields are accepted.
+ */
+export function isSavedFilePayload(value: unknown): value is SavedFilePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['etag'] === 'string',
+    typeof record['size'] === 'number',
+    nullOr(record['history'], isHistoryOutcome(record['history'])),
   ].every(Boolean);
 }
 
@@ -3099,9 +4916,159 @@ export function isTranscriptToolResultPayload(value: unknown): value is Transcri
 }
 
 /**
+ * Whether `value` carries every required field of {@link UploadPreflightPayloadItemsItemExisting}. Unknown fields are accepted.
+ */
+export function isUploadPreflightPayloadItemsItemExisting(value: unknown): value is UploadPreflightPayloadItemsItemExisting {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['kind'] === 'string',
+    nullOr(record['etag'], typeof record['etag'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link UploadPreflightPayloadItemsItem}. Unknown fields are accepted.
+ */
+export function isUploadPreflightPayloadItemsItem(value: unknown): value is UploadPreflightPayloadItemsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    nullOr(record['existing'], isUploadPreflightPayloadItemsItemExisting(record['existing'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link UploadPreflightPayload}. Unknown fields are accepted.
+ */
+export function isUploadPreflightPayload(value: unknown): value is UploadPreflightPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['items']),
+    withinMaxItems(record['items'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link UploadResultPayloadItemsItemError}. Unknown fields are accepted.
+ */
+export function isUploadResultPayloadItemsItemError(value: unknown): value is UploadResultPayloadItemsItemError {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['code'] === 'string',
+    typeof record['messageKey'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link UploadResultPayloadItemsItem}. Unknown fields are accepted.
+ */
+export function isUploadResultPayloadItemsItem(value: unknown): value is UploadResultPayloadItemsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['status'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link UploadResultPayload}. Unknown fields are accepted.
+ */
+export function isUploadResultPayload(value: unknown): value is UploadResultPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['items']),
+    withinMaxItems(record['items'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link VersionsPayloadEnginesItem}. Unknown fields are accepted.
+ */
+export function isVersionsPayloadEnginesItem(value: unknown): value is VersionsPayloadEnginesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['engine'] === 'string',
+    typeof record['displayName'] === 'string',
+    typeof record['state'] === 'string',
+    isComponentVersion(record['binary']),
+    nullOr(record['library'], isComponentVersion(record['library'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link VersionsPayload}. Unknown fields are accepted.
+ */
+export function isVersionsPayload(value: unknown): value is VersionsPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isComponentVersion(record['backend']),
+    isComponentVersion(record['node']),
+    typeof record['defaultEngine'] === 'string',
+    Array.isArray(record['engines']),
+    withinMaxItems(record['engines'], 32),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link WorkspaceListPayload}. Unknown fields are accepted.
+ */
+export function isWorkspaceListPayload(value: unknown): value is WorkspaceListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['workspaces']),
+    withinMaxItems(record['workspaces'], 256),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link PermissionResolvePayload}. Unknown fields are accepted.
  *
- * `reason` is also required when `decision` is `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
+ * `reason` is also required when `decision` is `deny` — the reason goes into the audit trail and back to the agent as a message; a refusal nobody can account for is a refusal nobody can learn from.
  */
 export function isPermissionResolvePayload(value: unknown): value is PermissionResolvePayload {
   if (typeof value !== 'object' || value === null) {
@@ -3117,6 +5084,36 @@ export function isPermissionResolvePayload(value: unknown): value is PermissionR
     withinMaxItems(record['answers'], 4),
   ].every(Boolean);
 }
+
+/** `POST /devices`, `POST /devices/:deviceId/approval` and `DELETE /devices/:deviceId/approval`: one device, as the client sees it — the same shape as one entry of `DeviceList.devices`, named again rather than declared twice (plan 28, B-48). */
+export type DevicePayload = Device;
+
+/** Whether `value` is a {@link DevicePayload}. */
+export const isDevicePayload = isDevice;
+
+/** `POST /engines/claude/diagnostics/model-check`: one turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). The same shape `GET /engines/claude/installation`'s `lastModelCheck` carries, named again rather than declared twice (plan 28, B-48). */
+export type ModelCheckOutcomePayload = ModelCheckOutcome;
+
+/** Whether `value` is a {@link ModelCheckOutcomePayload}. */
+export const isModelCheckOutcomePayload = isModelCheckOutcome;
+
+/** `POST /notifications`: keeps a notification — `201` when new, `200` with the one already kept under the same client id. The same shape as one entry of `NotificationPage.items`, named again rather than declared twice (plan 28, B-48). */
+export type NotificationPayload = Notification;
+
+/** Whether `value` is a {@link NotificationPayload}. */
+export const isNotificationPayload = isNotification;
+
+/** `POST /workspaces/open-folders`: `201` with the new tab, `200` with the one already open — the same shape as one entry of `OpenFolders.folders`, named again rather than declared twice (plan 28, B-48). */
+export type OpenFolderEntryPayload = OpenFolderEntry;
+
+/** Whether `value` is a {@link OpenFolderEntryPayload}. */
+export const isOpenFolderEntryPayload = isOpenFolderEntry;
+
+/** `GET /permission-rules/:ruleId`, `POST /permission-rules` and `DELETE /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48). */
+export type PermissionRulePayload = PermissionRule;
+
+/** Whether `value` is a {@link PermissionRulePayload}. */
+export const isPermissionRulePayload = isPermissionRule;
 
 /** A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream. */
 export interface CommandAcceptedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
@@ -3258,7 +5255,7 @@ export function isConnectionReauthenticateFrame(value: unknown): value is Connec
   );
 }
 
-/** Diagnostics of the gateway: it crosses every layer without touching the Agent SDK, and is the only smoke test that needs no Claude subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session. */
+/** Diagnostics of the gateway: it crosses every layer without touching the engine's own library, and is the only smoke test that needs no engine subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session. */
 export interface DiagPingFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'command';
   readonly type: 'diag.ping';
@@ -3418,7 +5415,7 @@ export function isSessionInterruptFrame(value: unknown): value is SessionInterru
   );
 }
 
-/** Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way the Claude Code UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`). */
+/** Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way a coding agent's own UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`). */
 export interface SessionPromptFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'command';
   readonly type: 'session.prompt';
@@ -3498,7 +5495,7 @@ export function isSessionRestoreChangeFrame(value: unknown): value is SessionRes
   );
 }
 
-/** Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`. */
+/** Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not the engine's own checkpoint restore: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`. */
 export interface SessionRewindFilesFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'command';
   readonly type: 'session.rewindFiles';
@@ -3758,7 +5755,7 @@ export function isMessageCompletedFrame(value: unknown): value is MessageComplet
   );
 }
 
-/** A fragment of the assistant's answer, from the SDK's `stream_event`. The client accumulates by `messageId`; it never concatenates blindly in arrival order. */
+/** A fragment of the assistant's answer, from the engine's own streaming event. The client accumulates by `messageId`; it never concatenates blindly in arrival order. */
 export interface MessageDeltaFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
   readonly type: 'message.delta';
@@ -3858,7 +5855,7 @@ export function isPromptDequeuedFrame(value: unknown): value is PromptDequeuedFr
   );
 }
 
-/** A prompt is waiting for the running turn to end. The queue is the backend's, not the SDK's — a prompt handed to the SDK cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`. */
+/** A prompt is waiting for the running turn to end. The queue is the backend's, not the engine's — a prompt handed to the engine cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`. */
 export interface PromptQueuedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
   readonly type: 'prompt.queued';
@@ -3898,7 +5895,27 @@ export function isSessionClosedFrame(value: unknown): value is SessionClosedFram
   );
 }
 
-/** The conversation was compacted: what came before is now a summary Claude carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there. */
+/** The slash commands of a session, menu-ordered and badged — the whole list, every time, so a client never patches: pushed when the engine's own menu changes mid-session (a skill discovered as the agent works in a subdirectory, say). A client that does not know it ignores it. */
+export interface SessionCommandsChangedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.commandsChanged';
+  readonly payload: SessionCommandsChangedPayload;
+}
+
+/** Whether `value` is a {@link SessionCommandsChangedFrame}. */
+export function isSessionCommandsChangedFrame(value: unknown): value is SessionCommandsChangedFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.commandsChanged' &&
+    isSessionCommandsChangedPayload(value.payload)
+  );
+}
+
+/** The conversation was compacted: what came before is now a summary the agent carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there. */
 export interface SessionCompactedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
   readonly type: 'session.compacted';
@@ -3978,7 +5995,7 @@ export function isSessionStartedFrame(value: unknown): value is SessionStartedFr
   );
 }
 
-/** Where the session stands. Derived by us, not read off a single SDK message. */
+/** Where the session stands. Derived by us, not read off a single message of the engine. */
 export interface SessionStatusChangedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
   readonly type: 'session.statusChanged';
@@ -4208,6 +6225,7 @@ export interface EventPayloads {
   'prompt.dequeued': PromptDequeuedPayload;
   'prompt.queued': PromptQueuedPayload;
   'session.closed': SessionClosedPayload;
+  'session.commandsChanged': SessionCommandsChangedPayload;
   'session.compacted': SessionCompactedPayload;
   'session.mcpStatusChanged': SessionMcpStatusChangedPayload;
   'session.rewound': SessionRewoundPayload;

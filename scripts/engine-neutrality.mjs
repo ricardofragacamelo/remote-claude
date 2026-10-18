@@ -1,30 +1,24 @@
 #!/usr/bin/env node
 /**
  * The neutrality gate (plan 28, B-04 and B-05): nothing in the core of the three ends names a coding
- * agent, and what still does is in the baseline, with the phase that removes it.
+ * agent.
  *
- *   node scripts/engine-neutrality.mjs                    # pnpm neutral:check
- *   node scripts/engine-neutrality.mjs --write-baseline   # rewrite the baseline from the tree
+ *   node scripts/engine-neutrality.mjs   # pnpm neutral:check
  *
  * Reads the code of the core (`backend/src`, `web/src`, `mobile/lib`, out of `engines/`), the strings
- * of i18n and every schema of the contract against `scripts/engine-vocabulary.json`, and fails on a
- * violation the baseline does not hold, on an entry that no longer occurs as written, and on an entry
- * whose phase is ✅ in docs/plans/28-agent-neutral-core/progress.md. `--write-baseline` keeps the
- * phase of every entry already there and writes `?` for a new one, which the gate fails until a
- * person writes its phase. Part of gate 11.
+ * of i18n and every schema of the contract against `scripts/engine-vocabulary.json`, and fails on any
+ * violation the baseline does not hold, and on an entry that no longer occurs as written. The baseline
+ * is empty since the window of the previous protocol closed (plan 28, F7, B-47), and there is no
+ * `--write-baseline` to regenerate it anymore — the gate rejects every violation now, with no
+ * exception beyond the product's own names in `engine-vocabulary.json`'s `exceptions`. An entry here
+ * is a decision a person writes by hand, never a script's. Part of gate 11.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import {
-  checkBaseline,
-  remainingByPhase,
-  scanFile,
-  scopeOf,
-  writtenBaseline,
-} from './lib/engine-neutrality.mjs';
+import { checkBaseline, remainingByPhase, scanFile, scopeOf } from './lib/engine-neutrality.mjs';
 import { filesUnder } from './lib/files.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { phaseStates } from './lib/render-parity.mjs';
@@ -59,13 +53,6 @@ function main() {
     scanFile(file, fs.readFileSync(path.join(repoRoot, file), 'utf8'), vocabulary),
   );
 
-  if (process.argv.includes('--write-baseline')) {
-    const entries = writtenBaseline(violations, baseline.entries);
-    fs.writeFileSync(BASELINE, `${JSON.stringify({ ...baseline, entries }, null, 2)}\n`);
-    ok('baseline written', `${String(entries.length)} entries`);
-    return 0;
-  }
-
   const problems = checkBaseline(
     violations,
     baseline.entries,
@@ -89,7 +76,7 @@ function main() {
     return 1;
   }
 
-  ok('the core names no coding agent beyond the baseline', `${String(files.length)} files read`);
+  ok('the core names no coding agent', `${String(files.length)} files read`);
   return 0;
 }
 

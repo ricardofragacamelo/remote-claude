@@ -9,6 +9,6 @@
   "required": ["sessionId", "model"],
   "properties": {
     "sessionId": { "type": "string" },
-    "model": { "type": "string", "description": "Model identifier, as the Agent SDK names it." }
+    "model": { "type": "string", "description": "Model identifier, as the engine names it." }
   }
 }

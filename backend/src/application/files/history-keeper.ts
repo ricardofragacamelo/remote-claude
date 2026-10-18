@@ -74,7 +74,7 @@ interface Walked {
  * everything is kept or nothing is, and the delete does not go ahead on "nothing"
  * ([D-06](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-06--apagar-definitivo-ou-lixeira), S-337).
  *
- * Only the person's writes come through here; Claude's never do — they have the undo of the session.
+ * Only the person's writes come through here; the agent's never do — they have the undo of the session.
  */
 export class HistoryKeeper {
   constructor(
@@ -150,7 +150,7 @@ export class HistoryKeeper {
 
   /**
    * Whether the entry is still what was kept — the walk of a folder, the hash of a file — right
-   * before it is removed. Claude writes without the person's lock; a file it created in between is
+   * before it is removed. The agent writes without the person's lock; a file it created in between is
    * not in the batch, and would go without a way back.
    */
   async unchanged(entry: FilePath, realPath: string, batch: KeptBatch): Promise<boolean> {

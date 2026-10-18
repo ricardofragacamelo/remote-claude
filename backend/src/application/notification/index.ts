@@ -32,3 +32,5 @@ export type {
   RecordedNotification,
 } from './ports/notification-history.repository';
 export { NOTIFICATION_HISTORY_REPOSITORY } from './ports/notification-history.repository';
+export type { DefaultEngineName } from './ports/default-engine-name.port';
+export { DEFAULT_ENGINE_NAME } from './ports/default-engine-name.port';

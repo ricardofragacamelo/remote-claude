@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/workspace.json",
+  "title": "Workspace",
+  "description": "One allowed root, as the client sees it (plan 06). `authorisedUsers` deliberately never crosses: who else may reach a root is nobody's business but the operator's.",
+  "type": "object",
+  "required": ["path", "label", "lastUsedAt"],
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Absolute path of the root, with every symlink already resolved."
+    },
+    "label": {
+      "type": "string"
+    },
+    "lastUsedAt": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "ISO-8601, or `null` when this user has never opened anything under it."
+    }
+  }
+}

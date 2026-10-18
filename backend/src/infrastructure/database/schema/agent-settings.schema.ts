@@ -1,7 +1,7 @@
 import { check, pgTable, text, unique } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-import { auditColumns } from './columns';
+import { auditColumns, engineOwnerColumns } from './columns';
 
 /**
  * The defaults a session of each engine opens with (plan 13, B-14; plan 28, B-36), written by
@@ -14,9 +14,7 @@ import { auditColumns } from './columns';
 export const agentDefaults = pgTable(
   'agent_defaults',
   {
-    id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
-    engine: text('engine').notNull(),
+    ...engineOwnerColumns,
     folderPath: text('folder_path'),
     model: text('model'),
     permissionMode: text('permission_mode'),

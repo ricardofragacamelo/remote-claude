@@ -1,19 +1,15 @@
+import type {
+  FileLimitsPayload,
+  UploadPreflightPayloadItemsItemExisting,
+} from '@remote-claude/contracts';
+
 import type { AppError } from '@/shared/api/errors';
 
 /**
  * The ceilings of the files routes, as `GET /files/limits` says them — known **before** a transfer
  * starts (07 · D-16), so a download or an upload past one is refused saying it, not cut half-way.
  */
-export interface FileLimits {
-  readonly maxEditBytes: number;
-  readonly largeFileBytes: number;
-  readonly downloadMaxBytes: number;
-  readonly archiveMaxEntries: number;
-  readonly uploadMaxBytes: number;
-  readonly uploadMaxEntries: number;
-  readonly uploadMaxTotalBytes: number;
-  readonly historyMaxFileBytes: number;
-}
+export type FileLimits = FileLimitsPayload;
 
 /** A file to upload, and where it goes under the destination — its folders kept (B-52). */
 export interface UploadCandidate {
@@ -24,10 +20,7 @@ export interface UploadCandidate {
 }
 
 /** What a path of the destination already holds, as the preflight answers it. */
-export interface ExistingEntry {
-  readonly kind: 'file' | 'directory' | 'symlink' | 'other';
-  readonly etag: string | null;
-}
+export type ExistingEntry = UploadPreflightPayloadItemsItemExisting;
 
 /** What the person chose for a file whose path is taken (S-319). */
 export type ConflictChoice = 'replace' | 'keepBoth' | 'skip';

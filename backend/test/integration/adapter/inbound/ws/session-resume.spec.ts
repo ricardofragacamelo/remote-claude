@@ -100,9 +100,10 @@ describe('resuming a conversation', () => {
   const db = (): PersistenceContext['db'] =>
     harness.app.get<PersistenceContext>(PERSISTENCE_CONTEXT).db;
 
-  async function originOf(claudeSessionId: string): Promise<string | null> {
+  async function originOf(conversationId: string): Promise<string | null> {
     const rows = await db().execute<{ user_id: string }>(
-      sql`SELECT "user_id" FROM "session_origins" WHERE "claude_session_id" = ${claudeSessionId}`,
+      sql`SELECT "user_id" FROM "session_origins"
+          WHERE "engine" = 'claude' AND "conversation_id" = ${conversationId}`,
     );
     return rows.rows[0]?.user_id ?? null;
   }

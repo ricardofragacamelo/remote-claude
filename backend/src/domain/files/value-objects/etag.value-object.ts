@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
  * The version of a file: a **strong** `ETag`, the SHA-256 of its bytes, between quotes.
  *
  * Content and not the clock ([07 · D-03](../../../../../docs/plans/07-explorer-and-editor/decisions.md#d-03--a-semântica-de-concorrência)):
- * Claude rewrites a file in the same second and with the same size, and only the hash says for
+ * The agent rewrites a file in the same second and with the same size, and only the hash says for
  * certain that the person is saving over the version they saw. It is the hash of the bytes that
  * were **read**, so a read racing somebody's atomic rename never pairs one version with the hash
  * of another (S-54).
@@ -49,7 +49,7 @@ export class Etag {
     return tagsOf(ifNoneMatch).some((tag) => tag.replace(/^W\//, '') === this.value);
   }
 
-  /** The SHA-256 in hex, without the quotes — how a write of Claude's names what it left. */
+  /** The SHA-256 in hex, without the quotes — how a write of the agent's names what it left. */
   get digest(): string {
     return this.value.slice(1, -1);
   }

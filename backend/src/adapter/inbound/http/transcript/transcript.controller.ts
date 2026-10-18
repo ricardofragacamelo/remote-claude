@@ -17,8 +17,6 @@ import {
   blockIdSchema,
   DEFAULT_PAGE_SIZE,
   engineSchema,
-  previousImageSchema,
-  previousToolSchema,
   listTranscriptsSchema,
   readTranscriptSchema,
   subagentToolSchema,
@@ -31,8 +29,6 @@ import {
 } from './transcript.dto';
 import type {
   ListTranscriptsQueryDto,
-  PreviousImageParams,
-  PreviousToolParams,
   ReadTranscriptQueryDto,
   SubagentPageDto,
   ToolResultDto,
@@ -52,7 +48,7 @@ import type {
  * | `403` | a `workspacePath` outside the caller's roots (S-73) |
  * | `404` | a conversation that does not exist **or** is not the caller's — the same answer on purpose (S-04, S-56) |
  * | `413` / `415` | the image of a prompt above the ceiling, or of a type never served (plan 22, D-10) |
- * | `502` / `504` | the Agent SDK failed, or did not answer in time (S-05, S-68) |
+ * | `502` / `504` | the engine failed, or did not answer in time (S-05, S-68) |
  */
 @Controller('transcripts')
 @UseGuards(BearerAuthGuard)
@@ -75,11 +71,6 @@ export class TranscriptController {
       throw new TranscriptNotFoundError(id);
     }
     return this.engines.conversation(engine, id);
-  }
-
-  /** The conversation a route of the previous protocol names: one of the default engine (D-08). */
-  private previous(id: string): ConversationRef {
-    return this.conversation(this.engines.defaultEngine, id);
   }
 
   /** The conversations of one workspace, most recently written first. */
@@ -110,16 +101,6 @@ export class TranscriptController {
     return this.page(this.conversation(engine, id), query, userId);
   }
 
-  /** The route of the previous protocol, until its window closes (plan 28, D-08). */
-  @Get(':sessionId/messages')
-  readPrevious(
-    @Param('sessionId', new ZodPipe(transcriptIdSchema)) sessionId: string,
-    @Query(new ZodPipe(readTranscriptSchema)) query: ReadTranscriptQueryDto,
-    @CurrentUser() userId: UserId,
-  ): Promise<TranscriptPageDto> {
-    return this.page(this.previous(sessionId), query, userId);
-  }
-
   @Get(':engine/:id/subagents/:toolUseId/messages')
   readSubagent(
     @Param('engine', new ZodPipe(engineSchema)) engine: string,
@@ -129,16 +110,6 @@ export class TranscriptController {
     @CurrentUser() userId: UserId,
   ): Promise<SubagentPageDto> {
     return this.subagentPage(this.conversation(engine, id), toolUseId, query, userId);
-  }
-
-  /** The route of the previous protocol, until its window closes (plan 28, D-08). */
-  @Get(':sessionId/subagents/:toolUseId/messages')
-  readSubagentPrevious(
-    @Param(new ZodPipe(previousToolSchema)) tool: PreviousToolParams,
-    @Query(new ZodPipe(readTranscriptSchema)) query: ReadTranscriptQueryDto,
-    @CurrentUser() userId: UserId,
-  ): Promise<SubagentPageDto> {
-    return this.subagentPage(this.previous(tool.sessionId), tool.toolUseId, query, userId);
   }
 
   @Get(':engine/:id/tools/:toolUseId/result')
@@ -151,15 +122,6 @@ export class TranscriptController {
     return this.toolResult(this.conversation(engine, id), toolUseId, userId);
   }
 
-  /** The route of the previous protocol, until its window closes (plan 28, D-08). */
-  @Get(':sessionId/tools/:toolUseId/result')
-  readToolResultPrevious(
-    @Param(new ZodPipe(previousToolSchema)) tool: PreviousToolParams,
-    @CurrentUser() userId: UserId,
-  ): Promise<ToolResultDto> {
-    return this.toolResult(this.previous(tool.sessionId), tool.toolUseId, userId);
-  }
-
   @Get(':engine/:id/images/:blockId')
   async readImage(
     @Param('engine', new ZodPipe(engineSchema)) engine: string,
@@ -169,16 +131,6 @@ export class TranscriptController {
     @Res() response: Response,
   ): Promise<void> {
     await this.image(this.conversation(engine, id), blockId, userId, response);
-  }
-
-  /** The route of the previous protocol, until its window closes (plan 28, D-08). */
-  @Get(':sessionId/images/:blockId')
-  async readImagePrevious(
-    @Param(new ZodPipe(previousImageSchema)) image: PreviousImageParams,
-    @CurrentUser() userId: UserId,
-    @Res() response: Response,
-  ): Promise<void> {
-    await this.image(this.previous(image.sessionId), image.blockId, userId, response);
   }
 
   private async page(

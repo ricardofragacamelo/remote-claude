@@ -1,3 +1,5 @@
+import type { UploadPreflightPayload } from '@remote-claude/contracts';
+
 import { api } from '@/shared/api/api';
 import { toAppError } from '@/shared/api/errors';
 import type {
@@ -90,9 +92,7 @@ export function downloadArchive(
   return downloaded(`/files/archive?${search(fields)}`, fallbackName, signal);
 }
 
-interface PreflightDto {
-  readonly items: readonly { readonly path: string; readonly existing: ExistingEntry | null }[];
-}
+type PreflightDto = UploadPreflightPayload;
 
 /**
  * What each file of an upload would land on, **before** a byte is sent (S-319) — the paths that are

@@ -16,7 +16,7 @@ a tabela `claude_skill_preferences` mantém o prefixo, que é o da extensão, e 
 com o motor no payload — nenhum kind de auditoria leva nome de motor
 ([28 · D-10](../28-agent-neutral-core/decisions.md#f6--extensões-isoladas)). No web, as seções Projeto e Skills
 moram em `web/src/engines/claude/settings/` e são registradas pela extensão nos registros do núcleo (seções,
-comandos, ajuda) por `web/src/app/engines.ts`; as chaves de i18n são `engines.claude.*`. Nada desta fase entra no
+comandos, ajuda) por `web/src/app/engines/index.ts`; as chaves de i18n são `engines.claude.*`. Nada desta fase entra no
 núcleo, e o núcleo nunca importa `engines/` (o lint e o `pnpm neutral:check` conferem). O que ela põe na conversa
 (skill, subagent, hook, output style) chega aos clientes pelo `kind` canônico da
 [28 · F2](../28-agent-neutral-core/F2-canonical-tools.md) e da [28 · F3](../28-agent-neutral-core/F3-interactions.md),

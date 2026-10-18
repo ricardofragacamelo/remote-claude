@@ -42,13 +42,17 @@ abstract final class SessionCommands {
 /// What a session opens with, chosen before it exists — the draft (D-05). `null` is the
 /// installation's default.
 class SessionChoices {
-  const SessionChoices({this.model, this.permissionMode, this.effort});
+  const SessionChoices({this.model, this.permissionMode, this.effort, this.engine});
 
   final String? model;
   final String? permissionMode;
 
   /// Only here: changing it on a live session drops the hook that asks before each tool (08 · D-16).
   final String? effort;
+
+  /// The engine to open on — an id of `GET /engines` (plan 28, B-45). `null` is the installation's
+  /// default. Chosen only here: a live session always runs the engine it opened on.
+  final String? engine;
 }
 
 /// What the screen can ask of a session.
@@ -72,6 +76,7 @@ class DriveSession {
         'model': ?choices.model,
         'permissionMode': ?choices.permissionMode,
         'effort': ?choices.effort,
+        'engine': ?choices.engine,
       });
 
   /// Continues [conversation] — a conversation of its engine's store — in [workspacePath], which is

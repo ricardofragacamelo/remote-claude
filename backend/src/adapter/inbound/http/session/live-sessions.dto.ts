@@ -28,13 +28,6 @@ export interface LiveSessionDto {
   /** The conversation it continues, when it is a resume; `null` for a new one. */
   readonly resumedFromConversation: ConversationRefPayload | null;
 
-  /**
-   * The id of the conversation and of the one it continues, alone, for the published app of the
-   * previous protocol — gone when its window closes (plan 28, D-08, D-22).
-   */
-  readonly claudeSessionId: string;
-  readonly resumedFrom: string | null;
-
   /** Where it runs — the folder asked about, or one below it. */
   readonly workspacePath: string;
   readonly status: string;
@@ -58,8 +51,6 @@ export function toLiveSessionListDto(listings: readonly LiveSessionListing[]): L
       conversation: conversationRefPayload(conversation.ref),
       resumedFromConversation:
         conversation.resumedFrom === null ? null : conversationRefPayload(conversation.resumedFrom),
-      claudeSessionId: conversation.ref.id,
-      resumedFrom: conversation.resumedFrom?.id ?? null,
       workspacePath: session.workspace.value,
       status: session.status,
       model: session.model,

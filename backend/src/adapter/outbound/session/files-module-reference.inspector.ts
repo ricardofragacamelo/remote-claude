@@ -13,7 +13,7 @@ import { ReferenceKindMismatchError } from '@domain/session';
 import { WorkspaceNotADirectoryError, WorkspaceNotAllowedError } from '@domain/workspace';
 import type { WorkspacePath } from '@domain/workspace';
 
-/** What the `Read` of Claude does not read as text or as an image: refused before it is named. */
+/** What the agent's read does not read as text or as an image: refused before it is named. */
 const NOT_READ: readonly string[] = [OCTET_STREAM, 'application/pdf'];
 
 /**

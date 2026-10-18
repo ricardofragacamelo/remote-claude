@@ -273,7 +273,7 @@ describe('the history read live — plan 22', () => {
       const history = recordedHistory('tool-turn');
       const id = conversation(1, history);
 
-      const response = await get(`/transcripts/${id}/messages?limit=2`);
+      const response = await get(`/transcripts/claude/${id}/messages?limit=2`);
 
       expect(response.status).toBe(200);
       expect(response.body.lastMessageId).toBe(history.at(-1)?.uuid);
@@ -282,14 +282,14 @@ describe('the history read live — plan 22', () => {
     it('answers `null` for an empty conversation — S-20', async () => {
       const id = conversation(2, []);
 
-      expect((await get(`/transcripts/${id}/messages`)).body.lastMessageId).toBeNull();
+      expect((await get(`/transcripts/claude/${id}/messages`)).body.lastMessageId).toBeNull();
     });
 
     it('keeps the order of the chain, not of the clock: the queued prompt after the result — S-21', async () => {
       const history = recordedHistory('queue-turn');
       const id = conversation(3, history);
 
-      const { events } = (await get(`/transcripts/${id}/messages`)).body as {
+      const { events } = (await get(`/transcripts/claude/${id}/messages`)).body as {
         events: { type: string; payload: Record<string, unknown> }[];
       };
       const queued = history[3];
@@ -309,7 +309,7 @@ describe('the history read live — plan 22', () => {
       const history = recordedHistory('bash-output-turn');
       const id = conversation(10, history);
 
-      const response = await get(`/transcripts/${id}/tools/${firstToolOf(history)}/result`);
+      const response = await get(`/transcripts/claude/${id}/tools/${firstToolOf(history)}/result`);
 
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({ truncated: false });
@@ -320,7 +320,7 @@ describe('the history read live — plan 22', () => {
     it('answers 404 for a tool the chain has no result of — S-24', async () => {
       const id = conversation(11, recordedHistory('tool-turn'));
 
-      expect((await get(`/transcripts/${id}/tools/toolu_unknown/result`)).status).toBe(404);
+      expect((await get(`/transcripts/claude/${id}/tools/toolu_unknown/result`)).status).toBe(404);
     });
 
     it('answers another person`s conversation with the same 404 — S-25', async () => {
@@ -328,7 +328,7 @@ describe('the history read live — plan 22', () => {
       const id = conversation(12, history);
       await openedHere(id, OTHER);
 
-      const response = await get(`/transcripts/${id}/tools/${firstToolOf(history)}/result`);
+      const response = await get(`/transcripts/claude/${id}/tools/${firstToolOf(history)}/result`);
 
       expect(response.status).toBe(404);
       expect(response.body.error).toMatchObject({ code: 'NOT_FOUND' });
@@ -337,20 +337,20 @@ describe('the history read live — plan 22', () => {
     it('answers 401 to nobody, and to a bad token — S-26', async () => {
       const id = conversation(13, []);
 
-      expect((await get(`/transcripts/${id}/tools/toolu_x/result`, null)).status).toBe(401);
-      expect((await get(`/transcripts/${id}/tools/toolu_x/result`, 'not.a.token')).status).toBe(
-        401,
-      );
+      expect((await get(`/transcripts/claude/${id}/tools/toolu_x/result`, null)).status).toBe(401);
+      expect(
+        (await get(`/transcripts/claude/${id}/tools/toolu_x/result`, 'not.a.token')).status,
+      ).toBe(401);
     });
 
     it('does not find the tool of a subagent by the main chain — S-28', async () => {
       const id = conversation(14, capturedTranscript('task-subagent-turn'));
 
       expect(
-        (await get(`/transcripts/${id}/tools/toolu_014f5iBnPwwckKEK8h6CY2UN/result`)).status,
+        (await get(`/transcripts/claude/${id}/tools/toolu_014f5iBnPwwckKEK8h6CY2UN/result`)).status,
       ).toBe(404);
       expect(
-        (await get(`/transcripts/${id}/tools/toolu_01LvP3tC4QzaKLSktbguFujt/result`)).status,
+        (await get(`/transcripts/claude/${id}/tools/toolu_01LvP3tC4QzaKLSktbguFujt/result`)).status,
       ).toBe(200);
     });
   });
@@ -363,7 +363,9 @@ describe('the history read live — plan 22', () => {
       const history = recordedHistory('image-turn');
       const id = conversation(20, history);
 
-      const response = await get(`/transcripts/${id}/images/${imageBlock(history)}`).buffer(true);
+      const response = await get(`/transcripts/claude/${id}/images/${imageBlock(history)}`).buffer(
+        true,
+      );
 
       expect(response.status).toBe(200);
       expect(response.headers).toMatchObject({
@@ -379,7 +381,7 @@ describe('the history read live — plan 22', () => {
       const history = imagePrompt('image/svg+xml', Buffer.from('<svg/>').toString('base64'));
       const id = conversation(21, history);
 
-      const response = await get(`/transcripts/${id}/images/${imageBlock(history)}`);
+      const response = await get(`/transcripts/claude/${id}/images/${imageBlock(history)}`);
 
       expect(response.status).toBe(415);
       expect(response.body.error).toMatchObject({
@@ -395,8 +397,8 @@ describe('the history read live — plan 22', () => {
       const fits = conversation(22, at);
       const big = conversation(23, over);
 
-      const served = await get(`/transcripts/${fits}/images/${imageBlock(at)}`).buffer(true);
-      const refused = await get(`/transcripts/${big}/images/${imageBlock(over)}`);
+      const served = await get(`/transcripts/claude/${fits}/images/${imageBlock(at)}`).buffer(true);
+      const refused = await get(`/transcripts/claude/${big}/images/${imageBlock(over)}`);
 
       expect(served.status).toBe(200);
       expect(served.headers['content-length']).toBe(String(10 * MIB));
@@ -408,22 +410,27 @@ describe('the history read live — plan 22', () => {
       const history = recordedHistory('image-turn');
       const id = conversation(24, history);
 
-      expect((await get(`/transcripts/${id}/images/${String(history[0]?.uuid)}:0`)).status).toBe(
-        404,
-      );
       expect(
-        (await get(`/transcripts/${conversationId(99)}/images/${imageBlock(history)}`)).status,
+        (await get(`/transcripts/claude/${id}/images/${String(history[0]?.uuid)}:0`)).status,
       ).toBe(404);
-      expect((await get(`/transcripts/${id}/images/not-a-block`)).status).toBe(400);
+      expect(
+        (await get(`/transcripts/claude/${conversationId(99)}/images/${imageBlock(history)}`))
+          .status,
+      ).toBe(404);
+      expect((await get(`/transcripts/claude/${id}/images/not-a-block`)).status).toBe(400);
     });
 
     it('serves the same bytes twice from one read of the store — S-34', async () => {
       const history = recordedHistory('image-turn');
       const id = conversation(25, history);
 
-      await get(`/transcripts/${id}/messages`);
-      const first = await get(`/transcripts/${id}/images/${imageBlock(history)}`).buffer(true);
-      const second = await get(`/transcripts/${id}/images/${imageBlock(history)}`).buffer(true);
+      await get(`/transcripts/claude/${id}/messages`);
+      const first = await get(`/transcripts/claude/${id}/images/${imageBlock(history)}`).buffer(
+        true,
+      );
+      const second = await get(`/transcripts/claude/${id}/images/${imageBlock(history)}`).buffer(
+        true,
+      );
 
       expect(first.body).toEqual(second.body);
       expect(store.calls.getSessionMessages.filter((call) => call === id)).toHaveLength(1);
@@ -434,7 +441,9 @@ describe('the history read live — plan 22', () => {
     it('acks first, then sends everything after the entry — even what was written in between — S-51, S-65', async () => {
       const history = recordedHistory('tool-turn');
       const id = conversation(30, history.slice(0, 4));
-      const page = (await get(`/transcripts/${id}/messages`)).body as { lastMessageId: string };
+      const page = (await get(`/transcripts/claude/${id}/messages`)).body as {
+        lastMessageId: string;
+      };
       // Written between the page and the follow.
       store.append(id, history.slice(4, 6), (written += 1));
       const socket = await connected();
@@ -770,7 +779,7 @@ describe('the history read live — plan 22', () => {
       const grown = uuidsOf('bash-output-turn', 1);
 
       expect((await plant(id, 'thinking-turn')).status).toBe(201);
-      const page = (await get(`/transcripts/${id}/messages`)).body as {
+      const page = (await get(`/transcripts/claude/${id}/messages`)).body as {
         lastMessageId: string;
         session: { activity: string };
       };
@@ -807,7 +816,7 @@ describe('the history read live — plan 22', () => {
 
       expect((await rewrite(id, 'compact-turn')).status).toBe(204);
       const reset = await nextUpdate(socket, followId);
-      const { events } = (await get(`/transcripts/${id}/messages`)).body as {
+      const { events } = (await get(`/transcripts/claude/${id}/messages`)).body as {
         events: { type: string; payload: { role?: string; content?: { text?: string }[] } }[];
       };
 
@@ -822,7 +831,7 @@ describe('the history read live — plan 22', () => {
       const id = conversationId(82);
 
       expect((await plant(id, 'text-turn', false)).status).toBe(201);
-      expect((await get(`/transcripts/${id}/messages`)).body.lastMessageId).toBe(
+      expect((await get(`/transcripts/claude/${id}/messages`)).body.lastMessageId).toBe(
         capturedTranscript('text-turn', 1).at(-1)?.uuid,
       );
     });
@@ -839,7 +848,7 @@ describe('the history read live — plan 22', () => {
       // A recording that kept no history, and one with no compaction.
       expect((await append(id, 'text-turn')).body.error).toMatch(/kept no history/);
       expect((await rewrite(id, 'thinking-turn')).body.error).toMatch(/has no compaction/);
-      expect((await get(`/transcripts/${id}/messages`)).body.lastMessageId).toBe(
+      expect((await get(`/transcripts/claude/${id}/messages`)).body.lastMessageId).toBe(
         uuidsOf('thinking-turn', 1).at(-1),
       );
     });

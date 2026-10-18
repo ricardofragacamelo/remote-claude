@@ -13,7 +13,7 @@ import { SensitiveFiles } from '@domain/files';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { APP_CONFIG } from '../../config/environment';
 import type { AppConfig, EngineEnvironment } from '../../config/environment';
-import { claudeEnvironment } from './claude.environment';
+import { claudeEnvironment, forgetEmptyClaudeConfigDir } from './claude.environment';
 import { ClaudeSettingsModule } from './claude-settings.module';
 import { enabledEngines } from './engine-selection';
 import {
@@ -33,7 +33,8 @@ import {
  * extensions exist. Each extension adds its providers and tokens here, and the core asks the
  * registries built below — never an engine by name.
  */
-export { ClaudeEngineModule } from './claude.module';
+/** The one enabled today, under the neutral name the core asks the composition by. */
+export { ClaudeEngineModule as EngineModule } from './claude.module';
 export { enabledEngines } from './engine-selection';
 
 /**
@@ -41,6 +42,15 @@ export { enabledEngines } from './engine-selection';
  * the default model of each engine among them.
  */
 export const ENGINE_ENVIRONMENTS: readonly EngineEnvironment[] = [claudeEnvironment];
+
+/**
+ * Quirks of an engine's own process environment, fixed before anything else reads it — ahead of DI,
+ * ahead of the core's own validation (plan 04, F5). Each is the core asking an extension to fix what
+ * only it knows is broken, never fixing it by the engine's name itself.
+ */
+export const ENGINE_ENVIRONMENT_FIXUPS: readonly ((env: NodeJS.ProcessEnv) => void)[] = [
+  forgetEmptyClaudeConfigDir,
+];
 
 /** The modules of the engines' extensions: what only one engine has, with its routes. */
 export const ENGINE_MODULES = [ClaudeSettingsModule];

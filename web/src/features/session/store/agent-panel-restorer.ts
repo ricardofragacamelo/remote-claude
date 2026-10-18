@@ -2,7 +2,6 @@ import type { TabRestorer } from '@/features/workbench';
 import { readConversation } from '@/shared/lib/conversation';
 import { isRecord } from '@/shared/lib/json';
 import type { ChangesFilter } from '../types/changes';
-import { FORMER_PANEL_RESTORER_ID } from '../lib/former-ids';
 import { keptMode } from '../lib/panel-modes';
 import type { ContextItem } from '../types/context';
 import {
@@ -33,7 +32,9 @@ export interface KeptAgentPanel {
 /**
  * The choices of a draft, as far as they can be trusted: anything unreadable is the default. A mode
  * kept by an older build is read once through {@link keptMode} — `default` is `ask`, `plan` is
- * `readOnly` (plan 28, S-82) —; an effort is kept as text, and offered only if the engine announces it.
+ * `readOnly` (plan 28, S-82) —; an effort is kept as text, and offered only if the engine announces
+ * it. The engine itself is kept as text too (plan 28, B-44), by its id — the picker names it by
+ * `GET /engines` once it answers, the same way the model does.
  */
 function choicesFrom(value: unknown): DraftChoices {
   if (!isRecord(value)) {
@@ -41,6 +42,7 @@ function choicesFrom(value: unknown): DraftChoices {
   }
 
   return {
+    engine: typeof value['engine'] === 'string' ? value['engine'] : null,
     model: typeof value['model'] === 'string' ? value['model'] : null,
     mode: keptMode(value['mode']) ?? DEFAULT_CHOICES.mode,
     effort: typeof value['effort'] === 'string' ? value['effort'] : null,
@@ -173,7 +175,6 @@ export function keptAgentPanelFrom(saved: unknown): KeptAgentPanel | undefined {
  */
 export const AGENT_PANEL_RESTORER: TabRestorer<KeptAgentPanel> = {
   id: 'session.agentPanel',
-  formerIds: [FORMER_PANEL_RESTORER_ID],
   position: 310,
   version: 2,
   parse: keptAgentPanelFrom,

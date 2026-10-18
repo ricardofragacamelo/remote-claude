@@ -8,7 +8,7 @@ export type TranscriptTail =
 /**
  * The entries of a conversation after the one a reader has (plan 22, B-14).
  *
- * In the order of the chain the SDK returns — never of the clock: a prompt queued mid-turn is stamped
+ * In the order of the chain the engine returns — never of the clock: a prompt queued mid-turn is stamped
  * before the result that precedes it, and the model read it after (S-21). With no entry given — the
  * conversation the reader saw was empty — everything is new. An entry the chain no longer holds — a
  * rewind, a compaction or a fork rebuilt it — is `outside`: nothing after it can be told apart from

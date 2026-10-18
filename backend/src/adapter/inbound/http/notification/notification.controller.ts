@@ -14,6 +14,8 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 
+import type { NotificationPagePayload, NotificationPayload } from '@remote-claude/contracts';
+
 import {
   DeleteNotificationsUseCase,
   ListNotificationsUseCase,
@@ -34,8 +36,6 @@ import {
 import type {
   ListNotificationsDto,
   MarkNotificationsReadDto,
-  NotificationDto,
-  NotificationPageDto,
   RecordNotificationDto,
 } from './notification.dto';
 
@@ -63,7 +63,7 @@ export class NotificationController {
   async read(
     @Query(new ZodPipe(listNotificationsSchema)) query: ListNotificationsDto,
     @CurrentUser() userId: UserId,
-  ): Promise<NotificationPageDto> {
+  ): Promise<NotificationPagePayload> {
     const page = await this.list.execute(userId, query.cursor ?? null);
 
     return {
@@ -87,7 +87,7 @@ export class NotificationController {
     @Body(new ZodPipe(recordNotificationSchema)) body: RecordNotificationDto,
     @CurrentUser() userId: UserId,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<NotificationDto> {
+  ): Promise<NotificationPayload> {
     const recorded = await this.recordEntry.execute({ userId, ...body });
 
     this.logger.debug(

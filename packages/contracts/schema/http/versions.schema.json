@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/versions.json",
+  "title": "Versions",
+  "description": "`GET /diag/versions`: what somebody pastes into a bug report (plan 06, B-12; plan 28, B-37). Always `200` — a version that could not be read is `null` with the reason, never a `500`.",
+  "x-kind": "http",
+  "x-type": "diag.versions",
+  "x-route": [{ "method": "GET", "path": "/diag/versions" }],
+  "type": "object",
+  "required": ["backend", "node", "defaultEngine", "engines"],
+  "properties": {
+    "backend": {
+      "$ref": "../definitions/component-version.schema.json"
+    },
+    "node": {
+      "$ref": "../definitions/component-version.schema.json"
+    },
+    "defaultEngine": {
+      "type": "string",
+      "description": "The engine a session opens on when the client names none — one of `engines`."
+    },
+    "engines": {
+      "type": "array",
+      "maxItems": 32,
+      "description": "One per engine enabled, in the order the configuration lists them (S-108).",
+      "items": {
+        "type": "object",
+        "required": ["engine", "displayName", "state", "binary", "library"],
+        "properties": {
+          "engine": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["available", "unavailable"]
+          },
+          "binary": {
+            "$ref": "../definitions/component-version.schema.json"
+          },
+          "library": {
+            "$ref": "../definitions/component-version.schema.json",
+            "x-nullable": true,
+            "description": "`null` for an engine driven with no library."
+          }
+        }
+      }
+    }
+  }
+}

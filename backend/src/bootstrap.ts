@@ -9,6 +9,7 @@ import { ShutdownSignal } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 
 import { APP_CONFIG, type AppConfig } from '@infra/config/environment';
+import { ENGINE_ENVIRONMENT_FIXUPS } from '@infra/modules/engines';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { NestLoggerBridge } from '@shared/logging/nest-logger';
 
@@ -34,26 +35,10 @@ export function loadDotEnv(file: string = repositoryDotEnv()): boolean {
     process.loadEnvFile(file);
   }
 
-  forgetEmptyClaudeConfigDir();
-  return loaded;
-}
-
-/**
- * Drops a `CLAUDE_CONFIG_DIR` that is set to nothing — from the file above, or exported by
- * `pnpm dev`.
- *
- * `.env.example` declares it empty to mean "the default, `~/.claude`", and this backend reads it
- * that way. **The Claude CLI does not**: it inherits the variable, takes the empty string for a
- * directory, finds no login there and answers every prompt with "Not logged in" as an ordinary
- * turn. The two halves also disagreed about which `.claude.json` is live, so the trust mark was
- * cleared in a file the CLI was not reading. Found by `pnpm test:e2e:live` (plan 04, F5).
- *
- * @param env the environment the CLI will inherit; a parameter so a test owns what it changes
- */
-export function forgetEmptyClaudeConfigDir(env: NodeJS.ProcessEnv = process.env): void {
-  if (env['CLAUDE_CONFIG_DIR']?.trim() === '') {
-    delete env['CLAUDE_CONFIG_DIR'];
+  for (const fixup of ENGINE_ENVIRONMENT_FIXUPS) {
+    fixup(process.env);
   }
+  return loaded;
 }
 
 /**
@@ -71,7 +56,7 @@ export const SHUTDOWN_SIGNALS: readonly ShutdownSignal[] = Object.values(Shutdow
  * Everything a built application needs before it listens.
  *
  * Written once because there is more than one way into this process: `main.ts` is the product, and
- * the end-to-end suite starts the same application with a scripted Agent SDK behind it. Two copies
+ * the end-to-end suite starts the same application with a scripted engine behind it. Two copies
  * of this block would be two places for the CORS origin or the WebSocket adapter to differ — and
  * a suite running against an application configured differently from the product proves nothing
  * about the product.

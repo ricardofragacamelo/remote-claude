@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/file-entry.json",
+  "title": "FileEntry",
+  "description": "`POST /files`, `POST /files/move` and `POST /files/copy`: an entry a create, a move or a copy left — one shape for all three.",
+  "x-kind": "http",
+  "x-type": "files.entry",
+  "x-route": [
+    { "method": "POST", "path": "/files" },
+    { "method": "POST", "path": "/files/move" },
+    { "method": "POST", "path": "/files/copy" }
+  ],
+  "type": "object",
+  "required": ["path", "etag"],
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "etag": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Set for a file; `null` for a folder."
+    }
+  }
+}

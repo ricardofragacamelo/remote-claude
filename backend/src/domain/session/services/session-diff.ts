@@ -9,7 +9,7 @@ import type { CanonicalTool, FileChange as EngineFileChange, ToolKind } from '@d
 /**
  * What the diffs of a session are made of — plan 08, F3.
  *
- * The diff is ours, out of what the undo already keeps ([D-03](../../../../../docs/plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)):
+ * The diff is ours, out of what the undo already keeps (plan 08, D-03):
  * the change the tool makes, the snapshot of the turn and how the session left each file. There is no
  * second store of "after" — and so there are cases where one side is not known, and the answer
  * **says** which side and why rather than inventing it.

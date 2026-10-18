@@ -1,0 +1,15 @@
+{
+  "id": "28·S-123…S-124",
+  "title": "the web panel of the test engine: a write renders and is approved the same way as Claude's, and nothing without the capability — nor the word \"Claude\" — ever shows",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "engineId": "test",
+    "agentName": "Test agent",
+    "fixture": "tool-turn",
+    "toolName": "Write",
+    "decision": "Allowed by you"
+  }
+}

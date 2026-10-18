@@ -56,7 +56,7 @@ export interface PromptQueueing {
  * Sends one turn.
  *
  * A prompt that arrives while a turn is running is **queued** and runs next, as a turn of its own.
- * The queue is the backend's since plan 08 (D-14): a prompt handed to the SDK mid-turn is folded
+ * The queue is the backend's since plan 08 (D-14): a prompt handed to the engine mid-turn is folded
  * into the running turn (measured, discovery §10.4) and cannot be taken back. Held here, every
  * client watching sees it wait (`prompt.queued`) and any of them can take it out first. Refusing it
  * with a `409` was never the answer ([R-02](../../../../docs/plans/00-bootstrap/progress.md)).
@@ -70,7 +70,7 @@ export interface PromptQueueing {
  * Checking a command can wait on the CLI, so the prompts of one session are checked in the order
  * they arrived: a plain prompt sent right after `/init` must not overtake it into the queue. The
  * context of the prompt — files, folders, ranges, uploads, text — is checked in the same step, all
- * or nothing, before anything reaches Claude (plan 08, B-44): a prompt with one bad item is refused
+ * or nothing, before anything reaches the agent (plan 08, B-44): a prompt with one bad item is refused
  * whole, and its context goes into the queue with it when a turn is running (S-205).
  *
  * What `execute` answers is the **send**, and the caller runs it once the prompt has been
@@ -202,7 +202,7 @@ export class PromptSessionUseCase extends SessionCommandUseCase {
 }
 
 /**
- * Takes a prompt out of the queue before it reaches Claude (plan 08, B-34). Any client watching may.
+ * Takes a prompt out of the queue before it reaches the agent (plan 08, B-34). Any client watching may.
  *
  * A second cancel of the same prompt is an `ack` with no effect; one that already became a turn is
  * `CONFLICT` — stopping it now is interrupting the turn.
@@ -313,7 +313,7 @@ export class SetSessionModelUseCase extends SessionCommandUseCase {
 /**
  * Changes the permission mode of a running session.
  *
- * The SDK first, then the entity, then the questions already open: a request that arrives after the
+ * The engine first, then the entity, then the questions already open: a request that arrives after the
  * entity changed reads the new mode, and the ones that were waiting are handed to the gate with it —
  * switching to Permitir tudo answers them (plan 23, D-06).
  */

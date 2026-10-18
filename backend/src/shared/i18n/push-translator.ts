@@ -55,13 +55,13 @@ export class PushTranslator {
     };
   }
 
-  /** Claude asked something (plan 24, D-22) — words of ours, never the question's. */
-  question(locale: string): PushText {
+  /** The agent asked something (plan 24, D-22) — words of ours, never the question's. */
+  question(locale: string, params: PushTextParams): PushText {
     const language = languageOf(locale);
 
     return {
-      title: this.instance.t('push.question.title', { lng: language }),
-      body: this.instance.t('push.question.body', { lng: language }),
+      title: this.instance.t('push.question.title', { lng: language, ...params }),
+      body: this.instance.t('push.question.body', { lng: language, ...params }),
     };
   }
 

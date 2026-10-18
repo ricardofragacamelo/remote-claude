@@ -18,7 +18,7 @@ export interface JournalScope {
  *
  * One port for both halves because they are one mechanism: a hook writes the *before*, another
  * writes the *after*, and undo needs both to tell "the session left it like this" from "somebody
- * edited it afterwards". See docs/architecture/backend/04a-claude.md#desfazer-arquivos.
+ * edited it afterwards".
  *
  * **Nothing here may block a tool.** That is the difference from the audit trail, and it is a
  * deliberate asymmetry: without a trail there is no authorisation, but without a baseline undo is

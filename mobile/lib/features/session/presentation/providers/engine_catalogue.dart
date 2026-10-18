@@ -26,10 +26,10 @@ Future<EngineCatalogue> engineCatalogue(Ref ref) => ref.watch(listEnginesProvide
 EngineCapabilities? sessionCapabilities(WidgetRef ref, SessionFacts facts) =>
     facts.capabilities ?? ref.watch(engineCatalogueProvider).value?.capabilitiesOf(facts.engine);
 
-/// What the engine a draft will open on can do — the default engine's, as the list says. `null`
-/// while the list is not known.
-EngineCapabilities? draftCapabilities(WidgetRef ref) =>
-    ref.watch(engineCatalogueProvider).value?.capabilitiesOf(null);
+/// What the engine a draft will open on can do — [engine]'s, or the default's while nothing was
+/// chosen (plan 28, B-45). `null` while the list is not known.
+EngineCapabilities? draftCapabilities(WidgetRef ref, [String? engine]) =>
+    ref.watch(engineCatalogueProvider).value?.capabilitiesOf(engine);
 
 /// The modes of permission [can] offers — none while it is not known.
 List<String> modesOf(EngineCapabilities? can) => can?.permissionModes ?? const <String>[];

@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { aLiveSocket, hubEvent } from '../../support/live-socket';
 import type { LiveSocket } from '../../support/live-socket';
 import { translator } from '../../support/render';
-import { startFromDraft } from '../../support/agent-panel';
+import { startFromDraft as startFromDraftOf } from '../../support/agent-panel';
 import { draftOnScreen, openWorkbench, tabNamed, typeIn } from '../../support/workbench';
 import { aTab, aTabServer, projects } from '../../support/workspace-api';
 import { aToolCall } from '../../support/canonical-tool';
@@ -24,10 +24,19 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** This file's installation always lists `claude`, named "Claude" (`listedEngines`). */
+const AGENT_NAME = 'Claude';
+
 /** The chat with Claude beside the editor. */
 function claude(): HTMLElement {
-  return screen.getByRole('complementary', { name: t('workbench.agent.label') });
+  return screen.getByRole('complementary', { name: AGENT_NAME });
 }
+
+const startFromDraft = (
+  user: Parameters<typeof startFromDraftOf>[0],
+  live: Parameters<typeof startFromDraftOf>[1],
+  session: Parameters<typeof startFromDraftOf>[2],
+) => startFromDraftOf(user, live, session, AGENT_NAME);
 
 /** The question the server asks about a tool: a `request` frame, with no sequence. */
 function question(toolName: string): Record<string, unknown> {
@@ -209,9 +218,10 @@ describe('a session of a tab that is not on screen — plan 06, S-181, S-99, S-1
 
     await user.click(screen.getByRole('link', { name: t('navigation.entry.workbench') }));
     expect(
-      await within(
-        await screen.findByRole('complementary', { name: t('workbench.agent.label') }),
-      ).findByRole('listitem', { name: /Shell/ }),
+      await within(await screen.findByRole('complementary', { name: AGENT_NAME })).findByRole(
+        'listitem',
+        { name: /Shell/ },
+      ),
     ).toBeVisible();
     expect(attaches()).toBe(attachedBefore);
   });

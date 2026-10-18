@@ -93,8 +93,8 @@ void main() {
         'root': <String, Object?>{'path': '/w', 'label': 'work'},
         'parent': '/w',
         'entries': <Object?>[
-          <String, Object?>{'name': 'src', 'path': '/w/a/src', 'hidden': false},
-          <String, Object?>{'name': '.git', 'path': '/w/a/.git', 'hidden': true},
+          <String, Object?>{'name': 'src', 'path': '/w/a/src', 'hidden': false, 'symlink': false},
+          <String, Object?>{'name': '.git', 'path': '/w/a/.git', 'hidden': true, 'symlink': false},
           <String, Object?>{'name': 'broken'},
         ],
         'truncated': true,

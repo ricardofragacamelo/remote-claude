@@ -3,10 +3,10 @@ import { isAbsolute, resolve, sep } from 'node:path';
 import { InvalidWorkspacePathError } from '../errors/invalid-workspace-path.error';
 
 /**
- * An absolute, normalised path on the machine that runs Claude.
+ * An absolute, normalised path on the machine that runs the agent.
  *
- * It is the first line of defence of the whole product: `cwd` of the Agent SDK's `query()` **is**
- * this value, so a path that gets past here is a directory Claude may run in. The rule is pure —
+ * It is the first line of defence of the whole product: `cwd` of the engine's start call **is**
+ * this value, so a path that gets past here is a directory the agent may run in. The rule is pure —
  * string in, string out, no `stat`, no symlink resolution — which is what makes every refusal
  * cheap to test and impossible to race.
  *

@@ -2,9 +2,9 @@ import type { UserId } from '@domain/auth';
 import type { PermissionMode, SessionId } from '@domain/session';
 import type { CanonicalTool } from '@domain/engine';
 
-/** One invocation the SDK is holding its loop open for. */
+/** One invocation the engine is holding its loop open for. */
 export interface RequestPermissionCommand {
-  /** The SDK's key for the question. Idempotency is by this, never by `toolUseId`. */
+  /** The engine's key for the question. Idempotency is by this, never by `toolUseId`. */
   readonly requestId: string;
 
   readonly sessionId: SessionId;

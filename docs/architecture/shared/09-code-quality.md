@@ -131,7 +131,7 @@ Cada regra estrutural desta documentação tem um verificador. **A violação qu
 | `shared-cannot-import-features` | `shared/` importando `features/` | [02](../web/02-folder-structure.md) |
 | `no-literal-colour` | cor literal em classe (`bg-red-500`, `text-white`, `bg-[#…]`, `oklch(…)`) em componente de feature, no `app/` e nos compostos de `shared/components/` — o token do papel (`bg-destructive`) é o caminho | [03](../web/03-ui-system.md#o-sistema-visual) |
 | `icons-only-lucide` | ícone de outra biblioteca (`react-icons`, `@heroicons/*`, `@radix-ui/react-icons`…) em componente, `app/` ou `shared/` | [03](../web/03-ui-system.md#o-sistema-visual) |
-| `core-cannot-import-engines` | `features/`, `shared/` e `app/` (menos `app/engines.ts`, a composição) importando `engines/`, pelo alias ou por caminho relativo | [12](12-engines.md) |
+| `core-cannot-import-engines` | `features/`, `shared/` e `app/` (menos `app/engines/index.ts`, a composição) importando `engines/`, pelo alias ou por caminho relativo | [12](12-engines.md) |
 | `engines-are-isolated` | `engines/<a>/` importando `engines/<b>/`, ou o interior de uma feature (só o barril); um escopo por motor, listado em `WEB_ENGINES` | [12](12-engines.md) |
 
 ### Mobile — `import_lint`
@@ -232,6 +232,20 @@ Nem toda repetição é duplicação. Estas ficam fora da medição:
 - **Duplicação entre pontas.** Web e mobile implementam a mesma tela em linguagens diferentes;
   isso não é duplicação, é tradução. O que precisa ser único é o **contrato**, e ele já é —
   ver [07-repository-layout.md](07-repository-layout.md).
+- **Alguns poucos schemas de `packages/contracts/schema/`, nomeados no config** — não a
+  categoria inteira, só estes oito arquivos. O gerador resolve `$ref` para uma definição que é um
+  objeto inteiro (nunca um escalar, nunca um `enum` sozinho) e não tem genéricos; um campo nullable
+  ao lado de um `$ref` já funciona (plano 28, B-48 — a razão de a maior parte da duplicação de
+  schema ter desaparecido nesse mesmo plano), mas a forma repetida aqui não tem outro jeito de virar
+  um único tipo sem perder precisão: `upload-preflight.schema.json`/`upload-result.schema.json`
+  (o mesmo `maxItems` de array, coincidência de limite e não de regra), `defaults-view.schema.json`
+  (consigo mesmo e com `output-style-view.schema.json` — cinco campos da mesma forma
+  `{value, from, folder?}`, cada `value` de um tipo diferente; um `$ref` compartilhado trocaria
+  cinco tipos exatos por um genérico que o TypeScript gerado não tem como expressar) e
+  `engine-capabilities.schema.json`/`engine-models.schema.json` (`permissionModes`: um array de
+  `enum`, e `$ref` não resolve para um `enum` sozinho) e `component-version.schema.json`/
+  `read-version.schema.json` (o mesmo campo `version`, mas o `reason` de cada um é uma regra
+  diferente — fechado num, aberto no outro — e por isso continuam duas definições, não uma).
 
 Exclusão é declarada no config, com justificativa. Nunca por comentário espalhado no código.
 
@@ -265,7 +279,7 @@ formalidade:
 | **Regra própria** | **`query()` sem `settingSources: ['project']`** — omitir carrega o escopo `user` e desliga o `canUseTool` em silêncio; `[]` desliga o `CLAUDE.md` do projeto. Ver [ADR-011](00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse) |
 | Regra própria | `hooks.PreToolUse` ausente na fábrica de `Options` — sem ele não há trilha de auditoria |
 | Regra própria | `canUseTool` ausente no `query()` — o CLI decide sozinho, e ninguém é perguntado |
-| **Regra própria** | **`query()` sem `strictMcpConfig: true`** — sobem o `.mcp.json` que o próprio repositório auto-aprova, os servidores de plugin e os conectores claude.ai ([ADR-018](00-decisions.md#adr-018--extensões-do-claude-só-entram-pelo-produto)) |
+| **Regra própria** | **`query()` sem `strictMcpConfig: true`** — sobem o `.mcp.json` que o próprio repositório auto-aprova, os servidores de plugin e os conectores claude.ai ([ADR-018](00-decisions.md#adr-018--a-extensão-do-claude-só-entra-pelo-produto)) |
 | Regra própria | `updateSettings(` e `applyFlagSettings(` em qualquer lugar; `managedSettings:` em qualquer lugar (não segura o shell inline, medido); `settings:` no adapter do Claude que não venha de `flagSettings(` — o montador com allowlist (`outputStyle`, `disableSkillShellExecution`) |
 | Regra própria | `permission_policy` e `alwaysLoad` em configuração de servidor MCP; plugin `{ type: 'local' }` sem `skipMcpDiscovery: true`, e `skipMcpDiscovery` diferente de `true` |
 | Regra própria | control request sem método público (`get_hooks_listing`, `list_permission_rules`, `get_settings`) |

@@ -14,6 +14,14 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 
+import type {
+  FileContentPayload,
+  FileEntryPayload,
+  FileTreePayload,
+  KeptDeletePayload,
+  SavedFilePayload,
+} from '@remote-claude/contracts';
+
 import {
   CopyEntryUseCase,
   CreateEntryUseCase,
@@ -29,7 +37,6 @@ import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import { ApprovedDeviceGuard } from './approved-device.guard';
 import { toKeptDeleteDto } from './file-history.dto';
-import type { KeptDeleteDto } from './file-history.dto';
 import {
   contentQuerySchema,
   createBodySchema,
@@ -46,12 +53,8 @@ import type {
   ContentQueryDto,
   CreateBodyDto,
   DeleteQueryDto,
-  EntryDto,
-  FileContentDto,
   RelocateBodyDto,
   SaveBodyDto,
-  SavedFileDto,
-  TreeDto,
   TreeQueryDto,
 } from './files.dto';
 
@@ -88,7 +91,7 @@ export class FilesController {
   async readTree(
     @Query(new ZodPipe(treeQuerySchema)) query: TreeQueryDto,
     @CurrentUser() userId: UserId,
-  ): Promise<TreeDto> {
+  ): Promise<FileTreePayload> {
     return toTreeDto(await this.tree.execute(query, userId));
   }
 
@@ -104,7 +107,7 @@ export class FilesController {
     @Headers('if-none-match') ifNoneMatch: string | undefined,
     @CurrentUser() userId: UserId,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<FileContentDto | undefined> {
+  ): Promise<FileContentPayload | undefined> {
     const read = await this.reader.execute(
       {
         folder: query.folder,
@@ -127,7 +130,7 @@ export class FilesController {
 
   /**
    * Saves a file over the version named in `If-Match`. `428` without it, `412` with the version on
-   * disk when it is another — Claude wrote since — and `200` without writing when the disk already
+   * disk when it is another — the agent wrote since — and `200` without writing when the disk already
    * holds this exact text: the retry of a save whose answer got lost.
    */
   @Put('content')
@@ -137,7 +140,7 @@ export class FilesController {
     @Headers('if-match') ifMatch: string | undefined,
     @CurrentUser() userId: UserId,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<SavedFileDto> {
+  ): Promise<SavedFilePayload> {
     const saved = await this.saver.execute({ ...body, ifMatch: ifMatch ?? null }, userId);
 
     response.setHeader('ETag', saved.etag.value);
@@ -152,7 +155,7 @@ export class FilesController {
     @Body(new ZodPipe(createBodySchema)) body: CreateBodyDto,
     @CurrentUser() userId: UserId,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<EntryDto> {
+  ): Promise<FileEntryPayload> {
     const created = await this.creator.execute({ ...body, content: body.content ?? '' }, userId);
 
     locate(
@@ -175,7 +178,7 @@ export class FilesController {
   async move(
     @Body(new ZodPipe(relocateBodySchema)) body: RelocateBodyDto,
     @CurrentUser() userId: UserId,
-  ): Promise<EntryDto> {
+  ): Promise<FileEntryPayload> {
     return toEntryDto(await this.mover.execute(relocateCommand(body), userId));
   }
 
@@ -186,7 +189,7 @@ export class FilesController {
     @Body(new ZodPipe(relocateBodySchema)) body: RelocateBodyDto,
     @CurrentUser() userId: UserId,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<EntryDto> {
+  ): Promise<FileEntryPayload> {
     const copied = await this.copier.execute(relocateCommand(body), userId);
 
     locate(
@@ -210,7 +213,7 @@ export class FilesController {
     @Headers('if-match') ifMatch: string | undefined,
     @CurrentUser() userId: UserId,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<KeptDeleteDto | undefined> {
+  ): Promise<KeptDeletePayload | undefined> {
     const deleted = await this.deleter.execute(
       {
         folder: query.folder,

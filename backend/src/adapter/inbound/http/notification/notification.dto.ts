@@ -1,15 +1,13 @@
 import { z } from 'zod';
 
+import type { NotificationPayload } from '@remote-claude/contracts';
+
 import {
   NOTIFICATION_HISTORY_LIMIT,
   NOTIFICATION_PARAM_MAX_LENGTH,
   NOTIFICATION_SEVERITIES,
 } from '@domain/notification';
-import type {
-  NotificationEntry,
-  NotificationParams,
-  NotificationSeverity,
-} from '@domain/notification';
+import type { NotificationEntry } from '@domain/notification';
 
 /** How many notifications a client may group into one entry — a burst, not a counter of the day. */
 export const NOTIFICATION_COUNT_MAX = 10_000;
@@ -59,27 +57,7 @@ export const markNotificationsReadSchema = z
 
 export type MarkNotificationsReadDto = z.infer<typeof markNotificationsReadSchema>;
 
-/** One entry of the centre, as the client reads it. */
-export interface NotificationDto {
-  readonly id: string;
-  readonly severity: NotificationSeverity;
-  readonly messageKey: string;
-  readonly params: NotificationParams;
-  readonly count: number;
-  /** ISO-8601. */
-  readonly createdAt: string;
-  /** ISO-8601, or `null` while unread. */
-  readonly readAt: string | null;
-}
-
-/** A page of the centre, newest first. */
-export interface NotificationPageDto {
-  readonly items: readonly NotificationDto[];
-  readonly unread: number;
-  readonly nextCursor: string | null;
-}
-
-export function toNotificationDto(entry: NotificationEntry): NotificationDto {
+export function toNotificationDto(entry: NotificationEntry): NotificationPayload {
   return {
     id: entry.id,
     severity: entry.severity,

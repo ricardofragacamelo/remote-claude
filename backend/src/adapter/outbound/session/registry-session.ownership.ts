@@ -5,7 +5,7 @@ import type { SessionAccess, SessionOwnership } from '@application/session';
 import type { UserId } from '@domain/auth';
 import type { SessionId } from '@domain/session';
 
-/** A live session of Claude is owned by whoever opened it, and only while it is running. */
+/** A live session of the agent is owned by whoever opened it, and only while it is running. */
 @Injectable()
 export class RegistrySessionOwnership implements SessionOwnership {
   constructor(@Inject(SessionRegistry) private readonly registry: SessionRegistry) {}

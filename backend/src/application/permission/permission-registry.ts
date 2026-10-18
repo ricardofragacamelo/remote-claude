@@ -6,19 +6,19 @@ import type { CancelScheduled } from '@application/shared';
  * The requests that are open, the deadlines armed for them, and the rules that answer without
  * asking.
  *
- * **In memory, and that is the design.** An entry is a promise the SDK is holding its agent loop
+ * **In memory, and that is the design.** An entry is a promise the engine is holding its agent loop
  * open for; none of that survives a restart, so a table of pending requests would be a table of
  * rows that are all lies the moment the process dies. The *history* of what was asked does go to
  * PostgreSQL — that is a different question, answered by `PermissionRequestRepository`.
  *
  * It is also what makes reconnection work without `query.reinitialize()`. The gap a product
- * suffers is between the client and us; the SDK channel never dropped, so the promise is still
+ * suffers is between the client and us; the engine's channel never dropped, so the promise is still
  * pending here and the pending requests can simply be published again
  * ([ADR-012](../../../../docs/architecture/shared/00-decisions.md)).
  *
  * Settled requests are **kept** rather than deleted, until the session goes. That is what makes an
  * answer that arrives late a silent ack instead of a `PERMISSION_REQUEST_NOT_FOUND`, and a request
- * the SDK redelivers after a transport gap an idempotent no-op instead of a second execution.
+ * the engine redelivers after a transport gap an idempotent no-op instead of a second execution.
  */
 export class PermissionRegistry {
   private readonly requests = new Map<string, PermissionRequest>();

@@ -10,7 +10,7 @@ import type { WorkspaceAllowlistSource } from '@application/workspace';
 import type { LiveConversationSource } from './ports/live-conversation.source';
 import type { TranscriptOriginSource } from './ports/transcript-origin.source';
 
-/** A conversation as its caller sees it: what the SDK said, where it came from, what it is doing. */
+/** A conversation as its caller sees it: what the engine said, where it came from, what it is doing. */
 export interface ListedTranscript extends VisibleTranscriptSession {
   readonly activity: ConversationActivity;
 }

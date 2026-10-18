@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/defaults-view.json",
+  "title": "DefaultsView",
+  "description": "`GET/PUT /engines/:engine/defaults` and `PUT/DELETE /engines/:engine/defaults/folder`: the defaults as the screen shows them — what applies, the user's own, and the folder's override (plan 13, B-14; plan 28, B-36). `EffectiveValue<T>` is generic in TypeScript; JSON Schema has no generics, so `effective` is five independent properties, one per field, each typed to that field's own value type (plan 28, B-48).",
+  "x-kind": "http",
+  "x-type": "agentSettings.defaults",
+  "x-route": [
+    { "method": "GET", "path": "/engines/:engine/defaults" },
+    { "method": "PUT", "path": "/engines/:engine/defaults" },
+    { "method": "PUT", "path": "/engines/:engine/defaults/folder" }
+  ],
+  "type": "object",
+  "required": ["effective", "user", "folder"],
+  "properties": {
+    "effective": {
+      "type": "object",
+      "required": ["model", "permissionMode", "effort", "thinking", "fallbackModel"],
+      "description": "Every field as it applies in the folder asked — the nearest folder override, the user's default, or the installation's.",
+      "properties": {
+        "model": {
+          "type": "object",
+          "required": ["value", "from"],
+          "properties": {
+            "value": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "from": {
+              "type": "string",
+              "enum": ["folder", "user", "installation"]
+            },
+            "folder": {
+              "type": "string",
+              "description": "The folder whose override set it, when `from` is `folder`."
+            }
+          }
+        },
+        "permissionMode": {
+          "type": "object",
+          "required": ["value", "from"],
+          "properties": {
+            "value": {
+              "type": "string",
+              "enum": ["ask", "acceptEdits", "readOnly", "allowAll"],
+              "x-nullable": true
+            },
+            "from": {
+              "type": "string",
+              "enum": ["folder", "user", "installation"]
+            },
+            "folder": {
+              "type": "string"
+            }
+          }
+        },
+        "effort": {
+          "type": "object",
+          "required": ["value", "from"],
+          "properties": {
+            "value": {
+              "type": "string",
+              "enum": ["low", "medium", "high", "xhigh", "max"],
+              "x-nullable": true
+            },
+            "from": {
+              "type": "string",
+              "enum": ["folder", "user", "installation"]
+            },
+            "folder": {
+              "type": "string"
+            }
+          }
+        },
+        "thinking": {
+          "type": "object",
+          "required": ["value", "from"],
+          "properties": {
+            "value": {
+              "type": "string",
+              "enum": ["on", "off"],
+              "x-nullable": true
+            },
+            "from": {
+              "type": "string",
+              "enum": ["folder", "user", "installation"]
+            },
+            "folder": {
+              "type": "string"
+            }
+          }
+        },
+        "fallbackModel": {
+          "type": "object",
+          "required": ["value", "from"],
+          "properties": {
+            "value": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "from": {
+              "type": "string",
+              "enum": ["folder", "user", "installation"]
+            },
+            "folder": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "user": {
+      "$ref": "../definitions/agent-defaults.schema.json"
+    },
+    "folder": {
+      "type": "object",
+      "x-nullable": true,
+      "required": ["folder", "values"],
+      "description": "The folder's own override — mirrors `FolderDefaults`, inlined because the field is nullable and the generator refuses any sibling beside a `$ref` (plan 28, B-48). `null` when the folder has none of its own.",
+      "properties": {
+        "folder": {
+          "type": "string"
+        },
+        "values": {
+          "$ref": "../definitions/agent-defaults.schema.json"
+        }
+      }
+    }
+  }
+}

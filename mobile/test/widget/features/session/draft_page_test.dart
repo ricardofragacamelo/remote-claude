@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/features/device/device.dart';
@@ -46,6 +47,11 @@ void main() {
     double width = 900,
     bool fromTheFolders = false,
     EngineCapabilities capabilities = someCapabilities,
+    List<Engine>? engines,
+    // Names the chips read (plan 28, B-45) — `AgentNamesScope` is the app's own, put above the
+    // router by `EngineNames`; this harness builds its own tiny router, so a test that cares what a
+    // sentence names puts it here itself, the same way `pumpChip` does for a bare chip.
+    bool namesTheEngines = false,
   }) async {
     tester.view.physicalSize = Size(width, 900);
     tester.view.devicePixelRatio = 1;
@@ -53,6 +59,17 @@ void main() {
 
     sessions = FakeSessionRepository();
     addTearDown(sessions.dispose);
+
+    final List<Engine> catalogued =
+        engines ??
+        <Engine>[
+          Engine(
+            id: anEngine,
+            displayName: anEngineName,
+            isAvailable: true,
+            capabilities: capabilities,
+          ),
+        ];
 
     await tester.pumpRouted(
       <RouteBase>[
@@ -81,17 +98,7 @@ void main() {
         sessionRepositoryProvider.overrideWithValue(sessions),
         engineRepositoryProvider.overrideWithValue(
           FakeEngineRepository()
-            ..catalogue = EngineCatalogue(
-              defaultEngine: anEngine,
-              engines: <Engine>[
-                Engine(
-                  id: anEngine,
-                  displayName: anEngineName,
-                  isAvailable: true,
-                  capabilities: capabilities,
-                ),
-              ],
-            ),
+            ..catalogue = EngineCatalogue(defaultEngine: anEngine, engines: catalogued),
         ),
         insightRepositoryProvider.overrideWithValue(insight as InsightRepository),
         deviceControllerAnswering(AsyncValue<RegisteredDevice?>.data(aRegisteredDevice())),
@@ -100,6 +107,17 @@ void main() {
           (Ref ref) => Stream<ConnectionStatus>.value(connection),
         ),
       ],
+      builder: namesTheEngines
+          ? (BuildContext context, Widget? child) => AgentNamesScope(
+              names: AgentNames(
+                names: <String, String>{
+                  for (final Engine engine in catalogued) engine.id: engine.displayName,
+                },
+                defaultEngine: anEngine,
+              ),
+              child: child ?? const SizedBox.shrink(),
+            )
+          : null,
     );
     await tester.pumpAndSettle();
   }
@@ -178,6 +196,100 @@ void main() {
       'text': 'fix the build',
     });
     expect(find.text('opened session-7'), findsOneWidget);
+  });
+
+  group('plan 28, B-45 · the engine of a draft', () {
+    const EngineCapabilities announcedByTest = EngineCapabilities(
+      resume: false,
+      fork: 'none',
+      history: false,
+      images: false,
+      promptWhileBusy: true,
+      questions: true,
+      planApproval: false,
+      taskList: false,
+      subagents: false,
+      thinking: false,
+      slashCommands: false,
+      modelSwitch: false,
+      effortLevels: <String>[],
+      contextUse: false,
+      mcp: false,
+      compaction: false,
+      cost: 'none',
+      permissionModes: <String>['ask', 'acceptEdits', 'readOnly', 'allowAll'],
+    );
+
+    List<Engine> twoEngines({bool secondAvailable = true}) => <Engine>[
+      const Engine(
+        id: anEngine,
+        displayName: anEngineName,
+        isAvailable: true,
+        capabilities: someCapabilities,
+      ),
+      Engine(
+        id: 'test',
+        displayName: 'Test agent',
+        isAvailable: secondAvailable,
+        capabilities: announcedByTest,
+      ),
+    ];
+
+    testWidgets('S-126 · with one engine, or a second one unavailable, there is no chip to choose '
+        'it', (WidgetTester tester) async {
+      await pumpDraft(tester);
+      expect(find.text(l10n.engineLabel), findsNothing);
+
+      await pumpDraft(tester, engines: twoEngines(secondAvailable: false));
+      expect(find.text(l10n.engineLabel), findsNothing);
+    });
+
+    testWidgets(
+      'S-125 · with two engines available, picking one opens the session on it, and resets the '
+      'model and the effort it announces — not the mode',
+      (WidgetTester tester) async {
+        await pumpDraft(tester, width: 1200, engines: twoEngines());
+
+        await tester.tap(find.text(l10n.modeAsk));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.modeReadOnly));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byTooltip(l10n.composerChoice(l10n.engineLabel, l10n.engineDefault)));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Test agent'));
+        await tester.pumpAndSettle();
+
+        // The installation's default engine took an effort, but this one announces none — S-126:
+        // the chip is gone, not disabled.
+        expect(find.text(l10n.effortLabel), findsNothing);
+        // The mode chosen before the engine was picked is kept.
+        expect(find.text(l10n.modeReadOnly), findsOneWidget);
+
+        await send(tester, 'do the work');
+        expect(sessions.commands.single.$2, <String, Object?>{
+          'workspacePath': folder,
+          'permissionMode': 'readOnly',
+          'engine': 'test',
+        });
+      },
+    );
+
+    testWidgets('S-126 · the draft and the composer name the engine chosen, not the installation '
+        'default', (WidgetTester tester) async {
+      await pumpDraft(tester, width: 1200, engines: twoEngines(), namesTheEngines: true);
+
+      expect(find.text(l10n.draftDescription(anEngineName)), findsOneWidget);
+      expect(find.text(l10n.composerPlaceholder(anEngineName)), findsOneWidget);
+
+      await tester.tap(find.byTooltip(l10n.composerChoice(l10n.engineLabel, l10n.engineDefault)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Test agent'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.draftDescription('Test agent')), findsOneWidget);
+      expect(find.text(l10n.composerPlaceholder('Test agent')), findsOneWidget);
+    });
   });
 
   group('plan 28, B-27, B-28 · what the default engine announces', () {

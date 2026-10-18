@@ -142,8 +142,51 @@ void main() {
       );
     });
 
-    testWidgets('a draft offers what the default engine can do', (WidgetTester tester) async {
+    testWidgets('a draft that names no engine offers what the default engine can do', (
+      WidgetTester tester,
+    ) async {
       expect(await answer(tester, draftCapabilities), someCapabilities);
+    });
+
+    testWidgets('plan 28 · B-45 · a draft that chose an engine offers what that one can do', (
+      WidgetTester tester,
+    ) async {
+      EngineCapabilities? seen;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            engineRepositoryProvider.overrideWithValue(
+              FakeEngineRepository()
+                ..catalogue = const EngineCatalogue(
+                  defaultEngine: anEngine,
+                  engines: <Engine>[
+                    Engine(
+                      id: anEngine,
+                      displayName: anEngineName,
+                      isAvailable: true,
+                      capabilities: someCapabilities,
+                    ),
+                    Engine(
+                      id: 'test',
+                      displayName: 'Test agent',
+                      isAvailable: true,
+                      capabilities: other,
+                    ),
+                  ],
+                ),
+            ),
+          ],
+          child: Consumer(
+            builder: (BuildContext context, WidgetRef ref, Widget? _) {
+              seen = draftCapabilities(ref, 'test');
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(seen, other);
     });
   });
 }

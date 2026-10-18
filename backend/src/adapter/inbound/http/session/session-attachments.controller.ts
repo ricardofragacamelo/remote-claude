@@ -18,7 +18,7 @@ export const ATTACHMENT_LIMITS = Symbol('AttachmentLimits');
  * An attachment of the prompts, uploaded — plan 08, B-45, D-02.
  *
  * `multipart/form-data` with one `file` part, and a `name` field before it — the name of the file
- * on the person's machine, which is what a text is introduced to Claude by. Read as a stream, and
+ * on the person's machine, which is what a text is introduced to the agent by. Read as a stream, and
  * cut one byte past the ceiling: the backend never holds more than that of a body it will refuse.
  * The bytes stay in memory, for the session; the log carries the type, the size and the hash, and
  * never what the file says (S-211).

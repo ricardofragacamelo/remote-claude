@@ -1,3 +1,10 @@
+import type {
+  OpenFoldersPayload,
+  RecentFoldersPayload,
+  ResolvedWorkspacePayload,
+  WorkspaceListPayload,
+} from '@remote-claude/contracts';
+
 import { api, REQUEST_TIMEOUT_MS } from '@/shared/api/api';
 import { folderName } from '@/shared/lib/folder-name';
 import type {
@@ -8,32 +15,6 @@ import type {
   ResolvedFolder,
   Workspace,
 } from '../types/workspace';
-
-/** The shape the backend answers with. It stops existing at the end of this file. */
-interface WorkspaceListResponse {
-  readonly workspaces: readonly Workspace[];
-}
-
-interface RecentFolderDto {
-  readonly path: string;
-  readonly rootLabel: string | null;
-  readonly lastOpenedAt: string;
-  readonly pinned: boolean;
-  readonly available: boolean;
-}
-
-interface RecentFoldersResponse {
-  readonly folders: readonly RecentFolderDto[];
-}
-
-interface OpenFoldersResponse {
-  readonly folders: readonly OpenFolder[];
-}
-
-interface ResolvedFolderDto {
-  readonly path: string;
-  readonly root: Workspace;
-}
 
 /**
  * A query string with the folder in it.
@@ -56,7 +37,7 @@ function query(parameters: Readonly<Record<string, string>>): string {
  *   turned the backend's envelope into something with a code and a translation key
  */
 export async function fetchWorkspaces(): Promise<readonly Workspace[]> {
-  return (await api.get<WorkspaceListResponse>('/workspaces')).workspaces;
+  return (await api.get<WorkspaceListPayload>('/workspaces')).workspaces;
 }
 
 /**
@@ -66,7 +47,9 @@ export async function fetchWorkspaces(): Promise<readonly Workspace[]> {
  * the URL and to the session — never the one the link spelled.
  */
 export async function resolveFolder(path: string): Promise<ResolvedFolder> {
-  const resolved = await api.get<ResolvedFolderDto>(`/workspaces/resolve?${query({ path })}`);
+  const resolved = await api.get<ResolvedWorkspacePayload>(
+    `/workspaces/resolve?${query({ path })}`,
+  );
 
   return { path: resolved.path, name: folderName(resolved.path), root: resolved.root };
 }
@@ -110,7 +93,7 @@ export function listDirectories(
  * tell from a boolean.
  */
 export async function fetchRecentFolders(): Promise<readonly RecentFolder[]> {
-  return (await api.get<RecentFoldersResponse>('/workspaces/recent')).folders.map((folder) => ({
+  return (await api.get<RecentFoldersPayload>('/workspaces/recent')).folders.map((folder) => ({
     path: folder.path,
     name: folderName(folder.path),
     rootLabel: folder.rootLabel,
@@ -132,7 +115,7 @@ export async function forgetRecentFolder(path: string): Promise<void> {
 
 /** The folder tabs, in the order the user left them, each revalidated by the server. */
 export async function fetchOpenFolders(): Promise<readonly OpenFolder[]> {
-  return (await api.get<OpenFoldersResponse>('/workspaces/open-folders')).folders;
+  return (await api.get<OpenFoldersPayload>('/workspaces/open-folders')).folders;
 }
 
 /**

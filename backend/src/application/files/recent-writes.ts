@@ -27,7 +27,7 @@ export interface RecentWrite {
  *
  * Bounded twice: by age, because a write a minute old explains nothing the watcher sees now, and
  * by count, the oldest going first. A label, never a decision — losing a mark costs an `external`
- * where a `claude` would have been, and nothing else.
+ * where the engine's id would have been, and nothing else.
  */
 export class RecentWrites {
   private readonly writes = new Map<string, RecentWrite>();

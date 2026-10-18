@@ -179,7 +179,7 @@ export function SessionScreen({
               isPartial={session.isPartial}
               folder={folder}
               sessionId={sessionId}
-              reference={session.history.conversation}
+              reference={session.conversation ?? session.history.conversation}
               prompts={promptActionsOf(session, edit, setUndoAt, t)}
               inline={inline}
             />
@@ -430,6 +430,7 @@ function Composer(props: ComposerProps): React.JSX.Element {
         draft={editing.original}
         onEscape={editing.cancel}
         submitLabel={t('sessions.edit.send')}
+        engine={session.conversation?.engine}
       />
     );
   }
@@ -445,6 +446,7 @@ function Composer(props: ComposerProps): React.JSX.Element {
       onEscape={stop}
       context={folder === '' ? undefined : props.composer.context}
       sessionId={session.sessionId}
+      engine={session.conversation?.engine}
     />
   );
 }

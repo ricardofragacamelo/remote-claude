@@ -30,7 +30,7 @@ describe('sessionRegistryFor — D-01', () => {
       capacity: { floor: 1, ceiling: 10, memoryFraction: 0.5, perSessionBytes: 256 * 1024 ** 2 },
       idleTtlMs: 1_800_000,
       limits: { maxBudgetUsd: 10, maxTurns: 100 },
-      defaults: { model: 'claude-sonnet-5', permissionMode: 'ask' as const },
+      defaults: { models: { claude: 'claude-sonnet-5' }, permissionMode: 'ask' as const },
     },
   };
 

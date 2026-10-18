@@ -627,4 +627,82 @@ describe('buildModel with shared definitions', () => {
       /the definition `Answer` is declared twice/,
     );
   });
+
+  it('lets a field be nullable beside its $ref, since that is a fact about the field, not the shape', () => {
+    const model = using({
+      one: { $ref: '../definitions/answer.schema.json', 'x-nullable': true },
+    });
+
+    const payload = model.interfaces.find((declared) => declared.name === 'ThingPayload');
+    expect(payload?.fields[0]).toMatchObject({
+      type: { kind: 'object', name: 'Answer' },
+      nullable: true,
+    });
+  });
+
+  it('still refuses a keyword beside $ref that is neither description nor x-nullable', () => {
+    expect(() =>
+      using({ one: { $ref: '../definitions/answer.schema.json', maxLength: 3 } }),
+    ).toThrow(/`ThingPayloadOne` has `maxLength` beside `\$ref`/);
+  });
+});
+
+describe('buildModel with a message that aliases a definition', () => {
+  /** @param {Record<string, unknown>} schema @param {string} [file] */
+  const definition = (schema, file = 'answer.schema.json') => ({
+    source: `definitions/${file}`,
+    schema: { title: 'Answer', type: 'object', properties: { id: { type: 'string' } }, ...schema },
+  });
+
+  /** @param {Record<string, unknown>} schema */
+  const aliasMessage = (schema) =>
+    message({
+      title: 'Thing',
+      'x-kind': 'command',
+      'x-type': 'thing.do',
+      $ref: '../definitions/answer.schema.json',
+      ...schema,
+    });
+
+  it('names the message after the definition, minting no interface of its own', () => {
+    const model = buildModel(envelope(), [aliasMessage({})], [definition({})]);
+
+    expect(model.aliases).toEqual([{ name: 'ThingPayload', of: 'Answer', description: '' }]);
+    expect(model.interfaces.map((declared) => declared.name)).toEqual(['Answer']);
+    expect(model.messages[0]).toMatchObject({ name: 'Thing', payload: 'ThingPayload' });
+  });
+
+  it('carries the message’s own description onto the alias', () => {
+    const model = buildModel(
+      envelope(),
+      [aliasMessage({ description: 'One answer, by itself.' })],
+      [definition({})],
+    );
+
+    expect(model.aliases[0]?.description).toBe('One answer, by itself.');
+  });
+
+  it('refuses a message that aliases a definition and also declares its own shape', () => {
+    expect(() =>
+      buildModel(
+        envelope(),
+        [aliasMessage({ type: 'object', properties: { id: { type: 'string' } } })],
+        [definition({})],
+      ),
+    ).toThrow(
+      /`Thing` has `type` beside a top-level `\$ref` — a message that aliases a definition declares nothing else/,
+    );
+  });
+
+  it('refuses a message whose $ref names no definition, same as a field would', () => {
+    expect(() =>
+      buildModel(
+        envelope(),
+        [aliasMessage({ $ref: '../definitions/missing.schema.json' })],
+        [definition({})],
+      ),
+    ).toThrow(
+      /refers to "\.\.\/definitions\/missing\.schema\.json", which is no file of `definitions\/`/,
+    );
+  });
 });

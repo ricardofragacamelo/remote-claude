@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -12,6 +11,7 @@ import {
   loadDatabaseConfig,
 } from '@infra/config/environment';
 import type { RawEnvironment } from '@infra/config/environment';
+import { claudeEnvironment } from '@infra/modules/engines/claude.environment';
 
 const complete: RawEnvironment = {
   NODE_ENV: 'test',
@@ -100,7 +100,7 @@ function withChange(change: Partial<RawEnvironment>): RawEnvironment {
 
 describe('loadConfig', () => {
   it('translates the environment into the vocabulary of the code', () => {
-    const config = loadConfig(complete);
+    const config = loadConfig(complete, [claudeEnvironment]);
 
     expect(config).toEqual({
       nodeEnv: 'test',
@@ -110,12 +110,11 @@ describe('loadConfig', () => {
       databaseUrl: 'postgresql://u:p@localhost:5432/db',
       workspaceAllowlistFile: '/etc/remote-claude/workspaces.yaml',
       pidFile: null,
-      claudeConfig: { modelCheck: { maxBudgetUsd: 0.05, cwd: tmpdir() } },
       session: {
         capacity: { floor: 1, ceiling: 10, memoryFraction: 0.5, perSessionBytes: 268_435_456 },
         idleTtlMs: 1_800_000,
         limits: { maxBudgetUsd: 10, maxTurns: 100 },
-        defaults: { model: 'claude-sonnet-5', permissionMode: 'ask' },
+        defaults: { models: { claude: 'claude-sonnet-5' }, permissionMode: 'ask' },
       },
       engines: { enabled: [], default: null },
       websocket: { maxFramesPerSecond: 20, maxFrameBytes: 65_536, maxAttachedSessions: 16 },
@@ -218,8 +217,6 @@ describe('loadConfig', () => {
     'RC_WS_MAX_ATTACHED_SESSIONS',
     'RC_SESSION_MAX_TURNS',
     'RC_SESSION_MAX_BUDGET_USD',
-    'RC_MODEL_CHECK_MAX_BUDGET_USD',
-    'RC_SESSION_DEFAULT_MODEL',
     'RC_SESSION_DEFAULT_PERMISSION_MODE',
     'RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS',
     'RC_PERMISSION_RULE_MAX_LIFETIME_MS',
@@ -264,6 +261,33 @@ describe('loadConfig', () => {
     'RC_TRANSCRIPT_FOLLOW_MAX',
   ] as const)('refuses to produce a configuration when %s is missing', (variable) => {
     expect(() => loadConfig(withChange({ [variable]: undefined }))).toThrow(ConfigurationError);
+  });
+
+  describe('the variables of an engine, validated with the core (plan 28, B-37)', () => {
+    it('reads no model for an engine nobody asked for', () => {
+      expect(loadConfig(complete).session.defaults.models).toEqual({});
+    });
+
+    it("collects the engine's default model under its own name", () => {
+      expect(loadConfig(complete, [claudeEnvironment]).session.defaults.models).toEqual({
+        claude: 'claude-sonnet-5',
+      });
+    });
+
+    it.each(['RC_SESSION_DEFAULT_MODEL', 'RC_MODEL_CHECK_MAX_BUDGET_USD'] as const)(
+      'refuses to produce a configuration when %s is missing and the engine is asked',
+      (variable) => {
+        expect(() =>
+          loadConfig(withChange({ [variable]: undefined }), [claudeEnvironment]),
+        ).toThrow(ConfigurationError);
+      },
+    );
+
+    it("does not refuse the core for an engine's own problem — its variable is its own to answer for", () => {
+      // Missing only from the engine's point of view: the core never named it, so asking with no
+      // engine at all still produces a configuration.
+      expect(() => loadConfig(withChange({ RC_SESSION_DEFAULT_MODEL: undefined }))).not.toThrow();
+    });
   });
 
   it.each([

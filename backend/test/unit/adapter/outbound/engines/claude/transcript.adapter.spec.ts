@@ -214,7 +214,7 @@ describe('AgentSdkTranscriptAdapter', () => {
         .add({ sessionId: conversationId(1), directory: DIRECTORY, cwd: DIRECTORY });
 
       expect(await adapter.list(DIRECTORY)).toHaveLength(1);
-      expect(log.withOp('claude.transcript.list')[0]).toMatchObject({
+      expect(log.withOp('engine.transcript.list')[0]).toMatchObject({
         sessions: 1,
         unaddressable: 1,
       });
@@ -268,7 +268,7 @@ describe('AgentSdkTranscriptAdapter', () => {
       await adapter.messages(session);
 
       expect(sdk.calls.getSessionMessages).toHaveLength(1);
-      expect(log.withOp('claude.transcript.messages').map((line) => line['cache'])).toEqual([
+      expect(log.withOp('engine.transcript.messages').map((line) => line['cache'])).toEqual([
         'miss',
         'hit',
       ]);
@@ -409,7 +409,7 @@ describe('AgentSdkTranscriptAdapter', () => {
         .catch(() => undefined);
 
       expect(log.lines.find((line) => line.level === 'error')).toMatchObject({
-        op: 'claude.transcript.read',
+        op: 'engine.transcript.read',
         operation: 'describe a session',
       });
     });
@@ -437,7 +437,7 @@ describe('AgentSdkTranscriptAdapter', () => {
       expect(await listing).toBeInstanceOf(TranscriptTimeoutError);
       expect(await listing).toMatchObject({ code: 'AGENT_TIMEOUT', params: { timeoutMs: 5_000 } });
       expect(log.lines.find((line) => line.level === 'warn')).toMatchObject({
-        op: 'claude.transcript.read',
+        op: 'engine.transcript.read',
         operation: 'list sessions',
       });
     });
@@ -477,7 +477,7 @@ describe('AgentSdkTranscriptAdapter', () => {
 
     const written = JSON.stringify(log.lines);
     expect(log.lines.every((line) => line.level === 'debug')).toBe(true);
-    expect(log.withOp('claude.transcript.read')).toHaveLength(3);
+    expect(log.withOp('engine.transcript.read')).toHaveLength(3);
     expect(written).not.toContain('SECRET-SUMMARY');
     expect(written).not.toContain('two goals');
     expect(written).not.toContain('summary.md');
@@ -580,14 +580,14 @@ describe('AgentSdkTranscriptAdapter', () => {
       const logged = JSON.stringify(log.lines);
       expect(logged).not.toContain('599');
       expect(logged).not.toContain('iVBORw0');
-      expect(log.lines.find((line) => line['op'] === 'claude.transcript.toolResult')).toMatchObject(
+      expect(log.lines.find((line) => line['op'] === 'engine.transcript.toolResult')).toMatchObject(
         {
           found: true,
           cache: 'miss',
         },
       );
       expect(
-        log.lines.find((line) => line['op'] === 'claude.transcript.promptImage'),
+        log.lines.find((line) => line['op'] === 'engine.transcript.promptImage'),
       ).toMatchObject({
         found: true,
         mediaType: 'image/png',

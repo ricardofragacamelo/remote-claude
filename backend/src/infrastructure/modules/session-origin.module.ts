@@ -4,7 +4,7 @@ import { SESSION_ORIGIN_REPOSITORY } from '@application/session';
 import { DrizzleSessionOriginRepository } from '@adapter/outbound/persistence/session/drizzle-session-origin.repository';
 
 /**
- * That **we** opened a conversation of Claude — `session_origins`, and nothing else.
+ * That **we** opened a conversation of the agent — `session_origins`, and nothing else.
  *
  * A module of its own for one reason: two modules need it and one of them needs the other.
  * `session` writes the provenance and, to continue a conversation, asks `transcript` about it;

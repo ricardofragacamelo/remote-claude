@@ -25,7 +25,10 @@ export interface Draft {
    */
   readonly choices: DraftChoices;
 
-  /** What the engine a draft opens on can do — the default engine's, as `GET /engines` lists it. */
+  /**
+   * What the engine a draft opens on can do — the chosen one's, the default engine's when it names
+   * none, as `GET /engines` lists it (plan 28, B-44).
+   */
   readonly capabilities: EngineCapabilities | null;
 
   /** The modes the draft offers: exactly the engine's (S-81). */
@@ -91,11 +94,12 @@ export function useDraft(folder: string, key: string, workspacePath: string): Dr
   );
 
   const chosen = tab?.kind === 'draft' ? tab.choices : DEFAULT_CHOICES;
-  // A draft names no engine: its session opens on the default one.
-  const capabilities = useEngineCapabilities(null);
+  // What the chosen engine can do — the installation's default when the draft names none (B-44).
+  const capabilities = useEngineCapabilities(chosen.engine);
   const modes = offeredModes(capabilities);
   const choices = useMemo<DraftChoices>(
     () => ({
+      engine: chosen.engine,
       model: chosen.model,
       mode: shownMode(modes, chosen.mode) ?? chosen.mode,
       effort: effortToStart(capabilities, chosen.effort),
@@ -127,6 +131,7 @@ export function useDraft(folder: string, key: string, workspacePath: string): Dr
 
         const commandId = startDraft(wsClient, {
           workspacePath,
+          engine: choices.engine,
           model: choices.model,
           permissionMode: choices.mode,
           effort: choices.effort,

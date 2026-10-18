@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/model-check-outcome.json",
+  "title": "ModelCheckOutcome",
+  "description": "`POST /engines/claude/diagnostics/model-check`: one turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). The same shape `GET /engines/claude/installation`'s `lastModelCheck` carries, named again rather than declared twice (plan 28, B-48).",
+  "x-kind": "http",
+  "x-type": "engines.claude.modelCheck",
+  "x-route": [{ "method": "POST", "path": "/engines/claude/diagnostics/model-check" }],
+  "$ref": "model-check-outcome.schema.json"
+}

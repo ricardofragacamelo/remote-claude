@@ -42,7 +42,7 @@
     },
     "toolUseId": {
       "type": "string",
-      "description": "The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`."
+      "description": "The tool call the request was about, when the engine named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`."
     },
     "via": {
       "type": "string",

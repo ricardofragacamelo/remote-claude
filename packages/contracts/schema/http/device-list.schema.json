@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/device-list.json",
+  "title": "DeviceList",
+  "description": "`GET /devices`: this caller's devices, most recently seen first. Only theirs (plan 02).",
+  "x-kind": "http",
+  "x-type": "devices.list",
+  "x-route": [{ "method": "GET", "path": "/devices" }],
+  "type": "object",
+  "required": ["devices"],
+  "properties": {
+    "devices": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "../definitions/device.schema.json"
+      }
+    }
+  }
+}

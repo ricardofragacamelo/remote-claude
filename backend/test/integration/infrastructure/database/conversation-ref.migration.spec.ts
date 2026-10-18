@@ -29,6 +29,20 @@ function migrationsBefore(): { readonly all: string; readonly before: string } {
 }
 
 /**
+ * An empty directory holding only the migrations up to and including [migration] — never the ones
+ * after it. A later migration may drop a column this one still manipulates (B-47 did, to
+ * `claude_session_id`), and this spec replays this file's own SQL directly: it must run against the
+ * schema as this migration itself left it, not as a migration written years later leaves it.
+ */
+async function migrationsThrough(all: string, migration: string): Promise<string> {
+  const through = mkdtempSync(path.join(tmpdir(), 'rc-migrations-through-'));
+  for (const file of (await migrationFiles(all)).filter((name) => name <= migration)) {
+    copyFileSync(path.join(all, file), path.join(through, file));
+  }
+  return through;
+}
+
+/**
  * The migration that names a conversation by its engine (plan 28, B-11): rows written before it keep
  * their conversation, twice applied it changes nothing, and the undo still reaches what they recorded.
  */
@@ -62,7 +76,7 @@ describe('migration 0021 — the conversation as `{ engine, conversation_id }`',
       [SESSION, OURS, AT],
     );
 
-    await migrate(connection.pool, all);
+    await migrate(connection.pool, await migrationsThrough(all, MIGRATION));
   });
 
   afterAll(async () => {
@@ -103,8 +117,8 @@ describe('migration 0021 — the conversation as `{ engine, conversation_id }`',
 
   it('neither duplicates nor overwrites when it runs again — S-34', async () => {
     await connection.pool.query(
-      `UPDATE "session_origins" SET "conversation_id" = 'renamed-by-hand' WHERE "claude_session_id" = $1`,
-      [OURS],
+      `UPDATE "session_origins" SET "conversation_id" = 'renamed-by-hand' WHERE "session_id" = $1`,
+      [SESSION],
     );
     const sql = readFileSync(
       path.resolve(
@@ -119,8 +133,8 @@ describe('migration 0021 — the conversation as `{ engine, conversation_id }`',
     const origins = await connection.pool.query('SELECT "conversation_id" FROM "session_origins"');
     expect(origins.rows).toEqual([{ conversation_id: 'renamed-by-hand' }]);
     await connection.pool.query(
-      `UPDATE "session_origins" SET "conversation_id" = $1 WHERE "claude_session_id" = $1`,
-      [OURS],
+      `UPDATE "session_origins" SET "conversation_id" = $1 WHERE "session_id" = $2`,
+      [OURS, SESSION],
     );
   });
 
@@ -135,8 +149,8 @@ describe('migration 0021 — the conversation as `{ engine, conversation_id }`',
       ),
     )?.[0];
     await connection.pool.query(
-      `UPDATE "turn_file_checkpoints" SET "conversation_id" = 'lost' WHERE "claude_session_id" = $1`,
-      [OURS],
+      `UPDATE "turn_file_checkpoints" SET "conversation_id" = 'lost' WHERE "session_id" = $1`,
+      [SESSION],
     );
 
     await expect(connection.pool.query(String(guard))).rejects.toThrow(
@@ -144,8 +158,8 @@ describe('migration 0021 — the conversation as `{ engine, conversation_id }`',
     );
 
     await connection.pool.query(
-      `UPDATE "turn_file_checkpoints" SET "conversation_id" = $1 WHERE "claude_session_id" = $1`,
-      [OURS],
+      `UPDATE "turn_file_checkpoints" SET "conversation_id" = $1 WHERE "session_id" = $2`,
+      [OURS, SESSION],
     );
   });
 

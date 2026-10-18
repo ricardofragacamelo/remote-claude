@@ -39,13 +39,13 @@ import { SessionRegistryModule } from './session-registry.module';
 import { WorkspaceModule } from './workspace.module';
 
 /**
- * The `transcript` module: the history, read through the Agent SDK and fenced by the allowlist.
+ * The `transcript` module: the history, read through the engine and fenced by the allowlist.
  *
- * It imports the allowlist from `workspace` — the same fence that decides where Claude may run
+ * It imports the allowlist from `workspace` — the same fence that decides where the agent may run
  * decides what may be read — and the provenance and the registry of live sessions `session` keeps,
  * through the modules that hold them.
  * `session` imports it back for one thing, the store: continuing a conversation asks where it ran.
- * It holds no live session and writes nothing: the transcript is Claude's file, shared with the
+ * It holds no live session and writes nothing: the transcript is the engine's file, shared with the
  * editor, and never ours to change (docs/architecture/backend/03-modules.md#transcript).
  */
 @Module({
@@ -85,7 +85,7 @@ import { WorkspaceModule } from './workspace.module';
         audience: TranscriptAudience,
       ) => new ListTranscriptsUseCase(allowlist, store, audience),
     },
-    // The questions of Claude in the history, joined to what this backend recorded of their answers
+    // The questions of the agent in the history, joined to what this backend recorded of their answers
     // (plan 24, B-21) — read here, in the permission requests the permission flow already writes.
     { provide: QUESTION_RECORD_SOURCE, useClass: DrizzleQuestionRecordSource },
     {

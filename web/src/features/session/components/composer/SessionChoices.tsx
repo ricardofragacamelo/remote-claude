@@ -1,4 +1,4 @@
-import { Brain, Cpu, Eye, ShieldCheck, ShieldAlert, ShieldOff } from 'lucide-react';
+import { Bot, Brain, Cpu, Eye, ShieldCheck, ShieldAlert, ShieldOff } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { levelName } from '../../lib/effort-levels';
 import { shownMode } from '../../lib/panel-modes';
 import type { EffortLevel, PanelMode } from '../../store/agent-panel.store';
+import type { EngineDirectory } from '../../types/engine';
 import type { InstallationModel } from '../../types/insight';
 import { ChoiceMenu } from './ChoiceMenu';
 
@@ -104,6 +105,61 @@ export function ModelPicker({
         description: model.description,
       }))}
       onPick={onPick}
+    />
+  );
+}
+
+export interface EnginePickerProps {
+  /** The engines of the installation, as `GET /engines` lists them — `null` before it answers. */
+  readonly directory: EngineDirectory | null;
+
+  /** The engine chosen, or `null` for the installation's default. */
+  readonly current: string | null;
+
+  /** In the overflow menu of a narrow bar. */
+  readonly sub?: boolean;
+  onPick(engine: string | null): void;
+}
+
+/** The sentinel {@link ChoiceMenu} is given for "the installation's default", never an id of one. */
+const DEFAULT_ENGINE_OPTION = 'default';
+
+/**
+ * The engine a draft opens on (plan 28, B-44) — one of the agents this installation drives,
+ * `GET /engines` says can open a session now. With fewer than two of those there is nothing to
+ * choose, and no chip at all (S-124): a second engine unavailable (not installed, its security
+ * assertion unmet) is never offered, the same way it never opens a session when named by hand.
+ */
+export function EnginePicker({
+  directory,
+  current,
+  sub,
+  onPick,
+}: EnginePickerProps): React.JSX.Element | null {
+  const { t } = useTranslation();
+  const available = (directory?.engines ?? []).filter((engine) => engine.state === 'available');
+
+  if (available.length < 2) {
+    return null;
+  }
+
+  const chosen = available.find((engine) => engine.id === current);
+  const value = current === null ? t('sessions.engine.default') : (chosen?.displayName ?? current);
+
+  return (
+    <ChoiceMenu
+      label={t('sessions.engine.label')}
+      value={value}
+      icon={Bot}
+      sub={sub}
+      current={current ?? DEFAULT_ENGINE_OPTION}
+      options={[
+        { id: DEFAULT_ENGINE_OPTION, label: t('sessions.engine.default') },
+        ...available.map((engine) => ({ id: engine.id, label: engine.displayName })),
+      ]}
+      onPick={(picked) => {
+        onPick(picked === DEFAULT_ENGINE_OPTION ? null : picked);
+      }}
     />
   );
 }

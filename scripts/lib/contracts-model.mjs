@@ -16,6 +16,7 @@ const METADATA = new Set([
   'x-kind',
   'x-type',
   'x-protocol-version',
+  'x-route',
 ]);
 
 /**
@@ -138,12 +139,24 @@ export class ContractError extends Error {
  */
 
 /**
+ * A message whose whole payload is a shared definition, named again rather than declared twice —
+ * a route whose answer is exactly a shared shape (the one item of its own list, say) does not
+ * also require a second, physically duplicated copy of that shape (plan 28, B-48).
+ *
+ * @typedef {object} Alias
+ * @property {string} name the message's own payload name, e.g. `DevicePayload`
+ * @property {string} of the definition it names again, e.g. `Device`
+ * @property {string} description
+ */
+
+/**
  * @typedef {object} Model
  * @property {Interface} envelope
  * @property {number} protocolVersion the version this build speaks — `x-protocol-version` of the
  *   envelope; the server also accepts the one before it, for the window of plan 28, D-08
  * @property {Interface[]} interfaces every named object type, dependencies first
  * @property {Message[]} messages
+ * @property {Alias[]} aliases
  */
 
 /** @param {string} text @returns {string} */
@@ -214,8 +227,10 @@ const DEFINITION_REF = /^(?:\.\.\/definitions\/|\.\/)?([a-z0-9-]+\.schema\.json)
  * response, in the event that settles it and in the history (plan 24, D-28).
  *
  * Without it the same object is written three times, and a field added to one copy is the field a
- * client of another never learns about. Nothing but a `description` may stand beside the `$ref`: a
- * sibling `type` or bound would be read here and silently mean something else from the definition.
+ * client of another never learns about. Nothing but `description` and `x-nullable` may stand
+ * beside the `$ref`: a sibling `type` or bound would be read here and silently mean something
+ * else from the definition, but nullability is a fact about this *field*, not about the shape the
+ * definition names — the one case the definition itself cannot say on the field's behalf.
  *
  * @param {string} source
  * @param {string} name
@@ -224,7 +239,9 @@ const DEFINITION_REF = /^(?:\.\.\/definitions\/|\.\/)?([a-z0-9-]+\.schema\.json)
  * @returns {ObjectType}
  */
 function resolveRef(source, name, schema, collector) {
-  const beside = Object.keys(schema).find((key) => key !== '$ref' && key !== 'description');
+  const beside = Object.keys(schema).find(
+    (key) => key !== '$ref' && key !== 'description' && key !== 'x-nullable',
+  );
   if (beside !== undefined) {
     throw new ContractError(
       source,
@@ -232,7 +249,19 @@ function resolveRef(source, name, schema, collector) {
     );
   }
 
-  const ref = schema['$ref'];
+  return { kind: 'object', name: definitionNameFromRef(source, name, schema['$ref'], collector) };
+}
+
+/**
+ * The interface a `$ref` names — collecting its definition, the first time anything refers to it.
+ *
+ * @param {string} source
+ * @param {string} name
+ * @param {unknown} ref
+ * @param {Collector} collector
+ * @returns {string} the name of the interface the ref resolves to
+ */
+function definitionNameFromRef(source, name, ref, collector) {
   const file = typeof ref === 'string' ? DEFINITION_REF.exec(ref)?.[1] : undefined;
   const definition = file === undefined ? undefined : collector.definitions.get(file);
 
@@ -243,7 +272,7 @@ function resolveRef(source, name, schema, collector) {
     );
   }
 
-  return { kind: 'object', name: define(definition, collector) };
+  return define(definition, collector);
 }
 
 /**
@@ -631,10 +660,22 @@ export function buildModel(envelope, messages, definitions = []) {
 
   /** @type {Message[]} */
   const built = [];
+  /** @type {Alias[]} */
+  const aliases = [];
 
   for (const { source, schema } of messages) {
     const message = toMessage(source, schema);
-    interfaces.push(toInterface(source, message.payload, schema, collector));
+
+    if (schema['$ref'] === undefined) {
+      interfaces.push(toInterface(source, message.payload, schema, collector));
+    } else {
+      aliases.push({
+        name: message.payload,
+        of: aliasTarget(source, message.name, schema, collector),
+        description: message.description,
+      });
+    }
+
     built.push(message);
   }
 
@@ -645,7 +686,30 @@ export function buildModel(envelope, messages, definitions = []) {
     throw new ContractError(duplicate.name, `\`${duplicate.frameType}\` is declared twice`);
   }
 
-  return { envelope: envelopeInterface, protocolVersion, interfaces, messages: built };
+  return { envelope: envelopeInterface, protocolVersion, interfaces, messages: built, aliases };
+}
+
+/**
+ * The definition a message's bare `$ref` aliases — nothing beside `$ref` but the message's own
+ * metadata (`title`, `x-kind`, `x-type`, `x-route`, `description`…), since a message carrying a
+ * `type` or `properties` of its own is not aliasing anything, it is declaring its own shape.
+ *
+ * @param {string} source
+ * @param {string} name
+ * @param {Record<string, unknown>} schema
+ * @param {Collector} collector
+ * @returns {string} the aliased interface's name
+ */
+function aliasTarget(source, name, schema, collector) {
+  const extra = Object.keys(schema).find((key) => key !== '$ref' && !METADATA.has(key));
+  if (extra !== undefined) {
+    throw new ContractError(
+      source,
+      `\`${name}\` has \`${extra}\` beside a top-level \`$ref\` — a message that aliases a definition declares nothing else`,
+    );
+  }
+
+  return definitionNameFromRef(source, name, schema['$ref'], collector);
 }
 
 /** @param {string} source @returns {string} the file name a `$ref` uses */

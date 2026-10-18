@@ -349,6 +349,20 @@ function emitFrame(message) {
 }
 
 /**
+ * @param {import('./contracts-model.mjs').Alias} alias
+ * @returns {string}
+ */
+function emitAlias(alias) {
+  return [
+    ...comment(alias.description, '', 'block'),
+    `export type ${alias.name} = ${alias.of};`,
+    '',
+    `/** Whether \`value\` is a {@link ${alias.name}}. */`,
+    `export const is${alias.name} = is${alias.of};`,
+  ].join('\n');
+}
+
+/**
  * The payload of every event, by its `type` — what lets a producer be told by the compiler that an
  * event it emits is one of the contract, with the payload the contract declares (plan 28, S-29).
  *
@@ -395,6 +409,7 @@ export function emitTypeScript(model) {
       guards.some((guard) => guard.includes(`${helper.name}(`)),
     ).flatMap((helper) => [...helper.source, '']),
     ...guards.flatMap((guard) => [guard, '']),
+    ...model.aliases.flatMap((alias) => [emitAlias(alias), '']),
     ...frames.flatMap((message) => [emitFrame(message), '']),
     ...emitEventPayloads(frames),
   ];

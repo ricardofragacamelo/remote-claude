@@ -97,13 +97,13 @@ describe('the provenance of a session opened here', () => {
     harness.app.get<PersistenceContext>(PERSISTENCE_CONTEXT).db;
 
   async function origins(): Promise<
-    { claude_session_id: string; user_id: string; workspace_path: string }[]
+    { conversation_id: string; user_id: string; workspace_path: string }[]
   > {
     const rows = await db().execute<{
-      claude_session_id: string;
+      conversation_id: string;
       user_id: string;
       workspace_path: string;
-    }>(sql`SELECT "claude_session_id", "user_id", "workspace_path" FROM "session_origins"`);
+    }>(sql`SELECT "conversation_id", "user_id", "workspace_path" FROM "session_origins"`);
     return rows.rows;
   }
 
@@ -148,8 +148,8 @@ describe('the provenance of a session opened here', () => {
     const [row] = await origins();
 
     expect(row).toMatchObject({ user_id: SUBJECT, workspace_path: root });
-    expect(record.options?.sessionId).toBe(row?.claude_session_id);
-    expect(spawned.map((each) => each.sessionId)).toEqual([row?.claude_session_id]);
+    expect(record.options?.sessionId).toBe(row?.conversation_id);
+    expect(spawned.map((each) => each.sessionId)).toEqual([row?.conversation_id]);
 
     socket.send(commandFrame('session.close', { sessionId }));
     await until(socket, 'session.closed');
@@ -178,7 +178,7 @@ describe('the provenance of a session opened here', () => {
     const socket = await connect();
     const sessionId = await start(socket);
     const [row] = await origins();
-    const claudeSessionId = String(row?.claude_session_id);
+    const claudeSessionId = String(row?.conversation_id);
     store.add({ sessionId: claudeSessionId, directory: root, cwd: root });
 
     const response = await request(harness.app.getHttpServer())
@@ -187,7 +187,10 @@ describe('the provenance of a session opened here', () => {
       .set('authorization', `Bearer ${token}`);
 
     expect(response.body.sessions).toEqual([
-      expect.objectContaining({ sessionId: claudeSessionId, origin: 'ours' }),
+      expect.objectContaining({
+        conversation: { engine: 'claude', id: claudeSessionId },
+        origin: 'ours',
+      }),
     ]);
 
     socket.send(commandFrame('session.close', { sessionId }));
@@ -198,7 +201,7 @@ describe('the provenance of a session opened here', () => {
     const socket = await connect();
     const sessionId = await start(socket);
     const [row] = await origins();
-    const claudeSessionId = String(row?.claude_session_id);
+    const claudeSessionId = String(row?.conversation_id);
     store.add({
       sessionId: claudeSessionId,
       directory: root,
@@ -208,7 +211,7 @@ describe('the provenance of a session opened here', () => {
     const gate = store.hold();
 
     const pending = request(harness.app.getHttpServer())
-      .get(`/transcripts/${claudeSessionId}/messages`)
+      .get(`/transcripts/claude/${claudeSessionId}/messages`)
       .set('authorization', `Bearer ${token}`)
       .then((response) => response);
     await waitFor(
@@ -226,7 +229,10 @@ describe('the provenance of a session opened here', () => {
     const response = await pending;
 
     expect(response.status).toBe(200);
-    expect(response.body.session).toMatchObject({ sessionId: claudeSessionId, origin: 'ours' });
+    expect(response.body.session).toMatchObject({
+      conversation: { engine: 'claude', id: claudeSessionId },
+      origin: 'ours',
+    });
     expect(response.body.events.length).toBeGreaterThan(0);
     expect(record.closes).toBeGreaterThan(0);
   });

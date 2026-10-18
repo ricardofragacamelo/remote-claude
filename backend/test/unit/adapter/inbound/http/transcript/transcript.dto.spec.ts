@@ -103,7 +103,6 @@ describe('the transcript transport shapes', () => {
       }),
     ).toEqual({
       conversation: { engine: 'claude', id: conversationId(1) },
-      sessionId: conversationId(1),
       summary: 'a conversation',
       origin: 'ours',
       cwd: '/srv/projects/app',

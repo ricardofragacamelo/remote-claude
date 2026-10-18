@@ -60,6 +60,7 @@ describe('the session commands', () => {
     expect(
       startDraft(client, {
         workspacePath: '/srv/projects/app',
+        engine: null,
         model: null,
         permissionMode: 'ask',
         effort: null,
@@ -67,6 +68,7 @@ describe('the session commands', () => {
     ).toBe('cmd-1');
     startDraft(client, {
       workspacePath: '/srv/projects/app',
+      engine: null,
       model: 'opus',
       permissionMode: 'readOnly',
       effort: 'high',
@@ -85,6 +87,25 @@ describe('the session commands', () => {
           model: 'opus',
           effort: 'high',
         },
+      },
+    ]);
+  });
+
+  it('opens the session of a draft on the engine chosen — plan 28, B-44', () => {
+    const { client, sent } = aClient();
+
+    startDraft(client, {
+      workspacePath: '/srv/projects/app',
+      engine: 'test',
+      model: null,
+      permissionMode: 'ask',
+      effort: null,
+    });
+
+    expect(sent).toEqual([
+      {
+        type: 'session.start',
+        payload: { workspacePath: '/srv/projects/app', permissionMode: 'ask', engine: 'test' },
       },
     ]);
   });

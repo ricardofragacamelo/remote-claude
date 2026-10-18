@@ -8,7 +8,14 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// Every Dart file under [path], relative to the module.
+/// A probe `import_rules_test.dart` writes into the real tree for the length of its own test, to
+/// give `import_lint` a real violation to refuse — never code of the app, gone by the time that
+/// test's `tearDown` runs. The two tests race on the same files when `flutter test` runs them as
+/// two files in parallel; this is what tells that transient probe from a file this test should
+/// actually fail on.
+bool isArchProbe(String path) => path.contains('/_arch_');
+
+/// Every Dart file under [path], relative to the module, none of them a probe of another test.
 List<String> dartFilesUnder(String path) {
   final Directory directory = Directory(path);
   if (!directory.existsSync()) {
@@ -19,7 +26,7 @@ List<String> dartFilesUnder(String path) {
       .listSync(recursive: true)
       .whereType<File>()
       .map((File file) => file.path)
-      .where((String path) => path.endsWith('.dart'))
+      .where((String path) => path.endsWith('.dart') && !isArchProbe(path))
       .toList();
 }
 

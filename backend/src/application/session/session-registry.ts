@@ -17,7 +17,7 @@ import type {
   SessionConversation,
 } from './ports/agent-engine.port';
 
-/** A live session, the subprocess behind it, and the conversation of Claude it is. */
+/** A live session, the subprocess behind it, and the conversation of the agent it is. */
 export interface LiveSession {
   readonly session: Session;
   readonly handle: AgentSessionHandle;

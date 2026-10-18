@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/file-content.json",
+  "title": "FileContent",
+  "description": "`GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only.",
+  "x-kind": "http",
+  "x-type": "files.content",
+  "x-route": [
+    { "method": "GET", "path": "/files/content" },
+    { "method": "GET", "path": "/files/history/:entryId/content" }
+  ],
+  "type": "object",
+  "required": ["path", "content", "etag", "encoding", "bom", "eol", "size", "mtime", "largeFile"],
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "etag": {
+      "type": "string"
+    },
+    "encoding": {
+      "type": "string"
+    },
+    "bom": {
+      "type": "boolean"
+    },
+    "eol": {
+      "type": "string",
+      "enum": ["lf", "crlf", "mixed"]
+    },
+    "size": {
+      "type": "integer"
+    },
+    "mtime": {
+      "type": "string",
+      "description": "ISO-8601."
+    },
+    "largeFile": {
+      "type": "boolean"
+    }
+  }
+}

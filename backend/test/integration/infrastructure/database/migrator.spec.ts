@@ -57,8 +57,12 @@ describe('migrate', () => {
   });
 
   it('does not corrupt the schema when two instances start at the same moment', async () => {
-    await pool.query('DROP TABLE IF EXISTS "diag_sessions"');
-    await pool.query('DROP TABLE IF EXISTS "_migrations"');
+    // A truly empty database, not a hybrid of one dropped table and every other migration's own
+    // tables left behind: a later migration may drop a column an earlier one still writes to
+    // (B-47 does, to `claude_session_id`), and replaying the chain from scratch against that
+    // leftover schema would fail there, which proves nothing about concurrency.
+    await pool.query('DROP SCHEMA "public" CASCADE');
+    await pool.query('CREATE SCHEMA "public"');
 
     const [first, second] = await Promise.all([migrate(pool), migrate(pool)]);
 

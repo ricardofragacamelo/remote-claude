@@ -1,7 +1,8 @@
-import type { RecordAuditEventUseCase } from '@application/audit';
+import type { RecordAuditEventCommand, RecordAuditEventUseCase } from '@application/audit';
 import {
   DEFAULT_FIELDS,
   effectiveDefaults,
+  exactOverride,
   needsCatalogue,
   NO_DEFAULTS,
   sameDefaults,
@@ -32,6 +33,26 @@ export interface DefaultsDependencies {
 
 /** The audit kind of a change to the defaults of a session, of any engine (plan 28, D-10). */
 export const DEFAULTS_CHANGED = 'agentSettings.defaultsChanged';
+
+/**
+ * The envelope every change of a default is recorded under — the core's own fields and an
+ * extension's output style alike, told apart only by `details` (plan 28, D-10).
+ */
+export function defaultsChangedEvent(
+  userId: UserId,
+  folder: string | null,
+  at: Date,
+  details: Readonly<Record<string, unknown>>,
+): RecordAuditEventCommand {
+  return {
+    userId,
+    kind: DEFAULTS_CHANGED,
+    subjectId: folder ?? userId.value,
+    subjectLabel: folder ?? 'user',
+    details,
+    at,
+  };
+}
 
 /** `GET /engines/:engine/defaults?folder=` — what applies, field by field, and where it came from (S-37). */
 export class ReadDefaultsUseCase {
@@ -82,18 +103,13 @@ export class SaveDefaultsUseCase {
       folder === null ? (stored.user ?? NO_DEFAULTS) : overrideOf(stored.overrides, folder);
 
     if (!sameDefaults(before, checked)) {
-      await this.deps.trail.execute({
-        userId,
-        kind: DEFAULTS_CHANGED,
-        subjectId: folder ?? userId.value,
-        subjectLabel: folder ?? 'user',
-        details: {
+      await this.deps.trail.execute(
+        defaultsChangedEvent(userId, folder, this.deps.clock.now(), {
           engine,
           changed: DEFAULT_FIELDS.filter((field) => before[field] !== checked[field]),
           ...checked,
-        },
-        at: this.deps.clock.now(),
-      });
+        }),
+      );
       await this.deps.defaults.save(userId, engine, folder, checked);
     }
 
@@ -141,14 +157,12 @@ export class ClearFolderDefaultsUseCase {
     const stored = await this.deps.defaults.read(userId, engine);
 
     if (stored.overrides.some((override) => override.folder === folder.value)) {
-      await this.deps.trail.execute({
-        userId,
-        kind: DEFAULTS_CHANGED,
-        subjectId: folder.value,
-        subjectLabel: folder.value,
-        details: { engine, cleared: true },
-        at: this.deps.clock.now(),
-      });
+      await this.deps.trail.execute(
+        defaultsChangedEvent(userId, folder.value, this.deps.clock.now(), {
+          engine,
+          cleared: true,
+        }),
+      );
       await this.deps.defaults.remove(userId, engine, folder.value);
     }
   }
@@ -162,9 +176,6 @@ function viewOf(stored: StoredDefaults, folder: string | null): DefaultsView {
   return {
     effective: effectiveDefaults({ user: stored.user, overrides: stored.overrides, folder }),
     user: stored.user ?? NO_DEFAULTS,
-    folder:
-      folder === null
-        ? null
-        : (stored.overrides.find((override) => override.folder === folder) ?? null),
+    folder: exactOverride(stored.overrides, folder),
   };
 }

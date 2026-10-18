@@ -13,8 +13,8 @@ import type { ProcessEntry, ProcessTable } from './process-table';
  * Three conditions, all of them required, because the cost of a false positive is killing
  * something on the user's machine that was not ours to kill (S-07):
  *
- * - **the mark, with our value** — a process merely named `claude` is not enough, and neither is a
- *   variable that happens to share the name;
+ * - **the mark, with our value** — a process merely named after the engine's own binary is not
+ *   enough, and neither is a variable that happens to share the name;
  * - **not this process** — the backend does not sweep itself;
  * - **its backend is dead** — a mark naming a live backend is a sibling installation's session (a
  *   second checkout, the e2e stack), and it is alive for a reason.

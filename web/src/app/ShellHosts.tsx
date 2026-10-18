@@ -6,6 +6,8 @@ import { CommandHost, usePalette } from '@/features/commands';
 import { NotificationBell, NotificationHost } from '@/features/notifications';
 import { statusBarItems } from '@/features/workbench';
 import { FolderDialogHost } from '@/features/workspace';
+import { useRegistry } from '@/shared/hooks/useRegistry';
+import { commandHosts } from './command-hosts';
 import { manageMenu } from './global-navigation';
 import { useOpenFolder } from './navigation';
 import { useAppCommands } from './useAppCommands';
@@ -21,6 +23,7 @@ export function ShellHosts(): React.JSX.Element {
   const welcome = useCallback(() => {
     void navigate({ to: '/' });
   }, [navigate]);
+  const hosts = useRegistry(commandHosts);
 
   useAppCommands();
 
@@ -54,6 +57,9 @@ export function ShellHosts(): React.JSX.Element {
       <CommandHost />
       <FolderDialogHost open={openFolder} welcome={welcome} />
       <NotificationHost />
+      {hosts.map((host) => (
+        <host.component key={host.id} />
+      ))}
     </>
   );
 }

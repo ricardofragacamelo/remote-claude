@@ -15,7 +15,7 @@ export interface ListTranscriptsQuery {
 
   /**
    * Whether the conversations of the folders below it come too (plan 08, D-05). Off, the directory
-   * is matched exactly, as the SDK lists it.
+   * is matched exactly, as the engine lists it.
    */
   readonly includeSubfolders: boolean;
 
@@ -29,14 +29,14 @@ export interface ListTranscriptsQuery {
  * The conversations of one workspace — ours and the ones begun elsewhere, each with its origin and
  * what it is doing now.
  *
- * The directory clears the allowlist **before** the SDK is asked anything: a path outside the
+ * The directory clears the allowlist **before** the engine is asked anything: a path outside the
  * caller's roots is refused with the same answer that refuses running there (S-73), and costs no
- * read of the store. Then every session the SDK returns is fenced again, on the `cwd` it reports,
+ * read of the store. Then every session the engine returns is fenced again, on the `cwd` it reports,
  * because the directory we asked about is not proof of where a session ran (S-54, S-55).
  *
  * It lists one directory with `listSessions({ dir })`, exactly. Only the "include subfolders" filter
- * of plan 08 (D-05) asks for the whole store — the SDK does not descend — and then keeps what ran
- * **inside** the folder, by the `cwd` the SDK reported: the fence is the same, and only where the
+ * of plan 08 (D-05) asks for the whole store — the engine does not descend — and then keeps what ran
+ * **inside** the folder, by the `cwd` the engine reported: the fence is the same, and only where the
  * list comes from changed.
  */
 export class ListTranscriptsUseCase {
@@ -61,7 +61,7 @@ export class ListTranscriptsUseCase {
     return pageOfSessions(visible, query.after, query.limit);
   }
 
-  /** The directory exactly, or everything that ran inside it — by the `cwd` the SDK reported. */
+  /** The directory exactly, or everything that ran inside it — by the `cwd` the engine reported. */
   private async sessionsOf(
     folder: WorkspacePath,
     includeSubfolders: boolean,

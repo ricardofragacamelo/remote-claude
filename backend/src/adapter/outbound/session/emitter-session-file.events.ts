@@ -11,7 +11,7 @@ import { LOGGER, type Logger } from '@shared/logging/logger';
  *
  * `files` listens and `session` never learns who: the bus is what keeps the arrow out of the
  * catalogue (docs/architecture/backend/03-modules.md#comunicação-assíncrona). **Publication never
- * throws** — the hook that publishes runs inside a turn of Claude, and a listener's problem is its
+ * throws** — the hook that publishes runs inside a turn of the agent, and a listener's problem is its
  * own (plan 07, B-18).
  */
 @Injectable()

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/commands/diag-ping.json",
   "title": "DiagPing",
-  "description": "Diagnostics of the gateway: it crosses every layer without touching the Agent SDK, and is the only smoke test that needs no Claude subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session.",
+  "description": "Diagnostics of the gateway: it crosses every layer without touching the engine's own library, and is the only smoke test that needs no engine subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session.",
   "x-kind": "command",
   "x-type": "diag.ping",
   "type": "object",

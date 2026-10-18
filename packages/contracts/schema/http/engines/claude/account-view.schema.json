@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/account-view.json",
+  "title": "AccountView",
+  "description": "`GET /engines/claude/account`: who Claude bills on this machine (plan 13, B-11, D-07). Never a token, never the path of a credential — of the sources of the credential only their names.",
+  "x-kind": "http",
+  "x-type": "engines.claude.account",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/account" }],
+  "type": "object",
+  "required": ["email", "organization", "plan", "provider", "tokenSource", "apiKeySource", "state"],
+  "properties": {
+    "email": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "organization": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "plan": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "provider": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "tokenSource": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "apiKeySource": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "state": {
+      "type": "string",
+      "enum": ["ready", "loginRequired"]
+    }
+  }
+}

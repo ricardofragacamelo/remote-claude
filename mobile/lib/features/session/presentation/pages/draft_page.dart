@@ -1,11 +1,11 @@
 /// A new conversation in one folder, before it is a session — the draft (plan 10, B-08, D-05).
 ///
 /// The frame of every conversation: the hints in the place of the conversation, the box anchored
-/// under them, and the chips of what the session will start with — the model, the mode and the
-/// effort, from the folder's catalogue. Nothing runs until the first send: then the session opens
-/// with what was chosen, the prompt goes to it, and the screen moves there. A catalogue that could
-/// not be read says why and changes nothing about sending: the installation's defaults are used
-/// (S-21).
+/// under them, and the chips of what the session will start with — the engine, the model, the mode
+/// and the effort, from the folder's catalogue (plan 28, B-45 adds the engine, the mirror of the
+/// web's `EnginePicker`, D-49). Nothing runs until the first send: then the session opens with what
+/// was chosen, the prompt goes to it, and the screen moves there. A catalogue that could not be read
+/// says why and changes nothing about sending: the installation's defaults are used (S-21).
 library;
 
 import 'package:flutter/material.dart';
@@ -56,9 +56,10 @@ class _DraftPageState extends ConsumerState<DraftPage> with BoxOwner<DraftPage> 
     final AsyncValue<InstallationCatalog> catalog = ref.watch(catalogControllerProvider(path));
     final List<InstallationModel> known = catalog.value?.models ?? const <InstallationModel>[];
     final ConnectionStatus connection = connectionOf(ref.watch(connectionStatusProvider));
-    // The modes and the levels of effort are the default engine's, as the list of engines says
-    // (plan 28, B-27, B-28): a draft names no engine, so it opens on that one.
-    final EngineCapabilities? offered = draftCapabilities(ref);
+    final EngineCatalogue? engines = ref.watch(engineCatalogueProvider).value;
+    // The modes and the levels of effort are the chosen engine's, as the list of engines says
+    // (plan 28, B-27, B-28, B-45) — the default engine's while the draft names none.
+    final EngineCapabilities? offered = draftCapabilities(ref, draft.choices.engine);
 
     // The session answers on the socket, not from the command: the screen moves when it opened.
     ref.listen<Draft>(draftControllerProvider(path), (Draft? previous, Draft next) {
@@ -81,7 +82,7 @@ class _DraftPageState extends ConsumerState<DraftPage> with BoxOwner<DraftPage> 
           const DeviceStatusLine(),
           const PushReachLine(),
         ],
-        body: _Hints(path: path, catalog: catalog),
+        body: _Hints(path: path, catalog: catalog, engine: draft.choices.engine),
         aboveBox: <Widget>[
           if (refused != null) RefusalStrip(failure: refused, onClose: drafts.dismiss),
           if (connection != ConnectionStatus.ready && connection != ConnectionStatus.connecting)
@@ -93,6 +94,7 @@ class _DraftPageState extends ConsumerState<DraftPage> with BoxOwner<DraftPage> 
             isEnabled: connection == ConnectionStatus.ready,
             isBusy: draft.isStarting,
             busyLabel: l10n.draftStarting,
+            engine: draft.choices.engine,
           ),
           onSend: (String text) => drafts.send(text) ? SendOutcome.pending : SendOutcome.notSent,
           onOpenCommands: (String query) => pickCommand(context, workspacePath: path, query: query),
@@ -100,9 +102,16 @@ class _DraftPageState extends ConsumerState<DraftPage> with BoxOwner<DraftPage> 
             context,
             current: draft.choices.permissionMode,
             modes: modesOf(offered),
+            engine: draft.choices.engine,
             onPick: drafts.chooseMode,
           ),
           choices: <ComposerChoice>[
+            ?engineChoice(
+              context,
+              catalogue: engines,
+              current: draft.choices.engine,
+              onPick: drafts.chooseEngine,
+            ),
             modelChoice(
               context,
               current: draft.choices.model,
@@ -129,10 +138,13 @@ class _DraftPageState extends ConsumerState<DraftPage> with BoxOwner<DraftPage> 
 
 /// What a draft is, and what the box can do — in the place the conversation will be.
 class _Hints extends StatelessWidget {
-  const _Hints({required this.path, required this.catalog});
+  const _Hints({required this.path, required this.catalog, this.engine});
 
   final String path;
   final AsyncValue<InstallationCatalog> catalog;
+
+  /// The engine chosen in this draft — the installation's default while none was (plan 28, B-45).
+  final String? engine;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +158,10 @@ class _Hints extends StatelessWidget {
         children: <Widget>[
           Text(l10n.draftTitle, style: theme.textTheme.titleLarge),
           Text(path, style: theme.textTheme.bodySmall),
-          NoteLine(l10n.draftDescription(agentNameIn(context)), style: theme.textTheme.bodyMedium),
+          NoteLine(
+            l10n.draftDescription(agentNameIn(context, engine)),
+            style: theme.textTheme.bodyMedium,
+          ),
           NoteLine(l10n.draftCommands),
           if (noModels) NoteLine(l10n.draftDefaultModel),
           if (failure != null)

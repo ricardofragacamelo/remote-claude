@@ -6,8 +6,8 @@ import type { NotKeptReason } from '../services/local-history';
  *
  * - `ifMatchMissing` — a save with no `If-Match`, or with `*`, which in HTTP means "any version"
  *   and here would be the same as sending none: a client that forgot the header would overwrite
- *   Claude's work blind;
- * - `sensitiveFile` — a file that changes what Claude may do, written without the explicit
+ *   the agent's work blind;
+ * - `sensitiveFile` — a file that changes what the agent may do, written without the explicit
  *   confirmation ([07 · D-15](../../../../../docs/plans/07-explorer-and-editor/decisions.md#d-15--arquivos-que-mudam-a-permissão));
  * - `expectedEntriesMissing` — a recursive delete that does not say how many entries it agreed to;
  * - `notKept` — a delete that asked for the local history and did not fit in it: nothing was

@@ -11,7 +11,7 @@ import type { ConversationRef } from '@domain/engine';
  * **was** the same conversation — one of ours continued in place.
  *
  * Never more. A fork is a new conversation and reaches nothing of the one it continues, which is
- * what the SDK does too ([D-04](../../../../../docs/plans/04-transcript-and-resume/decisions.md#d-04--duas-bocas-no-mesmo-arquivo)).
+ * what the engine does too ([D-04](../../../../../docs/plans/04-transcript-and-resume/decisions.md#d-04--duas-bocas-no-mesmo-arquivo)).
  */
 export interface UndoReach {
   readonly sessionId: SessionId;

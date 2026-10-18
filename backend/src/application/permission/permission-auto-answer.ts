@@ -5,7 +5,7 @@ import type { PermissionRuleBook } from './permission-rule-book';
 import type { PermissionSettlement } from './settle-permission';
 
 /**
- * What a shell refusal says to Claude when a rule is what refused it.
+ * What a shell refusal says to the agent when a rule is what refused it.
  *
  * English and technical on purpose: it is not shown to a person, it is handed to the model so it
  * can propose something else instead of retrying the same command. The prose a human reads comes

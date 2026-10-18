@@ -45,7 +45,7 @@ export class RecordToolInvocationUseCase {
   /**
    * @returns what the caller should do — the tool passes only on `recorded`
    * @throws never: the decision is the return value, because a hook that throws would tell the
-   *   SDK something different from what the session needs to do about it
+   *   engine something different from what the session needs to do about it
    */
   async execute(command: RecordToolInvocationCommand): Promise<AuditOutcome> {
     const session = command.sessionId.value;

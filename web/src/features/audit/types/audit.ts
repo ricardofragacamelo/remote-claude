@@ -1,10 +1,16 @@
+import type {
+  AuditTrailPagePayload,
+  AuditTrailPagePayloadEntriesItem,
+  AuditTrailPagePayloadEntriesItemVerdict,
+} from '@remote-claude/contracts';
+
 /** What the system did about an invocation. `recorded` is the hook's, before anybody voted. */
-export type AuditDecision = 'recorded' | 'allowed' | 'denied';
+export type AuditDecision = AuditTrailPagePayloadEntriesItem['decision'];
 
 export const AUDIT_DECISIONS: readonly AuditDecision[] = ['recorded', 'allowed', 'denied'];
 
 /** How far an answer reaches. The same four the permission card offers. */
-export type AuditScope = 'once' | 'session' | 'project' | 'always';
+export type AuditScope = AuditTrailPagePayloadEntriesItemVerdict['scope'];
 
 /**
  * What a decision was, as the entry that records it says.
@@ -12,43 +18,15 @@ export type AuditScope = 'once' | 'session' | 'project' | 'always';
  * Only on an `allowed` or `denied` entry — and not even on every one: a decision written before
  * the trail kept this has none, and the screen says so rather than inventing it.
  */
-export interface AuditVerdict {
-  readonly requestId: string;
+export type AuditVerdict = AuditTrailPagePayloadEntriesItemVerdict;
 
-  /** The server decided with nobody answering: a rule, or the deadline. */
-  readonly auto: boolean;
-
-  /** The rule that answered, when one did. */
-  readonly ruleId: string | null;
-
-  readonly scope: AuditScope;
-
-  /** Who answered. `null` on the refusal nobody made. */
-  readonly resolvedBy: string | null;
-
-  readonly resolvedFrom: 'web' | 'mobile' | null;
-}
-
-/** One entry of the trail. */
-export interface AuditEntry {
-  readonly id: string;
-  readonly sessionId: string;
-  readonly toolUseId: string | null;
-  readonly toolName: string;
-
-  /** Exactly as the tool was called — a `Read` shows where and how much, never what it read. */
-  readonly input: Readonly<Record<string, unknown>>;
-
-  readonly decision: AuditDecision;
-
-  /** ISO 8601. */
-  readonly at: string;
-
-  /** What leads to the log lines and the events of the same command. */
-  readonly traceId: string | null;
-
-  readonly verdict: AuditVerdict | null;
-}
+/**
+ * One entry of the trail (`GET /audit-entries`).
+ *
+ * Without the canonical `kind`: the trail keeps the engine's own `toolName` for what a row shows
+ * (plan 28, F7) — the title of a request is by kind only while it is live, never once it is history.
+ */
+export type AuditEntry = Omit<AuditTrailPagePayloadEntriesItem, 'kind'>;
 
 /**
  * What the trail is filtered by. Every field is optional, and they live in the URL: a filtered
@@ -67,7 +45,6 @@ export interface AuditFilters {
 }
 
 /** One page, and the cursor of the next — opaque, and `null` on the last. */
-export interface AuditPage {
+export type AuditPage = Omit<AuditTrailPagePayload, 'entries'> & {
   readonly entries: readonly AuditEntry[];
-  readonly nextCursor: string | null;
-}
+};

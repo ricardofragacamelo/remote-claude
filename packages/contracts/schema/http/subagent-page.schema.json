@@ -5,6 +5,9 @@
   "description": "What `GET /transcripts/:engine/:id/subagents/:toolUseId/messages` answers: a page of what a subagent said, from the tail (plan 28, B-12).",
   "x-kind": "http",
   "x-type": "transcripts.subagentPage",
+  "x-route": [
+    { "method": "GET", "path": "/transcripts/:engine/:id/subagents/:toolUseId/messages" }
+  ],
   "type": "object",
   "required": ["events", "nextCursor"],
   "properties": {

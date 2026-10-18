@@ -3,7 +3,7 @@ import { DomainError } from '@domain/shared';
 /**
  * A refusal arrived without a reason.
  *
- * The reason is not paperwork: it goes into the audit trail and back to Claude as a message, which
+ * The reason is not paperwork: it goes into the audit trail and back to the agent as a message, which
  * is how the agent learns to propose something else instead of retrying the same command. A
  * refusal nobody can account for is a refusal nobody can learn from.
  *

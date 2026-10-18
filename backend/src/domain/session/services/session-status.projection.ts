@@ -3,10 +3,10 @@ import type { SessionStatus } from '../value-objects/session-status.value-object
 /**
  * Which status each event of our contract implies.
  *
- * The status is **derived by us**, not read off a single SDK message — there is no field in the
+ * The status is **derived by us**, not read off a single message of the engine — there is no field in the
  * stream that says "waiting on a human". Keeping the derivation here, as a table, is what stops
  * the same inference from being made slightly differently in the runner, in the gateway and in
- * the client. See docs/architecture/backend/04a-claude.md.
+ * the client.
  *
  * An event that is not in the table leaves the status alone: most of the stream is content, and a
  * default of "unknown" would make the UI flicker on every delta.

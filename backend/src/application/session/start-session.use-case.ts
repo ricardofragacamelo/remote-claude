@@ -113,8 +113,8 @@ function asChosen(command: StartSessionCommand): SessionConfiguration {
  * Opens a session of a coding agent on a workspace — a new conversation, or one continued.
  *
  * The order of the first two steps is the security of the product: the path clears the allowlist
- * **before** a slot is taken and long before a subprocess exists, because `cwd` of the SDK's
- * `query()` is exactly that path. A session that got as far as spawning on an unchecked directory
+ * **before** a slot is taken and long before a subprocess exists, because `cwd` of the engine's
+ * start call is exactly that path. A session that got as far as spawning on an unchecked directory
  * is a shell on the user's machine.
  *
  * The third step is the provenance, and it too comes before the subprocess. It is what later says

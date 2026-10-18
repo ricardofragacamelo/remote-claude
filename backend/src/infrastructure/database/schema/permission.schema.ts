@@ -20,8 +20,8 @@ import { auditColumns, invocationColumns } from './columns';
  * second write is the same fact reaching its conclusion rather than a record being rewritten. The
  * append-only record of what was *executed* is `audit_entries`, and nothing here touches it.
  *
- * The id is the SDK's `requestId`: the idempotency key of the whole flow. Never `tool_use_id`,
- * which the SDK does not always give and which repeats across a redelivery.
+ * The id is the engine's `requestId`: the idempotency key of the whole flow. Never `tool_use_id`,
+ * which the engine does not always give and which repeats across a redelivery.
  *
  * See docs/architecture/backend/05-persistence.md and
  * docs/plans/01-live-session/F4-permission.md.

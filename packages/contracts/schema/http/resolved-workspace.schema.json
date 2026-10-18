@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/resolved-workspace.json",
+  "title": "ResolvedWorkspace",
+  "description": "`GET /workspaces/resolve`: a path that cleared every check, and the root it cleared under (plan 06).",
+  "x-kind": "http",
+  "x-type": "workspaces.resolved",
+  "x-route": [{ "method": "GET", "path": "/workspaces/resolve" }],
+  "type": "object",
+  "required": ["path", "root"],
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "root": {
+      "$ref": "../definitions/workspace.schema.json"
+    }
+  }
+}

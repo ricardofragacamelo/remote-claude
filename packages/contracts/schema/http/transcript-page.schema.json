@@ -2,9 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/http/transcript-page.json",
   "title": "TranscriptPage",
-  "description": "What `GET /transcripts/:engine/:id/messages` answers: a page of a conversation, newest page first and oldest first within it (plan 28, B-12). The route of the previous protocol, `GET /transcripts/:sessionId/messages`, answers the same during its window.",
+  "description": "What `GET /transcripts/:engine/:id/messages` answers: a page of a conversation, newest page first and oldest first within it (plan 28, B-12).",
   "x-kind": "http",
   "x-type": "transcripts.page",
+  "x-route": [{ "method": "GET", "path": "/transcripts/:engine/:id/messages" }],
   "type": "object",
   "required": ["session", "events", "nextCursor", "lastMessageId"],
   "properties": {

@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/permission-rule.json",
+  "title": "PermissionRule",
+  "description": "One rule that outlives a session, as the client sees it (plan 03; plan 28, B-33). `status` is computed at the moment of the answer, because the list shows an expired rule marked and not missing.",
+  "type": "object",
+  "required": [
+    "id",
+    "scope",
+    "kind",
+    "toolName",
+    "pattern",
+    "decision",
+    "projectPath",
+    "engine",
+    "grantedBy",
+    "grantedAt",
+    "expiresAt",
+    "status",
+    "revokedAt",
+    "disabled"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["session", "project", "always"],
+      "description": "The scope of a granted rule. `session` is part of the domain's type but every rule reachable from these routes is `project` or `always`: a `session` rule lives in memory only and is never persisted or listed here."
+    },
+    "kind": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The canonical kind the pattern names — `shell`, `file.edit` —, `null` on a disabled rule."
+    },
+    "toolName": {
+      "type": "string",
+      "description": "The kind again, or the engine's pattern of a disabled rule — kept beside for the published app, which reads it (plan 28, D-22)."
+    },
+    "pattern": {
+      "type": "string",
+      "description": "The pattern exactly as written, in the canonical grammar — or, on a disabled rule, the engine's grammar it was written in."
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["allow", "deny"]
+    },
+    "projectPath": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "engine": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The engine the rule is restricted to, or `null` for every engine whose calls have the kind."
+    },
+    "grantedBy": {
+      "type": "string",
+      "description": "Who granted it. Always the caller, since nobody sees another person's rules."
+    },
+    "grantedAt": {
+      "type": "string"
+    },
+    "expiresAt": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "expired", "revoked", "disabled"]
+    },
+    "revokedAt": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "disabled": {
+      "type": "object",
+      "x-nullable": true,
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Why the rule was switched off — a rule written in an engine's grammar that had no unambiguous canonical translation."
+        }
+      }
+    }
+  }
+}

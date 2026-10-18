@@ -347,6 +347,61 @@ describe('the SDK message mapper', () => {
       ]);
     });
 
+    it('reads the menu changing mid-session as the whole list, ordered and badged — found live, plan 28, B-46', () => {
+      const mapped = toEvents(
+        message({
+          type: 'system',
+          subtype: 'commands_changed',
+          commands: [
+            { name: 'help', description: 'Shows help', argumentHint: '', builtin: true },
+            { name: 'deploy', description: 'Deploys the app', argumentHint: '[env]' },
+          ],
+        }),
+      );
+
+      expect(mapped.events).toEqual([
+        {
+          type: 'session.commandsChanged',
+          payload: {
+            commands: [
+              {
+                name: 'deploy',
+                description: 'Deploys the app',
+                argumentHint: '[env]',
+                aliases: [],
+                builtin: false,
+                suggested: false,
+                origin: 'project',
+                label: 'deploy',
+                shadowed: false,
+              },
+              {
+                name: 'help',
+                description: 'Shows help',
+                argumentHint: '',
+                aliases: [],
+                builtin: true,
+                suggested: false,
+                origin: 'builtin',
+                label: 'help',
+                shadowed: false,
+              },
+            ],
+          },
+        },
+      ]);
+    });
+
+    it('replaces the menu with an empty one rather than dropping the push — fronteira', () => {
+      const mapped = toEvents(
+        message({ type: 'system', subtype: 'commands_changed', commands: [] }),
+      );
+
+      expect(mapped.events).toEqual([
+        { type: 'session.commandsChanged', payload: { commands: [] } },
+      ]);
+    });
+
     it.each([
       'thinking_tokens',
       'task_started',

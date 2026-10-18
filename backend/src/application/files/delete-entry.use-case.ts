@@ -51,8 +51,8 @@ interface Removal {
  *
  * For good, until the local history of F8: so a folder with something in it is not deleted on the
  * first request. It answers `409` with **how much** would go, capped (S-109, S-111), and is deleted
- * only when the request sends that count back; if the count changed in between — Claude created a
- * file — nothing goes, `412` (S-110) ([07 · D-06](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-06--apagar-definitivo-ou-lixeira)).
+ * only when the request sends that count back; if the count changed in between — the agent created
+ * a file — nothing goes, `412` (S-110) ([07 · D-06](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-06--apagar-definitivo-ou-lixeira)).
  *
  * A link is removed and what it points at stays, wherever it is (S-113). The open folder is not
  * deleted from inside itself (S-115). Something already gone is `404`, which the web takes as done

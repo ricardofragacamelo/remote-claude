@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/component-version.json",
+  "title": "ComponentVersion",
+  "description": "One component's version, for `GET /diag/versions` (plan 06, B-12; plan 28, B-37): the number, or `null` and a closed, stable reason — never a failure, because the screen exists precisely for when something is wrong.",
+  "type": "object",
+  "required": ["version", "reason"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "reason": {
+      "type": "string",
+      "enum": ["notInstalled", "unreadable"],
+      "x-nullable": true,
+      "description": "Set exactly when `version` is `null`."
+    }
+  }
+}

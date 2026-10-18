@@ -310,6 +310,16 @@ function emitClass(declaration) {
 }
 
 /**
+ * @param {import('./contracts-model.mjs').Alias} alias
+ * @returns {string}
+ */
+function emitAlias(alias) {
+  return [...comment(alias.description, '', 'line'), `typedef ${alias.name} = ${alias.of};`].join(
+    '\n',
+  );
+}
+
+/**
  * The whole generated Dart file.
  *
  * @param {import('./contracts-model.mjs').Model} model
@@ -351,6 +361,7 @@ export function emitDart(model) {
       ...emitConditionals(declaration),
       ...emitLimits(declaration),
     ]),
+    ...model.aliases.flatMap((alias) => [emitAlias(alias), '']),
   ];
 
   return `${blocks.join('\n').trimEnd()}\n`;

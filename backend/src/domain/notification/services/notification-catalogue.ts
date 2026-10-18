@@ -28,7 +28,7 @@ export const NOTIFICATION_CATALOGUE: readonly NotificationKind[] = [
   // (08 · D-08).
   { messageKey: 'notification.changes.rejectedFile', params: ['name'] },
   { messageKey: 'notification.changes.rejectedHunk', params: ['name'] },
-  // Claude asks something in a folder tab not on screen; the toast leads to it (08 · B-42).
+  // The agent asks something in a folder tab not on screen; the toast leads to it (08 · B-42).
   { messageKey: 'notification.permission.waiting', params: ['folder'] },
 ];
 

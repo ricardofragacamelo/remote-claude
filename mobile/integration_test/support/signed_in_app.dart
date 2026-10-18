@@ -140,3 +140,15 @@ Future<void> extendedOnTheCard(
     () => app.queueOf(sessionId).cardOf(requestId)?.remainingExtensions != null,
   );
 }
+
+/// Waits for the question's card of [sessionId] in the conversation, buys time on it, and answers
+/// with the request's id — the common first act of a turn that asks something and holds.
+Future<String> cardRequestIdOnScreen(WidgetTester tester, SignedInApp app, String sessionId) async {
+  final SessionRobot robot = app.robot(tester);
+  await pumpUntil(tester, () => app.queueOf(sessionId).pending.isNotEmpty);
+  await pumpUntil(tester, () => robot.cardInConversation.evaluate().isNotEmpty);
+  final String requestId = app.queueOf(sessionId).pending.single.requestId;
+  await extendedOnTheCard(tester, app, sessionId, requestId);
+
+  return requestId;
+}

@@ -649,26 +649,6 @@ export function checkBaseline(violations, baseline, phases) {
 }
 
 /**
- * The baseline that holds exactly [violations], sorted by file and term. An entry that was already
- * there keeps its phase; a new one gets `?`, which the gate fails until a person writes the phase
- * that removes it — a violation never enters the baseline unseen.
- *
- * @param {readonly Violation[]} violations @param {readonly BaselineEntry[]} previous
- * @returns {BaselineEntry[]}
- */
-export function writtenBaseline(violations, previous) {
-  const phases = new Map(previous.map((entry) => [keyOf(entry.file, entry.term), entry.phase]));
-  return [...grouped(violations).values()]
-    .map((group) => ({
-      file: group.file,
-      term: group.term,
-      count: group.lines.length,
-      phase: phases.get(keyOf(group.file, group.term)) ?? '?',
-    }))
-    .sort((a, b) => a.file.localeCompare(b.file, 'en') || a.term.localeCompare(b.term, 'en'));
-}
-
-/**
  * How many entries and occurrences each phase still has to remove, in the order of the phases.
  *
  * @param {readonly BaselineEntry[]} baseline

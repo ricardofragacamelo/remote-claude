@@ -14,7 +14,7 @@
         "field": "decision",
         "equals": "deny"
       },
-      "because": "the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from"
+      "because": "the reason goes into the audit trail and back to the agent as a message; a refusal nobody can account for is a refusal nobody can learn from"
     }
   ],
   "properties": {

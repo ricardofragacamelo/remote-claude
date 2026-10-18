@@ -48,7 +48,7 @@ interface Restoring {
  * ([D-17](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-17--o-histórico-local)):
  *
  * - **with `If-Match`**, it replaces the current file, and only that version of it: `412` with the
- *   one on disk when it changed — Claude included (S-339) —; the current one is kept first
+ *   one on disk when it changed — the agent included (S-339) —; the current one is kept first
  *   (`restore`), so the restore can itself be undone (S-338);
  * - **without**, it re-creates what was deleted, with the folders above it, through the fence: `409`
  *   when the path was taken since (S-340). A folder of a delete is re-created even empty, and one

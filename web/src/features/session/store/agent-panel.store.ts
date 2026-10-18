@@ -18,6 +18,12 @@ export type PanelMode = PermissionMode;
 
 /** What a new conversation starts with — chosen in its draft, sent with `session.start` (D-07). */
 export interface DraftChoices {
+  /**
+   * The engine the session opens on — `null` for the installation's default (plan 28, B-44). Only
+   * ever chosen from `GET /engines`; the control that offers it does not exist with fewer than two.
+   */
+  readonly engine: string | null;
+
   /** `null` for the installation's default. */
   readonly model: string | null;
   readonly mode: PanelMode;
@@ -30,7 +36,12 @@ export interface DraftChoices {
 }
 
 /** A new draft asks before every tool — the mode that asks the most, offered or not by the engine. */
-export const DEFAULT_CHOICES: DraftChoices = { model: null, mode: 'ask', effort: null };
+export const DEFAULT_CHOICES: DraftChoices = {
+  engine: null,
+  model: null,
+  mode: 'ask',
+  effort: null,
+};
 
 /** One conversation of the panel: a draft, a live session, or one of the history, read only (B-32). */
 export type PanelTab =

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/definitions/question-answer.json",
   "title": "QuestionAnswer",
-  "description": "The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the SDK's joined string.",
+  "description": "The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the engine's own joined string.",
   "type": "object",
   "required": ["questionId", "selected"],
   "properties": {

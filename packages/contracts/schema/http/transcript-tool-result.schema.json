@@ -5,6 +5,7 @@
   "description": "What `GET /transcripts/:engine/:id/tools/:toolUseId/result` answers: the whole output of one tool of a conversation, read from the transcript when a client unfolds the tool — never on the stream, whose `tool.completed.summary` is short on purpose. Over HTTP, but one contract in three languages all the same. An output above the ceiling is not an error: it comes cut, its beginning and its end, with `truncated: true`.",
   "x-kind": "http",
   "x-type": "transcript.toolResult",
+  "x-route": [{ "method": "GET", "path": "/transcripts/:engine/:id/tools/:toolUseId/result" }],
   "type": "object",
   "required": ["text", "truncated", "bytes"],
   "properties": {

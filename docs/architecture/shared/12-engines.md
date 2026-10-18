@@ -35,15 +35,22 @@ Voltar para o [índice transversal](README.md).
 |---|---|---|---|
 | **Núcleo** | tudo fora de `*/engines/` | `features/`, `shared/`, `app/` | `core/`, `features/`, `app/` |
 | **Extensão** | `domain/engines/<motor>/`, `application/engines/<motor>/`, `adapter/inbound/http/engines/<motor>/`, `adapter/outbound/engines/<motor>/` | `engines/<motor>/` | `engines/<motor>/` |
-| **Composição** | `infrastructure/modules/engines/` | `app/engines.ts` | `app/engines.dart` |
+| **Composição** | `infrastructure/modules/engines/` | `app/engines/index.ts` | `app/engines.dart` |
 
 O backend é organizado por camada, então a extensão é um **recorte por motor dentro de cada camada**, e
 a Dependency Rule continua valendo dentro dela. O web e o app são organizados por feature, então a
 extensão é uma pasta, que só importa o barril das features do núcleo.
 
-**Hoje:** o `engines/` do app existe vazio, com o lint (F0). O adapter do Claude está em
-`adapter/outbound/engines/claude/` desde a F1, com o classificador de ferramentas desde a F2, e o
-`claude-config` se divide entre o núcleo e a extensão na F6 ([plano 28](../../plans/28-agent-neutral-core/README.md#fases)).
+**Hoje:** o adapter do Claude está em `adapter/outbound/engines/claude/` desde a F1, com o
+classificador de ferramentas desde a F2. O antigo `claude-config` já está dividido (F6, B-36): o
+núcleo tem `domain/agent-settings/` e `application/agent-settings/` (padrões e MCP, por motor), e a
+extensão tem `domain/engines/claude/` e `application/engines/claude/` (conta, instalação, teste de
+modelo, output style — plugins, skills e o `.claude/` do projeto chegam com o
+[plano 13](../../plans/13-claude-settings/README.md)). No web, o antigo `features/claude-settings/`
+virou `web/src/engines/claude/`, registrado por `web/src/app/engines/index.ts` nos registros do núcleo —
+`features/agent-settings/` (telas, i18n), `app/global-navigation.ts`, `app/command-hosts.ts` e
+`shared/lib/sensitive-files.ts`. O `engines/` do app continua vazio, com o lint (F0, D-15) — nenhuma
+tela de motor existe nele ainda.
 
 ---
 
@@ -72,7 +79,7 @@ Uma extensão **se pendura** nos registros do núcleo, e o núcleo nunca a conhe
 | Ponta | Registro do núcleo | O que a extensão registra |
 |---|---|---|
 | Backend | `EngineRegistry` (F1) | o adapter da porta `AgentEnginePort`, o `RuleDialect`, os health checks |
-| Web | seções de configuração, navegação global, comandos, views do workbench | as telas e os comandos que só o motor tem |
+| Web | `agentSettingsSections`, `defaultsExtraFields`, `globalNavigation`, `commandHosts`, `agentSettingsShortcuts`, `sensitiveFiles` (F6, B-38) | as seções da tela de configuração do motor, o campo extra do formulário de padrões, a entrada na navegação, um host de atalhos, e os arquivos sensíveis que só esse motor declara |
 | App | — (nenhuma tela de motor hoje) | — |
 
 A composição de cada ponta importa a extensão e a registra. Nenhum outro arquivo do núcleo a importa.
@@ -134,16 +141,12 @@ cada termo e onde a coisa deveria morar. Há quatro modos de casar:
 - os nomes do produto (`remote-claude`, `remote_claude`, `RemoteClaudeApp`), uma lista de exceções
   permanentes, cada uma com o motivo.
 
-**A catraca.** `scripts/engine-neutrality-baseline.json` guarda as violações de 2026-10-10 por arquivo
-e termo, com a contagem e a fase do plano 28 que remove cada uma. O portão reprova:
-
-- violação fora do baseline, ou mais ocorrências do que ele guarda;
-- entrada que ocorre menos do que diz, ou não ocorre mais: o baseline acompanha o código para baixo,
-  com `node scripts/engine-neutrality.mjs --write-baseline`;
-- entrada cuja fase está ✅ no `progress.md` do plano 28;
-- entrada nova sem fase (o `--write-baseline` a grava com `?`, e só uma pessoa escreve a fase).
-
-Ao fim do plano 28, o baseline está vazio, e o `--write-baseline` sai do script.
+**A catraca, fechada.** `scripts/engine-neutrality-baseline.json` guardou, de 2026-10-10 ao fim da
+F7, as violações do dia por arquivo e termo, com a contagem e a fase do plano 28 que removia cada
+uma — e o `--write-baseline` que o escrevia. Fechada a janela do protocolo anterior (F7, B-47), o
+baseline está **vazio** e a opção saiu do script: `pnpm neutral:check` reprova qualquer violação,
+sem exceção além dos nomes do produto de `engine-vocabulary.json`. Uma entrada nova, se um dia
+precisar existir, é uma pessoa escrevendo o JSON à mão — nunca um script.
 
 ---
 
@@ -167,7 +170,7 @@ de todo motor registrado entram nos arquivos sensíveis do `files`. A regra de p
 | Backend (`dependency-cruiser`) | `engine-extension-is-isolated` | importar `*/engines/<motor>/` de fora dele, exceto a composição em `infrastructure/modules/engines/` |
 | Backend | `engines-do-not-know-each-other` | `engines/<a>/` importar `engines/<b>/` |
 | Backend | `adapters-do-not-know-each-other` | um adapter de saída importar arquivo de outro adapter de saída |
-| Web (ESLint) | `core-cannot-import-engines` | `features/`, `shared/` e `app/` (menos `app/engines.ts`) importarem `engines/` |
+| Web (ESLint) | `core-cannot-import-engines` | `features/`, `shared/` e `app/` (menos `app/engines/index.ts`) importarem `engines/` |
 | Web | `engines-are-isolated` | `engines/<a>/` importar `engines/<b>/`, ou um caminho profundo de `features/` |
 | App (`import_lint`) | `core_cannot_import_engines`, `features_cannot_import_engines` | `core/` e `features/` importarem `engines/` |
 | App | `engines_are_isolated` | `engines/<a>/` importar `engines/<b>/` |

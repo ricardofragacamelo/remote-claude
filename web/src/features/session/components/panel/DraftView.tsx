@@ -8,14 +8,22 @@ import { EmptyState } from '@/shared/components/EmptyState';
 import { useContextSet } from '../../hooks/useContextSet';
 import { useDraft } from '../../hooks/useDraft';
 import type { Draft } from '../../hooks/useDraft';
+import { useEngines } from '../../hooks/useEngines';
 import { unsendable } from '../../lib/context-set';
 import { offeredEfforts } from '../../lib/effort-levels';
 import { useKnownModels } from '../../store/known-models.store';
+import type { EngineDirectory } from '../../types/engine';
 import type { InstallationModel } from '../../types/insight';
 import { ChatComposer } from '../composer/ChatComposer';
 import { ContextDropZone } from '../composer/ContextDropZone';
 import type { ComposerBarChoices } from '../composer/ComposerToolbar';
-import { EffortPicker, knownModel, ModelPicker, ModePicker } from '../composer/SessionChoices';
+import {
+  EffortPicker,
+  EnginePicker,
+  knownModel,
+  ModelPicker,
+  ModePicker,
+} from '../composer/SessionChoices';
 import { ChatFrame } from '../frame/ChatFrame';
 
 export interface DraftViewProps {
@@ -38,10 +46,12 @@ const NO_MODELS: readonly InstallationModel[] = [];
 export function DraftView({ folder, tabKey }: DraftViewProps): React.JSX.Element {
   const { t } = useTranslation();
   const draft = useDraft(folder, tabKey, folder);
+  const { directory } = useEngines();
   const known = useStore(useKnownModels, (state) => state.byFolder[folder]) ?? NO_MODELS;
   const focus = useShortcut('agent.focusComposer');
   const context = useContextSet(folder, tabKey, null);
   const [held, setHeld] = useState(0);
+  const engineParam = { engine: draft.choices.engine ?? undefined };
 
   return (
     <ContextDropZone folder={folder} context={context} fill>
@@ -75,16 +85,20 @@ export function DraftView({ folder, tabKey }: DraftViewProps): React.JSX.Element
             folder={folder}
             sessionId={null}
             pendingUploads
-            bar={draftBarOf(draft, known, t)}
+            engine={draft.choices.engine}
+            bar={draftBarOf(draft, directory, known, t)}
           />
         }
       >
         <EmptyState
           title={t('sessions.draft.title')}
-          description={t('sessions.draft.description', { shortcut: focus?.label ?? '' })}
+          description={t('sessions.draft.description', {
+            shortcut: focus?.label ?? '',
+            ...engineParam,
+          })}
         />
         <ul className="flex list-disc flex-col gap-1 pl-5 text-ui-sm text-muted-foreground">
-          <li>{t('sessions.draft.mention')}</li>
+          <li>{t('sessions.draft.mention', engineParam)}</li>
           <li>{t('sessions.draft.commands')}</li>
           <li>{t('sessions.draft.drag')}</li>
           {known.length === 0 && <li>{t('sessions.draft.defaultModel')}</li>}
@@ -95,16 +109,27 @@ export function DraftView({ folder, tabKey }: DraftViewProps): React.JSX.Element
 }
 
 /**
- * The choices of a draft's bar: the mode — among the ones the engine announces —, the model and — for
- * a model and an engine that take it — the effort (plan 28, B-27, B-28).
+ * The choices of a draft's bar: the engine — with more than one available (plan 28, B-44) —, the
+ * mode among the ones it announces, the model and — for a model and an engine that take it — the
+ * effort (plan 28, B-27, B-28).
  */
 function draftBarOf(
   draft: Draft,
+  directory: EngineDirectory | null,
   known: readonly InstallationModel[],
   t: TFunction,
 ): ComposerBarChoices {
   const choices = (sub: boolean) => (
     <>
+      <EnginePicker
+        sub={sub}
+        directory={directory}
+        current={draft.choices.engine}
+        onPick={(engine) => {
+          // A different engine has its own models and its own effort levels (plan 28, B-44).
+          draft.choose({ engine, model: null, effort: null });
+        }}
+      />
       <ModelPicker
         sub={sub}
         models={known}

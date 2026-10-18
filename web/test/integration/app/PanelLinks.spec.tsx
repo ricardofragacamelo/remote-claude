@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { registerSessionsView } from '@/features/session';
 import { aConversationDto, aHistoryPage, said } from '../../support/history';
+import { listedEngines } from '../../support/engines';
 import { aLiveSocket } from '../../support/live-socket';
 import type { LiveSocket } from '../../support/live-socket';
 import { translator } from '../../support/render';
@@ -74,13 +75,21 @@ function answers(path: string): unknown {
   return undefined;
 }
 
+/** This file's installation always lists `claude`, named "Claude" (`listedEngines`). */
+const AGENT_NAME = 'Claude';
+
 function claude(): Promise<HTMLElement> {
-  return screen.findByRole('complementary', { name: t('workbench.agent.label') });
+  return screen.findByRole('complementary', { name: AGENT_NAME });
 }
 
 function open(search: { session?: string; conversation?: string } = {}) {
   live = aLiveSocket();
-  const mounted = openWorkbench(A, aTabServer([aTab(A)]), { other: answers }, search);
+  const mounted = openWorkbench(
+    A,
+    aTabServer([aTab(A)]),
+    { other: (path) => listedEngines(path) ?? answers(path) },
+    search,
+  );
   live.connect();
   return mounted;
 }

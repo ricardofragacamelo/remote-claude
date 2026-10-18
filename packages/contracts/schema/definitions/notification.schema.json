@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/notification.json",
+  "title": "Notification",
+  "description": "One entry of the notification centre, as the client reads it (plan 06, B-40).",
+  "type": "object",
+  "required": ["id", "severity", "messageKey", "params", "count", "createdAt", "readAt"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "warning", "error"]
+    },
+    "messageKey": {
+      "type": "string"
+    },
+    "params": {
+      "type": "object",
+      "description": "The parameters of the message — in the domain each value is a string, a number or a boolean; the generator's open-object subset cannot bound the value type further, so this is carried as a generic open object."
+    },
+    "count": {
+      "type": "integer"
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "readAt": {
+      "type": "string",
+      "x-nullable": true
+    }
+  }
+}

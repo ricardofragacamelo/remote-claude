@@ -70,7 +70,7 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
  * The `permission` module: the fence of the product, across all four layers.
  *
  * The registry is a singleton with the process, like the session registry and for the same reason:
- * an open request is a promise the SDK is holding its loop for, and none of that survives a
+ * an open request is a promise the engine is holding its loop for, and none of that survives a
  * restart.
  *
  * It knows nothing about `session`, deliberately. The bridge that turns `canUseTool` into a

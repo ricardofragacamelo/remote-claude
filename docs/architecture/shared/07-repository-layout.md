@@ -178,14 +178,22 @@ acopla duas coisas que deveriam evoluir separado. `contracts/` existe porque con
 
 ---
 
-## Alvo do plano 28 — `engines/` nas três pontas, e o REST no contrato
+## `engines/` nas três pontas, e o REST no contrato
 
-> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)).
+[Plano 28](../../plans/28-agent-neutral-core/README.md) ([ADR-025](00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)).
 
-- Cada ponta ganha um anel `engines/<motor>/` e uma composição: `infrastructure/modules/engines/` no
-  backend (F1), `web/src/app/engines.ts` no web (F6) e `mobile/lib/app/engines.dart` no app (já na F0,
-  vazio). Ver [12-engines](12-engines.md).
-- O pacote `packages/contracts/` passa a gerar também os tipos de **todas** as rotas REST, em
-  `schema/http/`, para TypeScript e Dart: as da conversa na F1, o resto na F6 (D-09 do plano 28).
+- Cada ponta tem um anel `engines/<motor>/` e uma composição: `infrastructure/modules/engines/` no
+  backend, `web/src/app/engines/index.ts` no web e `mobile/lib/app/engines.dart` no app (vazio, com o lint —
+  nenhuma tela de motor existe nele ainda, [D-15](../../plans/28-agent-neutral-core/decisions.md#f0--normas)).
+  Ver [12-engines](12-engines.md).
+- O pacote `packages/contracts/` gera também os tipos das rotas REST, em `schema/http/`, para
+  TypeScript e Dart: as da conversa desde a F1; o resto (arquivos, pastas, regras, auditoria,
+  aparelhos, notificações, diagnóstico e as rotas de `engines/claude/`) é a F6, B-48 (D-09 do plano
+  28). O schema de uma rota só de um motor mora em `schema/http/engines/<motor>/` — o mesmo anel das
+  outras pontas, e o `neutral:check` o isenta pelo mesmo motivo (segmento `engines` no caminho);
+  `schema/definitions/` continua achatado, sem esse anel, porque o gerador só lê `$ref` por nome de
+  arquivo. O backend fechou a sua metade; falta o web e o mobile trocarem os tipos escritos à mão
+  pelos gerados, e o `contracts:check` reprovar uma rota sem schema e um schema sem rota — ainda em
+  andamento.
 - O vocabulário e o baseline do portão de neutralidade moram em `scripts/`
   (`engine-vocabulary.json`, `engine-neutrality-baseline.json`), ao lado do `render-parity.json`.

@@ -1,3 +1,4 @@
+import { CLAUDE_ENGINE } from './claude-engine';
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { InstallationAnswer, InstallationProbe } from '@application/engines/claude';
@@ -30,7 +31,7 @@ export class AgentSdkInstallationProbe implements InstallationProbe {
     const init = await this.claude.ask(
       {
         cwd: folder.value,
-        op: 'claude.probe',
+        op: 'engine.probe',
         subject: folder.value,
         what: 'answer the probe',
         timeoutMs: COMMANDS_TIMEOUT_MS,
@@ -40,8 +41,9 @@ export class AgentSdkInstallationProbe implements InstallationProbe {
 
     this.logger.debug(
       {
-        op: 'claude.probe',
+        op: 'engine.probe',
         layer: 'adapter',
+        engine: CLAUDE_ENGINE,
         workspacePath: folder.value,
         models: init.models.length,
         agents: init.agents.length,

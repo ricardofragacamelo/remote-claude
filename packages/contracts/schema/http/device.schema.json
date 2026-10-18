@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/device.json",
+  "title": "Device",
+  "description": "`POST /devices`, `POST /devices/:deviceId/approval` and `DELETE /devices/:deviceId/approval`: one device, as the client sees it — the same shape as one entry of `DeviceList.devices`, named again rather than declared twice (plan 28, B-48).",
+  "x-kind": "http",
+  "x-type": "devices.device",
+  "x-route": [
+    { "method": "POST", "path": "/devices" },
+    { "method": "POST", "path": "/devices/:deviceId/approval" },
+    { "method": "DELETE", "path": "/devices/:deviceId/approval" }
+  ],
+  "$ref": "../definitions/device.schema.json"
+}

@@ -77,7 +77,7 @@ export interface Rejection {
 /**
  * What a live session's changes need to remember that the journal does not keep — plan 08, F3.
  *
- * The change of each call that writes a file: the diff of a tool is made of it ([D-03](../../../../docs/plans/08-claude-panel/decisions.md#d-03--de-onde-vem-o-diff)),
+ * The change of each call that writes a file: the diff of a tool is made of it (plan 08, D-03),
  * and the trail that holds it is write-only to this module. And what each rejection replaced, so it
  * can be undone.
  *

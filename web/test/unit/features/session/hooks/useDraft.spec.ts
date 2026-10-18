@@ -8,10 +8,11 @@ import {
   forgetAgentPanel,
 } from '@/features/session/store/agent-panel.store';
 import { forgetFolderTabs } from '@/features/workbench';
+import { anEngineList, FEWER_CAPABILITIES, OTHER_ENGINE } from '../../../../support/engines';
 import { aLiveSocket } from '../../../../support/live-socket';
 import type { LiveSocket } from '../../../../support/live-socket';
 import { providers } from '../../../../support/render';
-import { aRefusal } from '../../../../support/session-tools';
+import { aRefusal, routeApi } from '../../../../support/session-tools';
 
 const FOLDER = '/srv/projects/app';
 const SESSION = '01J0ABCDEFGHJKMNPQRSTVWXYZ';
@@ -187,5 +188,58 @@ describe('a draft of the panel — plan 08, B-33', () => {
         .getState()
         .tabs.some((tab) => tab.key === key),
     ).toBe(false);
+  });
+});
+
+describe('the engine a draft opens on — plan 28, B-44', () => {
+  it('reads the default engine’s capabilities with nothing chosen', async () => {
+    routeApi({ '/engines': [anEngineList()] });
+    const { hook } = aDraft();
+
+    expect(hook.result.current.choices.engine).toBeNull();
+    await waitFor(() => {
+      expect(hook.result.current.capabilities?.effortLevels.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('reads the chosen engine’s own capabilities — never the default’s', async () => {
+    routeApi({ '/engines': [anEngineList()] });
+    const { hook } = aDraft();
+
+    act(() => {
+      hook.result.current.choose({ engine: OTHER_ENGINE });
+    });
+
+    await waitFor(() => {
+      expect(hook.result.current.capabilities).toEqual(FEWER_CAPABILITIES);
+    });
+  });
+
+  it('sends nothing named with no engine chosen', () => {
+    routeApi({ '/engines': [anEngineList()] });
+    const { hook } = aDraft();
+    live.connect();
+
+    act(() => {
+      hook.result.current.send('go');
+    });
+
+    expect(starts()[0]).toMatchObject({ payload: { permissionMode: 'ask' } });
+    expect(starts()[0]?.['payload']).not.toHaveProperty('engine');
+  });
+
+  it('sends the chosen engine with `session.start` — plan 28, B-44', () => {
+    routeApi({ '/engines': [anEngineList()] });
+    const { hook } = aDraft();
+    live.connect();
+
+    act(() => {
+      hook.result.current.choose({ engine: OTHER_ENGINE });
+    });
+    act(() => {
+      hook.result.current.send('go');
+    });
+
+    expect(starts()[0]).toMatchObject({ payload: { engine: OTHER_ENGINE } });
   });
 });

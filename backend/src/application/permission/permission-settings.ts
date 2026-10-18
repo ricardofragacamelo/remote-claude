@@ -11,7 +11,7 @@ export interface PermissionSettings {
   readonly timeoutMs: number;
 
   /**
-   * How long a **question** of Claude waits instead — reading and choosing take longer than saying
+   * How long a **question** of the agent waits instead — reading and choosing take longer than saying
    * yes or no, and the person may be answering from a phone
    * ([24 · D-07](../../../../docs/plans/24-structured-questions/decisions.md#f1--backend)). Extended
    * by the same step, to the same ceiling.

@@ -53,7 +53,7 @@ export function useExportConversation(asked: ConversationRef | null): Conversati
           {
             title: t('sessions.export.title', { conversationId: conversation.id }),
             you: t('session.role.user'),
-            agent: t('session.role.assistant'),
+            agent: t('session.role.assistant', { engine: conversation.engine }),
             thinking: t('sessions.export.thinking'),
             output: t('sessions.export.output'),
             compacted: t('sessions.export.compacted'),

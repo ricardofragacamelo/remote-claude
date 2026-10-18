@@ -207,16 +207,13 @@ export class RecordingHandle implements AgentSessionHandle, EngineControl {
     return this.answer(this.servers);
   }
 
-  /** The account and the output styles `initialization()` answers beside the lists above. */
+  /** The account `initialization()` answers beside the lists above. */
   account: SessionInitialization['account'] = {
     email: 'person@example.com',
     organization: null,
     plan: 'max',
     provider: 'firstParty',
-    tokenSource: null,
-    apiKeySource: null,
   };
-  outputStyles: string[] = ['default'];
   initializationCalls = 0;
 
   initialization(): Promise<SessionInitialization> {
@@ -225,8 +222,6 @@ export class RecordingHandle implements AgentSessionHandle, EngineControl {
       commands: this.commands,
       agents: [],
       models: this.offered,
-      outputStyle: 'default',
-      outputStyles: this.outputStyles,
       account: this.account,
     });
   }

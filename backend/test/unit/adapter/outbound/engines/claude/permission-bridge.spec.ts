@@ -363,7 +363,7 @@ describe('PermissionBridge', () => {
         (line) => line['msg'] === 'canUseTool answered without asking anybody',
       );
       expect(said).toMatchObject({
-        op: 'claude.permission.request',
+        op: 'engine.permission.request',
         sessionId: PERMISSION_SESSION.value,
         requestId: 'request-1',
         toolName: 'Bash',

@@ -1,6 +1,5 @@
 import {
   Activity,
-  Bot,
   Info,
   LayoutPanelLeft,
   ListChecks,
@@ -28,7 +27,7 @@ export const NAVIGATION_POSITIONS = {
   devices: 400,
   usage: 500,
   diagnostics: 600,
-  claude: 700,
+  agents: 700,
   settings: 800,
 } as const;
 
@@ -48,8 +47,13 @@ export interface NavigationEntry extends RegistryEntry {
   href(context: NavigationContext): string;
 
   /**
-   * The first segment of every path it is the place of — so the item stays lit on a deep link
-   * (`/rules/rule_1`, `/audit?decision=allowed`). `''` is the root.
+   * Every path it is the place of, so the item stays lit on a deep link (`/rules/rule_1`,
+   * `/audit?decision=allowed`). `''` is the root. Most of the time one segment is enough and is
+   * matched against the first alone (`'rules'`); an entry whose first segment another entry also
+   * answers to (the engine's settings under `/settings/…`, same as the app's own) names a full
+   * prefix instead (`'settings/agents'`), matched against that many leading segments of the path —
+   * whichever matching prefix is the **longest** wins, so the more specific entry is the one lit
+   * (plan 28, B-38, S-111).
    */
   readonly sections: readonly string[];
 
@@ -68,8 +72,8 @@ export interface ManageEntry extends RegistryEntry {
 }
 
 /**
- * The entries of the navigation: plan 06's, and plan 13's "the agent's settings" — every place but
- * the one held for plan 16.
+ * The entries of the navigation plan 06 declares — every place but the one held for plan 16, and the
+ * agent's settings, which the engine's own extension registers at its place (plan 28, B-38, D-06).
  */
 const DECLARED: readonly NavigationEntry[] = [
   {
@@ -118,18 +122,8 @@ const DECLARED: readonly NavigationEntry[] = [
     sections: ['diagnostics'],
   },
   {
-    // How the agent works on this machine (plan 13): a screen of its own, never a section of the
-    // app's Settings (13 · D-09, D-27).
-    id: 'claude',
-    position: NAVIGATION_POSITIONS.claude,
-    labelKey: 'navigation.entry.claude',
-    icon: Bot,
-    href: () => '/claude-settings',
-    sections: ['claude-settings'],
-  },
-  {
-    // The app's settings — never the agent's, which is the screen plan 13 registers at its own
-    // place.
+    // The app's settings — never the agent's, which is the screen an engine's own extension
+    // registers at its own place (`NAVIGATION_POSITIONS.agents`).
     id: 'settings',
     position: NAVIGATION_POSITIONS.settings,
     labelKey: 'navigation.entry.settings',
@@ -169,12 +163,41 @@ function sectionOf(pathname: string): string {
   return pathname.split('/')[1] ?? '';
 }
 
-/** The place a path belongs to, if any — what the navigation lights (plan 06, S-90). */
+/**
+ * Whether `section` is the place `pathname` belongs to: its first segment alone for every entry
+ * that only ever needs that (`'rules'`, `''`), or the full prefix for one that needs more of the
+ * path to tell it apart from another entry at the same first segment (`'settings/agents'`).
+ */
+function matches(section: string, pathname: string): boolean {
+  if (!section.includes('/')) {
+    return sectionOf(pathname) === section;
+  }
+
+  const prefix = `/${section}`;
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+/**
+ * The place a path belongs to, if any — what the navigation lights (plan 06, S-90). Two entries can
+ * both claim the same first segment (the app's own Settings and the engine's, both under
+ * `/settings/…`): the **longest** matching prefix wins, so the more specific entry is the one lit,
+ * whichever order the two were declared in (plan 28, B-38, S-111).
+ */
 export function activeEntry(
   entries: readonly NavigationEntry[],
   pathname: string,
 ): NavigationEntry | undefined {
-  const section = sectionOf(pathname);
+  let best: NavigationEntry | undefined;
+  let bestLength = -1;
 
-  return entries.find((entry) => entry.sections.includes(section));
+  for (const entry of entries) {
+    for (const section of entry.sections) {
+      if (section.length > bestLength && matches(section, pathname)) {
+        best = entry;
+        bestLength = section.length;
+      }
+    }
+  }
+
+  return best;
 }

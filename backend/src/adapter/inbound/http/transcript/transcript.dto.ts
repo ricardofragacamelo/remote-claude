@@ -15,7 +15,6 @@ import type {
   TranscriptMessage,
   VisibleTranscriptSession,
 } from '@domain/transcript';
-import { previousToolFields } from '@shared/protocol/previous-tool-fields';
 
 /**
  * How many items a page holds when the client does not say, and the most it may ask for.
@@ -68,18 +67,10 @@ export const transcriptIdSchema = z.string().regex(OPAQUE_ID);
 export const engineSchema = z.string().regex(ENGINE);
 
 /**
- * The tool a subagent hangs off — an id the SDK minted (`toolu_…`), short and plain. Anything else is
- * not one this server can name.
+ * The tool a subagent hangs off — an id the engine minted (`toolu_…`), short and plain. Anything else
+ * is not one this server can name.
  */
 export const subagentToolSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
-
-/** The tool of a route of the previous protocol (plan 28, D-08): its conversation, and the tool. */
-export const previousToolSchema = z.object({
-  sessionId: transcriptIdSchema,
-  toolUseId: subagentToolSchema,
-});
-
-export type PreviousToolParams = z.infer<typeof previousToolSchema>;
 
 /** What `GET /transcripts/:engine/:id/messages` may be asked. The cursor is a message id. */
 export const readTranscriptSchema = z.object({
@@ -122,7 +113,6 @@ export type TranscriptPageDto = TranscriptPagePayload;
 export function toTranscriptSessionDto(session: VisibleTranscriptSession): TranscriptSessionDto {
   return {
     conversation: { engine: session.id.engine.value, id: session.id.id },
-    sessionId: session.id.id,
     summary: session.summary,
     origin: session.origin,
     // Never `null` here: a session without one is not visible, and so never reaches a DTO.
@@ -173,15 +163,7 @@ export function toTranscriptPageDto({
  */
 export const blockIdSchema = z.string().regex(/^[^\s:]{1,256}:\d{1,4}$/);
 
-/** The image of a route of the previous protocol (plan 28, D-08): its conversation, and the block. */
-export const previousImageSchema = z.object({
-  sessionId: transcriptIdSchema,
-  blockId: blockIdSchema,
-});
-
-export type PreviousImageParams = z.infer<typeof previousImageSchema>;
-
-/** The whole output of a tool, as `GET /transcripts/:sessionId/tools/:toolUseId/result` answers it. */
+/** The whole output of a tool, as `GET /transcripts/:engine/:id/tools/:toolUseId/result` answers it. */
 export type ToolResultDto = TranscriptToolResultPayload;
 
 /** The transport shape of a tool's output — `cutAt` only when it was cut. */
@@ -202,17 +184,7 @@ export function toSubagentPageDto(page: Page<TranscriptMessage, string>): Subage
   return { events: eventsOf(page.items), nextCursor: page.next };
 }
 
-/**
- * The events of [messages], each `tool.started` with the fields the previous protocol named the call
- * by beside the canonical ones: a page over HTTP has no version to answer in, and an app on a store
- * reads it (plan 28, D-22). Gone with the window, in F7 (B-47).
- */
+/** The events of [messages]: the canonical `{ type, payload }` of each, oldest first. */
 function eventsOf(messages: readonly TranscriptMessage[]): TranscriptMessage['events'] {
-  return messages.flatMap((message) =>
-    message.events.map((event) =>
-      event.type === 'tool.started'
-        ? { ...event, payload: { ...event.payload, ...previousToolFields(event.payload) } }
-        : event,
-    ),
-  );
+  return messages.flatMap((message) => message.events);
 }

@@ -82,25 +82,17 @@ function aResponse() {
   return { response: response as unknown as Response, headers };
 }
 
-describe('the routes of the history — plan 28, B-12, S-38', () => {
-  it('reads every resource of a conversation by its engine and id, and by the route of the previous protocol', async () => {
+describe('the routes of the history — plan 28, B-12', () => {
+  it('reads every resource of a conversation by its engine and id', async () => {
     const { controller, asked } = aController();
     const query = {};
 
     await controller.read('claude', ID, query, user);
-    await controller.readPrevious(ID, query, user);
     await controller.readSubagent('claude', ID, 'toolu_1', query, user);
-    await controller.readSubagentPrevious({ sessionId: ID, toolUseId: 'toolu_1' }, query, user);
     await controller.readToolResult('claude', ID, 'toolu_1', user);
-    await controller.readToolResultPrevious({ sessionId: ID, toolUseId: 'toolu_1' }, user);
     await controller.readImage('claude', ID, `${ID}:0`, user, aResponse().response);
-    await controller.readImagePrevious(
-      { sessionId: ID, blockId: `${ID}:0` },
-      user,
-      aResponse().response,
-    );
 
-    expect(asked).toEqual(Array.from({ length: 8 }, () => `claude:${ID}`));
+    expect(asked).toEqual(Array.from({ length: 4 }, () => `claude:${ID}`));
   });
 
   it('lists the conversations of a folder, with the cursor of the next page', async () => {

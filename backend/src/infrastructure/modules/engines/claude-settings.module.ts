@@ -1,29 +1,19 @@
 import { Module } from '@nestjs/common';
 
 import { ClaudeController } from '@adapter/inbound/http/engines/claude/claude.controller';
-import {
-  ClaudeLegacyController,
-  LEGACY_ENGINE,
-} from '@adapter/inbound/http/engines/claude/claude-legacy.controller';
 import { CLAUDE_ENGINE } from '@adapter/outbound/engines/claude/claude-engine';
 import {
   AgentSdkModelCheck,
   MODEL_CHECK_SETTINGS,
   MODEL_CHECK_TIMEOUT_MS,
 } from '@adapter/outbound/engines/claude/model-check.adapter';
-import {
-  ClearFolderDefaultsUseCase,
-  FOLDER_ACCESS,
-  ReadDefaultsUseCase,
-  SaveDefaultsUseCase,
-} from '@application/agent-settings';
+import { FOLDER_ACCESS } from '@application/agent-settings';
 import type { FolderAccess } from '@application/agent-settings';
 import { RecordAuditEventUseCase } from '@application/audit';
 import {
   CheckModelUseCase,
   ClaudeInstallationCatalog,
   INSTALLATION_FACTS,
-  LegacyDefaultsUseCases,
   MODEL_CHECK,
   ModelChecks,
   OUTPUT_STYLE_DEFAULTS_REPOSITORY,
@@ -53,9 +43,8 @@ const OUTPUT_STYLE_DEPENDENCIES = Symbol('OutputStyleDependencies');
 /**
  * The settings only Claude has, composed (plan 13; plan 28, B-36, D-06): the account of its CLI,
  * the diagnostic of its installation, the test of the connection and the output style of its
- * sessions — and the routes of plan 13 that answer the same for the window of the previous protocol
- * (`/claude/*`, `v-1`). The defaults and the models every engine has are the core's
- * (`agent-settings`), asked here for Claude by name.
+ * sessions. The defaults and the models every engine has are the core's (`agent-settings`), asked
+ * here for Claude by name.
  *
  * It owns no live session and no permission rule; every contact with the SDK — the probe, the model
  * check — lives in `adapter/outbound/engines/claude/`, as backend/04 asks.
@@ -64,9 +53,8 @@ const OUTPUT_STYLE_DEPENDENCIES = Symbol('OutputStyleDependencies');
  */
 @Module({
   imports: [AgentSettingsModule, AuditModule, AuthModule, ClaudeInstallationModule],
-  controllers: [ClaudeController, ClaudeLegacyController],
+  controllers: [ClaudeController],
   providers: [
-    { provide: LEGACY_ENGINE, useValue: CLAUDE_ENGINE },
     { provide: MODEL_CHECK, useClass: AgentSdkModelCheck },
     {
       provide: MODEL_CHECK_SETTINGS,
@@ -120,31 +108,6 @@ const OUTPUT_STYLE_DEPENDENCIES = Symbol('OutputStyleDependencies');
       provide: SaveOutputStyleUseCase,
       inject: [OUTPUT_STYLE_DEPENDENCIES],
       useFactory: (deps: OutputStyleDependencies) => new SaveOutputStyleUseCase(deps),
-    },
-    {
-      provide: LegacyDefaultsUseCases,
-      inject: [
-        ReadDefaultsUseCase,
-        SaveDefaultsUseCase,
-        ClearFolderDefaultsUseCase,
-        ReadOutputStyleUseCase,
-        SaveOutputStyleUseCase,
-      ],
-      useFactory: (
-        read: ReadDefaultsUseCase,
-        save: SaveDefaultsUseCase,
-        clear: ClearFolderDefaultsUseCase,
-        readStyle: ReadOutputStyleUseCase,
-        saveStyle: SaveOutputStyleUseCase,
-      ) =>
-        new LegacyDefaultsUseCases({
-          engine: CLAUDE_ENGINE,
-          read,
-          save,
-          clear,
-          readStyle,
-          saveStyle,
-        }),
     },
   ],
 })

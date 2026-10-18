@@ -1,5 +1,5 @@
 /**
- * Whether something read off an input the domain does not control — the SDK's, a client's — is an
+ * Whether something read off an input the domain does not control — the engine's, a client's — is an
  * object with fields to read.
  *
  * Arrays and `null` are excluded: `typeof` calls both objects, and a reader that walked either as a

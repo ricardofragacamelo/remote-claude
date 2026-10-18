@@ -36,7 +36,7 @@
           },
           "thinking": {
             "type": "string",
-            "description": "What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redacted_thinking` block has neither: it says the model thought, and nothing it thought."
+            "description": "What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redactedThinking` block has neither: it says the model thought, and nothing it thought."
           },
           "toolUseId": {
             "type": "string"
@@ -51,7 +51,7 @@
           },
           "size": {
             "type": "integer",
-            "description": "The size of an `image` block in bytes, decoded. The bytes themselves never travel on the stream or in a page: the image is fetched on demand, by `GET /transcripts/:sessionId/images/:blockId`. Absent for an image given by URL."
+            "description": "The size of an `image` block in bytes, decoded. The bytes themselves never travel on the stream or in a page: the image is fetched on demand, by `GET /transcripts/:engine/:id/images/:blockId`. Absent for an image given by URL."
           }
         }
       }

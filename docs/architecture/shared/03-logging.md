@@ -94,7 +94,7 @@ As bordas deste sistema:
 | HTTP | request in / response out | `http.request` / `http.response` |
 | WebSocket | frame in / frame out | `ws.inbound` / `ws.outbound` |
 | Banco | query / result | `db.query` |
-| Agent SDK | prompt enviado / `SDKMessage` recebido | `claude.input` / `claude.output` |
+| Porta de motor | prompt enviado / mensagem recebida | `engine.input` / `engine.output` |
 | Push | envio / retorno do provedor | `push.send` |
 
 No backend isso é responsabilidade de **interceptor/middleware**, não de cada use case.

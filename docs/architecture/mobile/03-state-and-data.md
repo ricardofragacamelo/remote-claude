@@ -96,7 +96,7 @@ Idênticas às do web, porque o problema é o mesmo:
 
 1. **Descarte evento com `seq <= lastSeq`** — replay reentrega; sem isso, mensagem duplica.
 2. **`gap: true` → limpe o estado e recarregue o transcript por HTTP.** Não costure buraco. A
-   conversa a recarregar é a que o ack nomeia em `claudeSessionId` (o `onGap` do `SessionSubscriber`
+   conversa a recarregar é a que o ack nomeia em `conversation` (o `onGap` do `SessionSubscriber`
    a recebe), e a página é posta **por baixo** do que o stream trouxer enquanto ela carrega
    (`Conversation.withHistory`): mesmo `messageId`/`toolUseId` fica com o stream — salvo fragmento
    ainda em curso de uma mensagem que o histórico já tem inteira —, o resto do stream vem depois, e

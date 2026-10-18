@@ -68,7 +68,7 @@ describe('what the installation is made of — plan 13, B-11', () => {
 
     expect(await absent.pathCli()).toEqual({ version: null, reason: 'notInstalled' });
     expect(await garbled.pathCli()).toEqual({ version: null, reason: 'unreadable' });
-    expect(logger.withOp('claude.installation')).toHaveLength(1);
+    expect(logger.withOp('engine.installation')).toHaveLength(1);
   });
 
   it('reads an empty CLAUDE_CONFIG_DIR as absent, and names the directory in effect — S-28', () => {

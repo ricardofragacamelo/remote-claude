@@ -3,7 +3,7 @@ import type { UserId } from '@domain/auth';
 import type { SessionConversation } from './ports/agent-engine.port';
 import type { SessionOwnership } from './ports/session-ownership.port';
 
-/** Which conversation of Claude a stream is, when it is one. */
+/** Which conversation of the agent a stream is, when it is one. */
 export interface SessionConversations {
   /** The conversation of a live session, or `null` for a stream that is not one. */
   conversationOf(sessionId: SessionId): SessionConversation | null;
@@ -27,7 +27,7 @@ export interface AttachedSession {
  * by design — so this use case answers only the question the domain owns: may this user watch this
  * session?
  *
- * It asks every source it was given rather than one: a live session of Claude and the diagnostic
+ * It asks every source it was given rather than one: a live session of the agent and the diagnostic
  * round trip are different things that both produce a stream, and both are attachable by whoever
  * owns them.
  */

@@ -67,7 +67,7 @@ export function requestedPayload(
 ): Readonly<Record<string, unknown>> {
   const common = {
     requestId: request.id,
-    // The contract requires it; the SDK does not always give one, and an empty string is a
+    // The contract requires it; the engine does not always give one, and an empty string is a
     // truthful "there was none" where a missing field would break a required one.
     toolUseId: request.toolUseId ?? '',
     ...canonicalToolPayload(request.tool, request.input),

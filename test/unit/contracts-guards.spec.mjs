@@ -122,6 +122,7 @@ describe('the generated protocol surface', () => {
       'session.cancelQueuedPrompt',
       'session.close',
       'session.closed',
+      'session.commandsChanged',
       'session.compact',
       'session.compacted',
       'session.detach',

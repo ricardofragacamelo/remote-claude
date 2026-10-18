@@ -49,9 +49,10 @@ const OTHER_ICONS = {
 };
 
 /**
- * The core never imports an engine extension: the composition in `web/src/app/engines.ts` is the one
- * file that knows one (ADR-025, docs/architecture/shared/12-engines.md). Reused by every scope of the
- * core below, since a later scope that sets `no-restricted-imports` replaces the earlier one.
+ * The core never imports an engine extension: the composition in `web/src/app/engines/index.ts` is
+ * the one file that knows one (ADR-025, docs/architecture/shared/12-engines.md). Reused by every
+ * scope of the core below, since a later scope that sets `no-restricted-imports` replaces the
+ * earlier one.
  */
 const CORE_CANNOT_IMPORT_ENGINES = {
   group: [
@@ -64,7 +65,7 @@ const CORE_CANNOT_IMPORT_ENGINES = {
     '../../../../../engines/**',
   ],
   message:
-    'core-cannot-import-engines: the core never knows an engine extension; app/engines.ts registers it into the registries of the core (ADR-025).',
+    'core-cannot-import-engines: the core never knows an engine extension; app/engines/index.ts registers it into the registries of the core (ADR-025).',
 };
 
 /** The engine extensions of the web, one folder each under `web/src/engines/`. */
@@ -165,7 +166,7 @@ export default tseslint.config(
     // The scopes below repeat the pattern, because the last scope to set a rule replaces it.
     name: 'remote-claude/web-core-cannot-import-engines',
     files: ['web/src/{features,shared,app}/**/*.{ts,tsx}', 'web/src/*.{ts,tsx}'],
-    ignores: ['web/src/app/engines.ts'],
+    ignores: ['web/src/app/engines/index.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [CORE_CANNOT_IMPORT_ENGINES, OTHER_ICONS] }],
     },
@@ -299,7 +300,7 @@ export default tseslint.config(
     // The app layer composes screens and draws the frame: the same one set of icons.
     name: 'remote-claude/web-app-icons',
     files: ['web/src/app/**/*.{ts,tsx}'],
-    ignores: ['web/src/app/engines.ts'],
+    ignores: ['web/src/app/engines/index.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [OTHER_ICONS, CORE_CANNOT_IMPORT_ENGINES] }],
     },
@@ -308,7 +309,7 @@ export default tseslint.config(
   {
     // The composition: the one file of the core that imports the engine extensions (ADR-025).
     name: 'remote-claude/web-app-engines',
-    files: ['web/src/app/engines.ts'],
+    files: ['web/src/app/engines/index.ts'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [OTHER_ICONS] }],
     },

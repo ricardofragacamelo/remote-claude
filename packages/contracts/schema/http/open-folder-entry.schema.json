@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/open-folder-entry.json",
+  "title": "OpenFolderEntry",
+  "description": "`POST /workspaces/open-folders`: `201` with the new tab, `200` with the one already open — the same shape as one entry of `OpenFolders.folders`, named again rather than declared twice (plan 28, B-48).",
+  "x-kind": "http",
+  "x-type": "workspaces.openFolder",
+  "x-route": [{ "method": "POST", "path": "/workspaces/open-folders" }],
+  "$ref": "../definitions/open-folder-entry.schema.json"
+}

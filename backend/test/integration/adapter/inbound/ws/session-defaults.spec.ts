@@ -53,7 +53,7 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
   beforeEach(async () => {
     await harness.app
       .get<PersistenceContext>(PERSISTENCE_CONTEXT)
-      .db.execute('DELETE FROM claude_defaults');
+      .db.execute('DELETE FROM agent_defaults');
   });
 
   afterEach(async () => {
@@ -124,12 +124,12 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
 
   it('opens with the folder’s default over the user’s, and says where it came from — S-50', async () => {
     const [first, second] = models;
-    await put('/claude/defaults', {
-      model: first,
-      permissionMode: 'readOnly',
-      outputStyle: 'Concise',
+    await put('/engines/claude/defaults', { model: first, permissionMode: 'readOnly' });
+    await put('/engines/claude/output-style', { outputStyle: 'Concise' });
+    await put('/engines/claude/defaults/folder', {
+      folder: path.join(root, 'repo'),
+      model: second,
     });
-    await put('/claude/defaults/folder', { folder: path.join(root, 'repo'), model: second });
 
     const opened = await open();
 
@@ -147,7 +147,7 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
   });
 
   it('lets what the client sent win over every default — S-48', async () => {
-    await put('/claude/defaults', { model: models[0], permissionMode: 'readOnly' });
+    await put('/engines/claude/defaults', { model: models[0], permissionMode: 'readOnly' });
 
     const opened = await open({ model: models[1], permissionMode: 'acceptEdits' });
 
@@ -161,12 +161,14 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
   it('opens with the installation’s model when the default one is gone, and says so — S-51', async () => {
     const repo = path.join(root, 'repo');
     // What the installation offers is known to the catalogue before the session opens.
-    expect((await get(`/claude/models?folder=${encodeURIComponent(repo)}`)).status).toBe(200);
+    expect((await get(`/engines/claude/models?folder=${encodeURIComponent(repo)}`)).status).toBe(
+      200,
+    );
     // A default saved before an update of the CLI took its model away: saved, then aged in place.
-    expect((await put('/claude/defaults', { thinking: 'on' })).status).toBe(200);
+    expect((await put('/engines/claude/defaults', { thinking: 'on' })).status).toBe(200);
     await harness.app
       .get<PersistenceContext>(PERSISTENCE_CONTEXT)
-      .db.execute(`UPDATE claude_defaults SET model = 'a-model-gone' WHERE folder_path IS NULL`);
+      .db.execute(`UPDATE agent_defaults SET model = 'a-model-gone' WHERE folder_path IS NULL`);
     harness.log.lines.length = 0;
 
     const opened = await open();
@@ -174,7 +176,7 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
     expect(opened.payload).toMatchObject({ defaultsFrom: 'installation' });
     expect(opened.payload?.['model']).not.toBe('a-model-gone');
     expect(record.options).not.toHaveProperty('model', 'a-model-gone');
-    expect(harness.log.withOp('claude.defaults')).toEqual([
+    expect(harness.log.withOp('agentSettings.defaults')).toEqual([
       expect.objectContaining({ stale: ['model'] }),
     ]);
   });
@@ -185,7 +187,7 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
 
     const panel = await get(`/sessions/${sessionId}/models`);
     const screen = await get(
-      `/claude/models?folder=${encodeURIComponent(path.join(root, 'repo'))}`,
+      `/engines/claude/models?folder=${encodeURIComponent(path.join(root, 'repo'))}`,
     );
 
     expect(panel.status).toBe(200);
@@ -196,7 +198,7 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
   });
 
   it('turns thinking off when a default says so', async () => {
-    await put('/claude/defaults', { thinking: 'off' });
+    await put('/engines/claude/defaults', { thinking: 'off' });
 
     await open();
 

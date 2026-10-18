@@ -1,17 +1,26 @@
 import {
-  Body,
   Controller,
   Delete,
   Get,
-  HttpCode,
-  Inject,
   Post,
   Put,
   Query,
+  Body,
+  Inject,
   Res,
+  HttpCode,
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
+
+import type {
+  DirectoryListingPayload,
+  OpenFolderEntryPayload,
+  OpenFoldersPayload,
+  RecentFoldersPayload,
+  ResolvedWorkspacePayload,
+  WorkspaceListPayload,
+} from '@remote-claude/contracts';
 
 import {
   CloseFolderUseCase,
@@ -40,21 +49,15 @@ import {
   toWorkspaceDto,
 } from './workspace.dto';
 import type {
-  DirectoryListingDto,
   FolderDto,
   ListDirectoriesQueryDto,
-  OpenFolderEntryDto,
-  OpenFoldersDto,
   PinRecentFolderDto,
-  RecentFoldersDto,
   ReorderOpenFoldersDto,
-  ResolvedWorkspaceDto,
   ResolveWorkspaceDto,
-  WorkspaceListDto,
 } from './workspace.dto';
 
 /**
- * The directories this installation will let Claude run in, and the folders a user opened.
+ * The directories this installation will let the agent run in, and the folders a user opened.
  *
  * `GET /workspaces` reads the allowlist and never the disk; `resolve` touches one path. Listing is
  * the one route that reads a directory, and only in the terms of
@@ -82,7 +85,7 @@ export class WorkspaceController {
 
   /** The roots this caller may use. Only theirs: a root of somebody else is not listed at all. */
   @Get()
-  async read(@CurrentUser() userId: UserId): Promise<WorkspaceListDto> {
+  async read(@CurrentUser() userId: UserId): Promise<WorkspaceListPayload> {
     return { workspaces: (await this.list.execute(userId)).map(toWorkspaceDto) };
   }
 
@@ -97,7 +100,7 @@ export class WorkspaceController {
   async check(
     @Query(new ZodPipe(resolveWorkspaceSchema)) query: ResolveWorkspaceDto,
     @CurrentUser() userId: UserId,
-  ): Promise<ResolvedWorkspaceDto> {
+  ): Promise<ResolvedWorkspacePayload> {
     const resolved = await this.resolve.execute(query.path, userId);
 
     return { path: resolved.path.value, root: toWorkspaceDto(resolved.workspace) };
@@ -113,7 +116,7 @@ export class WorkspaceController {
   async listDirectories(
     @Query(new ZodPipe(listDirectoriesSchema)) query: ListDirectoriesQueryDto,
     @CurrentUser() userId: UserId,
-  ): Promise<DirectoryListingDto> {
+  ): Promise<DirectoryListingPayload> {
     return toDirectoryListingDto(
       await this.directories.execute(
         { path: query.path, hidden: query.hidden, prefix: query.prefix ?? null },
@@ -124,7 +127,7 @@ export class WorkspaceController {
 
   /** The folders this caller opened, pinned first — each marked when it can no longer be used. */
   @Get('recent')
-  async readRecent(@CurrentUser() userId: UserId): Promise<RecentFoldersDto> {
+  async readRecent(@CurrentUser() userId: UserId): Promise<RecentFoldersPayload> {
     return { folders: (await this.recent.execute(userId)).map(toRecentFolderDto) };
   }
 
@@ -150,7 +153,7 @@ export class WorkspaceController {
 
   /** The folder tabs, in order, each revalidated. */
   @Get('open-folders')
-  async readOpenFolders(@CurrentUser() userId: UserId): Promise<OpenFoldersDto> {
+  async readOpenFolders(@CurrentUser() userId: UserId): Promise<OpenFoldersPayload> {
     return { folders: (await this.openFolders.execute(userId)).map(toOpenFolderEntryDto) };
   }
 
@@ -167,7 +170,7 @@ export class WorkspaceController {
     @Body(new ZodPipe(folderSchema)) body: FolderDto,
     @CurrentUser() userId: UserId,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<OpenFolderEntryDto> {
+  ): Promise<OpenFolderEntryPayload> {
     const opened = await this.openFolder.execute(body.path, userId);
 
     if (!opened.created) {
@@ -177,7 +180,7 @@ export class WorkspaceController {
     return toOpenFolderEntryDto(opened.view);
   }
 
-  /** Closes a folder's tab — `204` also when it was not open. Ends no session of Claude. */
+  /** Closes a folder's tab — `204` also when it was not open. Ends no session of the agent. */
   @Delete('open-folders')
   @HttpCode(204)
   async close(

@@ -79,25 +79,18 @@ describe('DrizzleSessionOriginRepository', () => {
     ]);
   });
 
-  it('writes the engine and the id of the conversation beside the old column — plan 28, B-11', async () => {
+  it('writes the engine and the id of the conversation — plan 28, B-11', async () => {
     await build().record(origin(4));
 
     const rows = await connection.db.execute<{
-      claude_session_id: string;
       engine: string;
       conversation_id: string;
     }>(
-      sql`SELECT "claude_session_id", "engine", "conversation_id" FROM "session_origins"
+      sql`SELECT "engine", "conversation_id" FROM "session_origins"
           WHERE "conversation_id" = ${conversationId(4)}`,
     );
 
-    expect(rows.rows).toEqual([
-      {
-        claude_session_id: conversationId(4),
-        engine: 'claude',
-        conversation_id: conversationId(4),
-      },
-    ]);
+    expect(rows.rows).toEqual([{ engine: 'claude', conversation_id: conversationId(4) }]);
   });
 
   it('answers by engine: the same id under another engine is another conversation', async () => {
@@ -132,12 +125,11 @@ describe('DrizzleSessionOriginRepository', () => {
     );
 
     expect(columns.rows.map((row) => row.column_name)).toEqual([
-      'claude_session_id',
       'session_id',
       'user_id',
       'workspace_path',
       'opened_at',
-      // The conversation as plan 28 names it; the first column is its copy until F7 drops it.
+      // The conversation as plan 28 names it (engine, conversation_id) — the primary key.
       'engine',
       'conversation_id',
     ]);

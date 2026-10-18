@@ -15,8 +15,8 @@ import type { ConversationRef } from '@domain/engine';
 /**
  * `session` asking about a conversation it was told to continue.
  *
- * Two questions, two owners: where the conversation ran is Claude's store, read by `transcript`
- * through the SDK — never by a parser of ours; who opened it here is the provenance `session`
+ * Two questions, two owners: where the conversation ran is the engine's store, read by `transcript`
+ * through the engine — never by a parser of ours; who opened it here is the provenance `session`
  * keeps. Neither reads a message: deciding a resume needs none.
  */
 @Injectable()

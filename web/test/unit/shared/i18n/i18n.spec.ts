@@ -62,9 +62,11 @@ describe('the catalogues', () => {
     }
   });
 
-  it('nest no deeper than three segments', () => {
+  it('nest no deeper than three segments — four under an engine extension’s own prefix (plan 28, B-39)', () => {
     for (const key of keysOf(en)) {
-      expect(key.split('.'), key).toHaveLength(3);
+      const segments = key.split('.');
+      const expected = segments[0] === 'engines' ? 4 : 3;
+      expect(segments, key).toHaveLength(expected);
     }
   });
 });
@@ -228,7 +230,6 @@ describe('the texts of the core name the engine of the session — plan 28, B-39
   it('says the default engine’s displayName where the text names no session', () => {
     nameAgents(DIRECTORY);
 
-    expect(createI18n('en').t('workbench.agent.label')).toBe('Claude Code');
     expect(createI18n('en').t('command.agent.newConversation')).toBe(
       'Claude Code: New conversation',
     );

@@ -29,7 +29,7 @@ código por duas razões ([R-06](README.md#riscos-e-decisões-em-aberto)):
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-36 — O `claude-config` dividido no backend 🔲
+### B-36 — O `claude-config` dividido no backend ✅
 
 A divisão segue a [discovery §5.1](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#51-backend)
 ([D-06](decisions.md#f6--extensões-isoladas)).
@@ -61,7 +61,7 @@ A regra `claude-config-never-reaches-session` passa a valer para a extensão int
 (o módulo `claude-config` sai, e entram `agent-settings`, `mcp` e a extensão) e o ADR-018, reclassificado
 como ADR da extensão, com o MCP fora dele. Cenários S-104…S-107.
 
-### B-37 — Instalação e diagnóstico pelo `describe()` 🔲
+### B-37 — Instalação e diagnóstico pelo `describe()` ✅
 
 O `InstallationVersions` (`agentSdk`, `claudeCli`) e o `/diag/versions` passam a listar o `describe()` de
 cada motor registrado. Os tipos da instalação do Claude saem do `domain/session/services/installation.ts`:
@@ -70,7 +70,7 @@ mesmo vale para o `slash-commands.ts`: o plugin sintético `remote-claude-user` 
 são da extensão. O `RC_SESSION_DEFAULT_MODEL` passa a ser por motor, e o `RC_MODEL_CHECK_MAX_BUDGET_USD`,
 da extensão. Cenários S-108, S-109.
 
-### B-38 — O `web/src/engines/claude/` 🔲
+### B-38 — O `web/src/engines/claude/` ✅
 
 O `features/claude-settings/` (21 arquivos) muda para `web/src/engines/claude/`. As seções do núcleo
 (padrões e MCP, por motor) ficam numa feature do núcleo, `features/agent-settings/`, e as seções do Claude
@@ -81,12 +81,12 @@ são **registradas** pela extensão nos registros do núcleo:
 - `commands`;
 - a ajuda.
 
-O registro acontece pelo `web/src/app/engines.ts`, o único arquivo que importa `engines/`. A rota
+O registro acontece pelo `web/src/app/engines/index.ts`, o único arquivo que importa `engines/`. A rota
 `/claude-settings` vira `/settings/agents/$engine`, com a seção da extensão dentro. O
 [web/01](../../architecture/web/01-architecture.md) e o [web/02](../../architecture/web/02-folder-structure.md)
 saem da forma-alvo da F0 para a forma real. Cenários S-110, S-111.
 
-### B-39 — Os nomes e o i18n do núcleo no web 🔲
+### B-39 — Os nomes e o i18n do núcleo no web ✅
 
 Os renomes da [discovery §5.2](../../discovery/10-nucleo-canonico-e-agentes-isolados.md#52-web):
 
@@ -106,7 +106,7 @@ de três formas:
 
 Cenários S-112…S-114.
 
-### B-40 — Os nomes e o i18n do núcleo no app 🔲
+### B-40 — Os nomes e o i18n do núcleo no app ✅
 
 O `ClaudeWaitingStrip` vira `AgentWaitingStrip`, e o `fileViewerClaudeWaiting` vira `fileViewerAgentWaiting`.
 As 53 chaves dos ARB com "Claude" passam a `{agent}`, e as 5 com "Claude" no nome são renomeadas. O
@@ -114,7 +114,7 @@ As 53 chaves dos ARB com "Claude" passam a `{agent}`, e as 5 com "Claude" no nom
 nada além do núcleo. O [mobile/01](../../architecture/mobile/01-architecture.md) e o
 [mobile/02](../../architecture/mobile/02-folder-structure.md) saem da forma-alvo. Cenários S-115, S-116.
 
-### B-41 — O que sobra no backend: logs, push e comentários 🔲
+### B-41 — O que sobra no backend: logs, push e comentários ✅
 
 - O `op` `claude.*` dos logs vira `engine.*`, com `engine` e `engineVersion` no contexto, no adapter e no
   `claude-config-module.configuration.ts` ([shared/03](../../architecture/shared/03-logging.md)).
@@ -125,7 +125,7 @@ nada além do núcleo. O [mobile/01](../../architecture/mobile/01-architecture.m
 As constantes do núcleo também mudam: `CLAUDE_SESSION_PORT`, `CLAUDE_DEFAULTS_REPOSITORY` e as `CLAUDE_*` que sobrarem. Cenário
 S-117.
 
-### B-48 — O resto do REST no pacote `contracts` 🔲
+### B-48 — O resto do REST no pacote `contracts` ✅
 
 Pela [D-09](decisions.md#f1--porta-de-motor-e-conversa), **todas** as rotas REST passam a ter o tipo
 gerado do schema, como o WS. As rotas da conversa entraram na [B-12](F1-engine-port.md). Aqui entra o
@@ -147,7 +147,7 @@ O [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#ver
 e o [shared/07](../../architecture/shared/07-repository-layout.md) passam a dizer que o pacote cobre WS e
 REST. Cenários S-135, S-136.
 
-### B-42 — Os documentos na forma real 🔲
+### B-42 — Os documentos na forma real ✅
 
 Saem as marcas "alvo do plano 28" da F0, e cada documento passa a descrever o que existe:
 

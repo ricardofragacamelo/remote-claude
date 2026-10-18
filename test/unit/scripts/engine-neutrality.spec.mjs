@@ -16,7 +16,6 @@ import {
   violationsIn,
   withoutExceptions,
   wordsOf,
-  writtenBaseline,
 } from '../../../scripts/lib/engine-neutrality.mjs';
 import { repoRoot } from '../../../scripts/lib/paths.mjs';
 
@@ -427,22 +426,6 @@ describe('neutral:check — the baseline (plan 28, B-05)', () => {
         phases,
       ),
     ).toEqual([]);
-  });
-
-  it('writes the same baseline twice from the same tree, keeping each phase — S-15', () => {
-    const found = [
-      violation('b.ts', 'claude'),
-      violation('a.ts', 'Edit'),
-      violation('a.ts', 'claude'),
-    ];
-    const once = writtenBaseline(found, [{ file: 'a.ts', term: 'claude', count: 5, phase: 'F3' }]);
-
-    expect(once).toEqual([
-      { file: 'a.ts', term: 'claude', count: 1, phase: 'F3' },
-      { file: 'a.ts', term: 'Edit', count: 1, phase: '?' },
-      { file: 'b.ts', term: 'claude', count: 1, phase: '?' },
-    ]);
-    expect(writtenBaseline(found, once)).toEqual(once);
   });
 
   it('sums what each phase still removes, in the order of the phases', () => {

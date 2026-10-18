@@ -63,7 +63,7 @@ export function encodedWithin(writing: FileWriting, path: string, text: TextToWr
 
 /**
  * Writes over `current`, and only over it: the atomic write asks again right before its rename,
- * and a version that changed in between — Claude wrote, or removed the file — stops it with `412`
+ * and a version that changed in between — the agent wrote, or removed the file — stops it with `412`
  * and the version found. What a save and a restore of the history share.
  */
 export function writeOver(

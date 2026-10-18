@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/kept-delete.json",
+  "title": "KeptDelete",
+  "description": "`DELETE /files` with `keepInHistory`: what the delete kept, for the client's Undo (plan 07, F8). Absent on the plain `204` — this is the present shape only.",
+  "x-kind": "http",
+  "x-type": "files.kept",
+  "x-route": [{ "method": "DELETE", "path": "/files" }],
+  "type": "object",
+  "required": ["kept"],
+  "properties": {
+    "kept": {
+      "type": "object",
+      "required": ["batchId", "entries"],
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "maxItems": 100000,
+          "items": {
+            "type": "object",
+            "required": ["id", "path", "entryKind"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "entryKind": {
+                "type": "string",
+                "enum": ["file", "directory"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

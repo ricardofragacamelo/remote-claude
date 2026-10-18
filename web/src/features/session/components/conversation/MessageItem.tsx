@@ -129,7 +129,7 @@ function MessageHeader({
     <div className="flex items-center gap-1">
       {showsAuthor && (
         <span className="text-ui-xs uppercase text-muted-foreground">
-          {t(`session.role.${message.role}`)}
+          {t(`session.role.${message.role}`, { engine: context.reference?.engine })}
         </span>
       )}
       {copyable && (

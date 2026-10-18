@@ -185,7 +185,7 @@ describe('what a reload gives the panel back — S-125', () => {
       {
         key: 'draft:1',
         kind: 'draft',
-        choices: { model: 'opus', mode: 'readOnly', effort: 'high' },
+        choices: { engine: null, model: 'opus', mode: 'readOnly', effort: 'high' },
       },
       { key: 'draft:2', kind: 'draft', choices: DEFAULT_CHOICES },
       { key: 'draft:3', kind: 'draft', choices: DEFAULT_CHOICES },
@@ -279,7 +279,7 @@ describe('the conversations of the panel, in tabs — S-150', () => {
   it('changes the choices of a draft only', () => {
     const draft = panel().openDraft();
     panel().show('session', 's1');
-    const plan = { model: 'opus', mode: 'readOnly', effort: 'low' } as const;
+    const plan = { engine: null, model: 'opus', mode: 'readOnly', effort: 'low' } as const;
 
     panel().setChoices(draft, plan);
     panel().setChoices('session:s1', plan);
@@ -313,7 +313,7 @@ describe('the conversations of the panel, in tabs — S-150', () => {
 
   it('keeps the effort the draft chose, by session — plan 09, S-90', () => {
     const draft = panel().openDraft();
-    panel().setChoices(draft, { model: 'opus', mode: 'ask', effort: 'max' });
+    panel().setChoices(draft, { engine: null, model: 'opus', mode: 'ask', effort: 'max' });
     panel().promote(draft, 's1');
     // A tab that is not a draft has no choices to keep.
     panel().promote('session:s1', 's2');

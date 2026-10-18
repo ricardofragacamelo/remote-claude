@@ -17,10 +17,9 @@ export type DeadlineFailureReporter = (error: unknown, requestId: string) => voi
 /**
  * The only timeout there is.
  *
- * Measured, and the reason this class exists: the CLI held a permission open for 150 s without
- * giving up, emitting an error or ever calling back
- * (docs/discovery/01-descoberta-claude-agent-sdk.md#84). Nothing below us will ever end a request,
- * so if this fails to fire the session hangs until somebody notices.
+ * Measured, and the reason this class exists: the engine held a permission open for 150 s without
+ * giving up, emitting an error or ever calling back. Nothing below us will ever end a request, so
+ * if this fails to fire the session hangs until somebody notices.
  *
  * Arming goes through the registry so a deadline is always cancellable by request id, and always
  * cancelled when the request is settled — a timer that outlives its request is a `deny` landing on

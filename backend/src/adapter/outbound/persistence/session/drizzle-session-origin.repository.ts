@@ -28,8 +28,6 @@ export class DrizzleSessionOriginRepository implements SessionOriginRepository {
       this.context.db
         .insert(sessionOrigins)
         .values({
-          // The old column, the primary key until the window of the previous protocol closes (F7).
-          claudeSessionId: origin.conversation.id,
           engine: origin.conversation.engine.value,
           conversationId: origin.conversation.id,
           sessionId: origin.sessionId.value,
@@ -37,7 +35,7 @@ export class DrizzleSessionOriginRepository implements SessionOriginRepository {
           workspacePath: origin.workspace.value,
           openedAt: origin.openedAt,
         })
-        .onConflictDoNothing({ target: sessionOrigins.claudeSessionId }),
+        .onConflictDoNothing({ target: [sessionOrigins.engine, sessionOrigins.conversationId] }),
     );
   }
 

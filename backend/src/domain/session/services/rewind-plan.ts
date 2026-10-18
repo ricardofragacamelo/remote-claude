@@ -122,7 +122,7 @@ export function undoPointNamed(points: readonly UndoPoint[], promptId: string): 
  * What going back to `checkpoint` does to its path, given how the session last left it and what is
  * there now.
  *
- * The order of the questions is the design, and each one is there because of what the SDK did not
+ * The order of the questions is the design, and each one is there because of what the engine did not
  * do ([D-06](../../../../../docs/plans/04-transcript-and-resume/decisions.md#d-06--desfazer-sem-destruir)):
  *
  * 1. **already there** — the path is the way it was at the point. Nothing to do, and what makes a

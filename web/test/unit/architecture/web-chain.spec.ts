@@ -295,7 +295,7 @@ describe('the three rings of ADR-025, as the build enforces them', () => {
   });
 
   it('lets the composition import the extensions — plan 28, S-20', async () => {
-    const fired = await rulesFiredOn('web/src/app/engines.ts', IMPORT_ENGINE);
+    const fired = await rulesFiredOn('web/src/app/engines/index.ts', IMPORT_ENGINE);
 
     expect(fired).not.toContain('no-restricted-imports');
   });

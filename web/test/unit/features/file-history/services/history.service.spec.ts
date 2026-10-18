@@ -48,6 +48,7 @@ describe('the local history service — plan 07, B-59', () => {
           reason: 'save',
           kept: 'yes',
           sizeBytes: 3,
+          hash: 'sha',
           author: { self: true, id: 'me' },
           at: '2026-10-01T10:00:00.000Z',
           batchId: null,

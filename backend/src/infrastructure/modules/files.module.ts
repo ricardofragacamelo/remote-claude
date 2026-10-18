@@ -183,12 +183,13 @@ const TRANSFER_PROVIDERS = [
  * ([07 · D-01](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-01--módulo-novo-ou-extensão-do-workspace)).
  *
  * Its arrows are the ones the catalogue draws, and only those: `workspace` by the folder resolver,
- * `audit` by writing the trail, and **nothing** of `session` — Claude's writes reach it on the
+ * `audit` by writing the trail, and **nothing** of `session` — the agent's writes reach it on the
  * internal bus (docs/architecture/backend/03-modules.md#files). The lock it writes under is the
  * platform's, the same instance the undo of a session takes.
  *
- * It exports the save, and the watched folders: plan 11's replace-in-files and plan 13's `CLAUDE.md`
- * write through the first, and inherit the `ETag`, the trail and the atomicity; the gateway hands
+ * It exports the save, and the watched folders: plan 11's replace-in-files and plan 13's project
+ * memory file write through the first, and inherit the `ETag`, the trail and the atomicity; the
+ * gateway hands
  * `workspace.watch` to the second, and the shutdown closes its watchers (plan 07, B-21).
  */
 @Module({
@@ -216,13 +217,13 @@ const TRANSFER_PROVIDERS = [
       provide: ChangeOrigins,
       inject: [AgentWrites, UserWrites, FOLDER_DISK, CLOCK, LOGGER],
       useFactory: (
-        claude: AgentWrites,
+        agent: AgentWrites,
         user: UserWrites,
         disk: FolderDisk,
         clock: Clock,
         logger: Logger,
       ) =>
-        new ChangeOrigins(claude, user, disk, clock, (path, error) => {
+        new ChangeOrigins(agent, user, disk, clock, (path, error) => {
           logger.debug(
             { op: 'files.watch', layer: 'application', path, err: error },
             'a changed file could not be read to tell who changed it',

@@ -31,7 +31,7 @@ export function attachmentKindOf(bytes: Uint8Array): AttachmentKind {
   }
 
   // The sniff decoded the whole of it as UTF-8 and looked for a NUL in the first bytes only; the
-  // whole of it is what Claude would read.
+  // whole of it is what the agent would read.
   if (sniffed.startsWith('text/plain') && !bytes.includes(0)) {
     return { kind: 'text', mediaType: 'text/plain' };
   }

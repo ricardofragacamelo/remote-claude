@@ -24,9 +24,15 @@ export const SESSION_COMMANDS = {
   rewindFiles: 'session.rewindFiles',
 } as const;
 
-/** What a draft opens its session with (plan 08, D-07): the model, the mode, the effort chosen. */
+/**
+ * What a draft opens its session with (plan 08, D-07): the engine, the model, the mode, the effort
+ * chosen.
+ */
 export interface DraftStart {
   readonly workspacePath: string;
+
+  /** `null` for the installation's default engine (plan 28, B-44). */
+  readonly engine: string | null;
   readonly model: string | null;
   readonly permissionMode: string;
   readonly effort: string | null;
@@ -41,6 +47,7 @@ export function startDraft(client: WsClient, draft: DraftStart): string | null {
   return client.issue(SESSION_COMMANDS.start, {
     workspacePath: draft.workspacePath,
     permissionMode: draft.permissionMode,
+    ...(draft.engine === null ? {} : { engine: draft.engine }),
     ...(draft.model === null ? {} : { model: draft.model }),
     ...(draft.effort === null ? {} : { effort: draft.effort }),
   });

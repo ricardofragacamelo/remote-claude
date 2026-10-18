@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/upload-result.json",
+  "title": "UploadResult",
+  "description": "`POST /files/upload`: `200` when every item was written, `207` when any failed, each with its own outcome. In the domain `items` is a discriminated union by `status` (`created`/`renamed` carry `etag`; `replaced` carries `etag` and `history`; `failed` carries `error`), which the generator cannot express as a `oneOf`; flattened here, with the pairing documented per field (plan 28, B-48).",
+  "x-kind": "http",
+  "x-type": "files.upload.result",
+  "x-route": [{ "method": "POST", "path": "/files/upload" }],
+  "type": "object",
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["path", "status"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative to the open folder."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["created", "renamed", "replaced", "failed"]
+          },
+          "etag": {
+            "type": "string",
+            "description": "Present when `status` is `created`, `renamed` or `replaced`."
+          },
+          "history": {
+            "$ref": "../definitions/history-outcome.schema.json",
+            "description": "How keeping the version it replaced in the local history ended. Present exactly when `status` is `replaced`."
+          },
+          "error": {
+            "type": "object",
+            "required": ["code", "messageKey"],
+            "description": "Present exactly when `status` is `failed`. The envelope of an error, without the parts that belong to a whole response.",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "messageKey": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "description": "Open: the parameters of the message, by key."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

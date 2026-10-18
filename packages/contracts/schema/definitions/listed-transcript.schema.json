@@ -6,7 +6,6 @@
   "type": "object",
   "required": [
     "conversation",
-    "sessionId",
     "summary",
     "origin",
     "cwd",
@@ -21,10 +20,6 @@
     "conversation": {
       "$ref": "./conversation-ref.schema.json",
       "description": "The conversation — what `session.start` takes as `resumeFrom`."
-    },
-    "sessionId": {
-      "type": "string",
-      "description": "The id of the conversation alone, for the published app of the previous protocol — gone when its window closes (plan 28, D-08)."
     },
     "summary": {
       "type": "string",

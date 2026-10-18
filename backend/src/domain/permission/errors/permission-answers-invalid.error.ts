@@ -25,7 +25,7 @@ export interface AnswersProblem {
  * Answers that do not fit the question the server published.
  *
  * Refused before anything is settled, so the request stays open and the person can answer again —
- * and so Claude never receives an answer to a question it did not ask
+ * and so the agent never receives an answer to a question it did not ask
  * ([plan 24](../../../../../docs/plans/24-structured-questions/README.md)). `422`: the payload has the
  * right shape, and its content does not fit what it answers.
  *

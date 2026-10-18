@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/agent-defaults.json",
+  "title": "AgentDefaults",
+  "description": "What a default sets for the sessions of one engine — for the user, or for a folder and its subfolders (plan 13, D-04, D-06; plan 28, D-06). Every field `null` is \"not set here\": the next layer down decides, and at the bottom the installation's own default.",
+  "type": "object",
+  "required": ["model", "permissionMode", "effort", "thinking", "fallbackModel"],
+  "properties": {
+    "model": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "permissionMode": {
+      "type": "string",
+      "enum": ["ask", "acceptEdits", "readOnly", "allowAll"],
+      "x-nullable": true
+    },
+    "effort": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "xhigh", "max"],
+      "x-nullable": true
+    },
+    "thinking": {
+      "type": "string",
+      "enum": ["on", "off"],
+      "x-nullable": true
+    },
+    "fallbackModel": {
+      "type": "string",
+      "x-nullable": true
+    }
+  }
+}

@@ -85,7 +85,7 @@ export class AgentSdkModelCheck implements ModelCheck {
         model,
         maxTurns: 1,
         maxBudgetUsd: this.settings.maxBudgetUsd,
-        op: 'claude.modelCheck',
+        op: 'engine.modelCheck',
         subject: 'model-check',
         what: 'answer the test',
         timeoutMs: this.settings.timeoutMs,
@@ -95,7 +95,7 @@ export class AgentSdkModelCheck implements ModelCheck {
     const outcome = { ...turn, latencyMs: Date.now() - startedAt };
 
     this.logger.debug(
-      { op: 'claude.modelCheck', layer: 'adapter', ...outcome },
+      { op: 'engine.modelCheck', layer: 'adapter', engine: CLAUDE_ENGINE, ...outcome },
       'the test of the connection ran',
     );
     return outcome;

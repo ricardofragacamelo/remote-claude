@@ -6,8 +6,8 @@ import { auditColumns } from './columns';
 /**
  * The `diag_sessions` table: the counter behind `diag.ping`.
  *
- * It holds no session of Claude. A live session is process state — a subprocess, a `for await` and
- * a pending promise — and it dies with the process, so it is held in memory and never here
+ * It holds no session of the agent. A live session is process state — a subprocess, a `for await`
+ * and a pending promise — and it dies with the process, so it is held in memory and never here
  * (docs/architecture/backend/06-realtime.md). What this table keeps is the diagnostic round trip.
  *
  * It is **not** the `DiagSession` entity: they change for different reasons, and the mapper in the

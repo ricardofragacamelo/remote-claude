@@ -1,4 +1,5 @@
-import type { KeptEntry } from '@/features/file-history';
+import type { KeptDeletePayloadKept } from '@remote-claude/contracts';
+
 import { api } from '@/shared/api/api';
 import type { DirectoryListing, NewEntryKind, WrittenEntry } from '../types/explorer';
 
@@ -131,10 +132,7 @@ export async function deleteEntry(
 }
 
 /** What a delete the local history kept answers: every entry that went, under one batch (07 · F8). */
-export interface KeptDeletion {
-  readonly batchId: string;
-  readonly entries: readonly KeptEntry[];
-}
+export type KeptDeletion = KeptDeletePayloadKept;
 
 /**
  * Deletes an entry — a folder with all it holds — keeping each file and folder in the local history

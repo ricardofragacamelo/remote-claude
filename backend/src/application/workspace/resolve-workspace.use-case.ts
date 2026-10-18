@@ -8,9 +8,9 @@ import type { WorkspaceUsageRepository } from './ports/workspace-usage.repositor
 import { resolveFolder } from './resolve-folder';
 
 /**
- * Turns a path somebody typed into a directory Claude may be started in.
+ * Turns a path somebody typed into a directory the agent may be started in.
  *
- * This is the gate every session goes through, because `cwd` of the Agent SDK's `query()` **is**
+ * This is the gate every session goes through, because `cwd` of the engine's start call **is**
  * the value it produces. The four checks, and their order, are {@link resolveFolder}'s.
  */
 export class ResolveWorkspaceUseCase {

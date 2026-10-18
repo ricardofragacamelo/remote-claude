@@ -58,7 +58,7 @@ function twoRootAllowlist(): TestAllowlist & { readonly theirs: string } {
 }
 
 /**
- * `GET /transcripts` and `GET /transcripts/:sessionId/messages`, against the real application —
+ * `GET /transcripts` and `GET /transcripts/:engine/:id/messages`, against the real application —
  * plan 04, F0.
  *
  * The guard, the pipes, the filter, the use cases, the adapter with its cache and its limiter, and
@@ -137,10 +137,6 @@ describe('the transcript HTTP surface', () => {
     return as === null ? call : call.set('authorization', `Bearer ${as}`);
   };
 
-  /** The same page, by the route of the previous protocol — its window (plan 28, D-08). */
-  const readPrevious = (id: string, query: Record<string, string> = {}): request.Test =>
-    http().get(`/transcripts/${id}/messages`).query(query).set('authorization', `Bearer ${token}`);
-
   /** Records a conversation as opened here, by `subject`. */
   async function openedHere(id: string, subject = SUBJECT): Promise<void> {
     await harness.app.get<SessionOriginRepository>(SESSION_ORIGIN_REPOSITORY).record({
@@ -187,23 +183,7 @@ describe('the transcript HTTP surface', () => {
         `${event.type}:${String(event.payload['messageId'] ?? event.payload['toolUseId'])}`,
     );
 
-  describe('the routes of an engine, and of the previous protocol — plan 28, S-38', () => {
-    it('answers the same page by the route of the engine and by the old one', async () => {
-      const id = conversation(1);
-
-      const current = await read(id);
-      const previous = await readPrevious(id);
-
-      expect(current.status).toBe(200);
-      expect(previous.status).toBe(200);
-      // The age is read off the clock at each request, and two requests may straddle a second.
-      expect(previous.body).toEqual({
-        ...current.body,
-        session: { ...current.body.session, writtenAgoSeconds: expect.any(Number) },
-      });
-      expect(current.body.session).toMatchObject({ conversation: { engine: 'claude', id } });
-    });
-
+  describe('the routes of an engine — plan 28', () => {
     it('answers `404` for a conversation of an engine that is not enabled', async () => {
       const id = conversation(1);
 
@@ -245,7 +225,6 @@ describe('the transcript HTTP surface', () => {
         sessions: [
           {
             conversation: { engine: 'claude', id: ours },
-            sessionId: ours,
             summary: expect.any(String),
             origin: 'ours',
             cwd: allowlist.root,
@@ -256,7 +235,10 @@ describe('the transcript HTTP surface', () => {
             liveSessionId: null,
             writtenAgoSeconds: expect.any(Number),
           },
-          expect.objectContaining({ sessionId: external, origin: 'external' }),
+          expect.objectContaining({
+            conversation: { engine: 'claude', id: external },
+            origin: 'external',
+          }),
         ],
         nextCursor: null,
       });
@@ -297,12 +279,12 @@ describe('the transcript HTTP surface', () => {
       store.append(conversationId(3), [], 9_000);
       const rest = await list({ cursor: String(first.body.nextCursor), limit: '10' });
 
-      expect(first.body.sessions.map((s: { sessionId: string }) => s.sessionId)).toEqual([
-        conversationId(1),
-      ]);
-      expect(rest.body.sessions.map((s: { sessionId: string }) => s.sessionId)).toEqual([
-        conversationId(2),
-      ]);
+      expect(
+        first.body.sessions.map((s: { conversation: { id: string } }) => s.conversation.id),
+      ).toEqual([conversationId(1)]);
+      expect(
+        rest.body.sessions.map((s: { conversation: { id: string } }) => s.conversation.id),
+      ).toEqual([conversationId(2)]);
       expect(rest.body.nextCursor).toBeNull();
     });
 
@@ -386,10 +368,15 @@ describe('the transcript HTTP surface', () => {
       const recent = conversation(7, { lastModified: Date.now() - 5_000 });
       const old = conversation(8, { lastModified: Date.now() - 3_600_000 });
 
-      const sessions = (await list()).body.sessions as { sessionId: string; activity: string }[];
+      const sessions = (await list()).body.sessions as {
+        conversation: { id: string };
+        activity: string;
+      }[];
 
-      expect(sessions.find((row) => row.sessionId === recent)?.activity).toBe('activeElsewhere');
-      expect(sessions.find((row) => row.sessionId === old)?.activity).toBe('idle');
+      expect(sessions.find((row) => row.conversation.id === recent)?.activity).toBe(
+        'activeElsewhere',
+      );
+      expect(sessions.find((row) => row.conversation.id === old)?.activity).toBe('idle');
     });
 
     it('names the live session that holds a conversation of the caller — S-27', async () => {
@@ -401,8 +388,8 @@ describe('the transcript HTTP surface', () => {
         lastModified: Date.now(),
       });
 
-      const row = ((await list()).body.sessions as Record<string, unknown>[]).find(
-        (entry) => entry['sessionId'] === live.conversation,
+      const row = ((await list()).body.sessions as { conversation: { id: string } }[]).find(
+        (entry) => entry.conversation.id === live.conversation,
       );
 
       expect(row).toMatchObject({
@@ -432,9 +419,11 @@ describe('the transcript HTTP surface', () => {
       const deep = await list({ includeSubfolders: 'true' });
 
       expect((exact.body.sessions as unknown[]).length).toBe(0);
-      expect((deep.body.sessions as { sessionId: string }[]).map((row) => row.sessionId)).toEqual([
-        conversationId(21),
-      ]);
+      expect(
+        (deep.body.sessions as { conversation: { id: string } }[]).map(
+          (row) => row.conversation.id,
+        ),
+      ).toEqual([conversationId(21)]);
       expect(store.calls.listSessions.at(-1)).toEqual({ includeWorktrees: false });
     });
 
@@ -472,7 +461,7 @@ describe('the transcript HTTP surface', () => {
       });
 
       const ids = [...first.body.sessions, ...second.body.sessions].map(
-        (row: { sessionId: string }) => row.sessionId,
+        (row: { conversation: { id: string } }) => row.conversation.id,
       );
       expect(ids).toEqual([conversationId(33), conversationId(32), conversationId(31)]);
     });
@@ -488,30 +477,6 @@ describe('the transcript HTTP surface', () => {
 
       expect([history.status, history.body.error.code]).toEqual([502, 'AGENT_UNAVAILABLE']);
       expect(live.status).toBe(200);
-    });
-  });
-
-  /** Plan 08, B-21 — what a subagent said, loaded when its tool is unfolded. */
-  describe('the task list of a conversation — plan 08, B-20', () => {
-    it('reads back the id of every task created, from the text the store kept — S-87', async () => {
-      const id = conversationId(80);
-      store.add({
-        sessionId: id,
-        directory: allowlist.root,
-        cwd: allowlist.root,
-        lastModified: (written += 1_000),
-        messages: capturedTranscript('task-tools-turn'),
-      });
-
-      const response = await read(id, { limit: '100' });
-      const events = response.body.events as { type: string; payload: Record<string, unknown> }[];
-
-      expect(response.status).toBe(200);
-      expect(
-        events
-          .filter((event) => event.type === 'tool.completed' && 'taskId' in event.payload)
-          .map((event) => event.payload['taskId']),
-      ).toEqual(['1', '2', '3']);
     });
   });
 
@@ -616,7 +581,10 @@ describe('the transcript HTTP surface', () => {
       const response = await read(id);
 
       expect(response.status).toBe(200);
-      expect(response.body.session).toMatchObject({ sessionId: id, origin: 'external' });
+      expect(response.body.session).toMatchObject({
+        conversation: { engine: 'claude', id },
+        origin: 'external',
+      });
       expect(new Set(response.body.events.map((e: { type: string }) => e.type))).toEqual(
         new Set(['message.completed', 'tool.started', 'tool.completed']),
       );
@@ -697,35 +665,10 @@ describe('the transcript HTTP surface', () => {
       const response = await pending;
       const snapshot = [capturedTranscript('tool-turn', 0), capturedTranscript('tool-turn', 1)]
         .flat()
-        .flatMap((message) => historicalEvents(message, allowlist.root))
-        .map(withPreviousToolFields);
+        .flatMap((message) => historicalEvents(message, allowlist.root));
 
       expect(response.status).toBe(200);
       expect(response.body.events).toEqual(snapshot);
-    });
-
-    it('carries a call by its canonical fields, and by the previous ones beside them — plan 28, D-22', async () => {
-      const id = conversation(1, { turns: 2 });
-
-      const response = await read(id, { limit: '100' });
-      const started = (response.body.events as { type: string; payload: Record<string, unknown> }[])
-        .filter((event) => event.type === 'tool.started')
-        .map((event) => event.payload);
-
-      expect(response.status).toBe(200);
-      expect(started.length).toBeGreaterThan(0);
-      for (const payload of started) {
-        const origin = payload['origin'] as { engine: string; native: string };
-        expect(payload).toMatchObject({
-          kind: expect.any(String),
-          label: { messageKey: expect.stringMatching(/^sessions\.tool\./) },
-          changes: expect.any(Array),
-          origin: { engine: 'claude' },
-          // Beside, for an app on a store that reads them until F7: the name and the raw input.
-          toolName: origin.native,
-          input: payload['rawInput'],
-        });
-      }
     });
 
     it('continues from its cursor after the live session appended, without a repeat — S-57', async () => {
@@ -966,11 +909,11 @@ describe('the transcript HTTP surface', () => {
     await list();
     await read(id);
 
-    const reads = harness.log.withOp('claude.transcript.read');
+    const reads = harness.log.withOp('engine.transcript.read');
     const written = JSON.stringify(harness.log.lines);
 
     expect(reads.length).toBeGreaterThanOrEqual(3);
-    expect(harness.log.withOp('claude.transcript.messages')[0]).toMatchObject({
+    expect(harness.log.withOp('engine.transcript.messages')[0]).toMatchObject({
       claudeSessionId: id,
       cache: 'miss',
     });
@@ -979,24 +922,3 @@ describe('the transcript HTTP surface', () => {
     expect(written).not.toContain('safety and speed');
   });
 });
-
-/**
- * A `tool.started` of the history as a page over HTTP carries it: the canonical fields, and the
- * engine's name and the raw input beside them, for an app on a store (plan 28, D-22).
- */
-function withPreviousToolFields(event: {
-  readonly type: string;
-  readonly payload: object;
-}): object {
-  if (event.type !== 'tool.started') {
-    return event;
-  }
-  const payload = event.payload as {
-    readonly origin: { native: string };
-    readonly rawInput: unknown;
-  };
-  return {
-    ...event,
-    payload: { ...payload, toolName: payload.origin.native, input: payload.rawInput },
-  };
-}

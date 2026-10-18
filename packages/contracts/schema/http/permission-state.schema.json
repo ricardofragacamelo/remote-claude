@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-state.json",
+  "title": "PermissionState",
+  "description": "`GET /sessions/:sessionId/permissions/:requestId`: the state of one permission request, for a client that was told about it by somebody else — a push may be minutes late, so the app asks before it renders (plan 02, D-22). In the domain this is a discriminated union by `status` (`pending` carries `request` and `remainingExtensions`; `resolved` carries the rest), which the generator cannot express as a `oneOf`; flattened here with every field but `status` optional, paired by `status` (plan 28, B-48). `request` is carried as a generic open object — exactly `permission.requested`'s payload — rather than a precise nested shape, because the domain type behind it (`Readonly<Record<string, unknown>>`) is already open at the TypeScript boundary.",
+  "x-kind": "http",
+  "x-type": "permission.state",
+  "x-route": [{ "method": "GET", "path": "/sessions/:sessionId/permissions/:requestId" }],
+  "type": "object",
+  "required": ["status"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["pending", "resolved"]
+    },
+    "request": {
+      "type": "object",
+      "description": "Present exactly when `status` is `pending`. Exactly the `permission.requested` payload — the card renders from this and nothing else."
+    },
+    "remainingExtensions": {
+      "type": "integer",
+      "description": "Present exactly when `status` is `pending`. What stops a card offering an extension that no longer exists."
+    },
+    "requestId": {
+      "type": "string",
+      "description": "Present exactly when `status` is `resolved`. The request that was settled."
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["allow", "deny"],
+      "description": "Present exactly when `status` is `resolved`."
+    },
+    "auto": {
+      "type": "boolean",
+      "description": "Present exactly when `status` is `resolved`. The server decided it, with nobody answering."
+    },
+    "resolvedBy": {
+      "type": "string",
+      "description": "Present when `status` is `resolved` and a human answered."
+    },
+    "resolvedFrom": {
+      "type": "string",
+      "enum": ["web", "mobile"],
+      "description": "Present when `status` is `resolved` and a human answered."
+    },
+    "toolUseId": {
+      "type": "string",
+      "description": "Present when `status` is `resolved` and the engine named a tool call."
+    },
+    "via": {
+      "type": "string",
+      "enum": ["rule", "allowAll", "readOnly"],
+      "description": "Present when `status` is `resolved` and nobody was asked."
+    },
+    "answers": {
+      "type": "array",
+      "maxItems": 4,
+      "description": "Present when `status` is `resolved`, the request was a question and the decision `allow`.",
+      "items": {
+        "type": "object",
+        "required": ["questionId", "selected"],
+        "properties": {
+          "questionId": {
+            "type": "string"
+          },
+          "selected": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "type": "string"
+            }
+          },
+          "other": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "interaction": {
+      "$ref": "../definitions/interaction.schema.json",
+      "description": "Present when `status` is `resolved` and the request was a question — the phone a push opened draws it with what was answered."
+    }
+  }
+}

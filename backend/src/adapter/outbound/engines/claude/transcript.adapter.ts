@@ -119,8 +119,9 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
 
     this.logger.debug(
       {
-        op: 'claude.transcript.list',
+        op: 'engine.transcript.list',
         layer: 'adapter',
+        engine: CLAUDE_ENGINE,
         ...context,
         sessions: sessions.length,
         unaddressable: infos.length - sessions.length,
@@ -139,8 +140,9 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
   ): void {
     this.logger.debug(
       {
-        op: 'claude.transcript.list',
+        op: 'engine.transcript.list',
         layer: 'adapter',
+        engine: CLAUDE_ENGINE,
         ...context,
         sessions: sessions.length,
         shared: hit,
@@ -157,8 +159,9 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
 
     this.logger.debug(
       {
-        op: 'claude.transcript.find',
+        op: 'engine.transcript.find',
         layer: 'adapter',
+        engine: CLAUDE_ENGINE,
         claudeSessionId: id.id,
         found: session !== null,
       },
@@ -189,8 +192,9 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
 
     this.logger.debug(
       {
-        op: 'claude.transcript.messages',
+        op: 'engine.transcript.messages',
         layer: 'adapter',
+        engine: CLAUDE_ENGINE,
         claudeSessionId,
         lastModified: session.lastModified,
         messages: value.length,
@@ -236,8 +240,9 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
 
     this.logger.debug(
       {
-        op: 'claude.transcript.subagent',
+        op: 'engine.transcript.subagent',
         layer: 'adapter',
+        engine: CLAUDE_ENGINE,
         claudeSessionId,
         toolUseId,
         found: value !== NO_SUBAGENT,
@@ -256,8 +261,9 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
     // The id, whether it was there and how long it is — never what it says (S-27).
     this.logger.debug(
       {
-        op: 'claude.transcript.toolResult',
+        op: 'engine.transcript.toolResult',
         layer: 'adapter',
+        engine: CLAUDE_ENGINE,
         claudeSessionId: session.id.id,
         toolUseId,
         found: text !== null,
@@ -277,8 +283,9 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
     // The type and the length of the encoding — never a byte of the image (S-33).
     this.logger.debug(
       {
-        op: 'claude.transcript.promptImage',
+        op: 'engine.transcript.promptImage',
         layer: 'adapter',
+        engine: CLAUDE_ENGINE,
         claudeSessionId: session.id.id,
         blockId,
         found: image !== null,
@@ -334,7 +341,13 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
     const startedAt = Date.now();
 
     this.logger.debug(
-      { op: 'claude.transcript.read', layer: 'adapter', operation, ...context },
+      {
+        op: 'engine.transcript.read',
+        layer: 'adapter',
+        engine: CLAUDE_ENGINE,
+        operation,
+        ...context,
+      },
       'reading the transcript store',
     );
 
@@ -350,7 +363,14 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
 
       if (error instanceof TranscriptTimeoutError) {
         this.logger.warn(
-          { op: 'claude.transcript.read', layer: 'adapter', operation, ...context, durationMs },
+          {
+            op: 'engine.transcript.read',
+            layer: 'adapter',
+            engine: CLAUDE_ENGINE,
+            operation,
+            ...context,
+            durationMs,
+          },
           'the transcript store did not answer in time',
         );
         throw error;
@@ -358,8 +378,9 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
 
       this.logger.error(
         {
-          op: 'claude.transcript.read',
+          op: 'engine.transcript.read',
           layer: 'adapter',
+          engine: CLAUDE_ENGINE,
           operation,
           ...context,
           durationMs,

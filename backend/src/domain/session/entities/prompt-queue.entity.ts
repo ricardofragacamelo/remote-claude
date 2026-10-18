@@ -12,7 +12,7 @@ export const REMEMBERED_DEPARTURES = 200;
 export interface QueuedPrompt {
   readonly queueId: string;
 
-  /** What Claude receives: the text typed, its mentions guarded, the context composed after it. */
+  /** What the agent receives: the text typed, its mentions guarded, the context composed after it. */
   readonly text: string;
 
   /** The images and what the log may say of the context — absent for a prompt without any. */
@@ -39,11 +39,11 @@ export function previewOf(text: string): string {
 /**
  * The prompts of one session that wait for its turn to end — plan 08, D-14.
  *
- * The queue is **ours** and not the SDK's: a prompt handed to the SDK mid-turn is folded into the
+ * The queue is **ours** and not the engine's: a prompt handed to the engine mid-turn is folded into the
  * turn running (measured, discovery §10.4), and cannot be taken back. Held here, it runs as a turn of
  * its own, in the order it arrived from whichever client, and any of them can take it out first.
  *
- * A turn is open from the moment a prompt goes to the SDK until its `turn.completed`; a prompt that
+ * A turn is open from the moment a prompt goes to the engine until its `turn.completed`; a prompt that
  * arrives while one is open waits.
  */
 export class PromptQueue {
@@ -87,7 +87,7 @@ export class PromptQueue {
   }
 
   /**
-   * Takes a waiting prompt out, before it reaches Claude. The ones behind it move up by one.
+   * Takes a waiting prompt out, before it reaches the agent. The ones behind it move up by one.
    *
    * @throws {QueuedPromptStartedError} it already became a turn — stopping it now is interrupting
    * @throws {QueuedPromptNotFoundError} the queue never had it

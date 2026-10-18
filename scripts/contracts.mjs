@@ -15,6 +15,7 @@ import process from 'node:process';
 import { repoRoot } from './lib/paths.mjs';
 import { ContractError } from './lib/contracts-model.mjs';
 import { drift, targets, write } from './lib/contracts-io.mjs';
+import { checkRoutes } from './lib/contracts-routes.mjs';
 import { dim, fail, hint, line, ok, title } from './lib/ui.mjs';
 
 const check = process.argv.includes('--check');
@@ -56,14 +57,40 @@ function isStale(target) {
   return true;
 }
 
-function main() {
-  title(`contracts — ${check ? 'check' : 'generate'}`);
+/**
+ * Reports every HTTP route the backend registers with no schema and no documented exception, and
+ * every schema or exception naming a route that does not exist (plan 28, B-48). Only meaningful
+ * for `--check`: the route table is read from the controllers, never generated, so there is
+ * nothing for `pnpm contracts:generate` to write for it.
+ *
+ * @returns {boolean} whether every route and schema agree
+ */
+function routesOk() {
+  const problems = checkRoutes(repoRoot);
 
-  const planned = plannedTargets();
-  if (planned === null) {
-    return 1;
+  if (problems.length === 0) {
+    ok('routes — every one has a schema or a documented exception');
+    return true;
   }
 
+  for (const problem of problems) {
+    fail(`${problem.method} ${problem.path}`, problem.detail);
+  }
+  hint(
+    'add "x-route" to the schema that answers the route, or an entry (with a reason) to scripts/contracts-route-exceptions.json',
+  );
+
+  return false;
+}
+
+/**
+ * Generates or checks every planned target, and answers the names of the ones out of sync — empty
+ * while generating, since writing one always leaves it in sync.
+ *
+ * @param {import('./lib/contracts-io.mjs').Target[]} planned
+ * @returns {string[]}
+ */
+function syncTargets(planned) {
   /** @type {string[]} */
   const stale = [];
 
@@ -75,11 +102,30 @@ function main() {
     }
   }
 
+  return stale;
+}
+
+function main() {
+  title(`contracts — ${check ? 'check' : 'generate'}`);
+
+  const planned = plannedTargets();
+  if (planned === null) {
+    return 1;
+  }
+
+  const stale = syncTargets(planned);
+  const routesPass = check ? routesOk() : true;
+
   line();
 
   if (stale.length > 0) {
     fail(`${stale.join(' and ')} out of sync with packages/contracts/schema/`);
     hint('run `pnpm contracts:generate` and commit what it writes');
+    return 1;
+  }
+
+  if (!routesPass) {
+    fail('one or more HTTP routes and their schemas disagree');
     return 1;
   }
 

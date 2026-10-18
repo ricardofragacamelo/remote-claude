@@ -154,7 +154,8 @@
     {
       "term": "Agent",
       "match": "literal",
-      "reason": "a native tool name of Claude Code",
+      "kinds": ["string"],
+      "reason": "a native tool name of Claude Code; also the neutral word the core itself uses for the installed coding agent, which a `kinds` of `string` alone tells apart from a comparison against the raw native name",
       "home": "the tool classifier — the core reads the kind `agent`"
     },
     {

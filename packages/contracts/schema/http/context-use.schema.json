@@ -5,6 +5,7 @@
   "description": "`GET /sessions/:sessionId/context`: how full the context window of a live session is, by category, against the window of its model (plan 08, B-37; plan 28, B-24). `409 ENGINE_CAPABILITY_UNAVAILABLE` when the engine has no `contextUse`.",
   "x-kind": "http",
   "x-type": "session.context",
+  "x-route": [{ "method": "GET", "path": "/sessions/:sessionId/context" }],
   "type": "object",
   "required": ["model", "totalTokens", "maxTokens", "percentage", "categories"],
   "properties": {
@@ -30,7 +31,7 @@
       "description": "What the window holds, by category.",
       "items": {
         "type": "object",
-        "required": ["id", "name", "tokens", "kind"],
+        "required": ["id", "tokens", "kind"],
         "properties": {
           "id": {
             "type": "string",
@@ -45,10 +46,6 @@
           "text": {
             "type": "string",
             "description": "The engine's own name for a category with no key — its words, shown as they are. Absent on a canonical one."
-          },
-          "name": {
-            "type": "string",
-            "description": "The engine's own name, always — kept for the clients of the previous protocol, which read it for an id they do not know (plan 28, D-22). Goes with the window, in F7."
           },
           "tokens": {
             "type": "integer"

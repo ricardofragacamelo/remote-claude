@@ -11,6 +11,7 @@ import { useLocale } from '@/shared/hooks/useLocale';
 import { useTheme } from '@/shared/hooks/useTheme';
 import { VISITOR_PREFIX } from '@/shared/lib/visitor-storage';
 import { mountApp } from '../../support/app';
+import { ENGINES, backendAnswers } from '../../support/claude-settings';
 import { translator } from '../../support/render';
 import { fakeWorkspaceApi, projects, refusal, scratch } from '../../support/workspace-api';
 import type { RecentDto } from '../../support/workspace-api';
@@ -75,6 +76,22 @@ describe('the app’s Settings — plan 06, B-31', () => {
     expect(await heading('settings.section.appearance')).toBeVisible();
     expect(mounted.path()).toBe('/settings/appearance');
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it("leaves this screen with a way to the default engine's own, and no section of it here — S-55; plan 28, B-38", async () => {
+    const user = userEvent.setup();
+    backendAnswers(ENGINES);
+    const app = mountApp('/settings');
+
+    await user.click(
+      await screen.findByRole('link', {
+        name: t('settings.links.agentSettings', { engine: 'claude' }),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(app.path()).toBe('/settings/agents/claude');
+    });
   });
 
   describe('Appearance', () => {

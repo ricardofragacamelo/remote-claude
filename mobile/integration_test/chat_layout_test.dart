@@ -105,18 +105,6 @@ void main() {
     find.descendant(of: find.byType(ConversationView), matching: find.byType(Scrollable)).first,
   );
 
-  /// Waits for the card of the question of [sessionId] in the conversation, buys time on it, and
-  /// answers the request's id.
-  Future<String> aCardOnScreen(WidgetTester tester, SignedInApp app, String sessionId) async {
-    final SessionRobot robot = app.robot(tester);
-    await pumpUntil(tester, () => app.queueOf(sessionId).pending.isNotEmpty);
-    await pumpUntil(tester, () => robot.cardInConversation.evaluate().isNotEmpty);
-    final String requestId = app.queueOf(sessionId).pending.single.requestId;
-    await extendedOnTheCard(tester, app, sessionId, requestId);
-
-    return requestId;
-  }
-
   /// Allows the question on screen once — through the deliberate second step when it is
   /// destructive — and waits for the server to settle it.
   Future<void> allowedOnce(
@@ -219,7 +207,7 @@ void main() {
       boxWhole(tester, robot);
 
       // The card, and the line under the conversation saying who is waited on.
-      final String requestId = await aCardOnScreen(tester, app, sessionId);
+      final String requestId = await cardRequestIdOnScreen(tester, app, sessionId);
       await pumpUntil(
         tester,
         () => find
@@ -269,7 +257,7 @@ void main() {
 
       // The pill: away from the card, it says the agent waits; tapped, it brings the card back.
       await robot.prompt(turnOf(layout.text('inlineTurn')));
-      final String first = await aCardOnScreen(tester, app, sessionId);
+      final String first = await cardRequestIdOnScreen(tester, app, sessionId);
       final ScrollableState scroller = conversationScroller(tester);
       scroller.position.jumpTo(scroller.position.minScrollExtent);
       await tester.pump(const Duration(milliseconds: 300));
@@ -284,7 +272,7 @@ void main() {
       addTearDown(browser.close);
       browser.attach(sessionId);
       await robot.prompt(turnOf(layout.text('inlineTurn')));
-      final String second = await aCardOnScreen(tester, app, sessionId);
+      final String second = await cardRequestIdOnScreen(tester, app, sessionId);
       final Map<String, Object?> asked = await browser.waitFor(
         (Map<String, Object?> frame) =>
             frame['type'] == 'permission.requested' &&
@@ -299,7 +287,7 @@ void main() {
       // Away in the middle of a question, and back: the socket replays, the card is there once, and
       // nothing of the conversation is twice.
       await robot.prompt(turnOf(layout.text('inlineTurn')));
-      final String third = await aCardOnScreen(tester, app, sessionId);
+      final String third = await cardRequestIdOnScreen(tester, app, sessionId);
       final List<String> before = app
           .conversationOf(sessionId)
           .entries
@@ -367,7 +355,7 @@ void main() {
     // Asking — with every extension bought, since the checks take their time.
     final int before = turnsOf(app, sessionId);
     await robot.prompt(turnOf(layout.text('inlineTurn')));
-    final String requestId = await aCardOnScreen(tester, app, sessionId);
+    final String requestId = await cardRequestIdOnScreen(tester, app, sessionId);
     await app.robot(tester).answer(app.l10n.permissionExtend);
     await tester.pump(const Duration(milliseconds: 300));
     await guidelinesHold('asking');
@@ -402,7 +390,7 @@ void main() {
     final String sessionId = await aSession(tester, app);
     final int before = turnsOf(app, sessionId);
     await robot.prompt(turnOf(layout.text('inlineTurn')));
-    final String requestId = await aCardOnScreen(tester, app, sessionId);
+    final String requestId = await cardRequestIdOnScreen(tester, app, sessionId);
     boxWhole(tester, robot);
 
     // The command exactly as it will run — in its box, which scrolls rather than cuts.

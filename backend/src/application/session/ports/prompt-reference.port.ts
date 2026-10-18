@@ -10,7 +10,7 @@ export interface InspectedReference {
 }
 
 /**
- * How `session` asks `files` whether a path a prompt names may be read by Claude — plan 08, B-44.
+ * How `session` asks `files` whether a path a prompt names may be read by the agent — plan 08, B-44.
  *
  * The check is the fence of the `files` module of plan 07 — the string half of `FilePath` and the
  * `realpath` half of the disk — against the **session's** folder, through a port, so `session`

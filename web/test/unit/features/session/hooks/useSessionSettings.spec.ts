@@ -105,7 +105,7 @@ describe('the choices of a live session — plan 09, B-11', () => {
 
     const panel = agentPanelStore(FOLDER).getState();
     const draft = panel.openDraft();
-    panel.setChoices(draft, { model: 'opus', mode: 'ask', effort: 'high' });
+    panel.setChoices(draft, { engine: null, model: 'opus', mode: 'ask', effort: 'high' });
     act(() => {
       panel.promote(draft, SESSION);
     });

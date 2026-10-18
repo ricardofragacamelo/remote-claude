@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { cn } from '@/shared/lib/utils';
+import { SectionTabs } from '@/shared/components/SectionTabs';
 import { useSettingsSearch } from '../hooks/useSettingsSearch';
 import { useSettingsSections } from '../hooks/useSettingsSections';
 import { sectionFor } from '../store/settings-sections';
@@ -62,26 +62,14 @@ export function SettingsScreen({ section, onSection }: SettingsScreenProps): Rea
             search.setQuery(event.target.value);
           }}
         />
-        <ul className="flex flex-row flex-wrap gap-1 md:flex-col">
-          {sections.map((entry) => (
-            <li key={entry.id}>
-              <button
-                type="button"
-                aria-current={entry === active ? 'page' : undefined}
-                className={cn(
-                  'flex min-h-touch w-full items-center gap-2 rounded-md px-3 text-ui hover:bg-accent md:min-h-8',
-                  entry === active && 'bg-accent text-accent-foreground',
-                )}
-                onClick={() => {
-                  onSection(entry.id);
-                }}
-              >
-                <entry.icon className="size-4" aria-hidden />
-                {t(entry.labelKey)}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <SectionTabs
+          entries={sections}
+          active={active}
+          label={(entry) => t(entry.labelKey)}
+          onSelect={(entry) => {
+            onSection(entry.id);
+          }}
+        />
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col gap-4">

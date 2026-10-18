@@ -126,10 +126,9 @@ carregar só o necessário.
 
 ---
 
-## Alvo do plano 28 — a porta de motor e os três anéis
+## A porta de motor e os três anéis
 
-> **Alvo do [plano 28](../plans/28-agent-neutral-core/README.md)** ([ADR-025](shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)).
-> As regras já valem desde a F0; o desenho chega fase a fase.
+[Plano 28](../plans/28-agent-neutral-core/README.md) ([ADR-025](shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)).
 
 O backend fala com o agente de código por uma **porta de motor**, e o Claude é o único adapter
 registrado. O adapter interpreta o motor e entrega ao núcleo, e aos clientes, o contrato canônico: o

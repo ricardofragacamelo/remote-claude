@@ -7,7 +7,7 @@
  * whole version, and the `ETag` says which (plan 07, B-18, S-125).
  *
  * Keyed by the **real** path, so a symlink and its target are one file. A writer outside this
- * process — the CLI of Claude writes straight to the disk — does not take it; that window is
+ * process — the agent's own CLI writes straight to the disk — does not take it; that window is
  * declared in plan 07, R-01, and covered by the hash check right before the rename.
  *
  * A port in `shared` because two modules take it and neither may import the other; the

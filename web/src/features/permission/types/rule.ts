@@ -1,4 +1,6 @@
-import type { PermissionDecision, PersistedScope } from './permission';
+import type { PermissionRule as ContractPermissionRule } from '@remote-claude/contracts';
+
+import type { PersistedScope } from './permission';
 
 /**
  * Whether a rule still answers.
@@ -10,62 +12,30 @@ import type { PermissionDecision, PersistedScope } from './permission';
  * answered, and then it says it was revoked
  * ([D-18](../../../../../docs/plans/03-rules-and-audit/decisions.md)).
  */
-export type RuleStatus = 'active' | 'expired' | 'revoked' | 'disabled';
+export type RuleStatus = ContractPermissionRule['status'];
 
 /**
  * Why a rule stopped answering on its own: it was written for an agent in a form this version cannot
  * carry over to the canonical grammar, so it was kept, disabled, for the person to see and create
  * again (plan 28, D-18). `reason` is a code (`untranslatable`), never a sentence.
  */
-export interface RuleDisabled {
-  readonly reason: string;
-}
+export type RuleDisabled = NonNullable<ContractPermissionRule['disabled']>;
 
 /**
- * Something the user authorised in advance, as the rules screen knows it.
+ * Something the user authorised in advance, as the rules screen knows it (`GET /permission-rules`
+ * and friends).
  *
  * `always` means, in practice, "don't ask me again" — which is why every field that says how far
  * it reaches is here, and why none of them is optional.
+ *
+ * Narrower than the contract's `PermissionRule` on two fields: `scope` is only ever `project` or
+ * `always` here — the one reachable from these routes, `session` living in memory only and never
+ * persisted or listed (plan 28, B-48) — and `toolName` is left out entirely: kept by the server for
+ * the published app, but this screen names a rule by its `kind`, never by the engine's own word.
  */
-export interface PermissionRule {
-  readonly id: string;
+export type PermissionRule = Omit<ContractPermissionRule, 'scope' | 'toolName'> & {
   readonly scope: PersistedScope;
-
-  /**
-   * The kind of call the rule answers (`shell`, `file.edit`), as the server read it from the pattern.
-   * `null` on a disabled rule, whose pattern was never carried over.
-   */
-  readonly kind: string | null;
-
-  /**
-   * Exactly as granted, in the canonical grammar: `shell(git status:*)`. Opaque here — the server
-   * parses it, the screen shows it as written. A disabled rule keeps the pattern it was written with.
-   */
-  readonly pattern: string;
-
-  readonly decision: PermissionDecision;
-
-  /** The workspace root a `project` rule is confined to; `null` on `always`. */
-  readonly projectPath: string | null;
-
-  /** Who granted it. Always the person looking, since nobody sees another person's rules. */
-  readonly grantedBy: string;
-
-  /** ISO 8601. */
-  readonly grantedAt: string;
-  readonly expiresAt: string;
-
-  readonly status: RuleStatus;
-
-  /** ISO 8601, when it was taken back. `null` while it has not been. */
-  readonly revokedAt: string | null;
-
-  /** The engine the rule is restricted to; `null` when it holds for every agent with the kind. */
-  readonly engine: string | null;
-
-  /** Why it answers nothing any more, when it was disabled; `null` otherwise. */
-  readonly disabled: RuleDisabled | null;
-}
+};
 
 /** A rule on screen: the rule, and whether it is about to stop answering. */
 export interface ListedRule {

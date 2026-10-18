@@ -7,8 +7,8 @@ const translator = new PushTranslator();
 describe('the push catalogue', () => {
   // S-17: the payload goes out already rendered, in the language the device registered.
   it('answers in the language the device registered — S-17', () => {
-    const english = translator.permission('en', { toolName: 'Bash' });
-    const portuguese = translator.permission('pt-BR', { toolName: 'Bash' });
+    const english = translator.permission('en', { agent: 'Claude', toolName: 'Bash' });
+    const portuguese = translator.permission('pt-BR', { agent: 'Claude', toolName: 'Bash' });
 
     expect(english.title).not.toBe(portuguese.title);
     expect(english.body).toContain('Bash');
@@ -17,43 +17,52 @@ describe('the push catalogue', () => {
 
   // S-18: a notification with no words is worse than one in the wrong language.
   it.each(['fr', 'pt', 'en-GB', ''])('falls back to en for %s, never to a key — S-18', (locale) => {
-    const text = translator.permission(locale, { toolName: 'Bash' });
+    const text = translator.permission(locale, { agent: 'Claude', toolName: 'Bash' });
 
-    expect(text).toEqual(translator.permission('en', { toolName: 'Bash' }));
+    expect(text).toEqual(translator.permission('en', { agent: 'Claude', toolName: 'Bash' }));
     expect(text.title).not.toContain('push.');
     expect(text.title).not.toBe('');
     expect(text.body).not.toBe('');
   });
 
   it('interpolates by name, so word order can differ between languages', () => {
-    expect(translator.permission('pt-BR', { toolName: 'Write' }).body).toContain('Write');
+    expect(translator.permission('pt-BR', { agent: 'Claude', toolName: 'Write' }).body).toContain(
+      'Write',
+    );
   });
 
   // A hole where a value should have been is the nastiest failure this catalogue can have.
   it('leaves no placeholder unfilled when the value is given', () => {
-    const text = translator.permission('en', { toolName: 'Bash' });
+    const text = translator.permission('en', { agent: 'Claude', toolName: 'Bash' });
 
     expect(text.body).not.toContain('{{');
+    expect(text.title).not.toContain('{{');
+  });
+
+  it('names the agent the request is of, never a word of its own', () => {
+    expect(translator.permission('en', { agent: 'Claude', toolName: 'Bash' }).title).toBe(
+      'Claude is waiting for you',
+    );
   });
 
   it('says the same thing twice — the instance is reused, not rebuilt', () => {
-    expect(translator.permission('en', { toolName: 'Bash' })).toEqual(
-      translator.permission('en', { toolName: 'Bash' }),
+    expect(translator.permission('en', { agent: 'Claude', toolName: 'Bash' })).toEqual(
+      translator.permission('en', { agent: 'Claude', toolName: 'Bash' }),
     );
   });
 });
 
-describe('a question of Claude — plan 24, D-22', () => {
+describe('a question of the agent — plan 24, D-22', () => {
   it('has words of its own, in the language of the device, and falls back to en — S-52', () => {
-    const english = translator.question('en');
-    const portuguese = translator.question('pt-BR');
+    const english = translator.question('en', { agent: 'Claude' });
+    const portuguese = translator.question('pt-BR', { agent: 'Claude' });
 
     expect(english).toEqual({ title: 'Claude has a question for you', body: 'Open to answer.' });
     expect(portuguese).toEqual({
-      title: 'O Claude tem uma pergunta para você',
+      title: 'Claude tem uma pergunta para você',
       body: 'Abra para responder.',
     });
-    expect(translator.question('fr')).toEqual(english);
+    expect(translator.question('fr', { agent: 'Claude' })).toEqual(english);
   });
 });
 

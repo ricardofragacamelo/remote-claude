@@ -162,7 +162,6 @@ describe('the settings, one section at a time — plan 06, S-142', () => {
 
 describe('the other screens of the navigation, reached by their links', () => {
   it.each([
-    ['/claude-settings', '/_frame/claude-settings'],
     ['/devices', '/_frame/devices'],
     ['/diagnostics', '/_frame/diagnostics'],
     ['/about', '/_frame/about'],
@@ -185,6 +184,43 @@ describe('the addresses no plan has registered yet — plan 06, S-07', () => {
     );
 
     expect(reserved).toEqual([]);
+  });
+});
+
+describe('the address plan 13 retired — D-07, plan 28, B-38', () => {
+  it('answers /claude-settings, pasted from an old link, with the translated not-found', async () => {
+    expect((await land('/claude-settings')).routes).toEqual(['__root__']);
+  });
+});
+
+describe("an engine's settings, reached by its link — plan 13; plan 28, B-36, B-38", () => {
+  it('lands the engine and the section the link names', async () => {
+    const landed = await land('/settings/agents/claude?section=installation');
+
+    expect(landed.routes).toEqual(['__root__', '/_frame', '/_frame/settings/agents/$engine']);
+    expect(landed.params).toEqual({ engine: 'claude' });
+    expect(landed.search).toEqual({ section: 'installation' });
+  });
+
+  it('sends an address that names no section, or one this engine does not have, to the first one', async () => {
+    const bare = await land('/settings/agents/claude');
+    expect(bare.search).toEqual({ section: 'account' });
+
+    const unknown = await land('/settings/agents/claude?section=nowhere');
+    expect(unknown.search).toEqual({ section: 'account' });
+  });
+
+  it('keeps the folder of the address alongside the section', async () => {
+    const landed = await land('/settings/agents/claude?section=models&folder=%2Fsrv%2Fapp');
+
+    expect(landed.search).toEqual({ section: 'models', folder: '/srv/app' });
+  });
+
+  it("is still the agent's screen for an engine nobody's extension registered — the core's own sections stand", async () => {
+    const landed = await land('/settings/agents/other');
+
+    expect(landed.routes).toEqual(['__root__', '/_frame', '/_frame/settings/agents/$engine']);
+    expect(landed.search).toEqual({ section: 'models' });
   });
 });
 

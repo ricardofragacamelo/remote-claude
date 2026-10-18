@@ -17,7 +17,6 @@ import type { PermissionRequest } from '@/features/permission';
 import { folderTabStore } from '@/features/workbench';
 import { wsClient } from '@/shared/api/ws';
 import { capabilitiesIn } from '../lib/capabilities';
-import { formerCommandIdsOf } from '../lib/former-ids';
 import { nextPanelMode, offeredModes, shownMode } from '../lib/panel-modes';
 import { goToCard } from '../lib/request-finder';
 import { interruptSession, setSessionPermissionMode } from '../services/live-session.service';
@@ -222,5 +221,5 @@ export function usePanelCommands(folder: string, tabs: PanelTabs): void {
     },
   ];
 
-  useCommands(declarations.map((each) => ({ ...each, formerIds: formerCommandIdsOf(each.id) })));
+  useCommands(declarations);
 }

@@ -1,13 +1,14 @@
-/// The mode, the model and the effort, as chips of the composer bar, each opening a sheet
-/// (plan 10, B-11).
+/// The engine, the mode, the model and the effort, as chips of the composer bar, each opening a
+/// sheet (plan 10, B-11; plan 28, B-45).
 ///
-/// The lists are never ours: the modes and the levels of effort are the ones the engine announces in
-/// its capabilities (plan 28, B-27, B-28) — one mode, or no level, and there is nothing to choose,
-/// so no chip —, and the models come from the session or, in a draft, from the folder's catalogue.
-/// Permitir tudo (`allowAll`) is ours (plan 23, ADR-022): the backend still sees every tool, a rule
-/// that refuses still refuses, and switching it off asks again at the next tool. `acceptEdits` and
-/// `allowAll` **look** different: a warning tone with an icon of their own, never only a colour, and
-/// the warning in full in the sheet.
+/// The lists are never ours: the engines are the ones `GET /engines` lists as available, the modes
+/// and the levels of effort are the ones the engine announces in its capabilities (plan 28, B-27,
+/// B-28) — one mode, or no level, and there is nothing to choose, so no chip —, and the models come
+/// from the session or, in a draft, from the folder's catalogue. Permitir tudo (`allowAll`) is ours
+/// (plan 23, ADR-022): the backend still sees every tool, a rule that refuses still refuses, and
+/// switching it off asks again at the next tool. `acceptEdits` and `allowAll` **look** different: a
+/// warning tone with an icon of their own, never only a colour, and the warning in full in the
+/// sheet.
 library;
 
 import 'dart:async';
@@ -20,6 +21,7 @@ import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/message_strip.dart';
+import 'package:remote_claude/features/session/domain/entities/engine.dart';
 import 'package:remote_claude/features/session/domain/entities/insight.dart';
 import 'package:remote_claude/features/session/presentation/widgets/composer_bar.dart';
 import 'package:remote_claude/features/session/presentation/widgets/session_sheet.dart';
@@ -116,6 +118,53 @@ ComposerChoice? modeChoice(
               ),
           ],
           onPick: isPending ? null : onPick,
+        ),
+      ),
+    ),
+  );
+}
+
+/// The engine chip — in a draft only (plan 28, B-45): a running session keeps the engine it opened
+/// on. `null` with fewer than two **available** engines (S-126): a second engine that is not
+/// installed, or whose security assertion is unmet, is never offered, the same way it never opens a
+/// session when named by hand — the mirror, on mobile, of the web's own `EnginePicker` (D-48, D-49).
+ComposerChoice? engineChoice(
+  BuildContext context, {
+  required EngineCatalogue? catalogue,
+  required String? current,
+  required void Function(String? engine) onPick,
+}) {
+  final List<Engine> available = <Engine>[
+    for (final Engine engine in catalogue?.engines ?? const <Engine>[])
+      if (engine.isAvailable) engine,
+  ];
+
+  if (available.length < 2) {
+    return null;
+  }
+
+  final AppLocalizations l10n = AppLocalizations.of(context);
+  final Engine? chosen = current == null
+      ? null
+      : available.where((Engine engine) => engine.id == current).firstOrNull;
+  final String value = current == null ? l10n.engineDefault : (chosen?.displayName ?? current);
+
+  return ComposerChoice(
+    label: l10n.engineLabel,
+    value: value,
+    icon: Icons.smart_toy_outlined,
+    onOpen: () => unawaited(
+      _openSheet(
+        context,
+        _PickSheet<String?>(
+          title: l10n.engineLabel,
+          current: current,
+          options: <_Option<String?>>[
+            _Option<String?>(value: null, title: l10n.engineDefault),
+            for (final Engine engine in available)
+              _Option<String?>(value: engine.id, title: engine.displayName),
+          ],
+          onPick: onPick,
         ),
       ),
     ),

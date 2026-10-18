@@ -46,6 +46,13 @@ export interface LiveSession extends Conversation {
   readonly connection: ConnectionStatus;
   readonly sessionId: string | null;
 
+  /**
+   * The conversation this session is — its engine and its id in that engine's store — once the
+   * stream or the attach has said so; `null` until then. What the box names its engine by
+   * (plan 28, B-44), among other things.
+   */
+  readonly conversation: ConversationRef | null;
+
   /** What is on screen is only what the ring buffer still held. The UI says so. */
   readonly isPartial: boolean;
 
@@ -140,6 +147,7 @@ export function useLiveSession(sessionId: string | null): LiveSession {
   return {
     connection,
     sessionId,
+    conversation: state.conversation,
     status: state.status,
     messages: state.messages,
     tools: state.tools,

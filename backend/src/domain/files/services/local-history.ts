@@ -5,7 +5,7 @@ import type { UserId } from '@domain/auth';
  * ([D-17](../../../../../docs/plans/07-explorer-and-editor/decisions.md#d-17--o-histórico-local)).
  *
  * The history is **per path**: a move never overwrites (D-12), so no version is lost by one, and a
- * renamed file does not take its versions along. Only the person's writes enter — Claude's have the
+ * renamed file does not take its versions along. Only the person's writes enter — the agent's have the
  * undo store of the session, and two copies of one fact diverge.
  */
 

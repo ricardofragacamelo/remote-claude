@@ -1,0 +1,14 @@
+{
+  "id": "28·S-125…S-126",
+  "title": "the app's own panel of the test engine: a write renders and is approved the same way as Claude's, and nothing without the capability — nor the installation's default name — ever shows",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "engineId": "test",
+    "agentName": "Test agent",
+    "fixture": "tool-turn",
+    "toolTitle": "Write a file"
+  }
+}

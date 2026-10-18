@@ -77,18 +77,13 @@ function conversationOf(engine: string | null, id: string | null): ConversationR
   return engine === null || id === null ? null : ConversationRef.create(engine, id);
 }
 
-/**
- * The columns that name a conversation. The old `claude_session_id` is written beside the new two
- * until the window of the previous protocol closes, and a migration drops it (plan 28, F7).
- */
+/** The columns that name a conversation. */
 export function conversationColumns(conversation: ConversationRef | null): {
   readonly engine: string | null;
   readonly conversationId: string | null;
-  readonly claudeSessionId: string | null;
 } {
   return {
     engine: conversation?.engine.value ?? null,
     conversationId: conversation?.id ?? null,
-    claudeSessionId: conversation?.id ?? null,
   };
 }

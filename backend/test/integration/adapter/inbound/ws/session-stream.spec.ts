@@ -141,6 +141,28 @@ describe('a live session over the gateway', () => {
     expect(socket.isOpen).toBe(true);
   });
 
+  it.each(['bypassPermissions', 'default', 'plan'])(
+    'refuses `%s` as a `permissionMode` of `session.start` — not one of the canonical four',
+    async (permissionMode) => {
+      const socket = await connect();
+      socket.send(commandFrame('session.start', { workspacePath: root, permissionMode }));
+
+      const error = await until(socket, 'error');
+      expect(error.payload).toMatchObject({ code: 'INVALID_INPUT' });
+    },
+  );
+
+  it('refuses `bypassPermissions` as a `session.setPermissionMode`, on a session already open', async () => {
+    const socket = await connect();
+    const sessionId = await start(socket);
+
+    socket.send(
+      commandFrame('session.setPermissionMode', { sessionId, mode: 'bypassPermissions' }),
+    );
+
+    expect((await until(socket, 'error')).payload).toMatchObject({ code: 'INVALID_INPUT' });
+  });
+
   it('streams a turn as events of our contract, never as SDK messages', async () => {
     const socket = await connect();
     const sessionId = await start(socket);

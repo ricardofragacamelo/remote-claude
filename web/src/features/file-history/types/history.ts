@@ -1,3 +1,12 @@
+import type {
+  FileLimitsPayload,
+  HistoryPagePayload,
+  HistoryPagePayloadEntriesItem,
+  HistoryPagePayloadEntriesItemAuthor,
+  KeptDeletePayloadKeptEntriesItem,
+  RestoredEntryPayload,
+} from '@remote-claude/contracts';
+
 import type { AppError } from '@/shared/api/errors';
 
 /**
@@ -9,59 +18,22 @@ export const HISTORY_REASONS = ['save', 'delete', 'restore', 'upload'] as const;
 export type HistoryReason = (typeof HISTORY_REASONS)[number];
 
 /** Who wrote the version: the person asking, or somebody else who reaches the same folder (D-17). */
-export interface HistoryAuthor {
-  readonly self: boolean;
+export type HistoryAuthor = HistoryPagePayloadEntriesItemAuthor;
 
-  /** The identity the server knows — the token's subject, never a name. */
-  readonly id: string;
-}
-
-/** One version of the local history, as the Timeline shows it. */
-export interface HistoryEntry {
-  readonly id: string;
-
-  /** Relative to the folder, POSIX — the history is by path, and does not follow a rename. */
-  readonly path: string;
-  readonly entryKind: 'file' | 'directory';
-  readonly reason: HistoryReason;
-
-  /** `tooLarge`: above the ceiling of a snapshot — the fact is kept, the content is not. */
-  readonly kept: 'yes' | 'tooLarge';
-  readonly sizeBytes: number | null;
-  readonly author: HistoryAuthor;
-
-  /** ISO 8601. */
-  readonly at: string;
-
-  /** The delete it came from, for every entry of one delete — `null` otherwise. */
-  readonly batchId: string | null;
-}
+/** One version of the local history, as the Timeline shows it (`GET /files/history`). */
+export type HistoryEntry = HistoryPagePayloadEntriesItem;
 
 /** One page of versions, newest first. */
-export interface HistoryPage {
-  readonly entries: readonly HistoryEntry[];
-
-  /** Where the next page starts — `null` on the last one. */
-  readonly nextCursor: string | null;
-}
+export type HistoryPage = HistoryPagePayload;
 
 /** One entry a delete kept, as its `200` lists it — what the "Undo" of the delete restores. */
-export interface KeptEntry {
-  readonly id: string;
-  readonly path: string;
-  readonly entryKind: 'file' | 'directory';
-}
+export type KeptEntry = KeptDeletePayloadKeptEntriesItem;
 
-/** What a restore left on disk. */
-export interface RestoredEntry {
-  readonly path: string;
-
-  /** `null` for a folder. */
-  readonly etag: string | null;
-
-  /** `false`: the disk already had that version, and nothing was written. */
-  readonly written: boolean;
-}
+/**
+ * What a restore left on disk — the size and the fate of the version it replaced are the server's
+ * to know; this screen names only what it shows (`POST /files/history/:entryId/restore`).
+ */
+export type RestoredEntry = Pick<RestoredEntryPayload, 'path' | 'etag' | 'written'>;
 
 /** How one entry of an undone delete went — the explorer's outcome screen reads it as its own. */
 export type RestoreResult =
@@ -69,7 +41,4 @@ export type RestoreResult =
   | { readonly path: string; readonly ok: false; readonly error: AppError };
 
 /** The ceilings of the local history the server says — what the help tells. */
-export interface HistoryLimits {
-  /** A file larger than this is not kept: the entry says so (`kept: tooLarge`). */
-  readonly historyMaxFileBytes: number;
-}
+export type HistoryLimits = Pick<FileLimitsPayload, 'historyMaxFileBytes'>;

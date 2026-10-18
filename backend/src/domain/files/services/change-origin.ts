@@ -4,7 +4,7 @@ import type { ChangeKind } from './folder-changes';
 /** Who changed a path, as far as the server can tell — the contract's `changes[].origin`. */
 export type ChangeOrigin = 'agent' | 'user' | 'external';
 
-/** Who left a mark: a session of Claude, or a person through the routes of `files`. */
+/** Who left a mark: a session of the agent, or a person through the routes of `files`. */
 export type Writer = Exclude<ChangeOrigin, 'external'>;
 
 /**
@@ -43,11 +43,11 @@ export function needsHash(kind: ChangeKind, marks: readonly WriteMark[]): boolea
  * Who changed a path: the latest recent write whose outcome **is** what the disk holds now.
  *
  * - a deletion is the writer's who removed the path — a person's delete or move (S-149);
- * - anything else is the writer's whose contents match the bytes on disk — Claude's
+ * - anything else is the writer's whose contents match the bytes on disk — the agent's
  *   `session.fileStateRecorded` (S-148), or a person's save — or whose write left "anything" there;
  * - nothing matches → `external` (S-150).
  *
- * Claude and the person writing the same file inside the window are told apart by the **final**
+ * The agent and the person writing the same file inside the window are told apart by the **final**
  * bytes, never by who wrote last: a mark whose outcome is not on disk any more explains nothing,
  * and the origin is never invented (S-151). Two marks that both match — the same bytes, written
  * twice — go to the later one.

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+// Registers the engine whose files this suite treats as sensitive — `.claude/`, `.mcp.json` — the
+// same side-effecting import the app itself makes (plan 28, B-39).
+import '@/app/engines';
 import { whenOf } from '@/features/file-history/lib/entries';
 import { timelineStore } from '@/features/file-history/store/timeline.store';
 import { openDiff } from '@/features/editor';

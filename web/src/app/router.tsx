@@ -6,14 +6,19 @@ import {
   redirect,
 } from '@tanstack/react-router';
 
+import {
+  agentSettingsSections,
+  firstAgentSectionId,
+  readAgentSettingsSearch,
+  sectionsForEngine,
+} from '@/features/agent-settings';
 import { CALLBACK_PATH } from '@/features/auth';
-import { readClaudeSettingsSearch } from '@/features/claude-settings';
 import { firstSectionId, settingsSections } from '@/features/settings';
 import { AboutRoute } from './AboutRoute';
+import { AgentSettingsRoute } from './AgentSettingsRoute';
 import { App } from './App';
 import { AuditRoute, readAuditSearch } from './AuditRoute';
 import { Callback } from './Callback';
-import { ClaudeSettingsRoute } from './ClaudeSettingsRoute';
 import { DevicesRoute } from './DevicesRoute';
 import { DiagnosticsRoute } from './DiagnosticsRoute';
 import { FramedOutlet } from './FramedOutlet';
@@ -23,6 +28,10 @@ import { RulesRoute } from './RulesRoute';
 import { SettingsRoute } from './SettingsRoute';
 import { readWorkbenchSearch } from './workbench-location';
 import { WorkbenchRoute } from './WorkbenchRoute';
+// The composition root of the engine extensions (ADR-025): imported here, not only from
+// `main.tsx`, so a test that builds its own router from `routeTree` (`mountApp`) sees the same
+// registrations the real app does — the same reason `WorkbenchRoute` already pulls the editor's in.
+import '@/app/engines';
 
 /**
  * The routes.
@@ -150,14 +159,31 @@ const settingsRoute = createRoute({
 });
 
 /**
- * How the agent works on this machine (plan 13): the section and the folder in the search, so the
- * link reproduces the screen. A section nobody knows is the first one, without an error.
+ * How an engine works on this machine (plan 13; plan 28, B-36, B-38): the engine in the path, the
+ * section and the folder in the search, so the link reproduces the screen.
+ *
+ * A section nobody knows for this engine is sent to the first one it has, the same discipline as
+ * `/settings/$section` — not silently shown as if it were, since which sections exist depends on
+ * which engine is in the path, known only here, with `params` in hand.
  */
-const claudeSettingsRoute = createRoute({
+const agentSettingsRoute = createRoute({
   getParentRoute: () => frameRoute,
-  path: '/claude-settings',
-  validateSearch: readClaudeSettingsSearch,
-  component: ClaudeSettingsRoute,
+  path: '/settings/agents/$engine',
+  validateSearch: readAgentSettingsSearch,
+  beforeLoad: ({ params, search }) => {
+    const entries = sectionsForEngine(agentSettingsSections.entries(), params.engine);
+    const first = firstAgentSectionId(entries);
+
+    if (!entries.some((entry) => entry.id === search.section)) {
+      throw redirect({
+        to: '/settings/agents/$engine',
+        params,
+        search: { ...search, section: first },
+        replace: true,
+      });
+    }
+  },
+  component: AgentSettingsRoute,
 });
 
 /** The versions of the installation, the documentation and the license (B-32). */
@@ -171,10 +197,12 @@ const aboutRoute = createRoute({
  * Every route, as one tree — exported so a test can mount the real table on a memory history.
  *
  * The map is in docs/architecture/web/04-state-and-data.md#o-mapa-de-rotas. `/usage…` is
- * **reserved** to plan 16 and deliberately absent, and so is anything under `/claude/` — plan 13
- * took `/claude-settings`: an address nobody
- * registered answers the translated not-found, never an empty screen. So do `/sessions/$sessionId`,
- * `/history` and `/history/$conversationId`, removed without a compatibility link
+ * **reserved** to plan 16 and deliberately absent, and so is anything under an engine extension's
+ * own old REST prefix (`v-1`), and the address plan 13 gave this screen before plan 28 (B-38) moved
+ * it to `/settings/agents/$engine`: an
+ * address nobody registered answers the translated not-found, never an empty screen, the same
+ * discipline `/sessions/$sessionId`, `/history` and `/history/$conversationId` already set, removed
+ * without a compatibility link
  * ([06 · D-07](../../../docs/plans/06-workbench/decisions.md#d-07--o-destino-da-home-e-das-rotas-antigas)):
  * the live session is in the tab of its folder, and the history comes back with plan 08.
  */
@@ -190,7 +218,7 @@ export const routeTree = rootRoute.addChildren([
     diagnosticsRoute,
     settingsIndexRoute,
     settingsRoute,
-    claudeSettingsRoute,
+    agentSettingsRoute,
     aboutRoute,
   ]),
 ]);

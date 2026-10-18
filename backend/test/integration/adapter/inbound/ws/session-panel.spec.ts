@@ -371,12 +371,11 @@ describe('the panel of Claude', () => {
       expect(context.body.categories).toContainEqual({
         id: 'free',
         messageKey: 'sessions.context.free',
-        name: 'Free space',
         tokens: expect.any(Number),
         kind: 'free',
       });
       expect(context.body.categories).toContainEqual(
-        expect.objectContaining({ id: 'skills', text: 'Skills', name: 'Skills' }),
+        expect.objectContaining({ id: 'skills', text: 'Skills' }),
       );
       for (const category of context.body.categories as Record<string, unknown>[]) {
         expect('messageKey' in category !== 'text' in category, String(category['id'])).toBe(true);

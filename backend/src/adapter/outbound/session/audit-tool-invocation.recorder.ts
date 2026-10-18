@@ -52,7 +52,7 @@ export class AuditToolInvocationRecorder implements ToolInvocationRecorder {
 
     const outcome = await this.recordInvocation.execute({
       // The session knows its owner; the hook does not. Reading it here rather than threading it
-      // through the SDK keeps the adapter from inventing an identity when a session has gone.
+      // through the engine keeps the adapter from inventing an identity when a session has gone.
       userId: live?.session.ownerId ?? UNKNOWN_OWNER,
       sessionId: invocation.sessionId,
       toolUseId: invocation.toolUseId,

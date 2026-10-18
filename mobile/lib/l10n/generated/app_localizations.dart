@@ -2469,6 +2469,18 @@ abstract class AppLocalizations {
   /// **'Changing…'**
   String get composerChoicePending;
 
+  /// Engine chip, in a draft only (plan 28, B-45)
+  ///
+  /// In en, this message translates to:
+  /// **'Agent'**
+  String get engineLabel;
+
+  /// The engine a draft opens on when nobody chose one
+  ///
+  /// In en, this message translates to:
+  /// **'Installation default'**
+  String get engineDefault;
+
   /// Mode chip
   ///
   /// In en, this message translates to:

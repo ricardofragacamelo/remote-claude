@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import type { PermissionRuleListPayload, PermissionRulePayload } from '@remote-claude/contracts';
+
 import {
   DescribePermissionRuleUseCase,
   GrantPermissionRuleUseCase,
@@ -24,11 +26,7 @@ import { CLOCK } from '@application/shared';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import { grantPermissionRuleSchema, toPermissionRuleDto } from './permission-rules.dto';
-import type {
-  GrantPermissionRuleBody,
-  PermissionRuleDto,
-  PermissionRuleListDto,
-} from './permission-rules.dto';
+import type { GrantPermissionRuleBody } from './permission-rules.dto';
 
 /**
  * The rules that outlive a session: what somebody authorised in advance, and taking it back.
@@ -61,7 +59,7 @@ export class PermissionRulesController {
 
   /** The caller's rules, newest first — expired ones included and marked, revoked ones gone. */
   @Get()
-  async read(@CurrentUser() userId: UserId): Promise<PermissionRuleListDto> {
+  async read(@CurrentUser() userId: UserId): Promise<PermissionRuleListPayload> {
     return { rules: (await this.list.execute(userId)).map(toPermissionRuleDto) };
   }
 
@@ -73,7 +71,7 @@ export class PermissionRulesController {
   async readOne(
     @Param('ruleId') ruleId: string,
     @CurrentUser() userId: UserId,
-  ): Promise<PermissionRuleDto> {
+  ): Promise<PermissionRulePayload> {
     return toPermissionRuleDto(await this.describe.execute(userId, ruleId));
   }
 
@@ -88,7 +86,7 @@ export class PermissionRulesController {
   async create(
     @Body(new ZodPipe(grantPermissionRuleSchema)) body: GrantPermissionRuleBody,
     @CurrentUser() userId: UserId,
-  ): Promise<PermissionRuleDto> {
+  ): Promise<PermissionRulePayload> {
     const rule = await this.grant.execute({
       userId,
       pattern: body.pattern,
@@ -116,11 +114,11 @@ export class PermissionRulesController {
   async remove(
     @Param('ruleId') ruleId: string,
     @CurrentUser() userId: UserId,
-  ): Promise<PermissionRuleDto> {
+  ): Promise<PermissionRulePayload> {
     return this.described(await this.revoke.execute(userId, ruleId));
   }
 
-  private described(rule: PermissionRule): PermissionRuleDto {
+  private described(rule: PermissionRule): PermissionRulePayload {
     return toPermissionRuleDto({ rule, status: rule.statusAt(this.clock.now()) });
   }
 }

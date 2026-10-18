@@ -16,6 +16,7 @@ import type { PushTranslator } from '@shared/i18n/push-translator';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { scriptedSdk } from '../fakes/agent-sdk/scripted-query';
 import { ScriptedTranscripts } from '../fakes/agent-sdk/scripted-transcripts';
+import { withTestEngine } from '../fakes/engine/compose';
 import { FailFirstPushSender } from '../fakes/fail-first-push';
 import { conversationsElsewhere, ELSEWHERE_PATH } from './conversations-elsewhere';
 
@@ -27,6 +28,11 @@ import { conversationsElsewhere, ELSEWHERE_PATH } from './conversations-elsewher
  * the three that read Claude's store of conversations. The first replays a run captured from the
  * real SDK (`pnpm fixtures:record`); the second is a store that starts empty, so an end-to-end run
  * never reads the history of whoever happens to run it.
+ *
+ * A third is added, not replaced: the test engine of plan 28, B-43, registered beside Claude the
+ * same way `withTestEngine` wires it into any suite's `TestingModule` — a `session.start` naming no
+ * `engine` still opens on Claude, exactly as every scenario before B-44 already assumed. Only a web
+ * e2e spec that asks for `engine: 'test'` ever sees it.
  *
  * The two are **one** Claude, as on a real machine: what the replay says is written to that store,
  * the way `persistSession: true` writes it — so a conversation opened by the suite can be listed,
@@ -53,6 +59,11 @@ async function bootstrap(): Promise<void> {
     .useValue(scripted.createQuery)
     .overrideProvider(TRANSCRIPT_SDK)
     .useValue(transcripts);
+
+  // The test engine of plan 28, B-43, registered beside Claude — never instead of it (S-121): every
+  // scenario that never names `engine: 'test'` opens on Claude exactly as before (B-44's own
+  // regression concern, confirmed by the unmodified rest of this suite staying green).
+  builder = withTestEngine()(builder);
 
   // The real provider, failing its first announcement — only in the real-push run, which sets
   // this (plan 05, S-53). Every other run talks to a provider under `.invalid` anyway.

@@ -9,7 +9,7 @@ import { UnsupportedProtocolVersionError } from '@shared/errors/unsupported-prot
 const LIMIT = 65_536;
 
 const valid = {
-  v: 1,
+  v: 2,
   id: '01J0ABCDEFGHJKMNPQRSTVWXYZ',
   kind: 'command',
   type: 'diag.ping',
@@ -42,18 +42,16 @@ describe('decodeFrame', () => {
     expect(() => decodeFrame(JSON.stringify(frame), LIMIT)).toThrow(InputValidationError);
   });
 
-  it.each([
-    ['the current version', 2],
-    ['the one before it, in its window — plan 28, D-08', 1],
-  ])('accepts %s', (_case, version) => {
-    expect(decodeFrame(JSON.stringify({ ...valid, v: version }), LIMIT).v).toBe(version);
+  it('accepts the current version', () => {
+    expect(decodeFrame(JSON.stringify(valid), LIMIT).v).toBe(2);
   });
 
   it.each([
     ['a future version', 3],
-    ['one older than the window', 0],
+    ['the window of the previous protocol, closed in plan 28, B-47', 1],
+    ['one older still', 0],
     ['a missing version', undefined],
-    ['a version that is a string', '1'],
+    ['a version that is a string', '2'],
   ])('refuses %s, so the client can be told to update', (_case, version) => {
     expect(() => decodeFrame(JSON.stringify({ ...valid, v: version }), LIMIT)).toThrow(
       UnsupportedProtocolVersionError,
@@ -66,7 +64,7 @@ describe('decodeFrame', () => {
     try {
       decodeFrame(JSON.stringify({ ...valid, v: 99 }), LIMIT);
     } catch (error) {
-      expect((error as UnsupportedProtocolVersionError).supportedVersions).toEqual([2, 1]);
+      expect((error as UnsupportedProtocolVersionError).supportedVersions).toEqual([2]);
     }
   });
 

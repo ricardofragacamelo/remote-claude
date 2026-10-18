@@ -5,6 +5,7 @@
   "description": "What `GET /engines` answers: the coding agents this installation drives, the default first, and what each can do — before a session exists (plan 28, B-12; ADR-025). Nothing is spawned, no quota is spent, and no credential is part of it.",
   "x-kind": "http",
   "x-type": "engines.list",
+  "x-route": [{ "method": "GET", "path": "/engines" }],
   "type": "object",
   "required": ["defaultEngine", "engines"],
   "properties": {

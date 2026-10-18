@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/notification-page.json",
+  "title": "NotificationPage",
+  "description": "`GET /notifications`: a page of the centre, newest first, with how many are unread (plan 06, B-40).",
+  "x-kind": "http",
+  "x-type": "notifications.page",
+  "x-route": [{ "method": "GET", "path": "/notifications" }],
+  "type": "object",
+  "required": ["items", "unread", "nextCursor"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "$ref": "../definitions/notification.schema.json"
+      }
+    },
+    "unread": {
+      "type": "integer"
+    },
+    "nextCursor": {
+      "type": "string",
+      "x-nullable": true
+    }
+  }
+}

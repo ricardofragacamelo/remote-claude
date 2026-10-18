@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Param, UseGuards } from '@nestjs/common';
-import type { ContextUsePayload } from '@remote-claude/contracts';
+import type { AgentModel, ContextUsePayload } from '@remote-claude/contracts';
 
 import { InspectSessionUseCase } from '@application/session';
 import type { SessionModels } from '@application/session';
@@ -7,7 +7,6 @@ import type { UserId } from '@domain/auth';
 import type { ContextUse, McpServer } from '@domain/session';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import { toModelDto } from './model.dto';
-import type { ModelDto } from './model.dto';
 
 /**
  * What the panel shows about a live session without asking the model anything — plan 08, F4: the
@@ -25,8 +24,7 @@ import type { ModelDto } from './model.dto';
  */
 /**
  * The use of the context window as the contract carries it (plan 28, B-24): a canonical category by
- * its key, any other by the engine's words — and the engine's name beside both, for the clients of
- * the previous protocol (D-22). The percentage is whole: the screens draw a whole number.
+ * its key, any other by the engine's words. The percentage is whole: the screens draw a whole number.
  */
 export function toContextUseDto(use: ContextUse): ContextUsePayload {
   return {
@@ -39,7 +37,6 @@ export function toContextUseDto(use: ContextUse): ContextUsePayload {
       ...(category.messageKey === null
         ? { text: category.name }
         : { messageKey: category.messageKey }),
-      name: category.name,
       tokens: category.tokens,
       kind: category.kind,
     })),
@@ -56,7 +53,7 @@ export class SessionInsightController {
   async models(
     @Param('sessionId') sessionId: string,
     @CurrentUser() userId: UserId,
-  ): Promise<Omit<SessionModels, 'models'> & { readonly models: readonly ModelDto[] }> {
+  ): Promise<Omit<SessionModels, 'models'> & { readonly models: readonly AgentModel[] }> {
     const { current, models } = await this.inspect.modelsOf(sessionId, userId);
     return { current, models: models.map(toModelDto) };
   }

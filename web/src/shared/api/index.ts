@@ -6,6 +6,7 @@ export type { AppErrorDetail } from './errors';
 export { WsClient } from './ws-client';
 export type { ConnectionStatus, SessionSubscriber, SocketLike } from './ws-client';
 export { createFolderWatches } from './folder-watches';
+export { withFolder } from './with-folder';
 export type {
   FolderChange,
   FolderWatches,

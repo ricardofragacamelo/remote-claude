@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/restored-entry.json",
+  "title": "RestoredEntry",
+  "description": "`POST /files/history/:entryId/restore`: what a restore left. `etag` and `size` are `null` for a folder.",
+  "x-kind": "http",
+  "x-type": "files.history.restored",
+  "x-route": [{ "method": "POST", "path": "/files/history/:entryId/restore" }],
+  "type": "object",
+  "required": ["path", "etag", "size", "written", "history"],
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "etag": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "size": {
+      "type": "integer",
+      "x-nullable": true
+    },
+    "written": {
+      "type": "boolean"
+    },
+    "history": {
+      "$ref": "../definitions/history-outcome.schema.json",
+      "x-nullable": true
+    }
+  }
+}

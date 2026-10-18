@@ -56,7 +56,7 @@ export class PermissionSettlement {
     private readonly settings: PermissionSettings,
   ) {}
 
-  /** @returns who won, and the decision that actually reached the SDK */
+  /** @returns who won, and the decision that actually reached the engine */
   async settle(
     request: PermissionRequest,
     answer: PermissionAnswer,

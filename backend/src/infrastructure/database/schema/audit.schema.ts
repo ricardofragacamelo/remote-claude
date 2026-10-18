@@ -64,7 +64,7 @@ export const auditEntries = pgTable(
     // collides with the entry it repeats, so the trail never claims a command ran twice; a
     // permission decision about the same invocation is a different fact and gets its own row.
     // `NULLS DISTINCT` is the default and it is the point: `tool_use_id` is nullable because the
-    // SDK does not always give one, and under that rule two rows without an id do not collide.
+    // engine does not always give one, and under that rule two rows without an id do not collide.
     uniqueIndex('audit_entries_session_id_tool_use_id_decision_key').on(
       table.sessionId,
       table.toolUseId,

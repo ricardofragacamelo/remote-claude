@@ -1,0 +1,131 @@
+{
+  "$comment": "Routes `pnpm contracts:check` (plan 28, B-48) treats as deliberately without a schema under packages/contracts/schema/http/ — each with a reason, so a route missing from here fails the gate instead of going unnoticed. Checked against scripts/lib/http-routes.mjs's scanHttpRoutes() output: every route the backend registers is either named by an \"x-route\" entry of some schema, or named here, never both, never neither.",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "reason": "out of B-48's scope (plan 28, F6) — a liveness probe, not a product route"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/session",
+      "reason": "out of B-48's scope (plan 28, F6) — authentication, not a product route"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "reason": "out of B-48's scope (plan 28, F6) — authentication, not a product route"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "reason": "out of B-48's scope (plan 28, F6) — authentication, not a product route"
+    },
+    { "method": "GET", "path": "/catalog", "reason": "out of B-48's scope (plan 28, F6)" },
+    {
+      "method": "GET",
+      "path": "/sessions",
+      "reason": "out of B-48's scope (plan 28, F6) — the live-sessions list"
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/:sessionId/attachments",
+      "reason": "out of B-48's scope (plan 28, F6)"
+    },
+    {
+      "method": "GET",
+      "path": "/files/raw",
+      "reason": "void-returning handler (FileTransferController#readRaw) — streams bytes straight to the response, no JSON body to schema"
+    },
+    {
+      "method": "GET",
+      "path": "/files/archive",
+      "reason": "void-returning handler (FileTransferController#readArchive) — streams a zip straight to the response, no JSON body to schema"
+    },
+    {
+      "method": "PUT",
+      "path": "/workspaces/recent/pin",
+      "reason": "void-returning handler (WorkspaceController#pin) — 204, no body"
+    },
+    {
+      "method": "DELETE",
+      "path": "/workspaces/recent",
+      "reason": "void-returning handler (WorkspaceController#forget) — 204, no body"
+    },
+    {
+      "method": "DELETE",
+      "path": "/workspaces/open-folders",
+      "reason": "void-returning handler (WorkspaceController#close) — 204, no body"
+    },
+    {
+      "method": "PUT",
+      "path": "/workspaces/open-folders/order",
+      "reason": "void-returning handler (WorkspaceController#reorder) — 204, no body"
+    },
+    {
+      "method": "PUT",
+      "path": "/notifications/read",
+      "reason": "void-returning handler (NotificationController#readSome) — 204, no body"
+    },
+    {
+      "method": "PUT",
+      "path": "/notifications/read-all",
+      "reason": "void-returning handler (NotificationController#readAll) — 204, no body"
+    },
+    {
+      "method": "DELETE",
+      "path": "/notifications/:id",
+      "reason": "void-returning handler (NotificationController#remove) — 204, no body"
+    },
+    {
+      "method": "DELETE",
+      "path": "/notifications",
+      "reason": "void-returning handler (NotificationController#clear) — 204, no body"
+    },
+    {
+      "method": "DELETE",
+      "path": "/engines/:engine/defaults/folder",
+      "reason": "void-returning handler (AgentSettingsController#clearFolder) — 204, no body"
+    },
+    {
+      "method": "DELETE",
+      "path": "/engines/claude/output-style/folder",
+      "reason": "void-returning handler (ClaudeController#clearFolderOutputStyle) — 204, no body"
+    },
+    {
+      "method": "GET",
+      "path": "/transcripts/:engine/:id/images/:blockId",
+      "reason": "void-returning handler (TranscriptController#readImage) — streams image bytes straight to the response, no JSON body to schema"
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/:sessionId/commands",
+      "reason": "pre-existing gap outside B-48's declared scope (files/workspace/rules/audit/devices/notifications/diagnostics/engines) — not covered by B-12 either; flagged, not decided, by the session that wired this gate (plan 28)."
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/:sessionId/checkpoints",
+      "reason": "pre-existing gap outside B-48's declared scope (files/workspace/rules/audit/devices/notifications/diagnostics/engines) — not covered by B-12 either; flagged, not decided, by the session that wired this gate (plan 28)."
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/:sessionId/models",
+      "reason": "pre-existing gap outside B-48's declared scope (files/workspace/rules/audit/devices/notifications/diagnostics/engines) — not covered by B-12 either; flagged, not decided, by the session that wired this gate (plan 28)."
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/:sessionId/mcp-servers",
+      "reason": "pre-existing gap outside B-48's declared scope (files/workspace/rules/audit/devices/notifications/diagnostics/engines) — not covered by B-12 either; flagged, not decided, by the session that wired this gate (plan 28)."
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/:sessionId/changes",
+      "reason": "pre-existing gap outside B-48's declared scope (files/workspace/rules/audit/devices/notifications/diagnostics/engines) — not covered by B-12 either; flagged, not decided, by the session that wired this gate (plan 28)."
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/:sessionId/changes/file",
+      "reason": "pre-existing gap outside B-48's declared scope (files/workspace/rules/audit/devices/notifications/diagnostics/engines) — not covered by B-12 either; flagged, not decided, by the session that wired this gate (plan 28)."
+    }
+  ]
+}

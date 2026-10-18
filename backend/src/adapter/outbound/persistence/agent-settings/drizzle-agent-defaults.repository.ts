@@ -24,9 +24,11 @@ import { toDefaults, toRow } from './agent-defaults.mapper';
 export class DrizzleAgentDefaultsRepository implements AgentDefaultsRepository {
   constructor(
     @Inject(PERSISTENCE_CONTEXT) private readonly context: PersistenceContext,
+    // Mints the id of a default this engine of this user has never had a row for yet.
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
   ) {}
 
+  /** The engine's defaults: the user's own, and the folders that override them. */
   async read(userId: UserId, engine: string): Promise<StoredDefaults> {
     const rows = await runLogged(
       this.context.logger,

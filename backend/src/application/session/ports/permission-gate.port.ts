@@ -2,14 +2,14 @@ import type { PermissionRequest, QuestionAnswer } from '@domain/permission';
 import type { PermissionMode, SessionId } from '@domain/session';
 import type { CanonicalTool } from '@domain/engine';
 
-/** One question the SDK is holding its loop open for. */
+/** One question the engine is holding its loop open for. */
 export interface PermissionQuestion {
   readonly sessionId: SessionId;
 
   /**
-   * The SDK's own key for the question.
+   * The engine's own key for the question.
    *
-   * Idempotency is by **this** and never by `toolUseId`: after a transport gap the SDK redelivers
+   * Idempotency is by **this** and never by `toolUseId`: after a transport gap the engine redelivers
    * a pending call, and answering it twice would run the tool twice.
    */
   readonly requestId: string;
@@ -24,7 +24,7 @@ export interface PermissionQuestion {
    */
   readonly tool: CanonicalTool;
 
-  /** The SDK's cancellation. It fires when the session dies with a request still open. */
+  /** The engine's cancellation. It fires when the session dies with a request still open. */
   readonly signal: AbortSignal;
 }
 
@@ -32,12 +32,12 @@ export interface PermissionQuestion {
 export interface PermissionVerdict {
   readonly decision: 'allow' | 'deny';
 
-  /** Why it was refused. It goes back to Claude as a message, so it is never empty on a `deny`. */
+  /** Why it was refused. It goes back to the agent as a message, so it is never empty on a `deny`. */
   readonly reason: string | null;
 
   /**
    * What the person answered, on an `allow` of a question — by the id of each question, as the
-   * product carries it. The SDK's shape is the runner's to build: this port does not know it
+   * product carries it. The engine's shape is the runner's to build: this port does not know it
    * ([24 · D-03](../../../../../docs/plans/24-structured-questions/decisions.md)). `null` otherwise.
    */
   readonly answers: readonly QuestionAnswer[] | null;
@@ -52,7 +52,7 @@ export interface PermissionVerdict {
  * denies — belongs to the `permission` module, and `session` depends on the question rather than
  * on who answers it (docs/architecture/backend/03-modules.md#fronteiras).
  *
- * It never rejects. A gate that threw would leave the SDK to decide what an exception means, and
+ * It never rejects. A gate that threw would leave the engine to decide what an exception means, and
  * the one thing that must not be left to interpretation is what happens when nobody answers.
  */
 export interface SessionPermissionGate {

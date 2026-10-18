@@ -56,6 +56,7 @@ class Draft extends Equatable {
     choices.model,
     choices.permissionMode,
     choices.effort,
+    choices.engine,
     isStarting,
     failure,
     wasNotSent,
@@ -78,7 +79,11 @@ class DraftController extends _$DraftController with FollowsStart {
   /// Chooses the model. The effort goes back to the default: a level one model takes, another may
   /// not (S-34).
   void chooseModel(String? model) => state = state.copyWith(
-    choices: SessionChoices(model: model, permissionMode: state.choices.permissionMode),
+    choices: SessionChoices(
+      model: model,
+      permissionMode: state.choices.permissionMode,
+      engine: state.choices.engine,
+    ),
   );
 
   /// Chooses the mode.
@@ -87,6 +92,7 @@ class DraftController extends _$DraftController with FollowsStart {
       model: state.choices.model,
       permissionMode: mode,
       effort: state.choices.effort,
+      engine: state.choices.engine,
     ),
   );
 
@@ -96,7 +102,16 @@ class DraftController extends _$DraftController with FollowsStart {
       model: state.choices.model,
       permissionMode: state.choices.permissionMode,
       effort: effort,
+      engine: state.choices.engine,
     ),
+  );
+
+  /// Chooses the engine the session opens on (plan 28, B-45). The model and the effort go back to
+  /// the default: they are another engine's (D-49, mirroring D-48's `EnginePicker` on the web). The
+  /// mode stays — nothing here says it is wrong for the new engine, and the sheet that offers modes
+  /// already limits itself to what that engine announces.
+  void chooseEngine(String? engine) => state = state.copyWith(
+    choices: SessionChoices(permissionMode: state.choices.permissionMode, engine: engine),
   );
 
   /// Forgets why the last start was refused — the person closed the strip. The choices stay.

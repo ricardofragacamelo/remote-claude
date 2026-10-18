@@ -8,9 +8,12 @@ import type {
 } from '@remote-claude/contracts';
 import type { TaskItem } from '@domain/engine';
 import { TaskListTracker } from '@domain/session';
+import { menuOf } from '@domain/session';
 import { base64Size } from '@domain/shared';
+import { CLAUDE_COMMAND_MENU } from '@domain/engines/claude';
 import { isPlainObject } from '@shared/utils/plain-object';
 import { classifyTool } from './tool-classifier';
+import { toSlashCommand } from './slash-command-mapping';
 
 /** What a mapping produced: the events, and whatever the caller should log a warning about. */
 export interface MappedMessage {
@@ -150,6 +153,15 @@ function fromSystem(message: Extract<SDKMessage, { type: 'system' }>): MappedMes
           trigger: message.compact_metadata.trigger,
           preTokens: message.compact_metadata.pre_tokens,
         },
+      });
+
+    case 'commands_changed':
+      // The menu changed mid-session — a skill discovered as the agent works in a subdirectory,
+      // say. The push already carries the whole list, so the client replaces its menu with this
+      // instead of asking `supportedCommands()` again (found live, plan 28, B-46).
+      return events({
+        type: 'session.commandsChanged',
+        payload: { commands: menuOf(message.commands.map(toSlashCommand), CLAUDE_COMMAND_MENU) },
       });
 
     case 'api_retry':
@@ -447,7 +459,6 @@ function userEvents({
             toolUseId,
             status: succeeded ? 'succeeded' : 'failed',
             summary: summarise(block.content),
-            ...task,
             ...subagent,
             ...written,
           },
@@ -486,7 +497,7 @@ const TASK_CREATED = /^Task #(\S+) created successfully/;
  * in the text of the result — read from the whole of it, never from the cut `summary`. One message
  * of the CLI carries one result, so a message with several is read by its text only.
  */
-function taskOf(result: unknown, content: unknown): { readonly taskId?: string } {
+export function taskOf(result: unknown, content: unknown): { readonly taskId?: string } {
   if (isPlainObject(result)) {
     const task = result['task'];
     const id = isPlainObject(task) ? task['id'] : result['taskId'];

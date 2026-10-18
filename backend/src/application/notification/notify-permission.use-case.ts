@@ -16,7 +16,7 @@ export interface NotifyPermissionCommand {
   /** The tool's **name**. Never its input — a push goes through somebody else's server (S-19). */
   readonly toolName: string;
 
-  /** Whether it is a question of Claude rather than a permission — the words differ (plan 24, D-22). */
+  /** Whether it is a question of the agent rather than a permission — the words differ (plan 24, D-22). */
   readonly question: boolean;
 }
 
@@ -31,7 +31,7 @@ export type NotifyOutcome =
  *
  * - **somebody is watching that session.** They have already been asked. A notification on top of
  *   the card they are looking at is the noise that teaches people to dismiss notifications;
- * - **this request was already announced.** The SDK redelivers, the deadline is extended, a
+ * - **this request was already announced.** The engine redelivers, the deadline is extended, a
  *   reconnect replays — and none of those is a second question (S-24);
  * - **there is nobody to tell.** No approved device, or none with a token. That is not a failure:
  *   the request is still on the web, and the deadline still decides in the silence.

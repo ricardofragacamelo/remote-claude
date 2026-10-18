@@ -79,7 +79,7 @@ export function omitting(value: unknown, fields: readonly string[]): unknown {
 
 /**
  * What a frame of a given type carries that never reaches a log, though no name gives it away: the
- * text the person handed over as the context of a prompt — the output of a terminal — goes to Claude
+ * text the person handed over as the context of a prompt — the output of a terminal — goes to the agent
  * and to no line of ours (plan 08, S-204); and the entries of a conversation followed from the history
  * — the history is the user's, and its log line says how many events went and of which types, never
  * what they say (plan 22, S-72). Each is replaced by the marker, so the line still says it was there

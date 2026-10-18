@@ -9,6 +9,9 @@ import {
   NAVIGATION_POSITIONS,
 } from '@/app/global-navigation';
 import type { NavigationEntry } from '@/app/global-navigation';
+// Importing the composition root registers the engines' extensions — including Claude's place in
+// the navigation — onto the very singletons this spec reads (plan 28, B-38).
+import '@/app/engines';
 
 const nowhere = { workbenchFolder: null };
 
@@ -25,7 +28,7 @@ function entryOf(id: string, position: number, sections: readonly string[]): Nav
 }
 
 describe('the global navigation — plan 06, S-89', () => {
-  it('lists, in order, every screen there is — and no link for the place it holds — B-29…B-31, plan 13 B-09', () => {
+  it("lists, in order, every screen there is, including an engine extension's own place", () => {
     expect(globalNavigation.entries().map((entry) => entry.id)).toEqual([
       'workbench',
       'audit',
@@ -50,12 +53,11 @@ describe('the global navigation — plan 06, S-89', () => {
       'devices',
       'usage',
       'diagnostics',
-      'claude',
       'settings',
     ]);
   });
 
-  it('keeps the order the product states for every place', () => {
+  it("keeps the order the product states for every place, the engine extension's place included", () => {
     const order = Object.entries(NAVIGATION_POSITIONS)
       .sort(([, left], [, right]) => left - right)
       .map(([id]) => id);
@@ -67,7 +69,7 @@ describe('the global navigation — plan 06, S-89', () => {
       'devices',
       'usage',
       'diagnostics',
-      'claude',
+      'agents',
       'settings',
     ]);
   });
@@ -98,17 +100,17 @@ describe('the global navigation — plan 06, S-89', () => {
       '/rules',
       '/devices',
       '/diagnostics',
-      '/claude-settings',
+      '/settings/agents/claude',
       '/settings',
     ]);
   });
 
-  it("gives Claude's settings a place of its own, never a section of the app's — plan 13, S-55", () => {
+  it("gives the agent's settings a place of its own, never a section of the app's — plan 13, S-55; plan 28, B-38", () => {
     const claude = globalNavigation.entries().find((entry) => entry.id === 'claude');
 
-    expect(claude?.position).toBe(NAVIGATION_POSITIONS.claude);
-    expect(claude?.href(nowhere)).toBe('/claude-settings');
-    expect(claude?.sections).toEqual(['claude-settings']);
+    expect(claude?.position).toBe(NAVIGATION_POSITIONS.agents);
+    expect(claude?.href(nowhere)).toBe('/settings/agents/claude');
+    expect(claude?.sections).toEqual(['settings/agents']);
   });
 
   it('gives Devices a place of its own, never a section of Settings — S-138', () => {
@@ -151,5 +153,30 @@ describe('the place a path belongs to — plan 06, S-90', () => {
 
   it('reads an empty path as the root', () => {
     expect(activeEntry(entries, '')?.id).toBe('workbench');
+  });
+
+  it(
+    "lights the engine's settings, never the app's, for /settings/agents/claude — both start with " +
+      '"settings" (plan 28, B-38, S-111)',
+    () => {
+      expect(activeEntry(entries, '/settings/agents/claude')?.id).toBe('claude');
+      expect(activeEntry(entries, '/settings/agents/claude/')?.id).toBe('claude');
+    },
+  );
+
+  it("still lights the app's own Settings for every other address under /settings/…", () => {
+    expect(activeEntry(entries, '/settings/appearance')?.id).toBe('settings');
+    expect(activeEntry(entries, '/settings/workspaces')?.id).toBe('settings');
+    expect(activeEntry(entries, '/settings')?.id).toBe('settings');
+  });
+
+  it('matches a multi-segment section regardless of which entry was declared first', () => {
+    const reordered = createNavigation([
+      entryOf('agents', NAVIGATION_POSITIONS.agents, ['settings/agents']),
+      entryOf('settings', NAVIGATION_POSITIONS.settings, ['settings']),
+    ]);
+
+    expect(activeEntry(reordered.entries(), '/settings/agents/claude')?.id).toBe('agents');
+    expect(activeEntry(reordered.entries(), '/settings/appearance')?.id).toBe('settings');
   });
 });

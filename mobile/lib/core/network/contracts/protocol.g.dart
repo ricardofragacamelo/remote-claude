@@ -47,6 +47,7 @@ const List<String> frameTypes = <String>[
   'prompt.dequeued',
   'prompt.queued',
   'session.closed',
+  'session.commandsChanged',
   'session.compacted',
   'session.mcpStatusChanged',
   'session.rewound',
@@ -298,6 +299,12 @@ const String sessionClosedKind = 'event';
 /// `type` of a session.closed frame.
 const String sessionClosedType = 'session.closed';
 
+/// `kind` of a session.commandsChanged frame.
+const String sessionCommandsChangedKind = 'event';
+
+/// `type` of a session.commandsChanged frame.
+const String sessionCommandsChangedType = 'session.commandsChanged';
+
 /// `kind` of a session.compacted frame.
 const String sessionCompactedKind = 'event';
 
@@ -417,7 +424,7 @@ class Envelope {
         payload: json['payload'] as Map<String, Object?>?,
       );
 
-  /// Protocol version — `x-protocol-version` is the one this build speaks. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does. The server also accepts the version before it, during the window of deprecation, and answers each connection in the version it speaks (plan 28, D-08).
+  /// Protocol version — `x-protocol-version` is the one this build speaks. Adding an optional field or a new event does not change it; removing a field, renaming a type or changing a meaning does.
   final int v;
 
   /// ULID unique to this frame.
@@ -502,6 +509,140 @@ bool envelopeLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+/// What a default sets for the sessions of one engine — for the user, or for a folder and its subfolders (plan 13, D-04, D-06; plan 28, D-06). Every field `null` is "not set here": the next layer down decides, and at the bottom the installation's own default.
+class AgentDefaults {
+  const AgentDefaults({
+    required this.model,
+    required this.permissionMode,
+    required this.effort,
+    required this.thinking,
+    required this.fallbackModel,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AgentDefaults.fromJson(Map<String, Object?> json) => AgentDefaults(
+        model: json['model'] as String?,
+        permissionMode: json['permissionMode'] as String?,
+        effort: json['effort'] as String?,
+        thinking: json['thinking'] as String?,
+        fallbackModel: json['fallbackModel'] as String?,
+      );
+
+  final String? model;
+
+  final String? permissionMode;
+
+  final String? effort;
+
+  final String? thinking;
+
+  final String? fallbackModel;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'model': model,
+      'permissionMode': permissionMode,
+      'effort': effort,
+      'thinking': thinking,
+      'fallbackModel': fallbackModel,
+    };
+
+    return json;
+  }
+}
+
+/// A model of an engine's installation, as the clients read it (plan 13, B-13; plan 28, B-36) — discovered from the engine, never a list in the code.
+class AgentModel {
+  const AgentModel({
+    required this.value,
+    required this.resolvedModel,
+    required this.displayName,
+    required this.description,
+    required this.supportedEffortLevels,
+    required this.supportsEffort,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AgentModel.fromJson(Map<String, Object?> json) => AgentModel(
+        value: json['value']! as String,
+        resolvedModel: json['resolvedModel'] as String?,
+        displayName: json['displayName']! as String,
+        description: json['description']! as String,
+        supportedEffortLevels: (json['supportedEffortLevels']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        supportsEffort: json['supportsEffort']! as bool,
+      );
+
+  /// What `setModel` and `session.start.model` take.
+  final String value;
+
+  /// The id an alias resolves to, when the installation says.
+  final String? resolvedModel;
+
+  /// Data of the installation, shown as it is — like the description of a slash command.
+  final String displayName;
+
+  final String description;
+
+  /// The levels of effort this model takes — empty when it takes none.
+  final List<String> supportedEffortLevels;
+
+  /// Whether the model takes an effort at all, said by whether `supportedEffortLevels` is empty — kept on the wire for clients that read the flag rather than the list.
+  final bool supportsEffort;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'value': value,
+      'resolvedModel': resolvedModel,
+      'displayName': displayName,
+      'description': description,
+      'supportedEffortLevels': supportedEffortLevels,
+      'supportsEffort': supportsEffort,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [AgentModel].
+bool agentModelLimitsHold(Map<String, Object?> json) {
+  if (json['supportedEffortLevels'] is List<Object?> && (json['supportedEffortLevels']! as List<Object?>).length > 16) {
+    return false;
+  }
+
+  return true;
+}
+
+/// One component's version, for `GET /diag/versions` (plan 06, B-12; plan 28, B-37): the number, or `null` and a closed, stable reason — never a failure, because the screen exists precisely for when something is wrong.
+class ComponentVersion {
+  const ComponentVersion({
+    required this.version,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ComponentVersion.fromJson(Map<String, Object?> json) => ComponentVersion(
+        version: json['version'] as String?,
+        reason: json['reason'] as String?,
+      );
+
+  final String? version;
+
+  /// Set exactly when `version` is `null`.
+  final String? reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'version': version,
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
 /// Which conversation of which coding agent: the engine, and the id the conversation has in that engine's own store. It is not the `sessionId` of a live session, which names a subprocess and ends with it; this one outlives every session that ever continued it, and is what the history reads and a resume takes (ADR-025).
 class ConversationRef {
   const ConversationRef({
@@ -543,6 +684,80 @@ bool conversationRefLimitsHold(Map<String, Object?> json) {
   }
 
   return true;
+}
+
+/// One installation of the app, as the client sees it (plan 02). The push token never crosses: not truncated, not hashed — a value that is in a response is a value that is in a browser's network tab.
+class Device {
+  const Device({
+    required this.id,
+    required this.name,
+    required this.platform,
+    required this.appVersion,
+    required this.locale,
+    required this.status,
+    required this.pushEnabled,
+    required this.registeredAt,
+    required this.lastSeenAt,
+    required this.approvedAt,
+    required this.revokedAt,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory Device.fromJson(Map<String, Object?> json) => Device(
+        id: json['id']! as String,
+        name: json['name']! as String,
+        platform: json['platform']! as String,
+        appVersion: json['appVersion']! as String,
+        locale: json['locale']! as String,
+        status: json['status']! as String,
+        pushEnabled: json['pushEnabled']! as bool,
+        registeredAt: json['registeredAt']! as String,
+        lastSeenAt: json['lastSeenAt']! as String,
+        approvedAt: json['approvedAt'] as String?,
+        revokedAt: json['revokedAt'] as String?,
+      );
+
+  final String id;
+
+  final String name;
+
+  final String platform;
+
+  final String appVersion;
+
+  final String locale;
+
+  final String status;
+
+  /// Whether this device has a push token at all — which is what the screen can act on.
+  final bool pushEnabled;
+
+  final String registeredAt;
+
+  final String lastSeenAt;
+
+  final String? approvedAt;
+
+  final String? revokedAt;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'name': name,
+      'platform': platform,
+      'appVersion': appVersion,
+      'locale': locale,
+      'status': status,
+      'pushEnabled': pushEnabled,
+      'registeredAt': registeredAt,
+      'lastSeenAt': lastSeenAt,
+      'approvedAt': approvedAt,
+      'revokedAt': revokedAt,
+    };
+
+    return json;
+  }
 }
 
 /// What the engine of a session can do, declared and never supposed (ADR-025). The client hides the controls of what the engine does not have, rather than disabling them: the engine will never have it. Per session, since the version of the binary or the model can change what holds; `GET /engines` gives the engine's before a session exists.
@@ -760,6 +975,48 @@ class FileChange {
 
     if (to != null) {
       json['to'] = to;
+    }
+
+    return json;
+  }
+}
+
+/// How keeping the version a write replaced, in the local history, ended (plan 07, F8). In the domain this is a discriminated union — `{ kept: true, entryId }` or `{ kept: false, reason }` — which the generator cannot express as a `oneOf`; flattened here into one shape with `entryId` present only when `kept` is `true` and `reason` only when it is `false` (plan 28, B-48).
+class HistoryOutcome {
+  const HistoryOutcome({
+    required this.kept,
+    this.entryId,
+    this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory HistoryOutcome.fromJson(Map<String, Object?> json) => HistoryOutcome(
+        kept: json['kept']! as bool,
+        entryId: json['entryId'] as String?,
+        reason: json['reason'] as String?,
+      );
+
+  /// Whether the replaced version was kept in the local history.
+  final bool kept;
+
+  /// The entry the version was kept under. Present exactly when `kept` is `true`.
+  final String? entryId;
+
+  /// Why it was not kept. Present exactly when `kept` is `false`.
+  final String? reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kept': kept,
+    };
+
+    if (entryId != null) {
+      json['entryId'] = entryId;
+    }
+
+    if (reason != null) {
+      json['reason'] = reason;
     }
 
     return json;
@@ -997,7 +1254,6 @@ bool interactionLimitsHold(Map<String, Object?> json) {
 class ListedTranscript {
   const ListedTranscript({
     required this.conversation,
-    required this.sessionId,
     required this.summary,
     required this.origin,
     required this.cwd,
@@ -1012,7 +1268,6 @@ class ListedTranscript {
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory ListedTranscript.fromJson(Map<String, Object?> json) => ListedTranscript(
         conversation: ConversationRef.fromJson(json['conversation']! as Map<String, Object?>),
-        sessionId: json['sessionId']! as String,
         summary: json['summary']! as String,
         origin: json['origin']! as String,
         cwd: json['cwd']! as String,
@@ -1026,9 +1281,6 @@ class ListedTranscript {
 
   /// The conversation — what `session.start` takes as `resumeFrom`.
   final ConversationRef conversation;
-
-  /// The id of the conversation alone, for the published app of the previous protocol — gone when its window closes (plan 28, D-08).
-  final String sessionId;
 
   /// What the conversation is about, as the engine summarises it.
   final String summary;
@@ -1061,7 +1313,6 @@ class ListedTranscript {
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'conversation': conversation.toJson(),
-      'sessionId': sessionId,
       'summary': summary,
       'origin': origin,
       'cwd': cwd,
@@ -1077,7 +1328,266 @@ class ListedTranscript {
   }
 }
 
-/// The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the SDK's joined string.
+/// One turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). Shared by an engine's own diagnostics route and by its installation view's `lastModelCheck` (plan 28, B-48).
+class ModelCheckOutcome {
+  const ModelCheckOutcome({
+    required this.result,
+    required this.model,
+    required this.latencyMs,
+    required this.costUsd,
+    required this.reason,
+    required this.at,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ModelCheckOutcome.fromJson(Map<String, Object?> json) => ModelCheckOutcome(
+        result: json['result']! as String,
+        model: json['model'] as String?,
+        latencyMs: json['latencyMs']! as int,
+        costUsd: json['costUsd'] as String?,
+        reason: json['reason'] as String?,
+        at: json['at']! as String,
+      );
+
+  /// What the test of the connection found — data of the answer, never an error.
+  final String result;
+
+  /// The model that answered, when one did.
+  final String? model;
+
+  final int latencyMs;
+
+  /// What the turn cost in US dollars, as a decimal string — the money convention this contract already uses for `turn.completed`'s `costUsd` (a float would round where nobody looked). `null` when the CLI said nothing.
+  final String? costUsd;
+
+  /// Why it did not pass, as a stable word the screen translates (`authentication`, `billing`…).
+  final String? reason;
+
+  /// ISO-8601.
+  final String at;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'result': result,
+      'model': model,
+      'latencyMs': latencyMs,
+      'costUsd': costUsd,
+      'reason': reason,
+      'at': at,
+    };
+
+    return json;
+  }
+}
+
+/// One entry of the notification centre, as the client reads it (plan 06, B-40).
+class Notification {
+  const Notification({
+    required this.id,
+    required this.severity,
+    required this.messageKey,
+    required this.params,
+    required this.count,
+    required this.createdAt,
+    required this.readAt,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory Notification.fromJson(Map<String, Object?> json) => Notification(
+        id: json['id']! as String,
+        severity: json['severity']! as String,
+        messageKey: json['messageKey']! as String,
+        params: json['params']! as Map<String, Object?>,
+        count: json['count']! as int,
+        createdAt: json['createdAt']! as String,
+        readAt: json['readAt'] as String?,
+      );
+
+  final String id;
+
+  final String severity;
+
+  final String messageKey;
+
+  /// The parameters of the message — in the domain each value is a string, a number or a boolean; the generator's open-object subset cannot bound the value type further, so this is carried as a generic open object.
+  final Map<String, Object?> params;
+
+  final int count;
+
+  final String createdAt;
+
+  final String? readAt;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'severity': severity,
+      'messageKey': messageKey,
+      'params': params,
+      'count': count,
+      'createdAt': createdAt,
+      'readAt': readAt,
+    };
+
+    return json;
+  }
+}
+
+/// One folder tab, revalidated on every read (plan 06).
+class OpenFolderEntry {
+  const OpenFolderEntry({
+    required this.path,
+    required this.rootLabel,
+    required this.state,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory OpenFolderEntry.fromJson(Map<String, Object?> json) => OpenFolderEntry(
+        path: json['path']! as String,
+        rootLabel: json['rootLabel'] as String?,
+        state: json['state']! as String,
+      );
+
+  final String path;
+
+  /// The label of the root it lives under, or `null` once it lives under none.
+  final String? rootLabel;
+
+  /// Whether the tab can still be used, revalidated on every read.
+  final String state;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'rootLabel': rootLabel,
+      'state': state,
+    };
+
+    return json;
+  }
+}
+
+class PermissionRuleDisabled {
+  const PermissionRuleDisabled({
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleDisabled.fromJson(Map<String, Object?> json) => PermissionRuleDisabled(
+        reason: json['reason']! as String,
+      );
+
+  /// Why the rule was switched off — a rule written in an engine's grammar that had no unambiguous canonical translation.
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
+/// One rule that outlives a session, as the client sees it (plan 03; plan 28, B-33). `status` is computed at the moment of the answer, because the list shows an expired rule marked and not missing.
+class PermissionRule {
+  const PermissionRule({
+    required this.id,
+    required this.scope,
+    required this.kind,
+    required this.toolName,
+    required this.pattern,
+    required this.decision,
+    required this.projectPath,
+    required this.engine,
+    required this.grantedBy,
+    required this.grantedAt,
+    required this.expiresAt,
+    required this.status,
+    required this.revokedAt,
+    required this.disabled,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRule.fromJson(Map<String, Object?> json) => PermissionRule(
+        id: json['id']! as String,
+        scope: json['scope']! as String,
+        kind: json['kind'] as String?,
+        toolName: json['toolName']! as String,
+        pattern: json['pattern']! as String,
+        decision: json['decision']! as String,
+        projectPath: json['projectPath'] as String?,
+        engine: json['engine'] as String?,
+        grantedBy: json['grantedBy']! as String,
+        grantedAt: json['grantedAt']! as String,
+        expiresAt: json['expiresAt']! as String,
+        status: json['status']! as String,
+        revokedAt: json['revokedAt'] as String?,
+        disabled: json['disabled'] == null ? null : PermissionRuleDisabled.fromJson(json['disabled']! as Map<String, Object?>),
+      );
+
+  final String id;
+
+  /// The scope of a granted rule. `session` is part of the domain's type but every rule reachable from these routes is `project` or `always`: a `session` rule lives in memory only and is never persisted or listed here.
+  final String scope;
+
+  /// The canonical kind the pattern names — `shell`, `file.edit` —, `null` on a disabled rule.
+  final String? kind;
+
+  /// The kind again, or the engine's pattern of a disabled rule — kept beside for the published app, which reads it (plan 28, D-22).
+  final String toolName;
+
+  /// The pattern exactly as written, in the canonical grammar — or, on a disabled rule, the engine's grammar it was written in.
+  final String pattern;
+
+  final String decision;
+
+  final String? projectPath;
+
+  /// The engine the rule is restricted to, or `null` for every engine whose calls have the kind.
+  final String? engine;
+
+  /// Who granted it. Always the caller, since nobody sees another person's rules.
+  final String grantedBy;
+
+  final String grantedAt;
+
+  final String expiresAt;
+
+  final String status;
+
+  final String? revokedAt;
+
+  final PermissionRuleDisabled? disabled;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'scope': scope,
+      'kind': kind,
+      'toolName': toolName,
+      'pattern': pattern,
+      'decision': decision,
+      'projectPath': projectPath,
+      'engine': engine,
+      'grantedBy': grantedBy,
+      'grantedAt': grantedAt,
+      'expiresAt': expiresAt,
+      'status': status,
+      'revokedAt': revokedAt,
+      'disabled': disabled?.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the engine's own joined string.
 class QuestionAnswer {
   const QuestionAnswer({
     required this.questionId,
@@ -1131,6 +1641,35 @@ bool questionAnswerLimitsHold(Map<String, Object?> json) {
   }
 
   return true;
+}
+
+/// A version of a part of an engine's installation, as `GET /engines/:engine/installation` reads it (plan 13, B-11) — or why there is none, in the engine's own open-ended words. Never a failure. Distinct from `ComponentVersion` (diag's, with a closed two-value reason): this `reason` is whatever string the installation facts read off the engine, not one of a fixed set.
+class ReadVersion {
+  const ReadVersion({
+    required this.version,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ReadVersion.fromJson(Map<String, Object?> json) => ReadVersion(
+        version: json['version'] as String?,
+        reason: json['reason'] as String?,
+      );
+
+  final String? version;
+
+  /// Why there is no version — open-ended, unlike `ComponentVersion`'s.
+  final String? reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'version': version,
+      'reason': reason,
+    };
+
+    return json;
+  }
 }
 
 /// The label of a tool call, built by the backend from what the engine sent, which the client translates and never builds (plan 28, D-02). The adapter of the engine is the one that reads the call; a client that met an unknown `messageKey` shows the generic line.
@@ -1295,6 +1834,41 @@ class TranscriptEvent {
     final Map<String, Object?> json = <String, Object?>{
       'type': type,
       'payload': payload,
+    };
+
+    return json;
+  }
+}
+
+/// One allowed root, as the client sees it (plan 06). `authorisedUsers` deliberately never crosses: who else may reach a root is nobody's business but the operator's.
+class Workspace {
+  const Workspace({
+    required this.path,
+    required this.label,
+    required this.lastUsedAt,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory Workspace.fromJson(Map<String, Object?> json) => Workspace(
+        path: json['path']! as String,
+        label: json['label']! as String,
+        lastUsedAt: json['lastUsedAt'] as String?,
+      );
+
+  /// Absolute path of the root, with every symlink already resolved.
+  final String path;
+
+  final String label;
+
+  /// ISO-8601, or `null` when this user has never opened anything under it.
+  final String? lastUsedAt;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'label': label,
+      'lastUsedAt': lastUsedAt,
     };
 
     return json;
@@ -1682,7 +2256,7 @@ class DeviceRegisterPayload {
   }
 }
 
-/// Diagnostics of the gateway: it crosses every layer without touching the Agent SDK, and is the only smoke test that needs no Claude subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session.
+/// Diagnostics of the gateway: it crosses every layer without touching the engine's own library, and is the only smoke test that needs no engine subprocess. It lives outside the session namespace on purpose — `diag` says it is diagnostics, which is what keeps the slice from becoming a public API with no owner. Omitting `sessionId` opens a session; sending one pings that session.
 class DiagPingPayload {
   const DiagPingPayload({
     this.sessionId,
@@ -1977,7 +2551,7 @@ class SessionPromptPayloadAttachmentsItem {
   /// The provider that holds the `text` — the integrated terminal of plan 12, when it exists. An enum read as a string, so a provider added later does not break a client already published.
   final String? source;
 
-  /// How the `text` is introduced to Claude and shown on the chip: "terminal: bash".
+  /// How the `text` is introduced to the agent and shown on the chip: "terminal: bash".
   final String? label;
 
   /// The text itself, for a `text`. Bounded so that even at four bytes a character it fits the 64 KB frame beside the rest of the prompt.
@@ -2035,7 +2609,7 @@ class SessionPromptPayloadAttachmentsItem {
 /// `attachmentId` is also required when `kind`
 /// is `upload` — an uploaded attachment travels over HTTP, and the prompt carries only the id the upload answered.
 /// `source` is also required when `kind`
-/// is `text` — text a provider holds goes to Claude labelled with where it came from, never as if the user had typed it.
+/// is `text` — text a provider holds goes to the agent labelled with where it came from, never as if the user had typed it.
 /// `label` is also required when `kind`
 /// is `text` — the label is what the delimited block is introduced by, and what the chip showed.
 /// `content` is also required when `kind`
@@ -2085,7 +2659,7 @@ bool sessionPromptPayloadAttachmentsItemLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
-/// Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way the Claude Code UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`).
+/// Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way a coding agent's own UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`).
 class SessionPromptPayload {
   const SessionPromptPayload({
     required this.sessionId,
@@ -2105,7 +2679,7 @@ class SessionPromptPayload {
   /// What the user typed. Empty only when `attachments` carries something: the context alone is a prompt, and nothing at all is refused with `INVALID_INPUT` (plan 08, S-215).
   final String text;
 
-  /// The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and Claude reads it through `Read`, which the trail records; its content never travels here (plan 08, D-01).
+  /// The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and the agent reads it through its own `Read`-kind tool, which the trail records; its content never travels here (plan 08, D-01).
   final List<SessionPromptPayloadAttachmentsItem>? attachments;
 
   /// A JSON map with the absent optional fields left out.
@@ -2240,7 +2814,7 @@ class SessionRestoreChangePayload {
   }
 }
 
-/// Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not `rewindFiles()` of the SDK: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`.
+/// Puts the files a session wrote back the way they were **before** a turn began. The mechanism is ours, not the engine's own checkpoint restore: that one overwrites a manual edit in silence and takes no file filter, so a file somebody changed after the session is **preserved** here. Refused with `SESSION_LOCKED` while a turn is running, with `SESSION_NOT_FOUND` once the session is over, and with `INVALID_INPUT` for a point that is not a checkpoint of this session. The outcome arrives as `session.rewound`.
 class SessionRewindFilesPayload {
   const SessionRewindFilesPayload({
     required this.sessionId,
@@ -2317,7 +2891,7 @@ class SessionSetModelPayload {
 
   final String sessionId;
 
-  /// Model identifier, as the Agent SDK names it.
+  /// Model identifier, as the engine names it.
   final String model;
 
   /// A JSON map with the absent optional fields left out.
@@ -2346,7 +2920,7 @@ class SessionSetPermissionModePayload {
 
   final String sessionId;
 
-  /// The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused.
+  /// The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered.
   final String mode;
 
   /// A JSON map with the absent optional fields left out.
@@ -2389,7 +2963,7 @@ class SessionStartPayload {
   /// Model to open with. Absent means the server default.
   final String? model;
 
-  /// The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused.
+  /// The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered.
   final String? permissionMode;
 
   /// How much effort the model puts in, for the whole session. Absent is the installation's default. Chosen before the session exists, because changing it on a live one (`applyFlagSettings`) restarts the CLI's query and drops its hooks — measured in plan 08, D-16. A level the model does not take is `INVALID_INPUT` (`session.error.effortUnsupported`). An enum read as a string, so a level added later does not break a client. Only a level the engine announces in `capabilities.effortLevels` — any other is `INVALID_INPUT`.
@@ -2766,7 +3340,7 @@ class MessageCompletedPayloadContentItem {
   /// The text of a `text` block.
   final String? text;
 
-  /// What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redacted_thinking` block has neither: it says the model thought, and nothing it thought.
+  /// What the model thought, on a `thinking` block — in a field of its own and not in `text`, so a client that joins the `text` of every block never shows it as the answer. A `redactedThinking` block has neither: it says the model thought, and nothing it thought.
   final String? thinking;
 
   final String? toolUseId;
@@ -2777,7 +3351,7 @@ class MessageCompletedPayloadContentItem {
   /// The type of an `image` block, as the prompt declared it (`image/png`, …). Absent when it declared none.
   final String? mediaType;
 
-  /// The size of an `image` block in bytes, decoded. The bytes themselves never travel on the stream or in a page: the image is fetched on demand, by `GET /transcripts/:sessionId/images/:blockId`. Absent for an image given by URL.
+  /// The size of an `image` block in bytes, decoded. The bytes themselves never travel on the stream or in a page: the image is fetched on demand, by `GET /transcripts/:engine/:id/images/:blockId`. Absent for an image given by URL.
   final int? size;
 
   /// A JSON map with the absent optional fields left out.
@@ -2875,7 +3449,7 @@ class MessageCompletedPayload {
   }
 }
 
-/// A fragment of the assistant's answer, from the SDK's `stream_event`. The client accumulates by `messageId`; it never concatenates blindly in arrival order.
+/// A fragment of the assistant's answer, from the engine's own streaming event. The client accumulates by `messageId`; it never concatenates blindly in arrival order.
 class MessageDeltaPayload {
   const MessageDeltaPayload({
     required this.messageId,
@@ -2898,7 +3472,7 @@ class MessageDeltaPayload {
   /// The text of this fragment, and only of this one.
   final String delta;
 
-  /// What the fragment is part of: the answer, or Claude's thinking before it. Absent reads as `text`. An enum read as a string, so a block kind added later is not a crash.
+  /// What the fragment is part of: the answer, or the model's thinking before it. Absent reads as `text`. An enum read as a string, so a block kind added later is not a crash.
   final String? blockType;
 
   /// Set when the fragment comes from a subagent: the `toolUseId` of the `Task` that opened it. The client nests it there instead of in the conversation.
@@ -3212,7 +3786,7 @@ class PermissionResolvedPayload {
   /// Which client answered.
   final String? resolvedFrom;
 
-  /// The tool call the request was about, when the SDK named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`.
+  /// The tool call the request was about, when the engine named one — what lets a screen say the decision on that tool's line. A request a rule settles is never put to anybody, so this is the only place that line learns it (plan 10, B-20). Matching is still by `requestId`.
   final String? toolUseId;
 
   /// Why nobody was asked, when nobody was: a rule the user granted earlier (`rule`), the session running in Permitir tudo (`allowAll`), or a call that changes something refused because the session is read-only (`readOnly`, plan 28, B-26). Absent when a human answered or the deadline passed.
@@ -3303,7 +3877,7 @@ class PromptDequeuedPayload {
   }
 }
 
-/// A prompt is waiting for the running turn to end. The queue is the backend's, not the SDK's — a prompt handed to the SDK cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`.
+/// A prompt is waiting for the running turn to end. The queue is the backend's, not the engine's — a prompt handed to the engine cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`.
 class PromptQueuedPayload {
   const PromptQueuedPayload({
     required this.queueId,
@@ -3374,7 +3948,121 @@ class SessionClosedPayload {
   }
 }
 
-/// The conversation was compacted: what came before is now a summary Claude carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there.
+class SessionCommandsChangedPayloadCommandsItem {
+  const SessionCommandsChangedPayloadCommandsItem({
+    required this.name,
+    required this.description,
+    required this.argumentHint,
+    required this.aliases,
+    this.builtin,
+    required this.suggested,
+    required this.origin,
+    required this.label,
+    required this.shadowed,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionCommandsChangedPayloadCommandsItem.fromJson(Map<String, Object?> json) => SessionCommandsChangedPayloadCommandsItem(
+        name: json['name']! as String,
+        description: json['description']! as String,
+        argumentHint: json['argumentHint']! as String,
+        aliases: (json['aliases']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        builtin: json['builtin'] as bool?,
+        suggested: json['suggested']! as bool,
+        origin: json['origin']! as String,
+        label: json['label']! as String,
+        shadowed: json['shadowed']! as bool,
+      );
+
+  /// Without the leading slash.
+  final String name;
+
+  final String description;
+
+  /// What the command takes after its name — `<file>`, `[on|off]` — or empty.
+  final String argumentHint;
+
+  /// Other names that run the same command: `/cost` and `/stats` both run `/usage`.
+  final List<String> aliases;
+
+  /// Whether it is the engine's own. Absent or `false` for a command or a skill of the project, of a plugin or of an MCP server.
+  final bool? builtin;
+
+  /// Whether it belongs to the group shown first.
+  final bool suggested;
+
+  /// Where a command or a skill comes from — the badge of the menu.
+  final String origin;
+
+  /// The name a person reads — without the namespace of a plugin.
+  final String label;
+
+  /// `/name` runs another row: an unmarked row whose name a command of the engine's own also has. Listed, so nothing vanishes in silence.
+  final bool shadowed;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'description': description,
+      'argumentHint': argumentHint,
+      'aliases': aliases,
+      'suggested': suggested,
+      'origin': origin,
+      'label': label,
+      'shadowed': shadowed,
+    };
+
+    if (builtin != null) {
+      json['builtin'] = builtin;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionCommandsChangedPayloadCommandsItem].
+bool sessionCommandsChangedPayloadCommandsItemLimitsHold(Map<String, Object?> json) {
+  if (json['aliases'] is List<Object?> && (json['aliases']! as List<Object?>).length > 16) {
+    return false;
+  }
+
+  return true;
+}
+
+/// The slash commands of a session, menu-ordered and badged — the whole list, every time, so a client never patches: pushed when the engine's own menu changes mid-session (a skill discovered as the agent works in a subdirectory, say). A client that does not know it ignores it.
+class SessionCommandsChangedPayload {
+  const SessionCommandsChangedPayload({
+    required this.commands,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionCommandsChangedPayload.fromJson(Map<String, Object?> json) => SessionCommandsChangedPayload(
+        commands: (json['commands']! as List<Object?>).map((item) => SessionCommandsChangedPayloadCommandsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<SessionCommandsChangedPayloadCommandsItem> commands;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'commands': commands.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionCommandsChangedPayload].
+bool sessionCommandsChangedPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['commands'] is List<Object?> && (json['commands']! as List<Object?>).length > 256) {
+    return false;
+  }
+
+  return true;
+}
+
+/// The conversation was compacted: what came before is now a summary the agent carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there.
 class SessionCompactedPayload {
   const SessionCompactedPayload({
     required this.trigger,
@@ -3387,10 +4075,10 @@ class SessionCompactedPayload {
         preTokens: json['preTokens'] as int?,
       );
 
-  /// `manual` — somebody sent `/compact`; `auto` — the context was full and Claude compacted it.
+  /// `manual` — somebody sent `/compact`; `auto` — the context was full and the agent compacted it.
   final String trigger;
 
-  /// How many tokens the context held before, when the SDK says.
+  /// How many tokens the context held before, when the engine says.
   final int? preTokens;
 
   /// A JSON map with the absent optional fields left out.
@@ -3431,7 +4119,7 @@ class SessionMcpStatusChangedPayloadServersItem {
   /// `needs-auth` asks for a browser on the machine (OAuth); no OAuth address ever travels through the product.
   final String status;
 
-  /// Where the definition came from, read off the SDK's `source` and never off the name: `ours` is a server of the store, `project` an approved entry of `.mcp.json` (both reach the CLI as `dynamic`), `plugin` one a plugin brought, `other` anything else — never trusted as ours.
+  /// Where the definition came from, read off the engine's own `source` and never off the name: `ours` is a server of the store, `project` an approved entry of `.mcp.json` (both reach the CLI as `dynamic`), `plugin` one a plugin brought, `other` anything else — never trusted as ours.
   final String source;
 
   final int toolCount;
@@ -3696,7 +4384,7 @@ class SessionStartedPayload {
 
   final String model;
 
-  /// The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused.
+  /// The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered.
   final String permissionMode;
 
   /// The engine the session runs on — an `id` of `GET /engines`, whose `displayName` is how a screen names it. The client never decides by it.
@@ -3761,7 +4449,7 @@ bool sessionStartedPayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
-/// Where the session stands. Derived by us, not read off a single SDK message.
+/// Where the session stands. Derived by us, not read off a single message of the engine.
 class SessionStatusChangedPayload {
   const SessionStatusChangedPayload({
     required this.status,
@@ -3946,7 +4634,6 @@ class ToolCompletedPayload {
     required this.status,
     this.summary,
     this.parentToolUseId,
-    this.taskId,
     this.at,
     this.question,
   });
@@ -3957,7 +4644,6 @@ class ToolCompletedPayload {
         status: json['status']! as String,
         summary: json['summary'] as String?,
         parentToolUseId: json['parentToolUseId'] as String?,
-        taskId: json['taskId'] as String?,
         at: json['at'] as String?,
         question: json['question'] == null ? null : ToolCompletedPayloadQuestion.fromJson(json['question']! as Map<String, Object?>),
       );
@@ -3967,14 +4653,11 @@ class ToolCompletedPayload {
   /// `denied` is not a failure of the tool: it is a human having said no, and the UI reads the two differently.
   final String status;
 
-  /// A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:sessionId/tools/:toolUseId/result`.
+  /// A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:engine/:id/tools/:toolUseId/result`.
   final String? summary;
 
   /// Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation.
   final String? parentToolUseId;
-
-  /// The task a call that creates or changes one made or changed, taken from the call's result. Kept for the previous protocol, whose clients rebuild the list themselves; the list is `session.tasksChanged` now (plan 28, B-22), and this goes with the window, in F7 (B-47).
-  final String? taskId;
 
   /// When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. It marks the **end** of what the entry holds, never its start: a duration read from two of them is an upper bound. Absent live, where the frame's `ts` is the clock, and on an entry the store recorded no time for.
   final String? at;
@@ -3995,10 +4678,6 @@ class ToolCompletedPayload {
 
     if (parentToolUseId != null) {
       json['parentToolUseId'] = parentToolUseId;
-    }
-
-    if (taskId != null) {
-      json['taskId'] = taskId;
     }
 
     if (at != null) {
@@ -4213,7 +4892,7 @@ class TranscriptAppendedPayload {
   /// The conversation the entries are of.
   final ConversationRef conversation;
 
-  /// The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:sessionId/messages` carries, oldest first, in the order of the SDK's chain and never of the clock. A client folds them with the same reducer as the page.
+  /// The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:engine/:id/messages` carries, oldest first, in the order of the engine's own chain and never of the clock. A client folds them with the same reducer as the page.
   final List<TranscriptAppendedPayloadEventsItem> events;
 
   /// The last entry of the conversation now — what a reconnect follows again from. Absent while the conversation has no entry.
@@ -4222,7 +4901,7 @@ class TranscriptAppendedPayload {
   /// What the conversation is doing now, as `transcript.following` says it.
   final String activity;
 
-  /// Whether Claude seems to be working on it in another client: the conversation is `activeElsewhere` **and** its last entry leaves the turn open — a tool call without its result, a thinking, or a prompt without an answer. An inference from the transcript, which records no state of the turn; the screen says it is one.
+  /// Whether the agent seems to be working on it in another client: the conversation is `activeElsewhere` **and** its last entry leaves the turn open — a tool call without its result, a thinking, or a prompt without an answer. An inference from the transcript, which records no state of the turn; the screen says it is one.
   final bool working;
 
   /// A JSON map with the absent optional fields left out.
@@ -4452,7 +5131,7 @@ class WorkspaceFilesChangedPayloadChangesItem {
 
   final String kind;
 
-  /// Who changed it, as far as the server can tell: a write of the agent of a session, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say. (`claude` until plan 28, B-25; a connection of the previous protocol still reads that.)
+  /// Who changed it, as far as the server can tell: a write of the agent of a session, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say.
   final String? origin;
 
   /// On `agent`: the engine whose agent wrote it — an `id` of `GET /engines`, opaque, for naming the agent in the text. Absent on every other origin.
@@ -4553,12 +5232,260 @@ class WorkspaceWatchStoppedPayload {
   }
 }
 
+/// One fact, as the client sees it. The owner is the caller, so it is not here.
+class AuditEventPagePayloadEventsItem {
+  const AuditEventPagePayloadEventsItem({
+    required this.id,
+    required this.kind,
+    required this.subjectId,
+    required this.subjectLabel,
+    required this.details,
+    required this.at,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AuditEventPagePayloadEventsItem.fromJson(Map<String, Object?> json) => AuditEventPagePayloadEventsItem(
+        id: json['id']! as String,
+        kind: json['kind']! as String,
+        subjectId: json['subjectId']! as String,
+        subjectLabel: json['subjectLabel']! as String,
+        details: json['details'] as Map<String, Object?>?,
+        at: json['at']! as String,
+      );
+
+  final String id;
+
+  /// A genuinely open vocabulary — `file.`, `file.written`, a device or a rule event — never a fixed enum.
+  final String kind;
+
+  /// What the fact is about — for a file, its real path.
+  final String subjectId;
+
+  /// How to show the subject — for a file, its path relative to the open folder.
+  final String subjectLabel;
+
+  /// Sizes, hashes, origin and destination, counts — never the contents of a file. Open: shaped by the kind.
+  final Map<String, Object?>? details;
+
+  final String at;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'kind': kind,
+      'subjectId': subjectId,
+      'subjectLabel': subjectLabel,
+      'details': details,
+      'at': at,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /audit-events`: the account facts, read — devices, rules, conversations, undos, file writes (plan 06, B-40; plan 07, B-17).
+class AuditEventPagePayload {
+  const AuditEventPagePayload({
+    required this.events,
+    required this.nextCursor,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AuditEventPagePayload.fromJson(Map<String, Object?> json) => AuditEventPagePayload(
+        events: (json['events']! as List<Object?>).map((item) => AuditEventPagePayloadEventsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        nextCursor: json['nextCursor'] as String?,
+      );
+
+  final List<AuditEventPagePayloadEventsItem> events;
+
+  /// Opaque to the client: send it back as `cursor`. `null` on the last page.
+  final String? nextCursor;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'events': events.map((item) => item.toJson()).toList(growable: false),
+      'nextCursor': nextCursor,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [AuditEventPagePayload].
+bool auditEventPagePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['events'] is List<Object?> && (json['events']! as List<Object?>).length > 100) {
+    return false;
+  }
+
+  return true;
+}
+
+/// What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one.
+class AuditTrailPagePayloadEntriesItemVerdict {
+  const AuditTrailPagePayloadEntriesItemVerdict({
+    required this.requestId,
+    required this.auto,
+    required this.ruleId,
+    required this.scope,
+    required this.resolvedBy,
+    required this.resolvedFrom,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AuditTrailPagePayloadEntriesItemVerdict.fromJson(Map<String, Object?> json) => AuditTrailPagePayloadEntriesItemVerdict(
+        requestId: json['requestId']! as String,
+        auto: json['auto']! as bool,
+        ruleId: json['ruleId'] as String?,
+        scope: json['scope']! as String,
+        resolvedBy: json['resolvedBy'] as String?,
+        resolvedFrom: json['resolvedFrom'] as String?,
+      );
+
+  final String requestId;
+
+  final bool auto;
+
+  final String? ruleId;
+
+  final String scope;
+
+  final String? resolvedBy;
+
+  final String? resolvedFrom;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'requestId': requestId,
+      'auto': auto,
+      'ruleId': ruleId,
+      'scope': scope,
+      'resolvedBy': resolvedBy,
+      'resolvedFrom': resolvedFrom,
+    };
+
+    return json;
+  }
+}
+
+/// One entry of the trail, as the client sees it. The owner is not here: it is always the caller.
+class AuditTrailPagePayloadEntriesItem {
+  const AuditTrailPagePayloadEntriesItem({
+    required this.id,
+    required this.sessionId,
+    required this.toolUseId,
+    required this.toolName,
+    required this.kind,
+    required this.input,
+    required this.decision,
+    required this.at,
+    required this.traceId,
+    required this.verdict,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AuditTrailPagePayloadEntriesItem.fromJson(Map<String, Object?> json) => AuditTrailPagePayloadEntriesItem(
+        id: json['id']! as String,
+        sessionId: json['sessionId']! as String,
+        toolUseId: json['toolUseId'] as String?,
+        toolName: json['toolName']! as String,
+        kind: json['kind']! as String,
+        input: json['input']! as Map<String, Object?>,
+        decision: json['decision']! as String,
+        at: json['at']! as String,
+        traceId: json['traceId'] as String?,
+        verdict: json['verdict'] == null ? null : AuditTrailPagePayloadEntriesItemVerdict.fromJson(json['verdict']! as Map<String, Object?>),
+      );
+
+  final String id;
+
+  final String sessionId;
+
+  final String? toolUseId;
+
+  /// The engine's own name of the tool, kept beside the kind.
+  final String toolName;
+
+  /// The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33).
+  final String kind;
+
+  /// Exactly as the tool was called — except a `file.read`, which shows its path and window alone. Open: shaped by the tool, never fixed.
+  final Map<String, Object?> input;
+
+  final String decision;
+
+  final String at;
+
+  /// What leads from the entry to the log and the events of the same turn.
+  final String? traceId;
+
+  /// What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one.
+  final AuditTrailPagePayloadEntriesItemVerdict? verdict;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'sessionId': sessionId,
+      'toolUseId': toolUseId,
+      'toolName': toolName,
+      'kind': kind,
+      'input': input,
+      'decision': decision,
+      'at': at,
+      'traceId': traceId,
+      'verdict': verdict?.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /audit-entries`: the caller's trail, newest first, one page at a time — "what ran on my machine, and who let it?" (plan 03).
+class AuditTrailPagePayload {
+  const AuditTrailPagePayload({
+    required this.entries,
+    required this.nextCursor,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AuditTrailPagePayload.fromJson(Map<String, Object?> json) => AuditTrailPagePayload(
+        entries: (json['entries']! as List<Object?>).map((item) => AuditTrailPagePayloadEntriesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        nextCursor: json['nextCursor'] as String?,
+      );
+
+  final List<AuditTrailPagePayloadEntriesItem> entries;
+
+  /// Opaque to the client: send it back as `cursor` for the next page. `null` on the last one.
+  final String? nextCursor;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'entries': entries.map((item) => item.toJson()).toList(growable: false),
+      'nextCursor': nextCursor,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [AuditTrailPagePayload].
+bool auditTrailPagePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['entries'] is List<Object?> && (json['entries']! as List<Object?>).length > 100) {
+    return false;
+  }
+
+  return true;
+}
+
 class ContextUsePayloadCategoriesItem {
   const ContextUsePayloadCategoriesItem({
     required this.id,
     this.messageKey,
     this.text,
-    required this.name,
     required this.tokens,
     required this.kind,
   });
@@ -4568,7 +5495,6 @@ class ContextUsePayloadCategoriesItem {
         id: json['id']! as String,
         messageKey: json['messageKey'] as String?,
         text: json['text'] as String?,
-        name: json['name']! as String,
         tokens: json['tokens']! as int,
         kind: json['kind']! as String,
       );
@@ -4582,9 +5508,6 @@ class ContextUsePayloadCategoriesItem {
   /// The engine's own name for a category with no key — its words, shown as they are. Absent on a canonical one.
   final String? text;
 
-  /// The engine's own name, always — kept for the clients of the previous protocol, which read it for an id they do not know (plan 28, D-22). Goes with the window, in F7.
-  final String name;
-
   final int tokens;
 
   /// What the category is: in use, free, kept aside, or deferred until needed.
@@ -4594,7 +5517,6 @@ class ContextUsePayloadCategoriesItem {
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'id': id,
-      'name': name,
       'tokens': tokens,
       'kind': kind,
     };
@@ -4681,6 +5603,414 @@ bool contextUsePayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+class DefaultsViewPayloadEffectiveModel {
+  const DefaultsViewPayloadEffectiveModel({
+    required this.value,
+    required this.from,
+    this.folder,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DefaultsViewPayloadEffectiveModel.fromJson(Map<String, Object?> json) => DefaultsViewPayloadEffectiveModel(
+        value: json['value'] as String?,
+        from: json['from']! as String,
+        folder: json['folder'] as String?,
+      );
+
+  final String? value;
+
+  final String from;
+
+  /// The folder whose override set it, when `from` is `folder`.
+  final String? folder;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'value': value,
+      'from': from,
+    };
+
+    if (folder != null) {
+      json['folder'] = folder;
+    }
+
+    return json;
+  }
+}
+
+class DefaultsViewPayloadEffectivePermissionMode {
+  const DefaultsViewPayloadEffectivePermissionMode({
+    required this.value,
+    required this.from,
+    this.folder,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DefaultsViewPayloadEffectivePermissionMode.fromJson(Map<String, Object?> json) => DefaultsViewPayloadEffectivePermissionMode(
+        value: json['value'] as String?,
+        from: json['from']! as String,
+        folder: json['folder'] as String?,
+      );
+
+  final String? value;
+
+  final String from;
+
+  final String? folder;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'value': value,
+      'from': from,
+    };
+
+    if (folder != null) {
+      json['folder'] = folder;
+    }
+
+    return json;
+  }
+}
+
+class DefaultsViewPayloadEffectiveEffort {
+  const DefaultsViewPayloadEffectiveEffort({
+    required this.value,
+    required this.from,
+    this.folder,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DefaultsViewPayloadEffectiveEffort.fromJson(Map<String, Object?> json) => DefaultsViewPayloadEffectiveEffort(
+        value: json['value'] as String?,
+        from: json['from']! as String,
+        folder: json['folder'] as String?,
+      );
+
+  final String? value;
+
+  final String from;
+
+  final String? folder;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'value': value,
+      'from': from,
+    };
+
+    if (folder != null) {
+      json['folder'] = folder;
+    }
+
+    return json;
+  }
+}
+
+class DefaultsViewPayloadEffectiveThinking {
+  const DefaultsViewPayloadEffectiveThinking({
+    required this.value,
+    required this.from,
+    this.folder,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DefaultsViewPayloadEffectiveThinking.fromJson(Map<String, Object?> json) => DefaultsViewPayloadEffectiveThinking(
+        value: json['value'] as String?,
+        from: json['from']! as String,
+        folder: json['folder'] as String?,
+      );
+
+  final String? value;
+
+  final String from;
+
+  final String? folder;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'value': value,
+      'from': from,
+    };
+
+    if (folder != null) {
+      json['folder'] = folder;
+    }
+
+    return json;
+  }
+}
+
+class DefaultsViewPayloadEffectiveFallbackModel {
+  const DefaultsViewPayloadEffectiveFallbackModel({
+    required this.value,
+    required this.from,
+    this.folder,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DefaultsViewPayloadEffectiveFallbackModel.fromJson(Map<String, Object?> json) => DefaultsViewPayloadEffectiveFallbackModel(
+        value: json['value'] as String?,
+        from: json['from']! as String,
+        folder: json['folder'] as String?,
+      );
+
+  final String? value;
+
+  final String from;
+
+  final String? folder;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'value': value,
+      'from': from,
+    };
+
+    if (folder != null) {
+      json['folder'] = folder;
+    }
+
+    return json;
+  }
+}
+
+/// Every field as it applies in the folder asked — the nearest folder override, the user's default, or the installation's.
+class DefaultsViewPayloadEffective {
+  const DefaultsViewPayloadEffective({
+    required this.model,
+    required this.permissionMode,
+    required this.effort,
+    required this.thinking,
+    required this.fallbackModel,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DefaultsViewPayloadEffective.fromJson(Map<String, Object?> json) => DefaultsViewPayloadEffective(
+        model: DefaultsViewPayloadEffectiveModel.fromJson(json['model']! as Map<String, Object?>),
+        permissionMode: DefaultsViewPayloadEffectivePermissionMode.fromJson(json['permissionMode']! as Map<String, Object?>),
+        effort: DefaultsViewPayloadEffectiveEffort.fromJson(json['effort']! as Map<String, Object?>),
+        thinking: DefaultsViewPayloadEffectiveThinking.fromJson(json['thinking']! as Map<String, Object?>),
+        fallbackModel: DefaultsViewPayloadEffectiveFallbackModel.fromJson(json['fallbackModel']! as Map<String, Object?>),
+      );
+
+  final DefaultsViewPayloadEffectiveModel model;
+
+  final DefaultsViewPayloadEffectivePermissionMode permissionMode;
+
+  final DefaultsViewPayloadEffectiveEffort effort;
+
+  final DefaultsViewPayloadEffectiveThinking thinking;
+
+  final DefaultsViewPayloadEffectiveFallbackModel fallbackModel;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'model': model.toJson(),
+      'permissionMode': permissionMode.toJson(),
+      'effort': effort.toJson(),
+      'thinking': thinking.toJson(),
+      'fallbackModel': fallbackModel.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// The folder's own override — mirrors `FolderDefaults`, inlined because the field is nullable and the generator refuses any sibling beside a `$ref` (plan 28, B-48). `null` when the folder has none of its own.
+class DefaultsViewPayloadFolder {
+  const DefaultsViewPayloadFolder({
+    required this.folder,
+    required this.values,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DefaultsViewPayloadFolder.fromJson(Map<String, Object?> json) => DefaultsViewPayloadFolder(
+        folder: json['folder']! as String,
+        values: AgentDefaults.fromJson(json['values']! as Map<String, Object?>),
+      );
+
+  final String folder;
+
+  final AgentDefaults values;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'folder': folder,
+      'values': values.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `GET/PUT /engines/:engine/defaults` and `PUT/DELETE /engines/:engine/defaults/folder`: the defaults as the screen shows them — what applies, the user's own, and the folder's override (plan 13, B-14; plan 28, B-36). `EffectiveValue<T>` is generic in TypeScript; JSON Schema has no generics, so `effective` is five independent properties, one per field, each typed to that field's own value type (plan 28, B-48).
+class DefaultsViewPayload {
+  const DefaultsViewPayload({
+    required this.effective,
+    required this.user,
+    required this.folder,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DefaultsViewPayload.fromJson(Map<String, Object?> json) => DefaultsViewPayload(
+        effective: DefaultsViewPayloadEffective.fromJson(json['effective']! as Map<String, Object?>),
+        user: AgentDefaults.fromJson(json['user']! as Map<String, Object?>),
+        folder: json['folder'] == null ? null : DefaultsViewPayloadFolder.fromJson(json['folder']! as Map<String, Object?>),
+      );
+
+  /// Every field as it applies in the folder asked — the nearest folder override, the user's default, or the installation's.
+  final DefaultsViewPayloadEffective effective;
+
+  final AgentDefaults user;
+
+  /// The folder's own override — mirrors `FolderDefaults`, inlined because the field is nullable and the generator refuses any sibling beside a `$ref` (plan 28, B-48). `null` when the folder has none of its own.
+  final DefaultsViewPayloadFolder? folder;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'effective': effective.toJson(),
+      'user': user.toJson(),
+      'folder': folder?.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /devices`: this caller's devices, most recently seen first. Only theirs (plan 02).
+class DeviceListPayload {
+  const DeviceListPayload({
+    required this.devices,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DeviceListPayload.fromJson(Map<String, Object?> json) => DeviceListPayload(
+        devices: (json['devices']! as List<Object?>).map((item) => Device.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<Device> devices;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'devices': devices.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [DeviceListPayload].
+bool deviceListPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['devices'] is List<Object?> && (json['devices']! as List<Object?>).length > 256) {
+    return false;
+  }
+
+  return true;
+}
+
+class DirectoryListingPayloadEntriesItem {
+  const DirectoryListingPayloadEntriesItem({
+    required this.name,
+    required this.path,
+    required this.hidden,
+    required this.symlink,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DirectoryListingPayloadEntriesItem.fromJson(Map<String, Object?> json) => DirectoryListingPayloadEntriesItem(
+        name: json['name']! as String,
+        path: json['path']! as String,
+        hidden: json['hidden']! as bool,
+        symlink: json['symlink']! as bool,
+      );
+
+  final String name;
+
+  /// Absolute path of the entry as listed — for a symlink, the link, not its target.
+  final String path;
+
+  /// The name starts with `.`. Listed only when `hidden=true` was asked.
+  final bool hidden;
+
+  /// A symlink whose target is a directory inside the same root. One that escapes is omitted.
+  final bool symlink;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'path': path,
+      'hidden': hidden,
+      'symlink': symlink,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /workspaces/directories`: one level of one directory, never the tree (plan 06, D-05).
+class DirectoryListingPayload {
+  const DirectoryListingPayload({
+    required this.path,
+    required this.root,
+    required this.parent,
+    required this.entries,
+    required this.truncated,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory DirectoryListingPayload.fromJson(Map<String, Object?> json) => DirectoryListingPayload(
+        path: json['path']! as String,
+        root: Workspace.fromJson(json['root']! as Map<String, Object?>),
+        parent: json['parent'] as String?,
+        entries: (json['entries']! as List<Object?>).map((item) => DirectoryListingPayloadEntriesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        truncated: json['truncated']! as bool,
+      );
+
+  final String path;
+
+  final Workspace root;
+
+  /// `null` at the root: the picker never climbs above it.
+  final String? parent;
+
+  final List<DirectoryListingPayloadEntriesItem> entries;
+
+  /// The ceiling cut the listing; `prefix` reaches what was left out.
+  final bool truncated;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'root': root.toJson(),
+      'parent': parent,
+      'entries': entries.map((item) => item.toJson()).toList(growable: false),
+      'truncated': truncated,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [DirectoryListingPayload].
+bool directoryListingPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['entries'] is List<Object?> && (json['entries']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
 class EngineListPayloadEnginesItem {
   const EngineListPayloadEnginesItem({
     required this.id,
@@ -4758,6 +6088,1294 @@ class EngineListPayload {
     final Map<String, Object?> json = <String, Object?>{
       'defaultEngine': defaultEngine,
       'engines': engines.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /engines/:engine/models`: the models of an engine's installation, and the modes it runs in (plan 13, B-13; plan 28, B-36) — from the engine's installation, never a list in the code.
+class EngineModelsPayload {
+  const EngineModelsPayload({
+    required this.version,
+    required this.models,
+    required this.permissionModes,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EngineModelsPayload.fromJson(Map<String, Object?> json) => EngineModelsPayload(
+        version: json['version'] as String?,
+        models: (json['models']! as List<Object?>).map((item) => AgentModel.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        permissionModes: (json['permissionModes']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+      );
+
+  /// The version of the engine that answered, or `null` when it could not tell.
+  final String? version;
+
+  final List<AgentModel> models;
+
+  /// The modes the engine runs in, every one of them — the screen says which can be a default.
+  final List<String> permissionModes;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'version': version,
+      'models': models.map((item) => item.toJson()).toList(growable: false),
+      'permissionModes': permissionModes,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [EngineModelsPayload].
+bool engineModelsPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['models'] is List<Object?> && (json['models']! as List<Object?>).length > 256) {
+    return false;
+  }
+
+  if (json['permissionModes'] is List<Object?> && (json['permissionModes']! as List<Object?>).length > 16) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `GET /engines/claude/account`: who Claude bills on this machine (plan 13, B-11, D-07). Never a token, never the path of a credential — of the sources of the credential only their names.
+class AccountViewPayload {
+  const AccountViewPayload({
+    required this.email,
+    required this.organization,
+    required this.plan,
+    required this.provider,
+    required this.tokenSource,
+    required this.apiKeySource,
+    required this.state,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AccountViewPayload.fromJson(Map<String, Object?> json) => AccountViewPayload(
+        email: json['email'] as String?,
+        organization: json['organization'] as String?,
+        plan: json['plan'] as String?,
+        provider: json['provider'] as String?,
+        tokenSource: json['tokenSource'] as String?,
+        apiKeySource: json['apiKeySource'] as String?,
+        state: json['state']! as String,
+      );
+
+  final String? email;
+
+  final String? organization;
+
+  final String? plan;
+
+  final String? provider;
+
+  final String? tokenSource;
+
+  final String? apiKeySource;
+
+  final String state;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'email': email,
+      'organization': organization,
+      'plan': plan,
+      'provider': provider,
+      'tokenSource': tokenSource,
+      'apiKeySource': apiKeySource,
+      'state': state,
+    };
+
+    return json;
+  }
+}
+
+/// The `claude` on `PATH`, when there is one — often another version. Mirrors `ReadVersion` plus `differs`, inlined because the generator refuses any sibling beside a `$ref` (plan 28, B-48).
+class InstallationViewPayloadPathCli {
+  const InstallationViewPayloadPathCli({
+    required this.version,
+    required this.reason,
+    required this.differs,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory InstallationViewPayloadPathCli.fromJson(Map<String, Object?> json) => InstallationViewPayloadPathCli(
+        version: json['version'] as String?,
+        reason: json['reason'] as String?,
+        differs: json['differs']! as bool,
+      );
+
+  final String? version;
+
+  final String? reason;
+
+  /// Whether the version on `PATH` differs from the bundled one.
+  final bool differs;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'version': version,
+      'reason': reason,
+      'differs': differs,
+    };
+
+    return json;
+  }
+}
+
+/// The configuration directory the CLI reads: `CLAUDE_CONFIG_DIR`, or `~/.claude` without it.
+class InstallationViewPayloadConfigDir {
+  const InstallationViewPayloadConfigDir({
+    required this.path,
+    required this.fromEnvironment,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory InstallationViewPayloadConfigDir.fromJson(Map<String, Object?> json) => InstallationViewPayloadConfigDir(
+        path: json['path']! as String,
+        fromEnvironment: json['fromEnvironment']! as bool,
+      );
+
+  final String path;
+
+  final bool fromEnvironment;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'fromEnvironment': fromEnvironment,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /engines/claude/installation`: "why does Claude not work here?" Never fails because the CLI did not answer: every part says what it could read and why not (plan 13, B-11).
+class InstallationViewPayload {
+  const InstallationViewPayload({
+    required this.agentSdk,
+    required this.bundledCli,
+    required this.pathCli,
+    required this.configDir,
+    required this.login,
+    required this.lastModelCheck,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory InstallationViewPayload.fromJson(Map<String, Object?> json) => InstallationViewPayload(
+        agentSdk: ReadVersion.fromJson(json['agentSdk']! as Map<String, Object?>),
+        bundledCli: ReadVersion.fromJson(json['bundledCli']! as Map<String, Object?>),
+        pathCli: InstallationViewPayloadPathCli.fromJson(json['pathCli']! as Map<String, Object?>),
+        configDir: InstallationViewPayloadConfigDir.fromJson(json['configDir']! as Map<String, Object?>),
+        login: json['login']! as String,
+        lastModelCheck: json['lastModelCheck'] == null ? null : ModelCheckOutcome.fromJson(json['lastModelCheck']! as Map<String, Object?>),
+      );
+
+  final ReadVersion agentSdk;
+
+  /// The binary the SDK spawns, from its manifest.
+  final ReadVersion bundledCli;
+
+  /// The `claude` on `PATH`, when there is one — often another version. Mirrors `ReadVersion` plus `differs`, inlined because the generator refuses any sibling beside a `$ref` (plan 28, B-48).
+  final InstallationViewPayloadPathCli pathCli;
+
+  /// The configuration directory the CLI reads: `CLAUDE_CONFIG_DIR`, or `~/.claude` without it.
+  final InstallationViewPayloadConfigDir configDir;
+
+  /// What the last answer of the installation said of the login — `unknown` before any.
+  final String login;
+
+  /// The test of the connection most recently run, by user. `null` before any.
+  final ModelCheckOutcome? lastModelCheck;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'agentSdk': agentSdk.toJson(),
+      'bundledCli': bundledCli.toJson(),
+      'pathCli': pathCli.toJson(),
+      'configDir': configDir.toJson(),
+      'login': login,
+      'lastModelCheck': lastModelCheck?.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// What applies in the folder asked, and where it came from.
+class OutputStyleViewPayloadEffective {
+  const OutputStyleViewPayloadEffective({
+    required this.value,
+    required this.from,
+    this.folder,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory OutputStyleViewPayloadEffective.fromJson(Map<String, Object?> json) => OutputStyleViewPayloadEffective(
+        value: json['value'] as String?,
+        from: json['from']! as String,
+        folder: json['folder'] as String?,
+      );
+
+  final String? value;
+
+  final String from;
+
+  /// The folder whose override set it, when `from` is `folder`.
+  final String? folder;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'value': value,
+      'from': from,
+    };
+
+    if (folder != null) {
+      json['folder'] = folder;
+    }
+
+    return json;
+  }
+}
+
+/// The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own.
+class OutputStyleViewPayloadFolder {
+  const OutputStyleViewPayloadFolder({
+    required this.folder,
+    required this.value,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory OutputStyleViewPayloadFolder.fromJson(Map<String, Object?> json) => OutputStyleViewPayloadFolder(
+        folder: json['folder']! as String,
+        value: json['value']! as String,
+      );
+
+  final String folder;
+
+  final String value;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'folder': folder,
+      'value': value,
+    };
+
+    return json;
+  }
+}
+
+/// `GET/PUT /engines/claude/output-style` and `PUT/DELETE /engines/claude/output-style/folder`: the output style as the screen shows it — what applies, the user's own, and the folder's (plan 13, D-04, D-06; plan 28, D-06).
+class OutputStyleViewPayload {
+  const OutputStyleViewPayload({
+    required this.effective,
+    required this.user,
+    required this.folder,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory OutputStyleViewPayload.fromJson(Map<String, Object?> json) => OutputStyleViewPayload(
+        effective: OutputStyleViewPayloadEffective.fromJson(json['effective']! as Map<String, Object?>),
+        user: json['user'] as String?,
+        folder: json['folder'] == null ? null : OutputStyleViewPayloadFolder.fromJson(json['folder']! as Map<String, Object?>),
+      );
+
+  /// What applies in the folder asked, and where it came from.
+  final OutputStyleViewPayloadEffective effective;
+
+  final String? user;
+
+  /// The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own.
+  final OutputStyleViewPayloadFolder? folder;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'effective': effective.toJson(),
+      'user': user,
+      'folder': folder?.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only.
+class FileContentPayload {
+  const FileContentPayload({
+    required this.path,
+    required this.content,
+    required this.etag,
+    required this.encoding,
+    required this.bom,
+    required this.eol,
+    required this.size,
+    required this.mtime,
+    required this.largeFile,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory FileContentPayload.fromJson(Map<String, Object?> json) => FileContentPayload(
+        path: json['path']! as String,
+        content: json['content']! as String,
+        etag: json['etag']! as String,
+        encoding: json['encoding']! as String,
+        bom: json['bom']! as bool,
+        eol: json['eol']! as String,
+        size: json['size']! as int,
+        mtime: json['mtime']! as String,
+        largeFile: json['largeFile']! as bool,
+      );
+
+  final String path;
+
+  final String content;
+
+  final String etag;
+
+  final String encoding;
+
+  final bool bom;
+
+  final String eol;
+
+  final int size;
+
+  /// ISO-8601.
+  final String mtime;
+
+  final bool largeFile;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'content': content,
+      'etag': etag,
+      'encoding': encoding,
+      'bom': bom,
+      'eol': eol,
+      'size': size,
+      'mtime': mtime,
+      'largeFile': largeFile,
+    };
+
+    return json;
+  }
+}
+
+/// `POST /files`, `POST /files/move` and `POST /files/copy`: an entry a create, a move or a copy left — one shape for all three.
+class FileEntryPayload {
+  const FileEntryPayload({
+    required this.path,
+    required this.etag,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory FileEntryPayload.fromJson(Map<String, Object?> json) => FileEntryPayload(
+        path: json['path']! as String,
+        etag: json['etag'] as String?,
+      );
+
+  final String path;
+
+  /// Set for a file; `null` for a folder.
+  final String? etag;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'etag': etag,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /files/limits`: the ceilings a client has to know before it starts — editing, download, zip, upload, history (plan 07, F7). Said before the client starts, so a refusal is a sentence on the screen before the transfer, not a `413` after it.
+class FileLimitsPayload {
+  const FileLimitsPayload({
+    required this.maxEditBytes,
+    required this.largeFileBytes,
+    required this.downloadMaxBytes,
+    required this.archiveMaxEntries,
+    required this.uploadMaxBytes,
+    required this.uploadMaxEntries,
+    required this.uploadMaxTotalBytes,
+    required this.historyMaxFileBytes,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory FileLimitsPayload.fromJson(Map<String, Object?> json) => FileLimitsPayload(
+        maxEditBytes: json['maxEditBytes']! as int,
+        largeFileBytes: json['largeFileBytes']! as int,
+        downloadMaxBytes: json['downloadMaxBytes']! as int,
+        archiveMaxEntries: json['archiveMaxEntries']! as int,
+        uploadMaxBytes: json['uploadMaxBytes']! as int,
+        uploadMaxEntries: json['uploadMaxEntries']! as int,
+        uploadMaxTotalBytes: json['uploadMaxTotalBytes']! as int,
+        historyMaxFileBytes: json['historyMaxFileBytes']! as int,
+      );
+
+  /// Above this, a file is not opened for editing at all, and a save is refused.
+  final int maxEditBytes;
+
+  /// Above this, a file opens in the light mode of the editor.
+  final int largeFileBytes;
+
+  /// The most bytes one download takes out: a file, or the measure of a zip.
+  final int downloadMaxBytes;
+
+  /// The most entries one zip carries.
+  final int archiveMaxEntries;
+
+  /// The largest file one upload writes.
+  final int uploadMaxBytes;
+
+  /// The most files one upload writes.
+  final int uploadMaxEntries;
+
+  /// The most bytes one upload writes, all files together.
+  final int uploadMaxTotalBytes;
+
+  /// Above this, a version is not kept, and its entry says so.
+  final int historyMaxFileBytes;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'maxEditBytes': maxEditBytes,
+      'largeFileBytes': largeFileBytes,
+      'downloadMaxBytes': downloadMaxBytes,
+      'archiveMaxEntries': archiveMaxEntries,
+      'uploadMaxBytes': uploadMaxBytes,
+      'uploadMaxEntries': uploadMaxEntries,
+      'uploadMaxTotalBytes': uploadMaxTotalBytes,
+      'historyMaxFileBytes': historyMaxFileBytes,
+    };
+
+    return json;
+  }
+}
+
+class FileTreePayloadEntriesItem {
+  const FileTreePayloadEntriesItem({
+    required this.name,
+    required this.path,
+    required this.kind,
+    required this.size,
+    required this.mtime,
+    required this.hidden,
+    required this.unreadableName,
+    required this.outside,
+    required this.targetKind,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory FileTreePayloadEntriesItem.fromJson(Map<String, Object?> json) => FileTreePayloadEntriesItem(
+        name: json['name']! as String,
+        path: json['path']! as String,
+        kind: json['kind']! as String,
+        size: json['size']! as int,
+        mtime: json['mtime']! as String,
+        hidden: json['hidden']! as bool,
+        unreadableName: json['unreadableName']! as bool,
+        outside: json['outside']! as bool,
+        targetKind: json['targetKind'] as String?,
+      );
+
+  final String name;
+
+  /// Relative to the open folder.
+  final String path;
+
+  final String kind;
+
+  final int size;
+
+  /// ISO-8601.
+  final String mtime;
+
+  /// One of the names the explorer hides unless "show hidden" is on — marked, never left out.
+  final bool hidden;
+
+  /// Not UTF-8 on disk: shown, and never operated on.
+  final bool unreadableName;
+
+  /// A link that leads outside the open folder: not navigable. `false` for anything but a link.
+  final bool outside;
+
+  /// What a link inside leads to — `missing` when it is broken; `null` outside and for non-links.
+  final String? targetKind;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'path': path,
+      'kind': kind,
+      'size': size,
+      'mtime': mtime,
+      'hidden': hidden,
+      'unreadableName': unreadableName,
+      'outside': outside,
+      'targetKind': targetKind,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /files/tree`: one level of one folder, never the whole tree (plan 07, F1).
+class FileTreePayload {
+  const FileTreePayload({
+    required this.folder,
+    required this.path,
+    required this.entries,
+    required this.truncated,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory FileTreePayload.fromJson(Map<String, Object?> json) => FileTreePayload(
+        folder: json['folder']! as String,
+        path: json['path']! as String,
+        entries: (json['entries']! as List<Object?>).map((item) => FileTreePayloadEntriesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        truncated: json['truncated']! as bool,
+      );
+
+  final String folder;
+
+  /// Relative to the open folder.
+  final String path;
+
+  final List<FileTreePayloadEntriesItem> entries;
+
+  final bool truncated;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'folder': folder,
+      'path': path,
+      'entries': entries.map((item) => item.toJson()).toList(growable: false),
+      'truncated': truncated,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [FileTreePayload].
+bool fileTreePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['entries'] is List<Object?> && (json['entries']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// The server only knows the `sub` of whoever wrote: `self` says whether it is the caller.
+class HistoryPagePayloadEntriesItemAuthor {
+  const HistoryPagePayloadEntriesItemAuthor({
+    required this.self,
+    required this.id,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory HistoryPagePayloadEntriesItemAuthor.fromJson(Map<String, Object?> json) => HistoryPagePayloadEntriesItemAuthor(
+        self: json['self']! as bool,
+        id: json['id']! as String,
+      );
+
+  final bool self;
+
+  final String id;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'self': self,
+      'id': id,
+    };
+
+    return json;
+  }
+}
+
+/// One version, as the Timeline shows it. Never the contents.
+class HistoryPagePayloadEntriesItem {
+  const HistoryPagePayloadEntriesItem({
+    required this.id,
+    required this.path,
+    required this.entryKind,
+    required this.reason,
+    required this.kept,
+    required this.sizeBytes,
+    required this.hash,
+    required this.author,
+    required this.at,
+    required this.batchId,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory HistoryPagePayloadEntriesItem.fromJson(Map<String, Object?> json) => HistoryPagePayloadEntriesItem(
+        id: json['id']! as String,
+        path: json['path']! as String,
+        entryKind: json['entryKind']! as String,
+        reason: json['reason']! as String,
+        kept: json['kept']! as String,
+        sizeBytes: json['sizeBytes'] as int?,
+        hash: json['hash'] as String?,
+        author: HistoryPagePayloadEntriesItemAuthor.fromJson(json['author']! as Map<String, Object?>),
+        at: json['at']! as String,
+        batchId: json['batchId'] as String?,
+      );
+
+  final String id;
+
+  /// Relative to the folder asked.
+  final String path;
+
+  final String entryKind;
+
+  final String reason;
+
+  final String kept;
+
+  final int? sizeBytes;
+
+  /// In the form of an `ETag`, so a client compares it with the current file's as it is.
+  final String? hash;
+
+  /// The server only knows the `sub` of whoever wrote: `self` says whether it is the caller.
+  final HistoryPagePayloadEntriesItemAuthor author;
+
+  /// ISO-8601.
+  final String at;
+
+  final String? batchId;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'path': path,
+      'entryKind': entryKind,
+      'reason': reason,
+      'kept': kept,
+      'sizeBytes': sizeBytes,
+      'hash': hash,
+      'author': author.toJson(),
+      'at': at,
+      'batchId': batchId,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /files/history`: a page of versions, newest first — one path's, the whole folder's, or the recently deleted (plan 07, B-58).
+class HistoryPagePayload {
+  const HistoryPagePayload({
+    required this.entries,
+    required this.nextCursor,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory HistoryPagePayload.fromJson(Map<String, Object?> json) => HistoryPagePayload(
+        entries: (json['entries']! as List<Object?>).map((item) => HistoryPagePayloadEntriesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        nextCursor: json['nextCursor'] as String?,
+      );
+
+  final List<HistoryPagePayloadEntriesItem> entries;
+
+  /// Opaque to the client: send it back as `cursor`. `null` on the last page.
+  final String? nextCursor;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'entries': entries.map((item) => item.toJson()).toList(growable: false),
+      'nextCursor': nextCursor,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [HistoryPagePayload].
+bool historyPagePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['entries'] is List<Object?> && (json['entries']! as List<Object?>).length > 1000) {
+    return false;
+  }
+
+  return true;
+}
+
+class KeptDeletePayloadKeptEntriesItem {
+  const KeptDeletePayloadKeptEntriesItem({
+    required this.id,
+    required this.path,
+    required this.entryKind,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory KeptDeletePayloadKeptEntriesItem.fromJson(Map<String, Object?> json) => KeptDeletePayloadKeptEntriesItem(
+        id: json['id']! as String,
+        path: json['path']! as String,
+        entryKind: json['entryKind']! as String,
+      );
+
+  final String id;
+
+  final String path;
+
+  final String entryKind;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'path': path,
+      'entryKind': entryKind,
+    };
+
+    return json;
+  }
+}
+
+class KeptDeletePayloadKept {
+  const KeptDeletePayloadKept({
+    required this.batchId,
+    required this.entries,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory KeptDeletePayloadKept.fromJson(Map<String, Object?> json) => KeptDeletePayloadKept(
+        batchId: json['batchId']! as String,
+        entries: (json['entries']! as List<Object?>).map((item) => KeptDeletePayloadKeptEntriesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final String batchId;
+
+  final List<KeptDeletePayloadKeptEntriesItem> entries;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'batchId': batchId,
+      'entries': entries.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [KeptDeletePayloadKept].
+bool keptDeletePayloadKeptLimitsHold(Map<String, Object?> json) {
+  if (json['entries'] is List<Object?> && (json['entries']! as List<Object?>).length > 100000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `DELETE /files` with `keepInHistory`: what the delete kept, for the client's Undo (plan 07, F8). Absent on the plain `204` — this is the present shape only.
+class KeptDeletePayload {
+  const KeptDeletePayload({
+    required this.kept,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory KeptDeletePayload.fromJson(Map<String, Object?> json) => KeptDeletePayload(
+        kept: KeptDeletePayloadKept.fromJson(json['kept']! as Map<String, Object?>),
+      );
+
+  final KeptDeletePayloadKept kept;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kept': kept.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /notifications`: a page of the centre, newest first, with how many are unread (plan 06, B-40).
+class NotificationPagePayload {
+  const NotificationPagePayload({
+    required this.items,
+    required this.unread,
+    required this.nextCursor,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory NotificationPagePayload.fromJson(Map<String, Object?> json) => NotificationPagePayload(
+        items: (json['items']! as List<Object?>).map((item) => Notification.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        unread: json['unread']! as int,
+        nextCursor: json['nextCursor'] as String?,
+      );
+
+  final List<Notification> items;
+
+  final int unread;
+
+  final String? nextCursor;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'items': items.map((item) => item.toJson()).toList(growable: false),
+      'unread': unread,
+      'nextCursor': nextCursor,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [NotificationPagePayload].
+bool notificationPagePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['items'] is List<Object?> && (json['items']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `GET /workspaces/open-folders`: the folder tabs, in the order the user left them, each revalidated (plan 06).
+class OpenFoldersPayload {
+  const OpenFoldersPayload({
+    required this.folders,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory OpenFoldersPayload.fromJson(Map<String, Object?> json) => OpenFoldersPayload(
+        folders: (json['folders']! as List<Object?>).map((item) => OpenFolderEntry.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<OpenFolderEntry> folders;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'folders': folders.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [OpenFoldersPayload].
+bool openFoldersPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['folders'] is List<Object?> && (json['folders']! as List<Object?>).length > 256) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `GET /permission-rules`: the caller's rules, newest first — expired ones included and marked, revoked ones gone (plan 03).
+class PermissionRuleListPayload {
+  const PermissionRuleListPayload({
+    required this.rules,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleListPayload.fromJson(Map<String, Object?> json) => PermissionRuleListPayload(
+        rules: (json['rules']! as List<Object?>).map((item) => PermissionRule.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<PermissionRule> rules;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'rules': rules.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleListPayload].
+bool permissionRuleListPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['rules'] is List<Object?> && (json['rules']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+class PermissionStatePayloadAnswersItem {
+  const PermissionStatePayloadAnswersItem({
+    required this.questionId,
+    required this.selected,
+    this.other,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionStatePayloadAnswersItem.fromJson(Map<String, Object?> json) => PermissionStatePayloadAnswersItem(
+        questionId: json['questionId']! as String,
+        selected: (json['selected']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        other: json['other'] as String?,
+      );
+
+  final String questionId;
+
+  final List<String> selected;
+
+  final String? other;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'questionId': questionId,
+      'selected': selected,
+    };
+
+    if (other != null) {
+      json['other'] = other;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionStatePayloadAnswersItem].
+bool permissionStatePayloadAnswersItemLimitsHold(Map<String, Object?> json) {
+  if (json['selected'] is List<Object?> && (json['selected']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `GET /sessions/:sessionId/permissions/:requestId`: the state of one permission request, for a client that was told about it by somebody else — a push may be minutes late, so the app asks before it renders (plan 02, D-22). In the domain this is a discriminated union by `status` (`pending` carries `request` and `remainingExtensions`; `resolved` carries the rest), which the generator cannot express as a `oneOf`; flattened here with every field but `status` optional, paired by `status` (plan 28, B-48). `request` is carried as a generic open object — exactly `permission.requested`'s payload — rather than a precise nested shape, because the domain type behind it (`Readonly<Record<string, unknown>>`) is already open at the TypeScript boundary.
+class PermissionStatePayload {
+  const PermissionStatePayload({
+    required this.status,
+    this.request,
+    this.remainingExtensions,
+    this.requestId,
+    this.decision,
+    this.auto,
+    this.resolvedBy,
+    this.resolvedFrom,
+    this.toolUseId,
+    this.via,
+    this.answers,
+    this.interaction,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionStatePayload.fromJson(Map<String, Object?> json) => PermissionStatePayload(
+        status: json['status']! as String,
+        request: json['request'] as Map<String, Object?>?,
+        remainingExtensions: json['remainingExtensions'] as int?,
+        requestId: json['requestId'] as String?,
+        decision: json['decision'] as String?,
+        auto: json['auto'] as bool?,
+        resolvedBy: json['resolvedBy'] as String?,
+        resolvedFrom: json['resolvedFrom'] as String?,
+        toolUseId: json['toolUseId'] as String?,
+        via: json['via'] as String?,
+        answers: json['answers'] == null ? null : (json['answers']! as List<Object?>).map((item) => PermissionStatePayloadAnswersItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        interaction: json['interaction'] == null ? null : Interaction.fromJson(json['interaction']! as Map<String, Object?>),
+      );
+
+  final String status;
+
+  /// Present exactly when `status` is `pending`. Exactly the `permission.requested` payload — the card renders from this and nothing else.
+  final Map<String, Object?>? request;
+
+  /// Present exactly when `status` is `pending`. What stops a card offering an extension that no longer exists.
+  final int? remainingExtensions;
+
+  /// Present exactly when `status` is `resolved`. The request that was settled.
+  final String? requestId;
+
+  /// Present exactly when `status` is `resolved`.
+  final String? decision;
+
+  /// Present exactly when `status` is `resolved`. The server decided it, with nobody answering.
+  final bool? auto;
+
+  /// Present when `status` is `resolved` and a human answered.
+  final String? resolvedBy;
+
+  /// Present when `status` is `resolved` and a human answered.
+  final String? resolvedFrom;
+
+  /// Present when `status` is `resolved` and the engine named a tool call.
+  final String? toolUseId;
+
+  /// Present when `status` is `resolved` and nobody was asked.
+  final String? via;
+
+  /// Present when `status` is `resolved`, the request was a question and the decision `allow`.
+  final List<PermissionStatePayloadAnswersItem>? answers;
+
+  /// Present when `status` is `resolved` and the request was a question — the phone a push opened draws it with what was answered.
+  final Interaction? interaction;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'status': status,
+    };
+
+    if (request != null) {
+      json['request'] = request;
+    }
+
+    if (remainingExtensions != null) {
+      json['remainingExtensions'] = remainingExtensions;
+    }
+
+    if (requestId != null) {
+      json['requestId'] = requestId;
+    }
+
+    if (decision != null) {
+      json['decision'] = decision;
+    }
+
+    if (auto != null) {
+      json['auto'] = auto;
+    }
+
+    if (resolvedBy != null) {
+      json['resolvedBy'] = resolvedBy;
+    }
+
+    if (resolvedFrom != null) {
+      json['resolvedFrom'] = resolvedFrom;
+    }
+
+    if (toolUseId != null) {
+      json['toolUseId'] = toolUseId;
+    }
+
+    if (via != null) {
+      json['via'] = via;
+    }
+
+    if (answers != null) {
+      json['answers'] = answers?.map((item) => item.toJson()).toList(growable: false);
+    }
+
+    if (interaction != null) {
+      json['interaction'] = interaction?.toJson();
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionStatePayload].
+bool permissionStatePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['answers'] is List<Object?> && (json['answers']! as List<Object?>).length > 4) {
+    return false;
+  }
+
+  return true;
+}
+
+class RecentFoldersPayloadFoldersItem {
+  const RecentFoldersPayloadFoldersItem({
+    required this.path,
+    required this.rootLabel,
+    required this.lastOpenedAt,
+    required this.pinned,
+    required this.available,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory RecentFoldersPayloadFoldersItem.fromJson(Map<String, Object?> json) => RecentFoldersPayloadFoldersItem(
+        path: json['path']! as String,
+        rootLabel: json['rootLabel'] as String?,
+        lastOpenedAt: json['lastOpenedAt']! as String,
+        pinned: json['pinned']! as bool,
+        available: json['available']! as bool,
+      );
+
+  final String path;
+
+  /// The label of the root it lives under now, or `null` once it lives under none.
+  final String? rootLabel;
+
+  /// ISO-8601.
+  final String lastOpenedAt;
+
+  final bool pinned;
+
+  /// `false` for a folder that left the allowlist or the disk — marked, rather than dropped.
+  final bool available;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'rootLabel': rootLabel,
+      'lastOpenedAt': lastOpenedAt,
+      'pinned': pinned,
+      'available': available,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /workspaces/recent`: the folders this caller opened, pinned first — each marked when it can no longer be used (plan 06).
+class RecentFoldersPayload {
+  const RecentFoldersPayload({
+    required this.folders,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory RecentFoldersPayload.fromJson(Map<String, Object?> json) => RecentFoldersPayload(
+        folders: (json['folders']! as List<Object?>).map((item) => RecentFoldersPayloadFoldersItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<RecentFoldersPayloadFoldersItem> folders;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'folders': folders.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [RecentFoldersPayload].
+bool recentFoldersPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['folders'] is List<Object?> && (json['folders']! as List<Object?>).length > 1000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `GET /workspaces/resolve`: a path that cleared every check, and the root it cleared under (plan 06).
+class ResolvedWorkspacePayload {
+  const ResolvedWorkspacePayload({
+    required this.path,
+    required this.root,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ResolvedWorkspacePayload.fromJson(Map<String, Object?> json) => ResolvedWorkspacePayload(
+        path: json['path']! as String,
+        root: Workspace.fromJson(json['root']! as Map<String, Object?>),
+      );
+
+  final String path;
+
+  final Workspace root;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'root': root.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `POST /files/history/:entryId/restore`: what a restore left. `etag` and `size` are `null` for a folder.
+class RestoredEntryPayload {
+  const RestoredEntryPayload({
+    required this.path,
+    required this.etag,
+    required this.size,
+    required this.written,
+    required this.history,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory RestoredEntryPayload.fromJson(Map<String, Object?> json) => RestoredEntryPayload(
+        path: json['path']! as String,
+        etag: json['etag'] as String?,
+        size: json['size'] as int?,
+        written: json['written']! as bool,
+        history: json['history'] == null ? null : HistoryOutcome.fromJson(json['history']! as Map<String, Object?>),
+      );
+
+  final String path;
+
+  final String? etag;
+
+  final int? size;
+
+  final bool written;
+
+  final HistoryOutcome? history;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'etag': etag,
+      'size': size,
+      'written': written,
+      'history': history?.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `PUT /files/content`: a file as a save left it, and how keeping the version it replaced ended.
+class SavedFilePayload {
+  const SavedFilePayload({
+    required this.path,
+    required this.etag,
+    required this.size,
+    required this.history,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SavedFilePayload.fromJson(Map<String, Object?> json) => SavedFilePayload(
+        path: json['path']! as String,
+        etag: json['etag']! as String,
+        size: json['size']! as int,
+        history: json['history'] == null ? null : HistoryOutcome.fromJson(json['history']! as Map<String, Object?>),
+      );
+
+  final String path;
+
+  final String etag;
+
+  final int size;
+
+  /// `null`: nothing was written to the history.
+  final HistoryOutcome? history;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'etag': etag,
+      'size': size,
+      'history': history?.toJson(),
     };
 
     return json;
@@ -5070,7 +7688,7 @@ class TranscriptListPayload {
   }
 }
 
-/// What `GET /transcripts/:engine/:id/messages` answers: a page of a conversation, newest page first and oldest first within it (plan 28, B-12). The route of the previous protocol, `GET /transcripts/:sessionId/messages`, answers the same during its window.
+/// What `GET /transcripts/:engine/:id/messages` answers: a page of a conversation, newest page first and oldest first within it (plan 28, B-12).
 class TranscriptPagePayload {
   const TranscriptPagePayload({
     required this.session,
@@ -5157,6 +7775,341 @@ class TranscriptToolResultPayload {
   }
 }
 
+class UploadPreflightPayloadItemsItemExisting {
+  const UploadPreflightPayloadItemsItemExisting({
+    required this.kind,
+    required this.etag,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory UploadPreflightPayloadItemsItemExisting.fromJson(Map<String, Object?> json) => UploadPreflightPayloadItemsItemExisting(
+        kind: json['kind']! as String,
+        etag: json['etag'] as String?,
+      );
+
+  final String kind;
+
+  final String? etag;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kind': kind,
+      'etag': etag,
+    };
+
+    return json;
+  }
+}
+
+class UploadPreflightPayloadItemsItem {
+  const UploadPreflightPayloadItemsItem({
+    required this.path,
+    required this.existing,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory UploadPreflightPayloadItemsItem.fromJson(Map<String, Object?> json) => UploadPreflightPayloadItemsItem(
+        path: json['path']! as String,
+        existing: json['existing'] == null ? null : UploadPreflightPayloadItemsItemExisting.fromJson(json['existing']! as Map<String, Object?>),
+      );
+
+  /// Relative to the open folder.
+  final String path;
+
+  final UploadPreflightPayloadItemsItemExisting? existing;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'existing': existing?.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `POST /files/upload/preflight`: what is already where each item of an upload would go — asked before anything is sent (plan 07, F7).
+class UploadPreflightPayload {
+  const UploadPreflightPayload({
+    required this.items,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory UploadPreflightPayload.fromJson(Map<String, Object?> json) => UploadPreflightPayload(
+        items: (json['items']! as List<Object?>).map((item) => UploadPreflightPayloadItemsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<UploadPreflightPayloadItemsItem> items;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'items': items.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [UploadPreflightPayload].
+bool uploadPreflightPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['items'] is List<Object?> && (json['items']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Present exactly when `status` is `failed`. The envelope of an error, without the parts that belong to a whole response.
+class UploadResultPayloadItemsItemError {
+  const UploadResultPayloadItemsItemError({
+    required this.code,
+    required this.messageKey,
+    this.params,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory UploadResultPayloadItemsItemError.fromJson(Map<String, Object?> json) => UploadResultPayloadItemsItemError(
+        code: json['code']! as String,
+        messageKey: json['messageKey']! as String,
+        params: json['params'] as Map<String, Object?>?,
+      );
+
+  final String code;
+
+  final String messageKey;
+
+  /// Open: the parameters of the message, by key.
+  final Map<String, Object?>? params;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'code': code,
+      'messageKey': messageKey,
+    };
+
+    if (params != null) {
+      json['params'] = params;
+    }
+
+    return json;
+  }
+}
+
+class UploadResultPayloadItemsItem {
+  const UploadResultPayloadItemsItem({
+    required this.path,
+    required this.status,
+    this.etag,
+    this.history,
+    this.error,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory UploadResultPayloadItemsItem.fromJson(Map<String, Object?> json) => UploadResultPayloadItemsItem(
+        path: json['path']! as String,
+        status: json['status']! as String,
+        etag: json['etag'] as String?,
+        history: json['history'] == null ? null : HistoryOutcome.fromJson(json['history']! as Map<String, Object?>),
+        error: json['error'] == null ? null : UploadResultPayloadItemsItemError.fromJson(json['error']! as Map<String, Object?>),
+      );
+
+  /// Relative to the open folder.
+  final String path;
+
+  final String status;
+
+  /// Present when `status` is `created`, `renamed` or `replaced`.
+  final String? etag;
+
+  /// How keeping the version it replaced in the local history ended. Present exactly when `status` is `replaced`.
+  final HistoryOutcome? history;
+
+  /// Present exactly when `status` is `failed`. The envelope of an error, without the parts that belong to a whole response.
+  final UploadResultPayloadItemsItemError? error;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'status': status,
+    };
+
+    if (etag != null) {
+      json['etag'] = etag;
+    }
+
+    if (history != null) {
+      json['history'] = history?.toJson();
+    }
+
+    if (error != null) {
+      json['error'] = error?.toJson();
+    }
+
+    return json;
+  }
+}
+
+/// `POST /files/upload`: `200` when every item was written, `207` when any failed, each with its own outcome. In the domain `items` is a discriminated union by `status` (`created`/`renamed` carry `etag`; `replaced` carries `etag` and `history`; `failed` carries `error`), which the generator cannot express as a `oneOf`; flattened here, with the pairing documented per field (plan 28, B-48).
+class UploadResultPayload {
+  const UploadResultPayload({
+    required this.items,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory UploadResultPayload.fromJson(Map<String, Object?> json) => UploadResultPayload(
+        items: (json['items']! as List<Object?>).map((item) => UploadResultPayloadItemsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<UploadResultPayloadItemsItem> items;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'items': items.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [UploadResultPayload].
+bool uploadResultPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['items'] is List<Object?> && (json['items']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+class VersionsPayloadEnginesItem {
+  const VersionsPayloadEnginesItem({
+    required this.engine,
+    required this.displayName,
+    required this.state,
+    required this.binary,
+    required this.library,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory VersionsPayloadEnginesItem.fromJson(Map<String, Object?> json) => VersionsPayloadEnginesItem(
+        engine: json['engine']! as String,
+        displayName: json['displayName']! as String,
+        state: json['state']! as String,
+        binary: ComponentVersion.fromJson(json['binary']! as Map<String, Object?>),
+        library: json['library'] == null ? null : ComponentVersion.fromJson(json['library']! as Map<String, Object?>),
+      );
+
+  final String engine;
+
+  final String displayName;
+
+  final String state;
+
+  final ComponentVersion binary;
+
+  /// `null` for an engine driven with no library.
+  final ComponentVersion? library;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'engine': engine,
+      'displayName': displayName,
+      'state': state,
+      'binary': binary.toJson(),
+      'library': library?.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /diag/versions`: what somebody pastes into a bug report (plan 06, B-12; plan 28, B-37). Always `200` — a version that could not be read is `null` with the reason, never a `500`.
+class VersionsPayload {
+  const VersionsPayload({
+    required this.backend,
+    required this.node,
+    required this.defaultEngine,
+    required this.engines,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory VersionsPayload.fromJson(Map<String, Object?> json) => VersionsPayload(
+        backend: ComponentVersion.fromJson(json['backend']! as Map<String, Object?>),
+        node: ComponentVersion.fromJson(json['node']! as Map<String, Object?>),
+        defaultEngine: json['defaultEngine']! as String,
+        engines: (json['engines']! as List<Object?>).map((item) => VersionsPayloadEnginesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final ComponentVersion backend;
+
+  final ComponentVersion node;
+
+  /// The engine a session opens on when the client names none — one of `engines`.
+  final String defaultEngine;
+
+  /// One per engine enabled, in the order the configuration lists them (S-108).
+  final List<VersionsPayloadEnginesItem> engines;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'backend': backend.toJson(),
+      'node': node.toJson(),
+      'defaultEngine': defaultEngine,
+      'engines': engines.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [VersionsPayload].
+bool versionsPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['engines'] is List<Object?> && (json['engines']! as List<Object?>).length > 32) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `GET /workspaces`: the roots this caller may use. Only theirs: a root of somebody else is not listed at all (plan 06).
+class WorkspaceListPayload {
+  const WorkspaceListPayload({
+    required this.workspaces,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory WorkspaceListPayload.fromJson(Map<String, Object?> json) => WorkspaceListPayload(
+        workspaces: (json['workspaces']! as List<Object?>).map((item) => Workspace.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<Workspace> workspaces;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'workspaces': workspaces.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [WorkspaceListPayload].
+bool workspaceListPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['workspaces'] is List<Object?> && (json['workspaces']! as List<Object?>).length > 256) {
+    return false;
+  }
+
+  return true;
+}
+
 /// The answer to `permission.requested`, carrying its `id` in `correlationId`. Resolving the same `requestId` twice is a silent ack and **one** execution, never an error and never a double run — several clients watch one session, and a client may resend after reconnecting.
 class PermissionResolvePayload {
   const PermissionResolvePayload({
@@ -5226,7 +8179,7 @@ class PermissionResolvePayload {
 /// Whether [json] satisfies the conditional requirements of [PermissionResolvePayload].
 ///
 /// `reason` is also required when `decision`
-/// is `deny` — the reason goes into the audit trail and back to Claude as a message; a refusal nobody can account for is a refusal nobody can learn from.
+/// is `deny` — the reason goes into the audit trail and back to the agent as a message; a refusal nobody can account for is a refusal nobody can learn from.
 bool permissionResolvePayloadConditionalsHold(Map<String, Object?> json) {
   if (json['decision'] == 'deny' && json['reason'] is! String) {
     return false;
@@ -5243,3 +8196,18 @@ bool permissionResolvePayloadLimitsHold(Map<String, Object?> json) {
 
   return true;
 }
+
+/// `POST /devices`, `POST /devices/:deviceId/approval` and `DELETE /devices/:deviceId/approval`: one device, as the client sees it — the same shape as one entry of `DeviceList.devices`, named again rather than declared twice (plan 28, B-48).
+typedef DevicePayload = Device;
+
+/// `POST /engines/claude/diagnostics/model-check`: one turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). The same shape `GET /engines/claude/installation`'s `lastModelCheck` carries, named again rather than declared twice (plan 28, B-48).
+typedef ModelCheckOutcomePayload = ModelCheckOutcome;
+
+/// `POST /notifications`: keeps a notification — `201` when new, `200` with the one already kept under the same client id. The same shape as one entry of `NotificationPage.items`, named again rather than declared twice (plan 28, B-48).
+typedef NotificationPayload = Notification;
+
+/// `POST /workspaces/open-folders`: `201` with the new tab, `200` with the one already open — the same shape as one entry of `OpenFolders.folders`, named again rather than declared twice (plan 28, B-48).
+typedef OpenFolderEntryPayload = OpenFolderEntry;
+
+/// `GET /permission-rules/:ruleId`, `POST /permission-rules` and `DELETE /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48).
+typedef PermissionRulePayload = PermissionRule;

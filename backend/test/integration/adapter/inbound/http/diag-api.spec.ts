@@ -64,14 +64,20 @@ describe('the versions route', () => {
         authorization: `Bearer ${token}`,
       });
 
-  it('answers the backend, the SDK, the CLI and Node — S-65', async () => {
+  /** The default engine's own line of `engines[]`. */
+  const defaultEngineOf = (body: { defaultEngine: string; engines: { engine: string }[] }) =>
+    body.engines.find((engine) => engine.engine === body.defaultEngine);
+
+  it('answers the backend, the default engine and Node — S-65', async () => {
     const response = await versions();
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
       backend: { version: '0.0.0', reason: null },
-      agentSdk: { version: expect.stringMatching(/^\d+\.\d+\.\d+/), reason: null },
       node: { version: process.versions.node, reason: null },
+    });
+    expect(defaultEngineOf(response.body)).toMatchObject({
+      library: { version: expect.stringMatching(/^\d+\.\d+\.\d+/), reason: null },
     });
   });
 
@@ -80,16 +86,20 @@ describe('the versions route', () => {
 
     expect(response.status).toBe(200);
     // What the route read straight from the files of the SDK until the engine described itself.
-    expect(response.body.agentSdk).toEqual(readAgentSdkVersion());
-    expect(response.body.claudeCli).toEqual(readBundledCliVersion());
+    expect(defaultEngineOf(response.body)).toMatchObject({
+      library: readAgentSdkVersion(),
+      binary: readBundledCliVersion(),
+    });
   });
 
   it('answers 200 with null and the reason for a CLI it cannot read — S-66', async () => {
     const response = await versions(unreadable);
 
     expect(response.status).toBe(200);
-    expect(response.body.claudeCli).toEqual({ version: null, reason: 'notInstalled' });
-    expect(response.body.agentSdk).toEqual(readAgentSdkVersion());
+    expect(defaultEngineOf(response.body)).toMatchObject({
+      binary: { version: null, reason: 'notInstalled' },
+      library: readAgentSdkVersion(),
+    });
   });
 
   it('answers 401 without a credential — S-67', async () => {

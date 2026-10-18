@@ -45,7 +45,7 @@ import type { PermissionSettlement } from './settle-permission';
  * question: it is `once`, and no rule is left (D-09).
  *
  * **Losing the race is not an error.** The second answer gets an ordinary outcome carrying the
- * decision that actually reached the SDK, so the client can show who won rather than a failure
+ * decision that actually reached the engine, so the client can show who won rather than a failure
  * (docs/architecture/web/04-state-and-data.md#a-fila-de-permissão). A rule asked for about a question
  * that was already decided when the answer arrived is not granted.
  *

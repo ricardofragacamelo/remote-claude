@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/read-version.json",
+  "title": "ReadVersion",
+  "description": "A version of a part of an engine's installation, as `GET /engines/:engine/installation` reads it (plan 13, B-11) — or why there is none, in the engine's own open-ended words. Never a failure. Distinct from `ComponentVersion` (diag's, with a closed two-value reason): this `reason` is whatever string the installation facts read off the engine, not one of a fixed set.",
+  "type": "object",
+  "required": ["version", "reason"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "reason": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Why there is no version — open-ended, unlike `ComponentVersion`'s."
+    }
+  }
+}

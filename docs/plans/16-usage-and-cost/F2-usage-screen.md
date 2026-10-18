@@ -20,7 +20,7 @@ string literal ([02-i18n](../../architecture/shared/02-i18n.md)), token semânti
 [responsividade](../../architecture/web/03-ui-system.md#responsividade) e o núcleo neutro do
 [28](../28-agent-neutral-core/README.md): `web/src/features/usage/` não conhece nome de motor; o que
 só o Claude tem (limites da conta, assinatura) mora em `web/src/engines/claude/usage/` e é registrado
-pelo `web/src/app/engines.ts` num slot de painéis da tela; o nome do agente é `{agent}`, do
+pelo `web/src/app/engines/index.ts` num slot de painéis da tela; o nome do agente é `{agent}`, do
 `displayName` do `GET /engines`; a unidade mostrada segue a capacidade `cost` do motor. Cada task
 entrega unit (componentes e formatadores), integração (tela com MSW) e alimenta o e2e da F4.
 
@@ -122,7 +122,7 @@ não bloqueia a tela; recusa `USAGE_EXPORT_TOO_LARGE` traduzida com a ação "ex
 ### B-21 — Painel de limites da conta 🔲
 
 Painel da **extensão do Claude** (`web/src/engines/claude/usage/`), que consome
-`GET /engines/claude/usage/rate-limits` e se registra pelo `web/src/app/engines.ts` no slot de painéis
+`GET /engines/claude/usage/rate-limits` e se registra pelo `web/src/app/engines/index.ts` no slot de painéis
 da tela de uso; a tela não o importa, e sem a extensão habilitada ele não aparece. Bloco próprio: cada janela (5 horas, 7 dias, 7 dias Opus/Sonnet, overage) com barra acessível de
 utilização, estado (dentro, perto, bloqueado), reset relativo ("em 2 h 10 min") e absoluto no fuso,
 e "visto às HH:MM" — nunca finge tempo real (S-80). Conta sem limites de plano: explica que o limite

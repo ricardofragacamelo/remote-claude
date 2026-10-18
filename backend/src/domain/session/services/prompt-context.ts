@@ -1,17 +1,17 @@
 /**
- * How the context of a prompt reaches Claude — plan 08, D-01, B-44 and B-45.
+ * How the context of a prompt reaches the agent — plan 08, D-01, B-44 and B-45.
  *
  * A file, a folder or a range of lines is a **reference**: a delimited line naming the path, which
- * Claude reads through `Read` under the `PreToolUse` hook, so the trail sees the reading. What is
+ * the agent reads through `Read` under the `PreToolUse` hook, so the trail sees the reading. What is
  * not on disk — a text file dropped from the desktop, the text a provider of the client holds —
  * travels itself, delimited and labelled by where it came from, never as if the person had typed it.
  * An image goes beside the text as a block of its own, and is not composed here.
  *
- * Composed in the backend, so the web and the app send the same thing and Claude reads the same
+ * Composed in the backend, so the web and the app send the same thing and the agent reads the same
  * thing whichever sent it. Pure: strings in, a string out.
  */
 
-/** A file, a folder or a range of one, inside the session's folder — what Claude reads by `Read`. */
+/** A file, a folder or a range of one, inside the session's folder — what the agent reads by `Read`. */
 export interface PromptReference {
   readonly kind: 'file' | 'folder';
 
@@ -53,7 +53,7 @@ export interface ContextFact {
   readonly sha256?: string;
 }
 
-/** What goes to Claude beside the text of a turn. */
+/** What goes to the agent beside the text of a turn. */
 export interface PromptExtras {
   /** What the person typed, before anything was composed — the only part the log may quote. */
   readonly typed: string;
@@ -117,7 +117,7 @@ export function textBlock(text: PromptText): string {
 }
 
 /**
- * The text of a turn as Claude receives it: what was typed, with its mentions guarded, then the
+ * The text of a turn as the agent receives it: what was typed, with its mentions guarded, then the
  * references and the blocks of text, each on its own, in the order they were chosen.
  */
 export function composePrompt(

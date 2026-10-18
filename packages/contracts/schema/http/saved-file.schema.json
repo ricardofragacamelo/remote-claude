@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/saved-file.json",
+  "title": "SavedFile",
+  "description": "`PUT /files/content`: a file as a save left it, and how keeping the version it replaced ended.",
+  "x-kind": "http",
+  "x-type": "files.saved",
+  "x-route": [{ "method": "PUT", "path": "/files/content" }],
+  "type": "object",
+  "required": ["path", "etag", "size", "history"],
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "etag": {
+      "type": "string"
+    },
+    "size": {
+      "type": "integer"
+    },
+    "history": {
+      "$ref": "../definitions/history-outcome.schema.json",
+      "x-nullable": true,
+      "description": "`null`: nothing was written to the history."
+    }
+  }
+}

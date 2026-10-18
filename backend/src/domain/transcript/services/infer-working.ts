@@ -2,7 +2,7 @@ import type { TranscriptMessage } from '../value-objects/transcript-message.valu
 import type { TranscriptActivity } from './transcript-activity';
 
 /**
- * Whether Claude seems to be working on a conversation in another client (plan 22, B-15, D-12).
+ * Whether the agent seems to be working on a conversation in another client (plan 22, B-15, D-12).
  *
  * The transcript records no state of the turn, so this is an inference and the screen says it is one.
  * It is `true` only when the conversation is `activeElsewhere` — written within the window — **and** its

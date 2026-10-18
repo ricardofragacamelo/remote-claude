@@ -12,7 +12,7 @@ fica no cabeçalho de cada documento; o da implementação, no plano que a absor
 
 ## Panorama
 
-**Última atualização:** 2026-10-10
+**Última atualização:** 2026-10-17
 
 | # | Discovery | Criada em | Plano | Implementação |
 |---|---|---|---|---|
@@ -20,12 +20,13 @@ fica no cabeçalho de cada documento; o da implementação, no plano que a absor
 | 02 | [Workflow de sessões](02-workflow-de-sessoes.md) | 2026-10-03 | — | 🔲 rascunho, sem plano |
 | 03 | [Múltiplos motores de agente](03-multiplos-motores-de-agente.md) | 2026-10-03 | — | 🔲 rascunho, sem plano |
 | 04 | [Histórico ao vivo e fiel ao Claude Code](04-historico-ao-vivo-e-fiel.md) | 2026-10-04 | [22 — Histórico ao vivo](../plans/22-live-history/README.md) | ✅ implementada |
-| 05 | [Perguntas estruturadas (`AskUserQuestion`)](05-perguntas-estruturadas.md) | 2026-10-04 | [24 — Perguntas estruturadas](../plans/24-structured-questions/README.md) | 🔄 em andamento — F0…F2 (backend e fixtures) prontas; web, mobile, histórico e e2e por fazer |
+| 05 | [Perguntas estruturadas (`AskUserQuestion`)](05-perguntas-estruturadas.md) | 2026-10-04 | [24 — Perguntas estruturadas](../plans/24-structured-questions/README.md) | ✅ implementada |
 | 06 | [O remote-claude como app desktop (Tauri)](06-app-desktop-tauri.md) | 2026-10-08 | — | 🔲 discovery, sem plano |
-| 07 | [Navegar e ler os arquivos da pasta pelo app](07-navegador-de-arquivos-no-app.md) | 2026-10-08 | [25 — Navegador de arquivos no app](../plans/25-mobile-file-browser/README.md) | 🔲 plano criado, não iniciado |
-| 08 | [Paridade da conversa no app: o plano 13 e o markdown](08-paridade-da-conversa-no-app.md) | 2026-10-09 | [26 — Paridade da conversa no app](../plans/26-mobile-conversation-parity/README.md) | 🔲 plano criado, não iniciado |
+| 07 | [Navegar e ler os arquivos da pasta pelo app](07-navegador-de-arquivos-no-app.md) | 2026-10-08 | [25 — Navegador de arquivos no app](../plans/25-mobile-file-browser/README.md) | ✅ implementada |
+| 08 | [Paridade da conversa no app: o plano 13 e o markdown](08-paridade-da-conversa-no-app.md) | 2026-10-09 | [26 — Paridade da conversa no app](../plans/26-mobile-conversation-parity/README.md) | 🔄 em andamento — F0…F1 (spike e fixtures) prontas; o plano para aí até o [28](../plans/28-agent-neutral-core/README.md) fechar (D-15) |
 | 09 | [O que o backend perde da conversa, e a mensagem desconhecida na tela](09-perdas-do-backend-na-conversa.md) | 2026-10-09 | [27 — Perdas da conversa](../plans/27-conversation-losses/README.md) | 🔲 plano criado, não iniciado |
-| 10 | [Núcleo canônico e agentes de código isolados nas três pontas](10-nucleo-canonico-e-agentes-isolados.md) | 2026-10-10 | [28 — Núcleo neutro de agente](../plans/28-agent-neutral-core/README.md) | 🔲 plano criado, não iniciado |
+| 10 | [Núcleo canônico e agentes de código isolados nas três pontas](10-nucleo-canonico-e-agentes-isolados.md) | 2026-10-10 | [28 — Núcleo neutro de agente](../plans/28-agent-neutral-core/README.md) | ✅ implementada |
+| 11 | [Postura de segurança: acesso, perfis, estação local, clientes e cadeia de fornecimento](11-postura-de-seguranca.md) | 2026-10-15 | — | 🔲 rascunho, sem plano |
 
 Legenda: 🔲 não implementada · 🔄 em andamento · ✅ implementada
 
@@ -65,7 +66,8 @@ ela é conduzida em outro cliente. Virou o plano 22 em 2026-10-04, **concluído*
 
 As perguntas do `AskUserQuestion` aparecem como perguntas, não como JSON, e são respondidas pela
 UI. Virou o plano 24 em 2026-10-08, com as decisões do §14 com os mesmos IDs. Já usa a forma
-canônica da 03 (§6.4).
+canônica da 03 (§6.4). **Concluído** em 2026-10-08: as sete fases, com `pnpm verify:full` verde e
+o e2e mobile 34/35 (a pendência é a mesma corrida de 05 · S-79, [D-39](../plans/24-structured-questions/decisions.md#f6--e2e)).
 
 ### 06 — App desktop (Tauri)
 
@@ -80,7 +82,8 @@ desenhado), PDF, texto e imagem com zoom, sem editar e sem enviar, só baixar. O
 trabalho é só no app. Reabre a exclusão dos planos 07 e 21. Achado colateral: um pedido de permissão
 não notifica quando há uma tela empilhada sobre a sessão, o que já acontece com o histórico (§4.3).
 Virou o plano 25 em 2026-10-08, com as decisões do §16 com os mesmos IDs e o fatiamento do §19
-em oito fases (o spike é a F0, e o markdown e o PDF ficaram em fases separadas).
+em oito fases (o spike é a F0, e o markdown e o PDF ficaram em fases separadas). **Concluído** em
+2026-10-09, com a F7.
 
 
 ### 08 — Paridade da conversa no app
@@ -89,6 +92,9 @@ Respondeu se o plano 13 muda o que aparece na conversa (sim: o conteúdo, não o
 perde do que o web desenha — texto de subagent descartado, markdown cru, rótulo de tool, diff, ANSI, tokens — e
 o que o backend descarta para as duas pontas. Pela regra do usuário ("no conteúdo e no formato"), propõe um mapa
 de paridade conferido por máquina. Virou o plano 26 em 2026-10-09, rodado antes da F2 do plano 13.
+A F0 (spike contra o Claude real, inclusive subagent) e a F1 (fixtures e o envelope canônico, `pnpm verify`
+verde) fecharam em 2026-10-10; o plano para aí pela [D-15](../plans/26-mobile-conversation-parity/decisions.md#normas):
+a F2 em diante só começa com o plano 28 concluído.
 
 ### 09 — Perdas do backend na conversa
 
@@ -112,7 +118,22 @@ ponta, conferido por lint e por um portão de neutralidade com catraca. Detalha 
 mudanças de AGENTS, ADR e documentação (§8), o impacto nos planos (§9) e a ordem (§10). A
 recomendação era rodar entre a F1 e a F2 do 26, o que mudava a ordem 26 → 13 → 27. Virou o
 [plano 28](../plans/28-agent-neutral-core/README.md) em 2026-10-10, com a ordem decidida pelo usuário
-(D-01) e escrita no [índice dos planos](../plans/README.md#ordem-de-execução).
+(D-01) e escrita no [índice dos planos](../plans/README.md#ordem-de-execução). As 46 decisões
+fecharam no mesmo dia, três contra a recomendação da discovery (D-09, D-10, D-11). Em 2026-10-15,
+F0…F5 estão concluídas (a porta do motor, as tools canônicas, as interações, modos e uso, e o
+dialeto de permissão) e a F6 (as extensões isoladas por motor nas três pontas) está quase pronta;
+falta só a F7, o e2e que fecha o plano.
+
+### 11 — Postura de segurança
+
+Pedido do usuário: acesso e perfis, segurança da estação de trabalho que roda o backend, web,
+mobile, proteção de rotas, SAST, DAST, SBOM, dependências — e, acrescentado durante o
+levantamento, rate limit e resiliência a serviços externos. Cinco medições independentes no
+código confirmam: autenticação, proteção de rota e isolamento do subprocesso do Claude estão
+sólidos, e não há IDOR; mas o backend já liga em `0.0.0.0` sem TLS **hoje** (o plano 19, parado em
+0%, resolve isso), não existe RBAC/perfil nenhum, não há rate limit HTTP, SBOM nem DAST, e as
+chamadas de saída (Keycloak, Postgres) não têm timeout nem retry. Recomenda não um plano só, mas
+retomar o 19 primeiro e fatiar o resto em até quatro planos novos, pela ordem do §15.
 
 ---
 

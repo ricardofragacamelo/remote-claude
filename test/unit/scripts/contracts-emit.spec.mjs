@@ -853,3 +853,56 @@ describe('the version, the events and the fields that may be null — plan 28, B
     ).toThrow('x-nullable');
   });
 });
+
+const device = {
+  source: 'definitions/device.schema.json',
+  schema: {
+    title: 'Device',
+    description: 'One phone or tablet this account registered.',
+    type: 'object',
+    required: ['id', 'name'],
+    properties: { id: { type: 'string' }, name: { type: 'string' } },
+  },
+};
+
+const deviceAlias = {
+  source: 'http/device.schema.json',
+  schema: {
+    title: 'Device',
+    description: '`POST /devices`: the device just registered.',
+    'x-kind': 'http',
+    'x-type': 'devices.device',
+    $ref: '../definitions/device.schema.json',
+  },
+};
+
+const aliasModel = buildModel(envelope, [command, deviceAlias], [device]);
+const aliasTypeScript = emitTypeScript(aliasModel);
+const aliasDart = emitDart(aliasModel);
+
+describe('a message that aliases a shared definition — plan 28, B-48', () => {
+  it('mints no interface of its own, and declares the definition only once', () => {
+    expect(aliasTypeScript.match(/export interface Device \{/g)).toHaveLength(1);
+    expect(aliasTypeScript).not.toContain('export interface DevicePayload');
+  });
+
+  it('gives the payload name its own type, as an alias of the definition', () => {
+    expect(aliasTypeScript).toContain('export type DevicePayload = Device;');
+    expect(aliasTypeScript).toContain('export const isDevicePayload = isDevice;');
+  });
+
+  it('carries the message’s own description onto the alias, not the definition’s', () => {
+    const block = /\/\*\*[^]*?\*\/\nexport type DevicePayload/.exec(aliasTypeScript)?.[0] ?? '';
+    expect(block).toContain('the device just registered');
+  });
+
+  it('types as the definition in Dart, via a typedef, so `DevicePayload.fromJson` still works', () => {
+    expect(aliasDart).toContain('typedef DevicePayload = Device;');
+    expect(aliasDart).not.toContain('class DevicePayload {');
+  });
+
+  it('leaves an unrelated frame alone', () => {
+    expect(aliasTypeScript).toContain('ThingFrame');
+    expect(aliasDart).toContain("const String thingType = 'thing.do';");
+  });
+});

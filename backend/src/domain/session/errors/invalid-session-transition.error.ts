@@ -6,7 +6,7 @@ import type { SessionStatus } from '../value-objects/session-status.value-object
  * The machine was asked to do something it does not do.
  *
  * It is a bug of ours and never of the caller's — no command names a status, and the transitions
- * are driven by what the Agent SDK reports. So it carries `INTERNAL_ERROR`: answering `400` here
+ * are driven by what the engine reports. So it carries `INTERNAL_ERROR`: answering `400` here
  * would blame a client for a state machine it cannot see.
  */
 export class InvalidSessionTransitionError extends DomainError {

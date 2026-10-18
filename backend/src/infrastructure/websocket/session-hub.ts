@@ -5,7 +5,6 @@ import { LOGGER, type Logger } from '@shared/logging/logger';
 import { forLog, framePayloadForLog } from '@shared/logging/redact';
 import { currentTraceId } from '@shared/logging/trace-context';
 import { ConnectionRegistry } from './connection-registry';
-import { toConnection } from './protocol-window';
 import type { Connection } from './connection-registry';
 import { EventBuffer } from './event-buffer';
 import type { Replay } from './event-buffer';
@@ -114,8 +113,7 @@ export class SessionHub {
   }
 
   /** Sends one frame to one connection, logging the outbound edge. */
-  deliver(connection: Connection, current: Envelope): void {
-    const frame = toConnection(current, connection.version);
+  deliver(connection: Connection, frame: Envelope): void {
     const logged = forLog(framePayloadForLog(frame.type, frame.payload));
 
     try {

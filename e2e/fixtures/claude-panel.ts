@@ -22,19 +22,50 @@ import { attachFrom, connected } from './live-session';
  * moves the panel around, it changes this file, not the specs (09 · R-01).
  */
 
-/** The panel of Claude of the folder tab on screen. */
-export function panelOf(page: Page): Locator {
-  return page.getByRole('complementary', { name: 'Claude Code' });
+/**
+ * The side bar's own name — the name of the agent it is a chat with — never a Claude-specific
+ * default past this one place: a spec of the test engine (plan 28, B-44) passes its own
+ * `agent: 'Test agent'` to every locator below that needs it, and the equivalence of S-123 is that
+ * nothing else about these locators has to change for that to work.
+ */
+const DEFAULT_AGENT = 'Claude Code';
+
+/** The panel of the agent of the folder tab on screen — named by [agent], Claude's by default. */
+export function panelOf(page: Page, agent: string = DEFAULT_AGENT): Locator {
+  return page.getByRole('complementary', { name: agent });
 }
 
 /** The box a person writes the prompt in, at the foot of the panel. */
-export function promptBox(page: Page): Locator {
-  return panelOf(page).getByLabel('Prompt', { exact: true });
+export function promptBox(page: Page, agent: string = DEFAULT_AGENT): Locator {
+  return panelOf(page, agent).getByLabel('Prompt', { exact: true });
 }
 
 /** The button that sends what the box holds, while nothing runs. */
-export function sendButton(page: Page): Locator {
-  return panelOf(page).getByRole('button', { name: 'Send', exact: true });
+export function sendButton(page: Page, agent: string = DEFAULT_AGENT): Locator {
+  return panelOf(page, agent).getByRole('button', { name: 'Send', exact: true });
+}
+
+/**
+ * The chip of the engine a draft opens on — "Agent: Installation default" (plan 28, B-44). Only the
+ * direct chip, never the overflow's nested submenu of the same control: a viewport wide enough for
+ * the panel's own row (`test.use({ viewport })`, the same way a spec of a long conversation widens
+ * it — plan 09, F1) is what every spec of this family already assumes for `modeChip` and the rest,
+ * and a nested Radix submenu driven by a synthetic pointer is a fight nothing here needs to pick.
+ */
+export function enginePickerChip(
+  page: Page,
+  agent: string = DEFAULT_AGENT,
+  value?: string,
+): Locator {
+  return panelOf(page, agent).getByRole('button', {
+    name: value === undefined ? /^Agent: / : `Agent: ${value}`,
+  });
+}
+
+/** Picks [agent] in the open menu of {@link enginePickerChip} — the name `GET /engines` gives it. */
+export async function pickEngine(page: Page, agent: string): Promise<void> {
+  await enginePickerChip(page).click();
+  await page.getByRole('menuitem', { name: agent }).click();
 }
 
 /**
@@ -91,6 +122,15 @@ export async function endSession(page: Page): Promise<void> {
 /** The `/` of the bar of the box: it writes `/` at the start and opens the commands (plan 09, B-12). */
 export function commandsToggle(page: Page): Locator {
   return panelOf(page).getByRole('button', { name: 'Commands and skills (/)' });
+}
+
+/**
+ * The meter of how full the context window is — absent entirely for an engine with no `contextUse`
+ * (plan 28, S-124): it is never even asked for then, the same way the chip of the compact it opens
+ * is never offered without `compaction`.
+ */
+export function contextMeter(page: Page, agent: string = DEFAULT_AGENT): Locator {
+  return panelOf(page, agent).getByRole('button', { name: /^Context window \d+% used$/ });
 }
 
 /** One command of the open list of `/`, by the name it starts with — `/init`, `/review`. */
@@ -180,8 +220,8 @@ function cardName(toolName: string): RegExp {
  * The question on screen about one tool — its card, in the conversation where the tool is, or at
  * its end until the tool's line arrives (plan 09, B-23).
  */
-export function cardFor(page: Page, toolName: string): Locator {
-  return panelOf(page).getByRole('listitem', { name: cardName(toolName) });
+export function cardFor(page: Page, toolName: string, agent: string = DEFAULT_AGENT): Locator {
+  return panelOf(page, agent).getByRole('listitem', { name: cardName(toolName) });
 }
 
 /**
@@ -219,8 +259,12 @@ export function thoughtLines(page: Page): Locator {
 }
 
 /** The line a settled card became: "Allowed by you", "Allowed on a phone by …". */
-export function decisionLine(page: Page, text: string | RegExp): Locator {
-  return conversationOf(page).getByText(text);
+export function decisionLine(
+  page: Page,
+  text: string | RegExp,
+  agent: string = DEFAULT_AGENT,
+): Locator {
+  return conversationOf(page, agent).getByText(text);
 }
 
 /** The answer of a card that lets the tool run, this once. */
@@ -237,8 +281,8 @@ export function refuse(card: Locator): Locator {
  * What the chat beside the editor says, one list item per message — and per tool, and per end of a
  * turn (plan 08, F2).
  */
-export function conversationOf(page: Page): Locator {
-  return panelOf(page).getByRole('list', { name: 'Conversation' });
+export function conversationOf(page: Page, agent: string = DEFAULT_AGENT): Locator {
+  return panelOf(page, agent).getByRole('list', { name: 'Conversation' });
 }
 
 /**
@@ -263,9 +307,11 @@ export function continueConversationButton(page: Page): Locator {
 }
 
 /** Where the chat beside the editor names the session it shows — once it shows one. */
-export function sessionLabelOf(page: Page): Locator {
+export function sessionLabelOf(page: Page, agent: string = DEFAULT_AGENT): Locator {
   // Plan 09, B-06: the session is the frame of the conversation, named by its id — no card says it.
-  return panelOf(page).getByRole('region', { name: /^Session [0-9ABCDEFGHJKMNPQRSTVWXYZ]{26}$/ });
+  return panelOf(page, agent).getByRole('region', {
+    name: /^Session [0-9ABCDEFGHJKMNPQRSTVWXYZ]{26}$/,
+  });
 }
 
 /**
@@ -274,8 +320,8 @@ export function sessionLabelOf(page: Page): Locator {
  * A session born in a folder tab stays in that tab — the chat is never a screen of its own
  * (plan 06, S-115) — so its id is what the side bar says, not an address the browser moved to.
  */
-export async function openedSessionOf(page: Page): Promise<string> {
-  const label = sessionLabelOf(page);
+export async function openedSessionOf(page: Page, agent: string = DEFAULT_AGENT): Promise<string> {
+  const label = sessionLabelOf(page, agent);
 
   await expect(label).toBeVisible();
   return ((await label.getAttribute('aria-label')) ?? '').replace('Session ', '');
@@ -313,11 +359,11 @@ export function connectedStatus(page: Page): Locator {
  * the toasts of the notification centre appear, and a pointer held over a toast keeps it on screen
  * (the toaster pauses its timer on hover) — a click that waits for it never lands.
  */
-export async function send(page: Page, text: string): Promise<void> {
-  const box = promptBox(page);
+export async function send(page: Page, text: string, agent: string = DEFAULT_AGENT): Promise<void> {
+  const box = promptBox(page, agent);
 
   await box.fill(text);
-  await expect(sendButton(page)).toBeEnabled();
+  await expect(sendButton(page, agent)).toBeEnabled();
   await box.press('Enter');
 }
 
@@ -344,26 +390,30 @@ export async function reloaded(page: Page): Promise<void> {
 }
 
 /** The line that ends each turn: its cost, how long it took and its tokens — or that it stopped. */
-export function turnSummaries(page: Page): Locator {
-  return panelOf(page).getByText(/^Turn(?: ended)?: /);
+export function turnSummaries(page: Page, agent: string = DEFAULT_AGENT): Locator {
+  return panelOf(page, agent).getByText(/^Turn(?: ended)?: /);
 }
 
 /**
  * Sends a recorded turn from the box of the panel and waits for it to end, allowing on its card each
  * tool named in `allow`, in order — one more summary of a turn, whatever turns came before.
+ *
+ * @param agent the name of the side bar the turn runs in — Claude's by default, "Test agent" for a
+ *   conversation of the test engine (plan 28, B-44): the same replay, read off the same locators.
  */
 export async function recordedTurn(
   page: Page,
   fixture: string,
   allow: readonly string[] = [],
   text = 'do the work',
+  agent: string = DEFAULT_AGENT,
 ): Promise<void> {
-  const summaries = turnSummaries(page);
+  const summaries = turnSummaries(page, agent);
   const before = await summaries.count();
 
-  await send(page, `${text} [fixture:${fixture}]`);
+  await send(page, `${text} [fixture:${fixture}]`, agent);
   for (const toolName of allow) {
-    await allowOnce(cardFor(page, toolName)).click();
+    await allowOnce(cardFor(page, toolName, agent)).click();
   }
   await expect(summaries).toHaveCount(before + 1);
 }

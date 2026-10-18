@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import type { InstallationFacts, ReadVersion } from '@application/engines/claude';
 import type { Logger } from '@shared/logging/logger';
+import { CLAUDE_ENGINE } from './claude-engine';
 import { claudeEnvironment } from './claude-environment';
 import { readAgentSdkVersion, readBundledCliVersion } from './cli-version';
 import type { BundledVersion } from './cli-version';
@@ -82,7 +83,7 @@ export class NodeInstallationFacts implements InstallationFacts {
       return version === null ? { version: null, reason: 'unreadable' } : { version, reason: null };
     } catch (error) {
       this.logger.debug(
-        { op: 'claude.installation', layer: 'adapter', err: error },
+        { op: 'engine.installation', layer: 'adapter', engine: CLAUDE_ENGINE, err: error },
         'no claude on PATH answered --version',
       );
       return { version: null, reason: 'notInstalled' };

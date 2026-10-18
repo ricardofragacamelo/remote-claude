@@ -1,12 +1,14 @@
 import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
 
+import type { AuditEventPagePayload } from '@remote-claude/contracts';
+
 import { QueryAuditEventsUseCase } from '@application/audit';
 import type { UserId } from '@domain/auth';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import { DEFAULT_PAGE_SIZE } from './audit.dto';
 import { auditEventsQuerySchema, toAuditEventPageDto } from './audit-events.dto';
-import type { AuditEventPageDto, AuditEventsQuery } from './audit-events.dto';
+import type { AuditEventsQuery } from './audit-events.dto';
 
 /**
  * The account facts, read — the devices approved and revoked, the rules granted, the conversations
@@ -26,7 +28,7 @@ export class AuditEventsController {
   async read(
     @Query(new ZodPipe(auditEventsQuerySchema)) query: AuditEventsQuery,
     @CurrentUser() userId: UserId,
-  ): Promise<AuditEventPageDto> {
+  ): Promise<AuditEventPagePayload> {
     return toAuditEventPageDto(
       await this.query.execute({
         userId,

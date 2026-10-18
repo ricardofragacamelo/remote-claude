@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import {
+  DEFAULT_ENGINE_NAME,
   DeleteNotificationsUseCase,
   ListNotificationsUseCase,
   MarkNotificationsReadUseCase,
@@ -16,6 +17,7 @@ import {
   RecordNotificationUseCase,
 } from '@application/notification';
 import type {
+  DefaultEngineName,
   NotificationHistoryRepository,
   PushAudience,
   PushSender,
@@ -33,6 +35,7 @@ import {
   NotifyOnPermissionRequested,
 } from '@adapter/outbound/notification/permission-notification.listeners';
 import { NotifyOnDeviceApproved } from '@adapter/outbound/notification/device-notification.listener';
+import { RegistryDefaultEngineName } from '@adapter/outbound/notification/registry-default-engine.name';
 import { RegistryPushAudience } from '@adapter/outbound/notification/registry-push.audience';
 import { RepositoryPushTokenRegistry } from '@adapter/outbound/notification/repository-push-token.registry';
 import { HttpPushSender } from '@adapter/outbound/push/http-push.adapter';
@@ -45,6 +48,7 @@ import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { NotificationRetentionJob } from '../jobs/notification-retention.job';
 import { AuthModule } from './auth.module';
+import { SessionModule } from './session.module';
 import { WebsocketModule } from './websocket.module';
 
 /**
@@ -64,9 +68,10 @@ import { WebsocketModule } from './websocket.module';
  * The history is reached by its own routes, by the client, and by nothing else.
  */
 @Module({
-  imports: [AuthModule, WebsocketModule],
+  imports: [AuthModule, SessionModule, WebsocketModule],
   controllers: [NotificationController],
   providers: [
+    { provide: DEFAULT_ENGINE_NAME, useClass: RegistryDefaultEngineName },
     { provide: NOTIFICATION_HISTORY_REPOSITORY, useClass: DrizzleNotificationHistoryRepository },
     {
       provide: RecordNotificationUseCase,
@@ -124,19 +129,36 @@ import { WebsocketModule } from './websocket.module';
     },
     {
       provide: NotifyPermissionUseCase,
-      inject: [PUSH_AUDIENCE, PushDispatcher, PUSH_TOKEN_REGISTRY, NotificationRegistry],
-      useFactory: (
+      inject: [
+        PUSH_AUDIENCE,
+        PushDispatcher,
+        PUSH_TOKEN_REGISTRY,
+        NotificationRegistry,
+        DEFAULT_ENGINE_NAME,
+      ],
+      useFactory: async (
         audience: PushAudience,
         dispatcher: PushDispatcher,
         tokens: PushTokenRegistry,
         registry: NotificationRegistry,
-      ) =>
-        new NotifyPermissionUseCase(audience, dispatcher, tokens, registry, (target, command) =>
-          // Composed here, where both halves are in scope: the domain owns what a message may
-          // carry, and the adapter owns the words. The use case owns neither, which is what
-          // keeps the tool's **input** out of the payload by construction.
-          permissionMessage(target, command),
-        ),
+        engineName: DefaultEngineName,
+      ) => {
+        // Read once, at composition: the installation's engines do not change while it runs, and
+        // a push is not the place to spend a lookup it does not need (plan 28, B-41).
+        const agent = await engineName.read();
+
+        return new NotifyPermissionUseCase(
+          audience,
+          dispatcher,
+          tokens,
+          registry,
+          (target, command) =>
+            // Composed here, where both halves are in scope: the domain owns what a message may
+            // carry, and the adapter owns the words. The use case owns neither, which is what
+            // keeps the tool's **input** out of the payload by construction.
+            permissionMessage(target, command, agent),
+        );
+      },
     },
     {
       provide: NotifyDeviceApprovedUseCase,
@@ -151,7 +173,10 @@ import { WebsocketModule } from './websocket.module';
 })
 export class NotificationModule {}
 
-/** One question, as a message for one device. The tool's name interpolates; nothing else does. */
+/**
+ * One question, as a message for one device. The tool's name interpolates; nothing else does —
+ * `agent` is the installation's default engine, the word every push names itself after (B-41).
+ */
 function permissionMessage(
   target: PushTarget,
   command: {
@@ -161,6 +186,7 @@ function permissionMessage(
     readonly toolName: string;
     readonly question: boolean;
   },
+  agent: string,
 ): PushMessage {
   const reference = {
     sessionId: command.sessionId,
@@ -170,6 +196,6 @@ function permissionMessage(
 
   // A question says nothing of itself, not even the tool's name (plan 24, D-22).
   return command.question
-    ? PushMessage.questionAsked(target, reference)
-    : PushMessage.permissionRequested(target, reference, { toolName: command.toolName });
+    ? PushMessage.questionAsked(target, reference, { agent })
+    : PushMessage.permissionRequested(target, reference, { agent, toolName: command.toolName });
 }

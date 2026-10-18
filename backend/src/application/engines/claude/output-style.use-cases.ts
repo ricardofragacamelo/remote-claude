@@ -1,10 +1,11 @@
-import { DEFAULTS_CHANGED } from '@application/agent-settings';
+import { defaultsChangedEvent } from '@application/agent-settings';
 import type {
   EngineSessionDefaults,
   EngineSessionOptions,
   FolderAccess,
 } from '@application/agent-settings';
 import type { RecordAuditEventUseCase } from '@application/audit';
+import { exactOverride } from '@domain/agent-settings';
 import type { EffectiveValue } from '@domain/agent-settings';
 import type { UserId } from '@domain/auth';
 import { effectiveOutputStyle, outputStyleForSession } from '@domain/engines/claude';
@@ -32,14 +33,14 @@ export interface OutputStyleDependencies {
 }
 
 /** The view of [stored] in [folder]. */
-export function outputStyleView(stored: OutputStyleDefaults, folder: string | null): OutputStyleView {
+export function outputStyleView(
+  stored: OutputStyleDefaults,
+  folder: string | null,
+): OutputStyleView {
   return {
     effective: effectiveOutputStyle(stored, folder),
     user: stored.user,
-    folder:
-      folder === null
-        ? null
-        : (stored.overrides.find((override) => override.folder === folder) ?? null),
+    folder: exactOverride(stored.overrides, folder),
   };
 }
 
@@ -88,14 +89,13 @@ export class SaveOutputStyleUseCase {
         : (stored.overrides.find((override) => override.folder === folder)?.value ?? null);
 
     if (before !== style) {
-      await this.deps.trail.execute({
-        userId,
-        kind: DEFAULTS_CHANGED,
-        subjectId: folder ?? userId.value,
-        subjectLabel: folder ?? 'user',
-        details: { engine: this.deps.engine, changed: ['outputStyle'], outputStyle: style },
-        at: this.deps.clock.now(),
-      });
+      await this.deps.trail.execute(
+        defaultsChangedEvent(userId, folder, this.deps.clock.now(), {
+          engine: this.deps.engine,
+          changed: ['outputStyle'],
+          outputStyle: style,
+        }),
+      );
       await (style === null
         ? this.deps.styles.remove(userId, folder)
         : this.deps.styles.save(userId, folder, style));

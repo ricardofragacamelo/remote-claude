@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engine-models.json",
+  "title": "EngineModels",
+  "description": "`GET /engines/:engine/models`: the models of an engine's installation, and the modes it runs in (plan 13, B-13; plan 28, B-36) — from the engine's installation, never a list in the code.",
+  "x-kind": "http",
+  "x-type": "agentSettings.models",
+  "x-route": [{ "method": "GET", "path": "/engines/:engine/models" }],
+  "type": "object",
+  "required": ["version", "models", "permissionModes"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The version of the engine that answered, or `null` when it could not tell."
+    },
+    "models": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "../definitions/agent-model.schema.json"
+      }
+    },
+    "permissionModes": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "string",
+        "enum": ["ask", "acceptEdits", "readOnly", "allowAll"]
+      },
+      "description": "The modes the engine runs in, every one of them — the screen says which can be a default."
+    }
+  }
+}

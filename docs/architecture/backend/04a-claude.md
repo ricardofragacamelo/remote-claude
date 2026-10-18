@@ -111,7 +111,7 @@ Decisões tomadas:
 | `permissionMode` | o da sessão, menos `allowAll`, que chega como `default` | o Permitir tudo é nosso: o `canUseTool` continua sendo chamado ([ADR-022](../shared/00-decisions.md#adr-022--permitir-tudo-é-um-modo-nosso-não-o-bypasspermissions-do-sdk)) |
 | `settingSources` | **`['project']`, sempre** | ver [A armadilha do `settingSources`](#a-armadilha-do-settingsources) |
 | `pathToClaudeCodeExecutable` | binário do SDK | versões casadas; atualiza pelo npm junto com o SDK |
-| `strictMcpConfig` | **`true`, sempre** | sem ele, o `.mcp.json` que o próprio repositório auto-aprova e os conectores claude.ai da conta sobem — medido ([ADR-018](../shared/00-decisions.md#adr-018--extensões-do-claude-só-entram-pelo-produto)) |
+| `strictMcpConfig` | **`true`, sempre** | sem ele, o `.mcp.json` que o próprio repositório auto-aprova e os conectores claude.ai da conta sobem — medido ([ADR-018](../shared/00-decisions.md#adr-018--a-extensão-do-claude-só-entra-pelo-produto)) |
 | `mcpServers` | **`{}`, sempre** | o que vai aqui vira `--mcp-config` no argv, legível em `/proc`; os servidores da sessão chegam por `setMcpServers()` logo depois do início, e o primeiro prompt espera por ele |
 | `settings` | só pelo montador `flagSettings` | a camada de flag fica acima de user/project e aceita `permissions`; a allowlist é `outputStyle` e `disableSkillShellExecution`, esta sempre ligada |
 | `managedSettings` · `applyFlagSettings` · `updateSettings` | **nunca** | o primeiro não desliga o shell inline (medido); o segundo reinicia a query e perde os hooks (§10.3); o terceiro escreve arquivo de settings do usuário |

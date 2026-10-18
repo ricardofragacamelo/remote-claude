@@ -11,6 +11,7 @@ import {
 import { Providers } from './app/providers';
 import { router } from './app/router';
 import '@/styles/globals.css';
+import './app/engines';
 
 // The Explorer takes its place in the workbench before any folder tab is made: a tab is given back
 // what it kept the moment it is made (plan 07, B-24).

@@ -140,12 +140,14 @@ async function readsOf(sessionId: string): Promise<string[]> {
   );
   expect(response.status).toBe(200);
   const { entries } = (await response.json()) as {
-    entries: { toolName: string; input: { file_path?: unknown } }[];
+    // `file.read`'s disclosed input is `{ paths, window }`, never the engine's raw field — the
+    // trail never hands back what a read's own input happened to call the path (plan 28, B-16).
+    entries: { toolName: string; input: { paths?: readonly unknown[] } }[];
   };
 
   return entries
     .filter((entry) => entry.toolName === 'Read')
-    .map((entry) => String(entry.input.file_path ?? ''));
+    .flatMap((entry) => (entry.input.paths ?? []).map(String));
 }
 
 /** Uploads an image to the session, as a drop from the desktop does, and answers its id. */

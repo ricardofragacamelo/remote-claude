@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-list.json",
+  "title": "PermissionRuleList",
+  "description": "`GET /permission-rules`: the caller's rules, newest first — expired ones included and marked, revoked ones gone (plan 03).",
+  "x-kind": "http",
+  "x-type": "permissionRules.list",
+  "x-route": [{ "method": "GET", "path": "/permission-rules" }],
+  "type": "object",
+  "required": ["rules"],
+  "properties": {
+    "rules": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "$ref": "../definitions/permission-rule.schema.json"
+      }
+    }
+  }
+}

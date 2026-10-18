@@ -1,8 +1,8 @@
 import type { EngineModelCatalog, EngineModels } from '@application/agent-settings';
-import type { UserId } from '@domain/auth';
 import type { PermissionMode } from '@domain/engine';
-import type { InstallationModel } from '@domain/session';
 import type { WorkspacePath } from '@domain/workspace';
+import type { InstallationModel } from '@domain/session';
+import type { UserId } from '@domain/auth';
 import type { ClaudeInstallationCatalog } from './installation-catalog';
 
 /**

@@ -124,6 +124,80 @@ void main() {
     expect(read(container).choices.model, 'sonnet');
   });
 
+  group('plan 28, B-45 · choosing the engine', () {
+    test('sends the engine chosen, with what else was chosen', () {
+      final ProviderContainer container = build();
+      hold(container);
+
+      drafts(container)
+        ..chooseEngine('test')
+        ..chooseMode('readOnly');
+
+      expect(drafts(container).send('do the work'), isTrue);
+      expect(sessions.commands.single.$2, <String, Object?>{
+        'workspacePath': '/w',
+        'permissionMode': 'readOnly',
+        'engine': 'test',
+      });
+    });
+
+    test('a draft that names no engine sends none — the installation default', () {
+      final ProviderContainer container = build();
+      hold(container);
+
+      expect(drafts(container).send('do the work'), isTrue);
+
+      expect(sessions.commands.single.$2, isNot(contains('engine')));
+    });
+
+    test(
+      'choosing another engine puts the model and the effort back to the default, and keeps '
+      'the mode — they are another engine\'s (D-49, mirroring the web\'s EnginePicker, D-48)',
+      () {
+        final ProviderContainer container = build();
+        hold(container);
+
+        drafts(container)
+          ..chooseMode('acceptEdits')
+          ..chooseModel('opus')
+          ..chooseEffort('high')
+          ..chooseEngine('test');
+
+        expect(read(container).choices.engine, 'test');
+        expect(read(container).choices.model, isNull);
+        expect(read(container).choices.effort, isNull);
+        expect(read(container).choices.permissionMode, 'acceptEdits');
+      },
+    );
+
+    test('choosing a model or a mode after the engine keeps the engine chosen', () {
+      final ProviderContainer container = build();
+      hold(container);
+
+      drafts(container).chooseEngine('test');
+      drafts(container).chooseModel('opus');
+      expect(read(container).choices.engine, 'test');
+
+      drafts(container).chooseMode('readOnly');
+      expect(read(container).choices.engine, 'test');
+
+      drafts(container).chooseEffort('high');
+      expect(read(container).choices.engine, 'test');
+    });
+
+    test('back to the installation default is choosing null', () {
+      final ProviderContainer container = build();
+      hold(container);
+
+      drafts(container).chooseEngine('test');
+      drafts(container).chooseEngine(null);
+
+      expect(read(container).choices.engine, isNull);
+      expect(drafts(container).send('do the work'), isTrue);
+      expect(sessions.commands.single.$2, isNot(contains('engine')));
+    });
+  });
+
   test('S-20 · two sends while the session opens open one session', () {
     final ProviderContainer container = build();
     hold(container);

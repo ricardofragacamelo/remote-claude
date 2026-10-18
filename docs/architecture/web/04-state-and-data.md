@@ -146,8 +146,8 @@ Três regras que não podem faltar:
    a sessão é e como roda. Atrasado, o que ele diz é tomado, a menos que um frame posterior já tenha
    dito (`lateStart`, no `live-session.store.ts`; plano 08, S-267).
 2. **`gap: true` → limpe o store e recarregue o transcript por HTTP.** Não tente costurar. A
-   conversa a recarregar é a que o ack nomeia em `claudeSessionId` — o id da **conversa** no store
-   do Claude, não o da sessão viva —, e a página é **posta por baixo** do que o stream trouxer
+   conversa a recarregar é a que o ack nomeia em `conversation` — o id dela no store do motor, não o
+   da sessão viva —, e a página é **posta por baixo** do que o stream trouxer
    enquanto ela carrega: mesmo `messageId`/`toolUseId` fica com a versão do stream, o resto do
    stream vem depois, e `lastSeq` não se move. É o que deixa recarregar com o stream chegando sem
    duplicar mensagem (`withHistory`, em `live-session.service.ts`). A mesma carga vale para uma

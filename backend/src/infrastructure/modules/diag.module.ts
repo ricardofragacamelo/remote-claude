@@ -20,12 +20,12 @@ import { AuthModule } from './auth.module';
 import { SessionModule } from './session.module';
 
 /**
- * The `diag` module: the gateway round trip that needs no Claude, and the versions of the
+ * The `diag` module: the gateway round trip that needs no agent, and the versions of the
  * installation for the "About" screen (plan 06, B-12).
  *
  * It was the vertical slice of the bootstrap and it stays, because it is the cheapest smoke test
  * of the whole rail. It is a module of its own rather than part of `session` so that nothing here
- * can be mistaken for a session of Claude — D-01 of the live-session plan renamed the pair, and
+ * can be mistaken for a session of the agent — D-01 of the live-session plan renamed the pair, and
  * this is the rest of that move.
  */
 @Module({

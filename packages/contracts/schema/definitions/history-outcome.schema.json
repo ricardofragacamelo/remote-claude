@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/history-outcome.json",
+  "title": "HistoryOutcome",
+  "description": "How keeping the version a write replaced, in the local history, ended (plan 07, F8). In the domain this is a discriminated union — `{ kept: true, entryId }` or `{ kept: false, reason }` — which the generator cannot express as a `oneOf`; flattened here into one shape with `entryId` present only when `kept` is `true` and `reason` only when it is `false` (plan 28, B-48).",
+  "type": "object",
+  "required": ["kept"],
+  "properties": {
+    "kept": {
+      "type": "boolean",
+      "description": "Whether the replaced version was kept in the local history."
+    },
+    "entryId": {
+      "type": "string",
+      "description": "The entry the version was kept under. Present exactly when `kept` is `true`."
+    },
+    "reason": {
+      "type": "string",
+      "enum": ["tooLarge", "unavailable"],
+      "description": "Why it was not kept. Present exactly when `kept` is `false`."
+    }
+  }
+}

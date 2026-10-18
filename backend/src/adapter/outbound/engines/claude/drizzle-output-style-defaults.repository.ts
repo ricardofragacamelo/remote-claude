@@ -23,9 +23,11 @@ import { runLogged } from '../../persistence/query-logging';
 export class DrizzleOutputStyleDefaultsRepository implements OutputStyleDefaultsRepository {
   constructor(
     @Inject(PERSISTENCE_CONTEXT) private readonly context: PersistenceContext,
+    // Mints the id of a row this table has never had one for — the user's own, or a folder's.
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
   ) {}
 
+  /** The user's own output style, and the folders that override it. */
   async read(userId: UserId): Promise<OutputStyleDefaults> {
     const rows = await runLogged(
       this.context.logger,
@@ -50,7 +52,12 @@ export class DrizzleOutputStyleDefaultsRepository implements OutputStyleDefaults
       'outputStyleDefaults.save',
       this.context.db
         .insert(claudeOutputStyleDefaults)
-        .values({ id: this.ids.next(), userId: userId.value, folderPath: folder, outputStyle: style })
+        .values({
+          id: this.ids.next(),
+          userId: userId.value,
+          folderPath: folder,
+          outputStyle: style,
+        })
         .onConflictDoUpdate({
           target: [claudeOutputStyleDefaults.userId, claudeOutputStyleDefaults.folderPath],
           set: { outputStyle: style, updatedAt: this.context.clock.now() },

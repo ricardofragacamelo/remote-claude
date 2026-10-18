@@ -49,7 +49,13 @@ const DEFAULTS_DEPENDENCIES = Symbol('DefaultsDependencies');
     { provide: FOLDER_ACCESS, useClass: WorkspaceModuleFolderAccess },
     {
       provide: DEFAULTS_DEPENDENCIES,
-      inject: [AGENT_DEFAULTS_REPOSITORY, FOLDER_ACCESS, EngineSettings, RecordAuditEventUseCase, CLOCK],
+      inject: [
+        AGENT_DEFAULTS_REPOSITORY,
+        FOLDER_ACCESS,
+        EngineSettings,
+        RecordAuditEventUseCase,
+        CLOCK,
+      ],
       useFactory: (
         defaults: AgentDefaultsRepository,
         folders: FolderAccess,

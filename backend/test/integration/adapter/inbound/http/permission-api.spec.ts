@@ -111,9 +111,6 @@ describe('the permission HTTP surface', () => {
         origin: { engine: 'claude', native: 'Bash' },
         rawInput: { command: 'rm -rf build/' },
         title: 'permission.tool.shell',
-        // The fields the previous protocol named the call by, beside, until F7 (D-22).
-        toolName: 'Bash',
-        input: { command: 'rm -rf build/' },
         description: 'rm -rf build/',
         riskHint: 'destructive',
         defaultToNo: true,
@@ -244,7 +241,6 @@ describe('the permission HTTP surface', () => {
       expect(response.body).toMatchObject({
         status: 'pending',
         request: {
-          toolName: 'AskUserQuestion',
           riskHint: 'read',
           defaultToNo: false,
           interaction: {

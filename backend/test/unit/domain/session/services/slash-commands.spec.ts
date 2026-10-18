@@ -1,16 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  commandIn,
-  isHidden,
-  menuOf,
-  offers,
-  originOf,
-  SUGGESTED_COMMANDS,
-  SYSTEM_SKILLS_PLUGIN,
-  USER_SKILLS_PLUGIN,
-} from '@domain/session';
-import type { SlashCommand } from '@domain/session';
+import { commandIn, isHidden, menuOf, offers, originOf } from '@domain/session';
+import type { CommandMenu, SlashCommand } from '@domain/session';
 import { loadCommands } from '../../../../fakes/agent-sdk/fixture';
 import { aCommand } from '../../../../support/builders/session.builder';
 
@@ -65,12 +56,10 @@ describe('the slash command menu', () => {
 
   describe('its order — D-05', () => {
     it('puts the suggested first, in the ranking order, and the rest by name', () => {
-      const menu = menuOf([
-        aCommand('zeta'),
-        aCommand('compact'),
-        aCommand('alpha'),
-        aCommand('init'),
-      ]);
+      const menu = menuOf(
+        [aCommand('zeta'), aCommand('compact'), aCommand('alpha'), aCommand('init')],
+        { suggested: ['init', 'compact'], pluginOrigins: {} },
+      );
 
       expect(menu.map((command) => [command.name, command.suggested])).toEqual([
         ['init', true],
@@ -81,7 +70,7 @@ describe('the slash command menu', () => {
     });
 
     it('shows no suggestion the installation does not offer — S-30', () => {
-      const menu = menuOf([aCommand('alpha')]);
+      const menu = menuOf([aCommand('alpha')], { suggested: ['init'], pluginOrigins: {} });
 
       expect(menu.map((command) => command.name)).toEqual(['alpha']);
       expect(menu.some((command) => command.suggested)).toBe(false);
@@ -116,17 +105,6 @@ describe('the slash command menu', () => {
         label: 'loop',
         shadowed: false,
       });
-    });
-
-    it('builds the menu of the recorded installation without a hidden entry — S-29', () => {
-      const commands = recorded();
-      const menu = menuOf(commands);
-
-      expect(menu).toHaveLength(commands.length - 3);
-      expect(menu[0]?.name).toBe('init');
-      expect(menu.filter((command) => command.suggested).map((command) => command.name)).toEqual(
-        SUGGESTED_COMMANDS.filter((name) => commands.some((command) => command.name === name)),
-      );
     });
   });
 
@@ -173,23 +151,17 @@ describe('the slash command menu', () => {
   });
 
   describe('origins and collisions — plan 08, B-50', () => {
-    it('reads the origin from the marker and from the namespace of our plugins — S-241, S-242', () => {
+    const menu: CommandMenu = {
+      suggested: [],
+      pluginOrigins: { 'acme-user-skills': 'user', 'acme-system-skills': 'system' },
+    };
+
+    it('reads the origin from the marker and from a namespace the engine’s menu maps — S-241, S-242', () => {
       expect(originOf(aCommand('compact', { builtin: true }))).toBe('builtin');
       expect(originOf(aCommand('deploy'))).toBe('project');
-      expect(originOf(aCommand(`${USER_SKILLS_PLUGIN}:notes`))).toBe('user');
-      expect(originOf(aCommand(`${SYSTEM_SKILLS_PLUGIN}:pdf`))).toBe('system');
-      expect(originOf(aCommand('other-plugin:lint'))).toBe('project');
-    });
-
-    it('shows a qualified skill by its simple name, and inserts the qualified one — S-242', () => {
-      const [skill] = menuOf([aCommand(`${USER_SKILLS_PLUGIN}:notes`)]);
-
-      expect(skill).toMatchObject({
-        name: `${USER_SKILLS_PLUGIN}:notes`,
-        label: 'notes',
-        origin: 'user',
-        shadowed: false,
-      });
+      expect(originOf(aCommand('acme-user-skills:notes'), menu)).toBe('user');
+      expect(originOf(aCommand('acme-system-skills:pdf'), menu)).toBe('system');
+      expect(originOf(aCommand('other-plugin:lint'), menu)).toBe('project');
     });
 
     it.each([
@@ -200,26 +172,14 @@ describe('the slash command menu', () => {
       (_order, builtinFirst) => {
         const builtin = aCommand('review', { builtin: true });
         const project = aCommand('review', { description: "the project's" });
-        const menu = menuOf(builtinFirst ? [builtin, project] : [project, builtin]);
+        const commandMenu = menuOf(builtinFirst ? [builtin, project] : [project, builtin]);
 
-        expect(menu.map((row) => [row.origin, row.shadowed])).toEqual([
+        expect(commandMenu.map((row) => [row.origin, row.shadowed])).toEqual([
           ['builtin', false],
           ['project', true],
         ]);
       },
     );
-
-    it('does not cover a qualified row whose simple name a Claude Code command has — S-243', () => {
-      const menu = menuOf([
-        aCommand(`${USER_SKILLS_PLUGIN}:review`),
-        aCommand('review', { builtin: true }),
-      ]);
-
-      expect(menu.map((row) => [row.name, row.shadowed])).toEqual([
-        ['review', false],
-        [`${USER_SKILLS_PLUGIN}:review`, false],
-      ]);
-    });
 
     it('keeps one row of a name listed twice with the same marker', () => {
       expect(menuOf([aCommand('init'), aCommand('init')])).toHaveLength(1);

@@ -208,7 +208,7 @@ web/src/
 │                                          MCP no painel do 08, só com a capacidade mcp
 ├── engines/claude/settings/       F2, F3 — seções da extensão: Conta · Instalação · Plugins · Skills · Projeto
 ├── engines/claude/index.ts        registra seções, comandos e ajuda nos registros do núcleo
-└── app/engines.ts                 a composição: o único arquivo que importa engines/*
+└── app/engines/index.ts                 a composição: o único arquivo que importa engines/*
 mobile/lib/features/session/       F2 — o chip só de leitura de MCP, pelo evento canônico e pela capacidade
 e2e/
 ├── fixtures/                      servidor MCP stdio mínimo · .mcp.json · skill e subagent de fixture

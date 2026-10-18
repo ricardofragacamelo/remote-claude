@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+// Registers the engine whose files this suite treats as sensitive — `.claude/`, `.mcp.json` — the
+// same side-effecting import the app itself makes (plan 28, B-39).
+import '@/app/engines';
 import { useCommands } from '@/features/commands';
 import { openDiff, openFile } from '@/features/editor';
 import { FilePlaceholder } from '@/features/editor/components/FilePlaceholder';

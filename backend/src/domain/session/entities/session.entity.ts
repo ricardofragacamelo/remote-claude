@@ -39,7 +39,7 @@ export interface SessionOpening {
 }
 
 /**
- * A live session of Claude.
+ * A live session of the agent.
  *
  * It is a rule and no I/O: the subprocess, the socket and the database are all somewhere else, and
  * what lives here is the question "may this session do that now?". That is why the state machine
@@ -107,13 +107,13 @@ export class Session {
     return this.currentStatus === 'closed';
   }
 
-  /** The last time Claude said something or a human did something here. */
+  /** The last time the agent said something or a human did something here. */
   get lastActivityAt(): Date {
     return this.lastActivity;
   }
 
   /**
-   * Something happened: an event of Claude, or an action of a human.
+   * Something happened: an event of the agent, or an action of a human.
    *
    * Only ever moves forward. Two events handled out of order must not make a session look older
    * than it is, because an older session is one closer to being reclaimed.
@@ -146,7 +146,7 @@ export class Session {
    *
    * This is the door the event stream comes through, and it is separate from {@link moveTo} on
    * purpose. A status derived from somebody else's stream is an **observation**, not a command:
-   * if the SDK ever reorders its messages, or emits one we read differently, the honest outcome
+   * if the engine ever reorders its messages, or emits one we read differently, the honest outcome
    * is to keep the status we had and carry on — the same survival rule the mapper applies to a
    * variant it does not know. A session on the user's machine must not end because a message
    * arrived in an order this build did not expect.
@@ -170,7 +170,7 @@ export class Session {
   /**
    * Moves the machine.
    *
-   * Asking for the status it already has is a no-op and not an error: the SDK reports the same
+   * Asking for the status it already has is a no-op and not an error: the engine reports the same
    * thing twice often enough — two tools in a row both report `running` — and treating that as a
    * violation would turn ordinary streams into crashes.
    *

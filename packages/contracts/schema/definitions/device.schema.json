@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/device.json",
+  "title": "Device",
+  "description": "One installation of the app, as the client sees it (plan 02). The push token never crosses: not truncated, not hashed — a value that is in a response is a value that is in a browser's network tab.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "platform",
+    "appVersion",
+    "locale",
+    "status",
+    "pushEnabled",
+    "registeredAt",
+    "lastSeenAt",
+    "approvedAt",
+    "revokedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["android", "ios"]
+    },
+    "appVersion": {
+      "type": "string"
+    },
+    "locale": {
+      "type": "string",
+      "enum": ["en", "pt-BR"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "approved", "revoked"]
+    },
+    "pushEnabled": {
+      "type": "boolean",
+      "description": "Whether this device has a push token at all — which is what the screen can act on."
+    },
+    "registeredAt": {
+      "type": "string"
+    },
+    "lastSeenAt": {
+      "type": "string"
+    },
+    "approvedAt": {
+      "type": "string",
+      "x-nullable": true
+    },
+    "revokedAt": {
+      "type": "string",
+      "x-nullable": true
+    }
+  }
+}

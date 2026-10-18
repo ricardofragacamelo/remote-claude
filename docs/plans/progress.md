@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-10-10
+**Última atualização:** 2026-10-18
 
 ```
 00-bootstrap                  ████████████████████ 100%   ✅ concluído
@@ -45,7 +45,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 25-mobile-file-browser        ████████████████████ 100%   ✅ concluído
 26-mobile-conversation-parity █████░░░░░░░░░░░░░░░  23%   🔄 em andamento
 27-conversation-losses        ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-28-agent-neutral-core         ███████████████░░░░░  73%   🔄 em andamento
+28-agent-neutral-core         ████████████████████ 100%   ✅ concluído
 ```
 
 ---
@@ -84,8 +84,8 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [25 — Navegador de arquivos no app](25-mobile-file-browser/README.md) | 8/8 | 32/32 | 153/153 | 34/34 | ✅ |
 | [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 2/8 | 6/26 | 12/78 | 15/15 | 🔄 |
 | [27 — Perdas da conversa](27-conversation-losses/README.md) | 0/8 | 0/28 | 0/107 | 3/14 | 🔲 |
-| [28 — Agent neutral core](28-agent-neutral-core/README.md) | 6/8 | 35/48 | 106/136 | 46/46 | 🔄 |
-| **Total** | **121/177** | **645/977** | **2494/3969** | **485/577** | 🔄 |
+| [28 — Agent neutral core](28-agent-neutral-core/README.md) | 8/8 | 48/48 | 117/136 | 51/51 | ✅ |
+| **Total** | **123/177** | **658/977** | **2505/3969** | **490/582** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -383,6 +383,7 @@ Ciclo de validação é diário do plano, e fica **lá**, não aqui.
 
 | Data | O quê | Detalhe |
 |---|---|---|
+| 2026-10-17 | **Plano 28 — Núcleo neutro de agente concluído** (F0…F7) | 48/48 tarefas e 136 cenários. A porta de motor, as ferramentas e interações canônicas, os modos e o uso, o teste de todos os dois lados (web e app) contra um segundo motor de verdade (B-43…B-45), a regressão com o Claude real (`smoke-live` achando e fechando um variant novo do SDK, `system:commands_changed`, mapeado como `session.commandsChanged`) e, por fim, o baseline de neutralidade **vazio** — `--write-baseline` saiu do script, e a janela do protocolo anterior (`v-1`) fechou de ponta a ponta: o `protocol-window.ts` inteiro, as rotas `/claude/*` (a legada e as três duplicadas de `ClaudeController`), os campos de nível raiz de `GET /diag/versions`, e a migration `0026` derrubando `claude_session_id` das três tabelas que a B-11 havia copiado para `(engine, conversation_id)`. `pnpm verify` com os sete portões verdes; o `pnpm verify:full` fecha o plano. Achados fora do enunciado original documentados em D-50 |
 | 2026-10-10 | **Plano 28 — Núcleo neutro de agente criado; a ordem dos planos muda** | a partir da [discovery 10](../discovery/10-nucleo-canonico-e-agentes-isolados.md), por pedido do usuário: preparar para vários agentes de código, com as mensagens do web e do app canônicas, o código de um agente só isolado nas três pontas e nada no núcleo de visualização dependente de um agente. 8 fases e 47 tarefas, com 130 cenários. A ordem passa a ser 26 · F1 → 28 → 26 · F2…F7 → 13 · F2…F4 → 27 → 15, 14, 16, 18 → 19 ([índice](README.md#ordem-de-execução), 28 · D-01). Os planos 12, 13, 14, 15, 16, 18, 19, 26 e 27 tiveram as tasks ainda não executadas ajustadas às diretivas na mesma data, cada um com a sua decisão ✅; a B-08 do 15 fica pausada até a F5 do 28 |
 | 2026-10-09 | **Plano 25 — Navegador de arquivos no app concluído** (F0…F7) | 32/32 tarefas e 153 de 153 cenários. O app ganhou o painel de arquivos à direita (na sessão e na tela da pasta) e um leitor **somente leitura**: texto virtualizado com quebra e pinça, markdown com tabela larga, links pela regra do web e `mermaid` desenhado pelo próprio Mermaid do web num WebView fora da tela ([ADR-024](../architecture/shared/00-decisions.md#adr-024--o-app-desenha-mermaid-num-webview-fora-da-tela-sem-rede-e-sem-navegação)), PDF pelo PDFium (lido por intervalo pelo cliente do app, com senha só em memória) e imagem com zoom; e o download em stream para o "salvar como" do sistema, com progresso, cancelar e uma retomada do mesmo `ETag`. No backend, as rotas de `files` passaram a pedir aparelho aprovado a todo token que não é do web (B-32). O e2e achou e corrigiu dois defeitos (o painel por cima da conversa ao voltar, e o diagrama com link) e devolveu o `makeFolder` ao `folders_test`. `pnpm verify:full` com os onze portões verdes e `pnpm test:e2e:mobile` com 38 de 38 |
 | 2026-10-09 | **Plano 21 — Rich previews concluído** (F0…F4) | 23/23 tarefas e 74 de 74 cenários. A prévia de PDF virou o leitor do pdf.js: rolagem corrida, zoom e ajustes (também por `Ctrl+=`/`-`/`0` e `Ctrl`+roda), texto selecionável, links pela regra do `Markdown`, PDF com senha só em memória, painel com índice e miniaturas, busca com `Ctrl+F` no leitor, e a posição lembrada por aba. O `Markdown` — prévia, resposta do Claude e plano para aprovar — desenha tabela larga numa caixa que rola e bloco `mermaid` fechado como SVG sanitizado em três camadas ([ADR-020](../architecture/shared/00-decisions.md#adr-020--diagrama-mermaid-é-svg-inline-sanitizado-em-três-camadas)). `pnpm verify:full` com os onze portões verdes; o app Flutter não é tocado pelo plano, e o `test:e2e:mobile` não foi rodado |

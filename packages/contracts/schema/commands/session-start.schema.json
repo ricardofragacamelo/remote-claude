@@ -29,7 +29,7 @@
     "permissionMode": {
       "type": "string",
       "enum": ["ask", "acceptEdits", "readOnly", "allowAll"],
-      "description": "The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered. The previous protocol named them `default`, `acceptEdits`, `plan` and `allowAll`, and its `bypassPermissions` is refused."
+      "description": "The canonical mode (plan 28, D-16): `ask` — every call that needs leave asks; `acceptEdits` — file edits are accepted, the rest asks; `readOnly` — nothing changes: the server refuses every write and every shell, whatever the engine thinks; `allowAll` — Permitir tudo, ours: the server allows every call no rule refuses, but questions and plans (ADR-022). Only the modes the engine announces in `capabilities.permissionModes` are offered."
     },
     "effort": {
       "type": "string",

@@ -41,7 +41,7 @@ describe('InstallationVersionReader', () => {
     expect(versions.node).toEqual({ version: process.versions.node, reason: null });
   });
 
-  it('answers the engine’s parts as the default engine describes them — plan 28, S-100', async () => {
+  it('answers one entry per engine enabled, and which one is the default — plan 28, S-100', async () => {
     const engine = new PartsEngine('test-engine', {
       binary: { version: '2.1.277', reason: null },
       library: { version: '0.3.277', reason: null },
@@ -54,9 +54,24 @@ describe('InstallationVersionReader', () => {
 
     expect((await InstallationVersionReader.of(registry, readers)).read()).toEqual({
       backend: { version: '1.2.3', reason: null },
-      agentSdk: { version: '0.3.277', reason: null },
-      claudeCli: { version: '2.1.277', reason: null },
       node: { version: '24.0.0', reason: null },
+      defaultEngine: 'test-engine',
+      engines: [
+        {
+          engine: 'claude',
+          displayName: 'Stub',
+          state: 'available',
+          binary: { version: '9.9.9', reason: null },
+          library: null,
+        },
+        {
+          engine: 'test-engine',
+          displayName: 'Stub',
+          state: 'available',
+          binary: { version: '2.1.277', reason: null },
+          library: { version: '0.3.277', reason: null },
+        },
+      ],
     });
   });
 
@@ -74,9 +89,17 @@ describe('InstallationVersionReader', () => {
       (await InstallationVersionReader.of(new EngineRegistry([engine], 'claude'), broken)).read(),
     ).toEqual({
       backend: { version: null, reason: 'unreadable' },
-      agentSdk: { version: null, reason: 'unreadable' },
-      claudeCli: { version: null, reason: 'notInstalled' },
       node: { version: '24.0.0', reason: null },
+      defaultEngine: 'claude',
+      engines: [
+        {
+          engine: 'claude',
+          displayName: 'Stub',
+          state: 'available',
+          binary: { version: null, reason: 'notInstalled' },
+          library: { version: null, reason: 'unreadable' },
+        },
+      ],
     });
   });
 
@@ -90,7 +113,7 @@ describe('InstallationVersionReader', () => {
       await InstallationVersionReader.of(new EngineRegistry([engine], 'claude'), readers)
     ).read();
 
-    expect(versions.agentSdk).toEqual({ version: null, reason: 'notInstalled' });
+    expect(versions.engines[0]?.library).toBeNull();
   });
 
   it('asks the engine once, however often it is asked — S-68', async () => {

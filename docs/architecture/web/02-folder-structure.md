@@ -29,7 +29,7 @@ web/
 │   │   ├── AppFrame.tsx            a moldura: navegação global, menu Arquivo, conta
 │   │   ├── FramedOutlet.tsx        o layout `_frame`: a moldura e o portão de login (SignedIn)
 │   │   ├── global-navigation.ts    o registro da navegação global e do menu "gerenciar"
-│   │   ├── ClaudeSideBar.tsx       o chat da aba (componentes de sessão de hoje, até o plano 08)
+│   │   ├── AgentSideBar.tsx        o chat da aba (componentes de sessão de hoje, até o plano 08)
 │   │   ├── *Route.tsx              uma por tela: /workbench, /audit, /rules, /devices, /diagnostics,
 │   │   │                           /settings/$section, /about — e o "não encontrado" (NotFoundRoute)
 │   │   ├── workbench-location.ts   a search do workbench (`?folder=`), lida e escrita num par só
@@ -191,18 +191,22 @@ Relativo (`./`, `../`) só **dentro** da mesma feature. Atravessou fronteira, us
 
 ---
 
-## Alvo do plano 28 — `engines/` e a composição
+## `engines/` e a composição — núcleo neutro de agente
 
-> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)). As regras de lint já valem desde a F0; as pastas chegam na
-> F6.
+[Plano 28](../../plans/28-agent-neutral-core/README.md) ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)): o que é de um agente de código só mora num anel isolado, e o núcleo nunca o
+conhece pelo nome.
 
 ```
 web/src/
-├── features/            núcleo: desenha pelo `kind`, sem nome de motor
+├── features/
+│   └── agent-settings/  núcleo: as seções de todo motor (modelos, padrões, MCP) — a tela em si
+│                        é a de um motor por vez, montada pela rota /settings/agents/$engine
 ├── engines/
-│   └── claude/          F6 — ex-features/claude-settings/, e a ajuda própria do Claude
-└── app/engines.ts       F6 — a composição: o único arquivo que importa engines/*
+│   └── claude/          ex-features/claude-settings/: conta, instalação, teste de modelo, output
+│                        style, e a ajuda própria do Claude
+└── app/engines/index.ts       a composição: o único arquivo que importa engines/*
 ```
 
-`features/`, `shared/` e `app/` nunca importam `engines/`, e uma extensão só importa o barril de uma
-feature ([12-engines](../shared/12-engines.md)).
+`features/`, `shared/` e `app/` (fora de `app/engines/index.ts`) nunca importam `engines/`, e uma extensão só
+importa o barril de uma feature do núcleo — nunca a de outra extensão
+([12-engines](../shared/12-engines.md)).

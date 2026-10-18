@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/open-folder-entry.json",
+  "title": "OpenFolderEntry",
+  "description": "One folder tab, revalidated on every read (plan 06).",
+  "type": "object",
+  "required": ["path", "rootLabel", "state"],
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "rootLabel": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The label of the root it lives under, or `null` once it lives under none."
+    },
+    "state": {
+      "type": "string",
+      "enum": ["available", "notAllowed", "missing"],
+      "description": "Whether the tab can still be used, revalidated on every read."
+    }
+  }
+}

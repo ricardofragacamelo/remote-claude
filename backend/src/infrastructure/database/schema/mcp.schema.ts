@@ -11,7 +11,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-import { storedColumns } from './columns';
+import { engineOwnerColumns, storedColumns } from './columns';
 
 /** `bytea`, as a `Buffer` — the only shape a ciphertext is ever handled in. */
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
@@ -33,9 +33,7 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 export const mcpServers = pgTable(
   'mcp_servers',
   {
-    id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
-    engine: text('engine').notNull(),
+    ...engineOwnerColumns,
     name: text('name').notNull(),
     scope: text('scope').notNull(),
     folderPath: text('folder_path'),

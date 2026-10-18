@@ -20,6 +20,14 @@
     "infra/**",
     "**/*.module.ts",
     "**/test/**",
-    "**/e2e/fixtures/**"
+    "**/e2e/fixtures/**",
+    "packages/contracts/schema/http/upload-preflight.schema.json",
+    "packages/contracts/schema/http/upload-result.schema.json",
+    "packages/contracts/schema/http/defaults-view.schema.json",
+    "packages/contracts/schema/http/engines/claude/output-style-view.schema.json",
+    "packages/contracts/schema/definitions/engine-capabilities.schema.json",
+    "packages/contracts/schema/http/engine-models.schema.json",
+    "packages/contracts/schema/definitions/component-version.schema.json",
+    "packages/contracts/schema/definitions/read-version.schema.json"
   ]
 }

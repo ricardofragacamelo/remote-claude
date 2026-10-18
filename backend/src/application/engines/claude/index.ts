@@ -1,9 +1,12 @@
 // The public surface of the application layer of the Claude extension (plan 28, B-36): its account,
-// installation and test of the connection, the output style it keeps, and the routes of plan 13 kept
-// for the previous protocol. The core never imports it; the composition and the extension's adapters
-// do.
+// installation and test of the connection, and the output style it keeps. The core never imports it;
+// the composition and the extension's adapters do.
 export { ClaudeModelCatalog } from './claude-model-catalog';
-export { ACCOUNT_TTL_MS, CATALOGUE_CAPACITY, ClaudeInstallationCatalog } from './installation-catalog';
+export {
+  ACCOUNT_TTL_MS,
+  CATALOGUE_CAPACITY,
+  ClaudeInstallationCatalog,
+} from './installation-catalog';
 export {
   CheckModelUseCase,
   ModelChecks,
@@ -11,12 +14,6 @@ export {
   ReadInstallationUseCase,
 } from './installation.use-cases';
 export type { AccountView, InstallationView } from './installation.use-cases';
-export { LegacyDefaultsUseCases } from './legacy-defaults.use-cases';
-export type {
-  LegacyDefaults,
-  LegacyDefaultsDependencies,
-  LegacyDefaultsView,
-} from './legacy-defaults.use-cases';
 export {
   ClaudeSessionDefaults,
   outputStyleView,
@@ -24,7 +21,11 @@ export {
   SaveOutputStyleUseCase,
 } from './output-style.use-cases';
 export type { OutputStyleDependencies, OutputStyleView } from './output-style.use-cases';
-export { INSTALLATION_FACTS, INSTALLATION_PROBE, LIVE_INSTALLATION } from './ports/installation.ports';
+export {
+  INSTALLATION_FACTS,
+  INSTALLATION_PROBE,
+  LIVE_INSTALLATION,
+} from './ports/installation.ports';
 export type {
   InstallationAnswer,
   InstallationFacts,

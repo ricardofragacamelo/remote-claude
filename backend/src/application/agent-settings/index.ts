@@ -11,6 +11,7 @@ export {
   DEFAULTS_CHANGED,
   ReadDefaultsUseCase,
   SaveDefaultsUseCase,
+  defaultsChangedEvent,
 } from './defaults.use-cases';
 export type { DefaultsDependencies, DefaultsView } from './defaults.use-cases';
 export { EngineSettings } from './engine-settings';

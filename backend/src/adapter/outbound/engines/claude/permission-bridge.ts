@@ -1,3 +1,4 @@
+import { CLAUDE_ENGINE } from './claude-engine';
 import { Inject, Injectable } from '@nestjs/common';
 
 import {
@@ -144,8 +145,9 @@ export class PermissionBridge implements SessionPermissionGate, AgentLoopRelease
     this.endPermissions.execute(sessionId).catch((error: unknown) => {
       this.logger.error(
         {
-          op: 'claude.permission.request',
+          op: 'engine.permission.request',
           layer: 'adapter',
+          engine: CLAUDE_ENGINE,
           sessionId: sessionId.value,
           err: error,
         },
@@ -165,8 +167,9 @@ export class PermissionBridge implements SessionPermissionGate, AgentLoopRelease
 
       this.logger.debug(
         {
-          op: 'claude.permission.mode',
+          op: 'engine.permission.mode',
           layer: 'adapter',
+          engine: CLAUDE_ENGINE,
           sessionId: sessionId.value,
           mode,
           answered,
@@ -176,8 +179,9 @@ export class PermissionBridge implements SessionPermissionGate, AgentLoopRelease
     } catch (error) {
       this.logger.error(
         {
-          op: 'claude.permission.mode',
+          op: 'engine.permission.mode',
           layer: 'adapter',
+          engine: CLAUDE_ENGINE,
           sessionId: sessionId.value,
           mode,
           err: error,
@@ -270,8 +274,9 @@ interface Waiter {
 /** What every line about one question says: which session, which request, which tool — never the input. */
 function fieldsOf(question: PermissionQuestion): Record<string, unknown> {
   return {
-    op: 'claude.permission.request',
+    op: 'engine.permission.request',
     layer: 'adapter',
+    engine: CLAUDE_ENGINE,
     sessionId: question.sessionId.value,
     requestId: question.requestId,
     toolName: question.toolName,

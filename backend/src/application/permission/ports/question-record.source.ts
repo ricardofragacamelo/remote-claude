@@ -2,7 +2,7 @@ import type { UserId } from '@domain/auth';
 import type { PermissionDecision, PermissionRequestStatus } from '@domain/permission';
 
 /**
- * How a question of Claude ended, as `permission_requests` kept it — what the history of a session
+ * How a question of the agent ended, as `permission_requests` kept it — what the history of a session
  * joins to the line of its tool, by the tool call (plan 24, D-13).
  */
 export interface QuestionRecord {

@@ -11,18 +11,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import type { DefaultsViewPayload, EngineModelsPayload } from '@remote-claude/contracts';
+
 import {
   ClearFolderDefaultsUseCase,
   ReadDefaultsUseCase,
   ReadModelsUseCase,
   SaveDefaultsUseCase,
 } from '@application/agent-settings';
-import type { DefaultsView, ModelsView } from '@application/agent-settings';
 import type { UserId } from '@domain/auth';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import { toModelDto } from '../session/model.dto';
-import type { ModelDto } from '../session/model.dto';
 import {
   defaultsOf,
   engineParamSchema,
@@ -32,11 +32,6 @@ import {
   userDefaultsSchema,
 } from './agent-settings.dto';
 import type { FolderDefaultsBody, FolderQueryDto, UserDefaultsBody } from './agent-settings.dto';
-
-/** The models of an engine's installation on the wire. */
-export interface ModelsDto extends Omit<ModelsView, 'models'> {
-  readonly models: readonly ModelDto[];
-}
 
 /**
  * `/engines/:engine/*` — the defaults a session of an engine opens with, and the models of its
@@ -72,7 +67,7 @@ export class AgentSettingsController {
     @Param('engine', new ZodPipe(engineParamSchema)) engine: string,
     @Query(new ZodPipe(folderQuerySchema)) query: FolderQueryDto,
     @CurrentUser() userId: UserId,
-  ): Promise<ModelsDto> {
+  ): Promise<EngineModelsPayload> {
     const view = await this.models.execute(userId, engine, query.folder ?? null);
     return { ...view, models: view.models.map(toModelDto) };
   }
@@ -82,7 +77,7 @@ export class AgentSettingsController {
     @Param('engine', new ZodPipe(engineParamSchema)) engine: string,
     @Query(new ZodPipe(folderQuerySchema)) query: FolderQueryDto,
     @CurrentUser() userId: UserId,
-  ): Promise<DefaultsView> {
+  ): Promise<DefaultsViewPayload> {
     return this.readDefaults.execute(userId, engine, query.folder ?? null);
   }
 
@@ -91,7 +86,7 @@ export class AgentSettingsController {
     @Param('engine', new ZodPipe(engineParamSchema)) engine: string,
     @Body(new ZodPipe(userDefaultsSchema)) body: UserDefaultsBody,
     @CurrentUser() userId: UserId,
-  ): Promise<DefaultsView> {
+  ): Promise<DefaultsViewPayload> {
     return this.saveDefaults.execute(userId, engine, null, defaultsOf(body));
   }
 
@@ -100,7 +95,7 @@ export class AgentSettingsController {
     @Param('engine', new ZodPipe(engineParamSchema)) engine: string,
     @Body(new ZodPipe(folderDefaultsSchema)) body: FolderDefaultsBody,
     @CurrentUser() userId: UserId,
-  ): Promise<DefaultsView> {
+  ): Promise<DefaultsViewPayload> {
     return this.saveDefaults.execute(userId, engine, body.folder, defaultsOf(body));
   }
 

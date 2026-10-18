@@ -1,10 +1,16 @@
 import { z } from 'zod';
 
+import type {
+  FileContentPayload,
+  FileEntryPayload,
+  FileTreePayload,
+  SavedFilePayload,
+} from '@remote-claude/contracts';
+
 import type { CreatedEntry, OpenedFile, RelocatedEntry, SavedFile } from '@application/files';
-import type { TargetKind, TreeEntry, TreeListing } from '@domain/files';
+import type { TreeEntry, TreeListing } from '@domain/files';
 import { flag, folderPath } from '../workspace/workspace.dto';
 import { toHistoryOutcomeDto } from './file-history.dto';
-import type { HistoryOutcomeDto } from './file-history.dto';
 
 /**
  * A path inside the open folder, as the routes take it: relative, POSIX, `''` for the folder.
@@ -26,7 +32,7 @@ const entityTag = z.string().min(1).max(512);
 
 /**
  * How a text is written — the encoding it was opened in, whether it carries a byte-order mark — and
- * the second step of a file that changes what Claude may do. A save and a create both send them.
+ * the second step of a file that changes what the agent may do. A save and a create both send them.
  */
 const textOptions = {
   encoding: encoding.default('utf8'),
@@ -108,70 +114,7 @@ export const deleteQuerySchema = z.object({
 
 export type DeleteQueryDto = z.infer<typeof deleteQuerySchema>;
 
-/** One entry of a level of the tree. */
-export interface TreeEntryDto {
-  readonly name: string;
-  /** Relative to the open folder. */
-  readonly path: string;
-  readonly kind: 'file' | 'directory' | 'symlink' | 'other';
-  readonly size: number;
-  /** ISO-8601. */
-  readonly mtime: string;
-  /** One of the names the explorer hides unless "show hidden" is on — marked, never left out. */
-  readonly hidden: boolean;
-  /** Not UTF-8 on disk: shown, and never operated on. */
-  readonly unreadableName: boolean;
-  /** A link that leads outside the open folder: not navigable. `false` for anything but a link. */
-  readonly outside: boolean;
-  /** What a link inside leads to — `missing` when it is broken; `null` outside and for non-links. */
-  readonly targetKind: TargetKind | null;
-}
-
-/** One level of the tree, never more. */
-export interface TreeDto {
-  readonly folder: string;
-  readonly path: string;
-  readonly entries: readonly TreeEntryDto[];
-  readonly truncated: boolean;
-}
-
-/** A file, opened for the editor. Its version travels in the `ETag` header **and** here. */
-export interface FileContentDto {
-  readonly path: string;
-  readonly content: string;
-  readonly etag: string;
-  readonly encoding: string;
-  readonly bom: boolean;
-  readonly eol: 'lf' | 'crlf' | 'mixed';
-  readonly size: number;
-  readonly mtime: string;
-  readonly largeFile: boolean;
-}
-
-/** A file as a save left it, and how keeping the version it replaced ended (`null`: nothing written). */
-export interface SavedFileDto {
-  readonly path: string;
-  readonly etag: string;
-  readonly size: number;
-  readonly history: HistoryOutcomeDto | null;
-}
-
-/** An entry a create, a move or a copy left — `etag` for a file, `null` otherwise. */
-export interface EntryDto {
-  readonly path: string;
-  readonly etag: string | null;
-}
-
-export function toTreeDto(listing: TreeListing): TreeDto {
-  return {
-    folder: listing.directory.folder.value,
-    path: listing.directory.relative,
-    entries: listing.entries.map(toTreeEntryDto),
-    truncated: listing.truncated,
-  };
-}
-
-function toTreeEntryDto(entry: TreeEntry): TreeEntryDto {
+function toTreeEntryDto(entry: TreeEntry): FileTreePayload['entries'][number] {
   return {
     name: entry.name,
     path: entry.path,
@@ -185,7 +128,16 @@ function toTreeEntryDto(entry: TreeEntry): TreeEntryDto {
   };
 }
 
-export function toFileContentDto(file: OpenedFile): FileContentDto {
+export function toTreeDto(listing: TreeListing): FileTreePayload {
+  return {
+    folder: listing.directory.folder.value,
+    path: listing.directory.relative,
+    entries: listing.entries.map(toTreeEntryDto),
+    truncated: listing.truncated,
+  };
+}
+
+export function toFileContentDto(file: OpenedFile): FileContentPayload {
   return {
     path: file.path.relative,
     content: file.content,
@@ -199,7 +151,7 @@ export function toFileContentDto(file: OpenedFile): FileContentDto {
   };
 }
 
-export function toSavedFileDto(saved: SavedFile): SavedFileDto {
+export function toSavedFileDto(saved: SavedFile): SavedFilePayload {
   return {
     path: saved.path.relative,
     etag: saved.etag.value,
@@ -208,6 +160,6 @@ export function toSavedFileDto(saved: SavedFile): SavedFileDto {
   };
 }
 
-export function toEntryDto(entry: CreatedEntry | RelocatedEntry): EntryDto {
+export function toEntryDto(entry: CreatedEntry | RelocatedEntry): FileEntryPayload {
   return { path: entry.path.relative, etag: entry.etag?.value ?? null };
 }

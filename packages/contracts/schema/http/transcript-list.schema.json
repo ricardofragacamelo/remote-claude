@@ -5,6 +5,7 @@
   "description": "What `GET /transcripts?workspacePath=…` answers: a page of the conversations of a folder, of every engine enabled, newest first (plan 28, B-12).",
   "x-kind": "http",
   "x-type": "transcripts.list",
+  "x-route": [{ "method": "GET", "path": "/transcripts" }],
   "type": "object",
   "required": ["sessions", "nextCursor"],
   "properties": {

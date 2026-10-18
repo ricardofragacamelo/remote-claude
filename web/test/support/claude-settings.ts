@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 import { api } from '@/shared/api/api';
 import { anEngineList } from './engines';
 
-/** The installation's models, as `GET /claude/models` answers them. */
+/** The installation's models, as `GET /engines/claude/models` answers them. */
 export const MODELS = [
   {
     value: 'sonnet',
@@ -23,24 +23,30 @@ export const MODELS = [
   },
 ];
 
-/** Defaults with nothing set. */
+/** The core's five fields, with nothing set. */
 export const NONE = {
   model: null,
   permissionMode: null,
   effort: null,
   thinking: null,
-  outputStyle: null,
   fallbackModel: null,
 };
 
 /** Every field left to the installation. */
 export const installationOnly = Object.fromEntries(
-  ['model', 'permissionMode', 'effort', 'thinking', 'outputStyle', 'fallbackModel'].map((field) => [
+  ['model', 'permissionMode', 'effort', 'thinking', 'fallbackModel'].map((field) => [
     field,
     { value: null, from: 'installation' },
   ]),
 );
 export const DEFAULTS = { effective: installationOnly, user: NONE, folder: null };
+
+/** The output style — the one field Claude's extension adds beside the core's (plan 28, D-06). */
+export const OUTPUT_STYLE = {
+  effective: { value: null, from: 'installation' },
+  user: null,
+  folder: null,
+};
 
 export const ACCOUNT = {
   state: 'ready',
@@ -70,11 +76,11 @@ export const ENGINES = { '/engines': () => Promise.resolve(anEngineList()) };
 /** The backend of the screen: every read answered, the rest never. */
 export function backendAnswers(overrides: Record<string, () => Promise<unknown>> = {}) {
   const answers: Record<string, () => Promise<unknown>> = {
-    '/claude/account': () => Promise.resolve(ACCOUNT),
-    '/claude/installation': () => Promise.resolve(INSTALLATION),
-    '/claude/models': () =>
-      Promise.resolve({ cliVersion: '2.1.277', models: MODELS, permissionModes: [] }),
-    '/claude/defaults': () => Promise.resolve(DEFAULTS),
+    '/engines/claude/account': () => Promise.resolve(ACCOUNT),
+    '/engines/claude/installation': () => Promise.resolve(INSTALLATION),
+    '/engines/claude/models': () => Promise.resolve({ models: MODELS }),
+    '/engines/claude/defaults': () => Promise.resolve(DEFAULTS),
+    '/engines/claude/output-style': () => Promise.resolve(OUTPUT_STYLE),
     '/workspaces/open-folders': () =>
       Promise.resolve({ folders: [{ path: '/srv/app', rootLabel: 'srv', state: 'available' }] }),
     '/workspaces/recent': () => Promise.resolve({ folders: [] }),

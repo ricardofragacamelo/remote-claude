@@ -19,13 +19,13 @@ import type {
 /** How many versions one page brings. */
 export const HISTORY_PAGE_SIZE = 20;
 
+interface RestoredDto extends RestoredEntry {
+  readonly size: number;
+}
+
 interface HistoryPageDto {
   readonly entries: readonly HistoryEntry[];
   readonly nextCursor: string | null;
-}
-
-interface RestoredDto extends RestoredEntry {
-  readonly size: number;
 }
 
 function search(fields: Readonly<Record<string, string | null>>): string {
@@ -40,22 +40,26 @@ function search(fields: Readonly<Record<string, string | null>>): string {
   return query.toString();
 }
 
+/** One entry, keeping only what the model declares — a field the backend adds later stays unread. */
+function entryOf(entry: HistoryEntry): HistoryEntry {
+  const { path, id, kept, reason, entryKind, sizeBytes, hash, at, batchId, author } = entry;
+  return {
+    path,
+    id,
+    kept,
+    reason,
+    entryKind,
+    sizeBytes,
+    hash,
+    at,
+    batchId,
+    author: { id: author.id, self: author.self },
+  };
+}
+
 /** The DTO's entries, as the model has them — the shape of the backend stops here. */
 function pageOf(dto: HistoryPageDto): HistoryPage {
-  return {
-    entries: dto.entries.map((entry) => ({
-      id: entry.id,
-      path: entry.path,
-      entryKind: entry.entryKind,
-      reason: entry.reason,
-      kept: entry.kept,
-      sizeBytes: entry.sizeBytes,
-      author: { self: entry.author.self, id: entry.author.id },
-      at: entry.at,
-      batchId: entry.batchId,
-    })),
-    nextCursor: dto.nextCursor,
-  };
+  return { entries: dto.entries.map(entryOf), nextCursor: dto.nextCursor };
 }
 
 /**

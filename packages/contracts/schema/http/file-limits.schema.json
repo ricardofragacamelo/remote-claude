@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/file-limits.json",
+  "title": "FileLimits",
+  "description": "`GET /files/limits`: the ceilings a client has to know before it starts — editing, download, zip, upload, history (plan 07, F7). Said before the client starts, so a refusal is a sentence on the screen before the transfer, not a `413` after it.",
+  "x-kind": "http",
+  "x-type": "files.limits",
+  "x-route": [{ "method": "GET", "path": "/files/limits" }],
+  "type": "object",
+  "required": [
+    "maxEditBytes",
+    "largeFileBytes",
+    "downloadMaxBytes",
+    "archiveMaxEntries",
+    "uploadMaxBytes",
+    "uploadMaxEntries",
+    "uploadMaxTotalBytes",
+    "historyMaxFileBytes"
+  ],
+  "properties": {
+    "maxEditBytes": {
+      "type": "integer",
+      "description": "Above this, a file is not opened for editing at all, and a save is refused."
+    },
+    "largeFileBytes": {
+      "type": "integer",
+      "description": "Above this, a file opens in the light mode of the editor."
+    },
+    "downloadMaxBytes": {
+      "type": "integer",
+      "description": "The most bytes one download takes out: a file, or the measure of a zip."
+    },
+    "archiveMaxEntries": {
+      "type": "integer",
+      "description": "The most entries one zip carries."
+    },
+    "uploadMaxBytes": {
+      "type": "integer",
+      "description": "The largest file one upload writes."
+    },
+    "uploadMaxEntries": {
+      "type": "integer",
+      "description": "The most files one upload writes."
+    },
+    "uploadMaxTotalBytes": {
+      "type": "integer",
+      "description": "The most bytes one upload writes, all files together."
+    },
+    "historyMaxFileBytes": {
+      "type": "integer",
+      "description": "Above this, a version is not kept, and its entry says so."
+    }
+  }
+}

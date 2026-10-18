@@ -10,8 +10,8 @@ export interface TranscriptAudience {
   /**
    * Who opened the session here, when this backend did; `undefined` when it did not.
    *
-   * It comes from **our** database, because the SDK reports no provenance: `SDKSessionInfo` has no
-   * field for it, and `includeProgrammatic: false` returned the same sessions as `true` when
+   * It comes from **our** database, because the engine reports no provenance: its own session info
+   * has no field for it, and `includeProgrammatic: false` returned the same sessions as `true` when
    * measured ([D-01](../../../../../docs/plans/04-transcript-and-resume/decisions.md)).
    */
   readonly openedBy: UserId | undefined;
@@ -20,13 +20,13 @@ export interface TranscriptAudience {
 /**
  * Whether a caller sees a conversation, and with which origin — or `null` when they do not.
  *
- * The same fence that decides where Claude may **run** decides what may be **read**: the store
+ * The same fence that decides where the agent may **run** decides what may be **read**: the store
  * holds the conversation of every project on the machine, a client's included, and a failure in
  * the mobile channel must not expose one nobody released for it. Three refusals, in order:
  *
  * 1. **no working directory** — nothing proves the session belongs to an allowed root, so it is
  *    excluded, failing closed (S-54);
- * 2. **a working directory outside the caller's roots** — the filter is on the `cwd` the SDK
+ * 2. **a working directory outside the caller's roots** — the filter is on the `cwd` the engine
  *    reported, not on the directory we asked about: a worktree of an allowed repository is another
  *    path on disk (S-55);
  * 3. **a session another person opened here** — it is theirs, even under a root both may use

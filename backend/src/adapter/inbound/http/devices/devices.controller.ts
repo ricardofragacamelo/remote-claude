@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import type { DeviceListPayload, DevicePayload } from '@remote-claude/contracts';
+
 import {
   ApproveDeviceUseCase,
   ListDevicesUseCase,
@@ -21,7 +23,7 @@ import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import { CallingDevice } from './calling-device';
 import { registerDeviceSchema, toDeviceDto } from './devices.dto';
-import type { DeviceDto, DeviceListDto, RegisterDeviceBody } from './devices.dto';
+import type { RegisterDeviceBody } from './devices.dto';
 
 /**
  * The installations of the app, and which of them may decide something.
@@ -56,7 +58,7 @@ export class DevicesController {
   async create(
     @Body(new ZodPipe(registerDeviceSchema)) body: RegisterDeviceBody,
     @CurrentUser() userId: UserId,
-  ): Promise<DeviceDto> {
+  ): Promise<DevicePayload> {
     return toDeviceDto(
       await this.register.execute({
         userId,
@@ -72,7 +74,7 @@ export class DevicesController {
 
   /** This caller's devices, most recently seen first. Only theirs. */
   @Get()
-  async read(@CurrentUser() userId: UserId): Promise<DeviceListDto> {
+  async read(@CurrentUser() userId: UserId): Promise<DeviceListPayload> {
     return { devices: (await this.list.execute(userId)).map(toDeviceDto) };
   }
 
@@ -83,7 +85,7 @@ export class DevicesController {
     @Param('deviceId') deviceId: string,
     @CurrentUser() userId: UserId,
     @CallingDevice() callerInstallId: string | null,
-  ): Promise<DeviceDto> {
+  ): Promise<DevicePayload> {
     return toDeviceDto(await this.approve.execute({ userId, deviceId, callerInstallId }));
   }
 
@@ -98,7 +100,7 @@ export class DevicesController {
   async deny(
     @Param('deviceId') deviceId: string,
     @CurrentUser() userId: UserId,
-  ): Promise<DeviceDto> {
+  ): Promise<DevicePayload> {
     return toDeviceDto(await this.revoke.execute(userId, deviceId));
   }
 }

@@ -109,7 +109,7 @@ import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
 import { EnginesController } from '@adapter/inbound/http/engines/engines.controller';
 import { AgentSettingsModule } from './agent-settings.module';
-import { ClaudeEngineModule, engineSessionProviders } from './engines';
+import { EngineModule, engineSessionProviders } from './engines';
 import { PermissionModule } from './permission.module';
 import { WebsocketModule } from './websocket.module';
 import { SessionOriginModule } from './session-origin.module';
@@ -124,7 +124,7 @@ const CHANGE_STORES = Symbol('ChangeStores');
 const CHANGE_WRITING = Symbol('ChangeWriting');
 
 /**
- * The `session` module: the live session of Claude, across all four layers.
+ * The `session` module: the live session of the agent, across all four layers.
  *
  * The registry is a singleton with the configured limit baked in, because "how many sessions are
  * open" is a property of the process and there is exactly one process. Every use case is built
@@ -135,7 +135,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     AuditModule,
     AgentSettingsModule,
     AuthModule,
-    ClaudeEngineModule,
+    EngineModule,
     PermissionModule,
     SessionOriginModule,
     SessionRegistryModule,
@@ -524,8 +524,8 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
           'session.prompt',
           sessionSchemas.prompt,
           async (command, context) =>
-            // Queued and never refused for arriving mid-turn: it is what the SDK does natively and
-            // what the Claude Code UI does. What is refused is a slash command the installation does
+            // Queued and never refused for arriving mid-turn: it is what the engine does natively and
+            // what the engine's own interface does. What is refused is a slash command the installation does
             // not have, and that refusal is this command's `error` (S-34). The prompt reaches the CLI
             // only after the ack, so no event of its turn can overtake it.
             ({

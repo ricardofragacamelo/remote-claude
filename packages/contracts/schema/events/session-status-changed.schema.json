@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/events/session-status-changed.json",
   "title": "SessionStatusChanged",
-  "description": "Where the session stands. Derived by us, not read off a single SDK message.",
+  "description": "Where the session stands. Derived by us, not read off a single message of the engine.",
   "x-kind": "event",
   "x-type": "session.statusChanged",
   "type": "object",

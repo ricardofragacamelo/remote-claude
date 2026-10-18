@@ -180,11 +180,13 @@ As duas primeiras são verificadas por `import_lint` no CI — ver
 
 ---
 
-## Alvo do plano 28 — o app desenha pelo `kind`
+## Núcleo neutro de agente — o app desenha pelo `kind`
 
-> **Alvo do [plano 28](../../plans/28-agent-neutral-core/README.md)** ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)). As regras de lint já valem desde a F0.
+[Plano 28](../../plans/28-agent-neutral-core/README.md) ([ADR-025](../shared/00-decisions.md#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)).
 
-O que o app tinha do Claude era interpretação, e ela vai para o backend: o rótulo da ferramenta, a
-lista de tarefas (que hoje mora no **domínio** do app), o cartão de plano, os modos e as categorias de
-contexto chegam prontos no contrato canônico (F2…F4). O anel `lib/engines/` existe vazio, com a regra
-de lint, até haver uma tela de um motor só; `lib/app/engines.dart` é a composição ([12-engines](../shared/12-engines.md)).
+O que o app tinha do Claude era interpretação, e ela foi para o backend: o rótulo da ferramenta, a
+lista de tarefas, o cartão de plano, os modos e as categorias de contexto chegam prontos no contrato
+canônico. Os nomes do núcleo são neutros, com `{agent}` interpolado nas chaves de i18n que precisam
+nomear o motor. O anel `lib/engines/` existe vazio, com a regra de lint, até haver uma tela de um
+motor só ([D-15](../../plans/28-agent-neutral-core/decisions.md#f0--normas)); `lib/app/engines.dart`
+é a composição, e não registra nada além do núcleo ([12-engines](../shared/12-engines.md)).

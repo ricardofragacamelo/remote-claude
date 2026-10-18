@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/session-commands-changed.json",
+  "title": "SessionCommandsChanged",
+  "description": "The slash commands of a session, menu-ordered and badged — the whole list, every time, so a client never patches: pushed when the engine's own menu changes mid-session (a skill discovered as the agent works in a subdirectory, say). A client that does not know it ignores it.",
+  "x-kind": "event",
+  "x-type": "session.commandsChanged",
+  "type": "object",
+  "required": ["commands"],
+  "properties": {
+    "commands": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "argumentHint",
+          "aliases",
+          "suggested",
+          "origin",
+          "label",
+          "shadowed"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Without the leading slash."
+          },
+          "description": {
+            "type": "string"
+          },
+          "argumentHint": {
+            "type": "string",
+            "description": "What the command takes after its name — `<file>`, `[on|off]` — or empty."
+          },
+          "aliases": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string"
+            },
+            "description": "Other names that run the same command: `/cost` and `/stats` both run `/usage`."
+          },
+          "builtin": {
+            "type": "boolean",
+            "description": "Whether it is the engine's own. Absent or `false` for a command or a skill of the project, of a plugin or of an MCP server."
+          },
+          "suggested": {
+            "type": "boolean",
+            "description": "Whether it belongs to the group shown first."
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["builtin", "project", "user", "system"],
+            "description": "Where a command or a skill comes from — the badge of the menu."
+          },
+          "label": {
+            "type": "string",
+            "description": "The name a person reads — without the namespace of a plugin."
+          },
+          "shadowed": {
+            "type": "boolean",
+            "description": "`/name` runs another row: an unmarked row whose name a command of the engine's own also has. Listed, so nothing vanishes in silence."
+          }
+        }
+      }
+    }
+  }
+}

@@ -92,8 +92,8 @@ describe('ReadCatalogUseCase — plan 08, B-50, D-13', () => {
     const catalog = await useCase.execute(FOLDER, owner);
 
     expect(catalog.commands.map((command) => [command.name, command.origin])).toEqual([
-      ['init', 'builtin'],
       ['deploy', 'project'],
+      ['init', 'builtin'],
     ]);
     expect(catalog.models).toHaveLength(1);
     expect(catalog.limits).toEqual(LIMITS);

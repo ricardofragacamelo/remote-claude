@@ -26,7 +26,7 @@ export interface OpenFolderResult {
  * there records **nothing** — neither a tab nor a recent folder (plan 06, S-45). Opening is also
  * what puts a folder on the recent list ([06 · D-14](../../../../../docs/plans/06-workbench/decisions.md)).
  *
- * It never touches a session of Claude: sessions are `session`'s, and this module does not know
+ * It never touches a session of the agent: sessions are `session`'s, and this module does not know
  * they exist.
  */
 export class OpenFolderUseCase {
@@ -84,7 +84,7 @@ export class ListOpenFoldersUseCase {
  *
  * No gate: a folder that left the allowlist still has to be closable, or its tab would be stuck
  * open for good. Closing one that is not open is not an error — the answer to "close it" is the
- * same either way (plan 06, S-42). And it ends no session of Claude (S-49).
+ * same either way (plan 06, S-42). And it ends no session of the agent (S-49).
  */
 export class CloseFolderUseCase {
   constructor(private readonly folders: WorkspaceFolderRepository) {}

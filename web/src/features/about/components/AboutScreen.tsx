@@ -5,8 +5,7 @@ import { LoadStatus } from '@/shared/components/LoadStatus';
 import { Panel } from '@/shared/components/Panel';
 import { Button } from '@/shared/components/ui/button';
 import type { CopyState } from '@/shared/hooks/useCopy';
-import { useVersionLabels, useVersions } from '../hooks/useVersions';
-import { INSTALLATION_COMPONENTS } from '../types/about';
+import { useVersions } from '../hooks/useVersions';
 
 /**
  * Where the documentation of the project lives — the index of its `docs/`. Not a provider, not a
@@ -16,8 +15,9 @@ export const DOCUMENTATION_URL =
   'https://github.com/ricardofragacamelo/remote-claude/tree/main/docs';
 
 /**
- * About: the versions of the web, the backend, the Agent SDK, the agent's CLI and Node, with "copy"
- * of the whole block for a bug report — and the documentation and the license (plan 06, B-32).
+ * About: the versions of the web, the backend, Node and each engine enabled — its library and its
+ * command-line tool — with "copy" of the whole block for a bug report, and the documentation and
+ * the license (plan 06, B-32; plan 28, B-37, B-39).
  *
  * The web's version is on screen whatever the backend answers: it is the bundle's own. A version
  * that could not be read says so, with the reason; the backend unreachable is an error with "try
@@ -27,28 +27,18 @@ export const DOCUMENTATION_URL =
 export function AboutScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const versions = useVersions();
-  const { nameOf, valueOf } = useVersionLabels();
   const { installation } = versions;
 
   return (
     <>
       <Panel title={t('about.versions.title')} description={t('about.versions.description')}>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-ui">
-          <dt className="text-muted-foreground">{nameOf('web')}</dt>
-          <dd className="font-code">{versions.web}</dd>
-          {installation !== null &&
-            INSTALLATION_COMPONENTS.map((component) => (
-              <div key={component} className="contents">
-                <dt className="text-muted-foreground">{nameOf(component)}</dt>
-                <dd
-                  className={
-                    installation[component].version === null ? 'text-destructive' : 'font-code'
-                  }
-                >
-                  {valueOf(installation[component])}
-                </dd>
-              </div>
-            ))}
+          {versions.lines.map((line) => (
+            <div key={line.name} className="contents">
+              <dt className="text-muted-foreground">{line.name}</dt>
+              <dd className={line.ok ? 'font-code' : 'text-destructive'}>{line.value}</dd>
+            </div>
+          ))}
         </dl>
 
         <LoadStatus

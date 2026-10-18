@@ -1,5 +1,7 @@
 import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
 
+import type { AgentModel } from '@remote-claude/contracts';
+
 import { ReadCatalogUseCase } from '@application/session';
 import type { InstallationCatalog } from '@application/session';
 import type { UserId } from '@domain/auth';
@@ -7,7 +9,6 @@ import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import { listLiveSessionsSchema } from './live-sessions.dto';
 import { toModelDto } from './model.dto';
-import type { ModelDto } from './model.dto';
 import type { ListLiveSessionsQueryDto } from './live-sessions.dto';
 
 /**
@@ -37,7 +38,7 @@ export class CatalogController {
   async read(
     @Query(new ZodPipe(listLiveSessionsSchema)) query: ListLiveSessionsQueryDto,
     @CurrentUser() userId: UserId,
-  ): Promise<Omit<InstallationCatalog, 'models'> & { readonly models: readonly ModelDto[] }> {
+  ): Promise<Omit<InstallationCatalog, 'models'> & { readonly models: readonly AgentModel[] }> {
     const catalog = await this.catalog.execute(query.workspacePath, userId);
     return { ...catalog, models: catalog.models.map(toModelDto) };
   }

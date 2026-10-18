@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/workspace-list.json",
+  "title": "WorkspaceList",
+  "description": "`GET /workspaces`: the roots this caller may use. Only theirs: a root of somebody else is not listed at all (plan 06).",
+  "x-kind": "http",
+  "x-type": "workspaces.list",
+  "x-route": [{ "method": "GET", "path": "/workspaces" }],
+  "type": "object",
+  "required": ["workspaces"],
+  "properties": {
+    "workspaces": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "../definitions/workspace.schema.json"
+      }
+    }
+  }
+}

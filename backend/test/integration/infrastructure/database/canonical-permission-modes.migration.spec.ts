@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { DrizzleClaudeDefaultsRepository } from '@adapter/outbound/persistence/claude-config/drizzle-claude-defaults.repository';
+import { DrizzleAgentDefaultsRepository } from '@adapter/outbound/persistence/agent-settings/drizzle-agent-defaults.repository';
 import { UserId } from '@domain/auth';
 import { openDatabase } from '@infra/database/connection';
 import type { DatabaseConnection } from '@infra/database/connection';
@@ -70,7 +70,14 @@ describe('migration 0022 — the canonical permission modes', () => {
       );
     }
 
-    await migrate(connection.pool, MIGRATIONS);
+    // Stops right after 0022: the table is still `claude_defaults`, under its old name — 0024
+    // (plan 28, B-36) renames it to `agent_defaults` and adds `engine`, and every assertion below
+    // but the last reads the table as 0022 itself left it.
+    const upTo22 = mkdtempSync(path.join(tmpdir(), 'rc-migrations-'));
+    for (const file of (await migrationFiles(MIGRATIONS)).filter((name) => name <= MIGRATION)) {
+      copyFileSync(path.join(MIGRATIONS, file), path.join(upTo22, file));
+    }
+    await migrate(connection.pool, upTo22);
   });
 
   afterAll(async () => {
@@ -124,12 +131,16 @@ describe('migration 0022 — the canonical permission modes', () => {
   });
 
   it('lets the defaults written before it be read back in the canonical modes', async () => {
-    const repository = new DrizzleClaudeDefaultsRepository(
+    // Advances past 0024 (plan 28, B-36): `claude_defaults` becomes `agent_defaults`, every row
+    // written before this test keeps `engine = 'claude'` — the only engine there was.
+    await migrate(connection.pool, MIGRATIONS);
+
+    const repository = new DrizzleAgentDefaultsRepository(
       aPersistenceContext(connection.db),
       new SequentialIds(),
     );
 
-    const read = await repository.read(UserId.create('auth|owner'));
+    const read = await repository.read(UserId.create('auth|owner'), 'claude');
 
     expect(read.user?.permissionMode).toBe('ask');
     expect(

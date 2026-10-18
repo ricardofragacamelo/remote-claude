@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { PermissionRulePayload } from '@remote-claude/contracts';
+
 import { PERSISTED_PERMISSION_SCOPES } from '@domain/permission';
 import type { ListedPermissionRule } from '@application/permission';
 
@@ -28,54 +30,8 @@ export const grantPermissionRuleSchema = z.object({
 
 export type GrantPermissionRuleBody = z.infer<typeof grantPermissionRuleSchema>;
 
-/**
- * One rule, as the client sees it.
- *
- * `status` is computed at the moment of the answer, because the list shows an expired rule marked
- * and not missing — and the client has no clock worth trusting for that.
- */
-export interface PermissionRuleDto {
-  readonly id: string;
-  readonly scope: string;
-
-  /** The canonical kind the pattern names — `shell`, `file.edit` —, `null` on a disabled rule. */
-  readonly kind: string | null;
-
-  /**
-   * The kind again, or the engine's pattern of a disabled rule — kept beside for the published app,
-   * which reads it (plan 28, D-22).
-   */
-  readonly toolName: string;
-
-  /**
-   * The pattern exactly as written, in the canonical grammar — or, on a disabled rule, the engine's
-   * grammar it was written in, for the person to write it again.
-   */
-  readonly pattern: string;
-  readonly decision: string;
-  readonly projectPath: string | null;
-
-  /** The engine the rule is restricted to, or `null` for every engine whose calls have the kind. */
-  readonly engine: string | null;
-  /** Who granted it. Always the caller, since nobody sees another person's rules. */
-  readonly grantedBy: string;
-  readonly grantedAt: string;
-  readonly expiresAt: string;
-  /** `active`, `expired`, `revoked` or `disabled`. */
-  readonly status: string;
-  readonly revokedAt: string | null;
-
-  /** Why the rule was switched off — `{ reason: 'untranslatable' }` —, or `null`. */
-  readonly disabled: { readonly reason: string } | null;
-}
-
-/** The listing. An object and not a bare array, so the response can grow a field later. */
-export interface PermissionRuleListDto {
-  readonly rules: readonly PermissionRuleDto[];
-}
-
 /** The transport shape of a rule. */
-export function toPermissionRuleDto({ rule, status }: ListedPermissionRule): PermissionRuleDto {
+export function toPermissionRuleDto({ rule, status }: ListedPermissionRule): PermissionRulePayload {
   return {
     id: rule.id,
     scope: rule.scope,

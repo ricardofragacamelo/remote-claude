@@ -17,7 +17,7 @@
     },
     "events": {
       "type": "array",
-      "description": "The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:sessionId/messages` carries, oldest first, in the order of the SDK's chain and never of the clock. A client folds them with the same reducer as the page.",
+      "description": "The new entries as events of the history — `{ type, payload }`, the same `message.completed`, `tool.started` and `tool.completed` a page of `GET /transcripts/:engine/:id/messages` carries, oldest first, in the order of the engine's own chain and never of the clock. A client folds them with the same reducer as the page.",
       "items": {
         "type": "object",
         "required": ["type", "payload"],
@@ -42,7 +42,7 @@
     },
     "working": {
       "type": "boolean",
-      "description": "Whether Claude seems to be working on it in another client: the conversation is `activeElsewhere` **and** its last entry leaves the turn open — a tool call without its result, a thinking, or a prompt without an answer. An inference from the transcript, which records no state of the turn; the screen says it is one."
+      "description": "Whether the agent seems to be working on it in another client: the conversation is `activeElsewhere` **and** its last entry leaves the turn open — a tool call without its result, a thinking, or a prompt without an answer. An inference from the transcript, which records no state of the turn; the screen says it is one."
     }
   }
 }

@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+// Registers the engine whose files this suite treats as sensitive — `.claude/`, `.mcp.json` — the
+// same side-effecting import the app itself makes (plan 28, B-39).
+import '@/app/engines';
 import {
   answerRecreate,
   answerSensitive,

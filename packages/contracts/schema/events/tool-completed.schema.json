@@ -18,15 +18,11 @@
     },
     "summary": {
       "type": "string",
-      "description": "A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:sessionId/tools/:toolUseId/result`."
+      "description": "A short result for the timeline: the output **as text** — a result made of blocks is their text joined, never JSON —, cut to its **last** 5 lines and at most 400 characters, with `…` in front when it was cut. The end is kept because that is where a build or a test says how it went. The whole output is the transcript's job: `GET /transcripts/:engine/:id/tools/:toolUseId/result`."
     },
     "parentToolUseId": {
       "type": "string",
       "description": "Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation."
-    },
-    "taskId": {
-      "type": "string",
-      "description": "The task a call that creates or changes one made or changed, taken from the call's result. Kept for the previous protocol, whose clients rebuild the list themselves; the list is `session.tasksChanged` now (plan 28, B-22), and this goes with the window, in F7 (B-47)."
     },
     "at": {
       "type": "string",

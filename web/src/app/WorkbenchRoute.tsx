@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 
 import { EditorLocation } from '@/features/editor';
-import { PanelCommands } from '@/features/session';
+import { PanelCommands, useActiveAgentName } from '@/features/session';
 import { FolderShell, Workbench } from '@/features/workbench';
 import { FolderGate } from '@/features/workspace';
 import { AgentSideBar } from './AgentSideBar';
@@ -93,7 +93,7 @@ export function WorkbenchRoute(): React.JSX.Element {
               }}
             />
             <PanelCommands folder={folder.path} />
-            <FolderShell folder={folder.path} agent={<AgentSideBar folder={folder.path} />} />
+            <FolderWorkbenchShell folder={folder.path} />
           </>
         )}
       </FolderGate>
@@ -117,5 +117,17 @@ export function WorkbenchRoute(): React.JSX.Element {
       onWelcome={home}
       renderFolder={renderFolder}
     />
+  );
+}
+
+/**
+ * The workbench of one folder — a real component, not a render prop, because what names the side
+ * bar (plan 28, B-44) has to come from a hook, and a hook needs a component of its own to belong to.
+ */
+function FolderWorkbenchShell({ folder }: { readonly folder: string }): React.JSX.Element {
+  const agentName = useActiveAgentName(folder);
+
+  return (
+    <FolderShell folder={folder} agent={<AgentSideBar folder={folder} />} agentName={agentName} />
   );
 }

@@ -1,10 +1,7 @@
+import type { DeviceListPayload, DevicePayload } from '@remote-claude/contracts';
+
 import { api } from '@/shared/api/api';
 import type { Device } from '../types/device';
-
-/** The shape the backend answers with. It stops existing at the end of this file. */
-interface DeviceListResponse {
-  readonly devices: readonly Device[];
-}
 
 /**
  * The devices of this user.
@@ -15,7 +12,7 @@ interface DeviceListResponse {
  * @throws {import('@/shared/api/errors').AppError} never a raw `Response`
  */
 export async function fetchDevices(): Promise<readonly Device[]> {
-  return (await api.get<DeviceListResponse>('/devices')).devices;
+  return (await api.get<DeviceListPayload>('/devices')).devices;
 }
 
 /**
@@ -26,12 +23,12 @@ export async function fetchDevices(): Promise<readonly Device[]> {
  * add here for that: this client is not a device and has no header to send.
  */
 export async function approveDevice(deviceId: string): Promise<Device> {
-  return api.post<Device>(`/devices/${encodeURIComponent(deviceId)}/approval`, {});
+  return api.post<DevicePayload>(`/devices/${encodeURIComponent(deviceId)}/approval`, {});
 }
 
 /** Takes a device out. The row stays — the record that it was revoked is the point. */
 export async function revokeDevice(deviceId: string): Promise<Device> {
-  return api.request<Device>(`/devices/${encodeURIComponent(deviceId)}/approval`, {
+  return api.request<DevicePayload>(`/devices/${encodeURIComponent(deviceId)}/approval`, {
     method: 'DELETE',
   });
 }

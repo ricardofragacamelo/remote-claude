@@ -15,6 +15,12 @@ import { api } from '@/shared/api/api';
 import { wsClient } from '@/shared/api/ws';
 import { AppError } from '@/shared/api/errors';
 import { addToAgentContext, FILES_DRAG_TYPE } from '@/shared/lib/files-drag';
+import {
+  anEngineDto,
+  anEngineList,
+  CAPABILITIES,
+  FEWER_CAPABILITIES,
+} from '../../../support/engines';
 import { aHistoryPage } from '../../../support/history';
 import { aLiveSocket, hubEvent } from '../../../support/live-socket';
 import type { LiveSocket } from '../../../support/live-socket';
@@ -1099,6 +1105,89 @@ describe('a draft — plan 08, B-45, B-50, D-13', () => {
       await screen.findAllByText(t('composer.send.missing', { path: 'gone.md' })),
     ).not.toHaveLength(0);
     expect(live.lastSent('session.start')).toBeUndefined();
+  });
+});
+
+describe('the engine of a draft — plan 28, B-44', () => {
+  /** A draft of the panel, on screen. */
+  function aDraft(): string {
+    const key = agentPanelStore(A).getState().openDraft();
+    render(<DraftView folder={A} tabKey={key} />);
+    live.connect();
+    return key;
+  }
+
+  const enginePicker = () => screen.queryByRole('button', { name: /^Agent: / });
+
+  it('has no chip with one engine available — S-124', () => {
+    routeApi({ '/engines': [anEngineList()] });
+    aDraft();
+
+    expect(enginePicker()).toBeNull();
+  });
+
+  it('offers every available engine, never one that cannot open a session — S-124', async () => {
+    const user = userEvent.setup();
+    routeApi({
+      '/engines': [
+        anEngineList({
+          engines: [anEngineDto(), anEngineDto({ id: 'test', displayName: 'Test agent' })],
+        }),
+      ],
+    });
+    aDraft();
+
+    const chip = await screen.findByRole('button', { name: 'Agent: Installation default' });
+    await user.click(chip);
+
+    expect((await screen.findAllByRole('menuitem')).map((item) => item.textContent ?? '')).toEqual([
+      'Installation default',
+      'Claude',
+      'Test agent',
+    ]);
+  });
+
+  it('opens the session on the engine chosen, with that engine’s own model and effort reset — S-123', async () => {
+    const user = userEvent.setup();
+    routeApi({
+      '/engines': [
+        anEngineList({
+          engines: [
+            anEngineDto({ capabilities: { ...CAPABILITIES, effortLevels: ['low', 'high'] } }),
+            anEngineDto({
+              id: 'test',
+              displayName: 'Test agent',
+              capabilities: FEWER_CAPABILITIES,
+            }),
+          ],
+        }),
+      ],
+    });
+    const key = aDraft();
+    agentPanelStore(A).getState().setChoices(key, {
+      engine: null,
+      model: 'opus',
+      mode: 'ask',
+      effort: 'high',
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Agent: Installation default' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Test agent' }));
+
+    expect(await screen.findByRole('button', { name: 'Agent: Test agent' })).toBeVisible();
+    // A different engine has its own models and its own effort levels (plan 28, B-44).
+    expect(
+      agentPanelStore(A)
+        .getState()
+        .tabs.find((tab) => tab.key === key),
+    ).toMatchObject({ choices: { engine: 'test', model: null, effort: null } });
+
+    await typeIn(user, box(), 'go');
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => {
+      expect(live.lastSent('session.start')).toMatchObject({ payload: { engine: 'test' } });
+    });
   });
 });
 

@@ -20,14 +20,11 @@ export const sessionFileStates = pgTable(
     path: text('path').notNull(),
 
     /**
-     * The conversation the session was, so the undo of a later session of the same conversation
-     * — one of ours continued in place — still knows how this one left the file. `NULL` on rows
-     * written before migration `0013`.
+     * The engine and the id of the conversation the session was, so the undo of a later session of
+     * the same conversation — one of ours continued in place — still knows how this one left the
+     * file. `NULL`, together, on rows written before migration `0013`.
      */
-    claudeSessionId: text('claude_session_id'),
-    /** The engine of the conversation (plan 28, B-11); null with it, on rows before `0013`. */
     engine: text('engine'),
-    /** The id of the conversation in its engine's store; the old column is its copy until F7. */
     conversationId: text('conversation_id'),
 
     /**
@@ -43,7 +40,6 @@ export const sessionFileStates = pgTable(
   (table) => [
     primaryKey({ name: 'session_file_states_pkey', columns: [table.sessionId, table.path] }),
     index('session_file_states_session_id_idx').on(table.sessionId),
-    index('session_file_states_claude_session_id_idx').on(table.claudeSessionId),
     index('session_file_states_conversation_idx').on(table.engine, table.conversationId),
   ],
 );
@@ -69,14 +65,12 @@ export const turnFileCheckpoints = pgTable(
     sessionId: text('session_id').notNull(),
 
     /**
-     * The conversation the session was. It is what the undo reaches by: a conversation of ours
-     * continued in place is a new live session on the same conversation, and the points the
-     * sessions before it recorded are its points too. `NULL` on rows written before `0013`.
+     * The engine and the id of the conversation the session was. It is what the undo reaches by: a
+     * conversation of ours continued in place is a new live session on the same conversation, and
+     * the points the sessions before it recorded are its points too. `NULL`, together, on rows
+     * written before `0013`.
      */
-    claudeSessionId: text('claude_session_id'),
-    /** The engine of the conversation (plan 28, B-11); null with it, on rows before `0013`. */
     engine: text('engine'),
-    /** The id of the conversation in its engine's store; the old column is its copy until F7. */
     conversationId: text('conversation_id'),
     promptId: text('prompt_id').notNull(),
     path: text('path').notNull(),
@@ -118,7 +112,6 @@ export const turnFileCheckpoints = pgTable(
     // The purge walks by age, and undo reads one turn at a time.
     index('turn_file_checkpoints_captured_at_idx').on(table.capturedAt),
     index('turn_file_checkpoints_session_id_prompt_id_idx').on(table.sessionId, table.promptId),
-    index('turn_file_checkpoints_claude_session_id_idx').on(table.claudeSessionId),
     index('turn_file_checkpoints_conversation_idx').on(table.engine, table.conversationId),
   ],
 );

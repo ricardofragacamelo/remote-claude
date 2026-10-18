@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/installation-view.json",
+  "title": "InstallationView",
+  "description": "`GET /engines/claude/installation`: \"why does Claude not work here?\" Never fails because the CLI did not answer: every part says what it could read and why not (plan 13, B-11).",
+  "x-kind": "http",
+  "x-type": "engines.claude.installation",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/installation" }],
+  "type": "object",
+  "required": ["agentSdk", "bundledCli", "pathCli", "configDir", "login", "lastModelCheck"],
+  "properties": {
+    "agentSdk": {
+      "$ref": "read-version.schema.json"
+    },
+    "bundledCli": {
+      "$ref": "read-version.schema.json",
+      "description": "The binary the SDK spawns, from its manifest."
+    },
+    "pathCli": {
+      "type": "object",
+      "required": ["version", "reason", "differs"],
+      "description": "The `claude` on `PATH`, when there is one — often another version. Mirrors `ReadVersion` plus `differs`, inlined because the generator refuses any sibling beside a `$ref` (plan 28, B-48).",
+      "properties": {
+        "version": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "reason": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "differs": {
+          "type": "boolean",
+          "description": "Whether the version on `PATH` differs from the bundled one."
+        }
+      }
+    },
+    "configDir": {
+      "type": "object",
+      "required": ["path", "fromEnvironment"],
+      "description": "The configuration directory the CLI reads: `CLAUDE_CONFIG_DIR`, or `~/.claude` without it.",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "fromEnvironment": {
+          "type": "boolean"
+        }
+      }
+    },
+    "login": {
+      "type": "string",
+      "enum": ["ready", "loginRequired", "unknown"],
+      "description": "What the last answer of the installation said of the login — `unknown` before any."
+    },
+    "lastModelCheck": {
+      "$ref": "model-check-outcome.schema.json",
+      "x-nullable": true,
+      "description": "The test of the connection most recently run, by user. `null` before any."
+    }
+  }
+}

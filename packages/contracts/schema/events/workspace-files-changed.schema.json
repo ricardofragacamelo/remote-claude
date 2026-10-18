@@ -29,7 +29,7 @@
           "origin": {
             "type": "string",
             "enum": ["agent", "user", "external"],
-            "description": "Who changed it, as far as the server can tell: a write of the agent of a session, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say. (`claude` until plan 28, B-25; a connection of the previous protocol still reads that.)"
+            "description": "Who changed it, as far as the server can tell: a write of the agent of a session, a write of a person through the files routes, or anything else. A label, never a decision — absent when the server cannot say."
           },
           "engine": {
             "type": "string",

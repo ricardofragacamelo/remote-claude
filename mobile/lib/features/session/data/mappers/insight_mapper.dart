@@ -79,8 +79,7 @@ InstallationModel? _modelOf(Object? entry) {
   );
 }
 
-/// One category: its id, and what names it — our key, or the engine's words. The engine's `name` the
-/// payload still carries is for clients of the previous protocol, and is not read here.
+/// One category: its id, and what names it — our key, or the engine's words.
 ContextCategory? _categoryOf(Object? entry) {
   if (entry is! Map<String, Object?> || entry['tokens'] is! num) {
     return null;

@@ -15,6 +15,12 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
+import type {
+  FileLimitsPayload,
+  UploadPreflightPayload,
+  UploadResultPayload,
+} from '@remote-claude/contracts';
+
 import {
   DownloadArchiveUseCase,
   PreflightUploadUseCase,
@@ -40,13 +46,7 @@ import {
   toUploadDto,
   uploadFieldsSchema,
 } from './file-transfer.dto';
-import type {
-  ArchiveQueryDto,
-  LimitsDto,
-  PreflightBodyDto,
-  PreflightDto,
-  RawQueryDto,
-} from './file-transfer.dto';
+import type { ArchiveQueryDto, PreflightBodyDto, RawQueryDto } from './file-transfer.dto';
 import { MultipartUpload } from './multipart-upload.reader';
 
 /**
@@ -81,7 +81,7 @@ export class FileTransferController {
 
   /** The ceilings a client has to know before it starts: editing, download, zip, upload, history. */
   @Get('limits')
-  readLimits(): LimitsDto {
+  readLimits(): FileLimitsPayload {
     return this.limits.execute();
   }
 
@@ -140,7 +140,7 @@ export class FileTransferController {
   async preflight(
     @Body(new ZodPipe(preflightBodySchema)) body: PreflightBodyDto,
     @CurrentUser() userId: UserId,
-  ): Promise<PreflightDto> {
+  ): Promise<UploadPreflightPayload> {
     return toPreflightDto(await this.preflighter.execute(toPreflightCommand(body), userId));
   }
 
@@ -148,13 +148,18 @@ export class FileTransferController {
    * Files from the desktop: `multipart/form-data`, read as a stream — the fields, then one `file`
    * part per item of the manifest, in its order. `200` when every item was written, `207` when any
    * failed, each with its own outcome; a manifest refused whole has the status of its reason.
+   *
+   * `@Res({ passthrough: true })`, not plain `@Res()`: the status still has to be chosen by hand
+   * (`200` or `207`, depending on what happened), but the body is the return value, like every
+   * other route — the handler used to declare `Promise<void>` and write the body itself, which hid
+   * the real wire shape from its own type (plan 28, B-48).
    */
   @Post('upload')
   async upload(
     @Req() request: Request,
     @CurrentUser() userId: UserId,
-    @Res() response: Response,
-  ): Promise<void> {
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<UploadResultPayload> {
     const ceilings = this.limits.execute();
     const form = await MultipartUpload.open(request, {
       fileBytes: ceilings.uploadMaxBytes,
@@ -175,7 +180,8 @@ export class FileTransferController {
         { op: 'files.upload', layer: 'adapter', items: outcomes.length, failed },
         'files.upload done',
       );
-      response.status(failed > 0 ? 207 : 200).json(toUploadDto(outcomes));
+      response.status(failed > 0 ? 207 : 200);
+      return toUploadDto(outcomes);
     } finally {
       form.release();
     }

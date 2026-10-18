@@ -1,12 +1,14 @@
 import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
 
+import type { AuditTrailPagePayload } from '@remote-claude/contracts';
+
 import { QueryAuditTrailUseCase } from '@application/audit';
 import type { UserId } from '@domain/auth';
 import { SessionId } from '@domain/session';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../auth/bearer.guard';
 import { auditTrailQuerySchema, DEFAULT_PAGE_SIZE, toAuditTrailPageDto } from './audit.dto';
-import type { AuditTrailPageDto, AuditTrailQuery } from './audit.dto';
+import type { AuditTrailQuery } from './audit.dto';
 
 /**
  * The trail, read: "what ran on my machine, and who let it?"
@@ -29,7 +31,7 @@ export class AuditController {
   async read(
     @Query(new ZodPipe(auditTrailQuerySchema)) query: AuditTrailQuery,
     @CurrentUser() userId: UserId,
-  ): Promise<AuditTrailPageDto> {
+  ): Promise<AuditTrailPagePayload> {
     const page = await this.query.execute({
       userId,
       sessionId: query.sessionId === undefined ? null : SessionId.create(query.sessionId),

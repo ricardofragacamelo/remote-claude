@@ -12,13 +12,13 @@ export type ResumeStrategy = 'inPlace' | 'fork';
 
 /** What deciding needs to know about the conversation asked for. */
 export interface ResumeCandidate {
-  /** The working directory the SDK recorded, raw; `null` when it recorded none. */
+  /** The working directory the engine recorded, raw; `null` when it recorded none. */
   readonly cwd: string | null;
 
   /**
    * Who opened it here, when this backend did; `undefined` when it did not.
    *
-   * From **our** database: the SDK reports no provenance at all
+   * From **our** database: the engine reports no provenance at all
    * ([D-01](../../../../../docs/plans/04-transcript-and-resume/decisions.md)).
    */
   readonly openedBy: UserId | undefined;
@@ -47,7 +47,7 @@ export interface ResumeCaller {
  *    fails closed, as the listing does (S-54);
  * 2. **another working directory** — the conversation is looked up inside the workspace it is
  *    resumed in. `resume` finds the file by `cwd`, so a session opened on a different path would
- *    either not be found by the SDK or run where the allowlist was not asked;
+ *    either not be found by the engine or run where the allowlist was not asked;
  * 3. **opened here by another person** — it is theirs, even under a root both may use. The same
  *    answer an absent id gets, so a refusal confirms nothing to somebody probing for ids.
  */

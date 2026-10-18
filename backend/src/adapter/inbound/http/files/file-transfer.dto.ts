@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { UploadPreflightPayload, UploadResultPayload } from '@remote-claude/contracts';
+
 import type {
   ClientLimits,
   PreflightCommand,
@@ -7,11 +9,9 @@ import type {
   UploadCommand,
   UploadOutcome,
 } from '@application/files';
-import type { EntryKind } from '@domain/files';
 import { toErrorEnvelope } from '@shared/errors/error-catalogue';
 import { flag, folderPath } from '../workspace/workspace.dto';
 import { toKeepingDto } from './file-history.dto';
-import type { HistoryOutcomeDto } from './file-history.dto';
 
 /**
  * A path inside the open folder, as the transfer routes take it — format only; every rule about
@@ -90,44 +90,6 @@ export type UploadFieldsDto = z.infer<typeof uploadFieldsSchema>;
 /** The ceilings, by the names of the contract. */
 export type LimitsDto = ClientLimits;
 
-/** What is already where an item of an upload would go. */
-export interface PreflightItemDto {
-  /** Relative to the open folder. */
-  readonly path: string;
-  readonly existing: { readonly kind: EntryKind; readonly etag: string | null } | null;
-}
-
-export interface PreflightDto {
-  readonly items: readonly PreflightItemDto[];
-}
-
-/** The envelope of an error, without the parts that belong to a whole response. */
-export interface ItemErrorDto {
-  readonly code: string;
-  readonly messageKey: string;
-  readonly params?: Readonly<Record<string, unknown>>;
-}
-
-/** How one item of an upload ended. Paths are relative to the open folder, as on every route. */
-export type UploadItemDto =
-  | {
-      readonly path: string;
-      readonly status: 'created' | 'renamed';
-      readonly etag: string;
-    }
-  | {
-      readonly path: string;
-      readonly status: 'replaced';
-      readonly etag: string;
-      /** How keeping the version it replaced in the local history ended (F8). */
-      readonly history: HistoryOutcomeDto;
-    }
-  | { readonly path: string; readonly status: 'failed'; readonly error: ItemErrorDto };
-
-export interface UploadDto {
-  readonly items: readonly UploadItemDto[];
-}
-
 export function toPreflightCommand(body: PreflightBodyDto): PreflightCommand {
   return { folder: body.folder, directory: body.directory, items: body.items };
 }
@@ -141,7 +103,7 @@ export function toUploadCommand(fields: UploadFieldsDto): UploadCommand {
   };
 }
 
-export function toPreflightDto(items: readonly PreflightItem[]): PreflightDto {
+export function toPreflightDto(items: readonly PreflightItem[]): UploadPreflightPayload {
   return {
     items: items.map((item) => ({
       path: item.path.relative,
@@ -158,7 +120,7 @@ export function toPreflightDto(items: readonly PreflightItem[]): PreflightDto {
  * `messageKey`, `params` — exactly as a whole response would, so the client translates it the same
  * way ([doc 04](../../../../../../docs/architecture/shared/04-errors-and-http.md), `207`).
  */
-export function toUploadDto(outcomes: readonly UploadOutcome[]): UploadDto {
+export function toUploadDto(outcomes: readonly UploadOutcome[]): UploadResultPayload {
   return {
     items: outcomes.map((outcome) => {
       if (outcome.status === 'replaced') {

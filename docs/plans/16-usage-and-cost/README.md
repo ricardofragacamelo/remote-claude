@@ -185,7 +185,7 @@ backend/src/
 
 web/src/features/usage/             components · hooks · services · types — o slot de painéis da tela
 web/src/engines/claude/usage/       o painel de limites e o aviso de assinatura, registrados pelo
-                                    web/src/app/engines.ts no slot da tela de uso
+                                    web/src/app/engines/index.ts no slot da tela de uso
 web/src/app/                        UsageRoute · UsageSessionRoute · BudgetsRoute
 web/src/shared/components/ui/       chart (se D-11 escolher o do shadcn)
 mobile/lib/l10n/                    só a chave de `USAGE_BUDGET_EXCEEDED`

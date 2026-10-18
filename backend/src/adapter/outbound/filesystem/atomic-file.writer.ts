@@ -48,7 +48,7 @@ const SWEEP_LIMIT = 10_000;
 /**
  * Writes the person's bytes to the disk without ever leaving a file half-written — plan 07, B-11.
  *
- * The same discipline as the undo's restore (docs/architecture/backend/04a-claude.md):
+ * The same discipline as the undo's restore:
  * a temporary in the **same folder** as the real file, `fsync`, the mode of the original kept, the
  * descriptor of the temporary checked to be inside the open folder, the version on disk checked
  * once more, and a `rename` — atomic within one filesystem, so a failure at any step leaves the

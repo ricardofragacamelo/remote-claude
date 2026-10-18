@@ -689,8 +689,7 @@
       "devices": "Dispositivos",
       "diagnostics": "Logs e diagnóstico",
       "settings": "Configurações",
-      "about": "Sobre",
-      "claude": "Configuração do Claude"
+      "about": "Sobre"
     },
     "menu": {
       "open": "Abrir o menu",
@@ -750,7 +749,6 @@
       "placeholderDescription": "O terminal e a saída de uma sessão ficarão aqui."
     },
     "agent": {
-      "label": "{{agent}}",
       "backToStart": "Voltar para uma nova conversa",
       "showChanges": "O que a sessão alterou"
     },
@@ -943,10 +941,6 @@
       "cycleMode": "{{agent}}: trocar o modo da conversa",
       "goToRequest": "{{agent}}: Ir para a pergunta que espera você ({{count}})",
       "goToRequestNone": "{{agent}}: Ir para a pergunta que espera você — nada espera"
-    },
-    "claude": {
-      "defaultModel": "Claude: trocar o modelo padrão",
-      "testConnection": "Claude: testar a conexão com o modelo"
     }
   },
   "palette": {
@@ -1086,7 +1080,7 @@
       "restoreLabel": "Restaurar o padrão de {{option}}"
     },
     "links": {
-      "claude": "Como o Claude trabalha — modelos, padrões, servidores MCP, plugins, skills — fica na Configuração do Claude."
+      "agentSettings": "Como o {{agent}} trabalha nesta máquina — os modelos e os padrões dele, os servidores MCP, e o que a extensão dele mesmo adicionar — fica na configuração dele."
     }
   },
   "about": {
@@ -1095,7 +1089,7 @@
       "purpose": "As versões que esta instalação roda — prontas para colar num relato de defeito."
     },
     "help": {
-      "what": "A versão de cada parte desta instalação: este web, o backend, o Agent SDK, a ferramenta de linha de comando do {{agent}} e o Node. Quando algo der errado, copie o bloco e cole no relato: é a primeira coisa que quem for ajudar vai perguntar.",
+      "what": "A versão de cada parte desta instalação: este web, o backend, o Node, e o {{agent}} — a biblioteca dele e a ferramenta de linha de comando dele. Quando algo der errado, copie o bloco e cole no relato: é a primeira coisa que quem for ajudar vai perguntar.",
       "states": "Uma versão que o backend não conseguiu ler diz por quê: não instalado, ou instalado mas ilegível. Quando o backend não responde, só a versão deste web aparece, com o caminho para tentar de novo.",
       "notRecorded": "Ler as versões não registra nada. Copiar põe o bloco na sua área de transferência e em nenhum outro lugar."
     },
@@ -1110,8 +1104,8 @@
     "version": {
       "web": "Web",
       "backend": "Backend",
-      "agentSdk": "Agent SDK",
-      "claudeCli": "CLI do Claude",
+      "binary": "CLI do {{agent}}",
+      "library": "Biblioteca do {{agent}}",
       "node": "Node",
       "notInstalled": "não instalado",
       "unreadable": "não foi possível ler"
@@ -2109,6 +2103,10 @@
       "readOnly": "O esforço se escolhe quando a conversa começa. Trocá-lo com ela rodando faria o {{agent}} parar de perguntar antes de cada tool.",
       "unknown": "O do início"
     },
+    "engine": {
+      "default": "Padrão da instalação",
+      "label": "Agente"
+    },
     "export": {
       "compacted": "A conversa foi compactada aqui.",
       "failed": "A conversa não pôde ser exportada: {{reason}} Nada foi salvo.",
@@ -2406,93 +2404,42 @@
       "close": "Fechar esta mensagem"
     }
   },
-  "claudeConfig": {
+  "engine": {
+    "name": {
+      "fallback": "agente"
+    },
     "error": {
-      "mcpServerNotFound": "Esse servidor MCP não existe, ou esta sessão não o tem.",
-      "mcpServerNameTaken": "Você já tem um servidor MCP chamado {{name}} aqui. Escolha outro nome.",
-      "mcpServerConfigInvalid": "Essa configuração de servidor MCP não pode ser usada: confira o campo {{field}} e tente de novo.",
-      "mcpApprovalStale": "O .mcp.json desta pasta mudou desde que foi mostrado. Veja a entrada {{name}} de novo antes de aprovar.",
-      "modelNotAvailable": "Esta instalação não oferece o modelo {{model}}. Atualize a lista de modelos e escolha um deles.",
-      "defaultModeNotAllowed": "{{mode}} desliga a aprovação, por isso nunca pode ser padrão.",
-      "pluginNotFound": "Esse plugin não existe.",
-      "pluginPathInvalid": "Isso não é um plugin que este produto consiga carregar ({{reason}}).",
-      "pluginMarketplaceNotAllowed": "O marketplace {{marketplace}} não está declarado no arquivo de allowlist desta máquina, então nada é instalado dele.",
-      "pluginSourceUnavailable": "A fonte do marketplace {{marketplace}} não respondeu. Nada foi instalado; tente de novo mais tarde.",
-      "forbidden": "Isso é de outra pessoa.",
-      "secretStoreUnavailable": "Esta máquina não tem o arquivo de chave dos segredos de MCP, então um servidor com segredo não pode ser gravado. Os servidores sem segredo continuam funcionando.",
-      "effortUnsupported": "O modelo {{model}} não aceita o nível de esforço {{level}}. Escolha um que ele oferece, ou nenhum.",
-      "fallbackSameAsModel": "O modelo reserva precisa ser outro que não {{model}}.",
-      "skillNameInvalid": "O nome de uma skill usa só letras minúsculas, dígitos e hífen, até 64 caracteres."
+      "capabilityUnavailable": "O {{agent}} não consegue fazer isso.",
+      "notInstalled": "O {{agent}} não está instalado nesta máquina."
     }
   },
-  "claudeSettings": {
+  "agentSettings": {
+    "error": {
+      "forbidden": "Isso é de outra pessoa.",
+      "modelNotAvailable": "Esta instalação não oferece o modelo {{model}}. Atualize a lista de modelos e escolha um deles.",
+      "defaultModeNotAllowed": "{{mode}} desliga a aprovação, por isso nunca pode ser padrão.",
+      "effortUnsupported": "O modelo {{model}} não aceita o nível de esforço {{level}}. Escolha um que ele oferece, ou nenhum.",
+      "fallbackSameAsModel": "O modelo reserva precisa ser outro que não {{model}}."
+    },
     "screen": {
-      "title": "Configuração do Claude",
-      "purpose": "Como o Claude trabalha nesta máquina: a conta, modelos e padrões, servidores MCP, plugins, skills e o que um projeto traz."
+      "title": "Configurações do {{agent}}",
+      "purpose": "Como o {{agent}} trabalha nesta máquina, em seções: os modelos e os padrões dele, os servidores MCP, e o que a extensão dele mesmo adicionar."
     },
     "help": {
-      "what": "Tudo aqui muda como o Claude roda as suas sessões nesta máquina. A conta e a instalação dizem para quem o Claude cobra e qual versão roda. Os padrões escolhem o modelo e o modo com que uma sessão nova começa — para você, ou para uma pasta e as subpastas dela. Servidores MCP e plugins são programas que sobem com a sessão e rodam com as suas credenciais, por isso cada um entra por um segundo passo que diz, por extenso, o que ele roda. A seção Projeto mostra o que um repositório traz ao Claude: memória, slash commands, skills, subagents, output styles, hooks e permissões.",
-      "states": "Cada seção carrega por conta própria: enquanto carrega, mantém o lugar; se a instalação não responde, diz por quê e oferece tentar de novo; e uma seção vazia diz como preenchê-la. Mudar um servidor ou um padrão vale para a próxima sessão; remover ou desligar um servidor vale já, nas sessões abertas.",
+      "what": "Tudo aqui muda como o {{agent}} roda as suas sessões nesta máquina: os modelos dele, os padrões e os servidores MCP, e o que a extensão dele mesmo adicionar. Os padrões escolhem o modelo e o modo com que uma sessão nova começa — para você, ou para uma pasta e as subpastas dela. Servidores MCP são programas que sobem com a sessão e rodam com as suas credenciais, por isso cada um entra por um segundo passo que diz, por extenso, o que ele roda.",
+      "states": "Cada seção carrega por conta própria: enquanto carrega, mantém o lugar; e uma seção vazia diz como preenchê-la. Mudar um servidor ou um padrão vale para a próxima sessão; remover ou desligar um servidor vale já, nas sessões abertas.",
       "notRecorded": "Valores de segredo — as variáveis de ambiente e os cabeçalhos de um servidor MCP — nunca são mostrados, devolvidos nem gravados na trilha: só os nomes. A trilha registra toda mudança que amplia o que roda nesta máquina, antes de ela valer.",
-      "accountHeading": "A conta",
-      "accountBody": "Toda sessão de toda pessoa nesta máquina gasta a mesma conta do Claude — a que o CLI da máquina logou. A tela mostra o provedor, o plano, a organização e o e-mail, e da origem da credencial só o nome, nunca um token.",
-      "checkHeading": "O teste de conexão",
-      "checkBody": "Um turno do modelo com uma frase fixa e nenhuma tool: diz se o Claude responde aqui, quanto demorou e quanto custou. É a única coisa desta tela que gasta cota, e só roda quando você clica.",
       "modelHeading": "Modelos",
       "modelBody": "O modelo é quem responde na sessão. A lista vem da própria instalação e muda com a versão e o plano dela. O modelo reserva é usado quando o principal está sobrecarregado.",
       "modesHeading": "Modos de permissão",
-      "modesBody": "Perguntar antes de toda tool que precise — o padrão seguro. Editar arquivos sem perguntar — o Claude escreve e edita arquivos da pasta sem ninguém aprovar cada mudança. Só planejar — o Claude lê e propõe, e não muda nada. Permitir tudo que nenhuma regra recuse — toda tool roda a menos que uma regra sua a recuse, e as perguntas continuam vindo para você. Ignorar as permissões nunca pode ser padrão: desligaria a aprovação de toda sessão que começasse.",
+      "modesBody": "Perguntar antes de toda tool que precise — o padrão seguro. Editar arquivos sem perguntar — o {{agent}} escreve e edita arquivos da pasta sem ninguém aprovar cada mudança. Só planejar — o {{agent}} lê e propõe, e não muda nada. Permitir tudo que nenhuma regra recuse — toda tool roda a menos que uma regra sua a recuse, e as perguntas continuam vindo para você. Ignorar as permissões nunca pode ser padrão: desligaria a aprovação de toda sessão que começasse.",
       "effortHeading": "Esforço",
       "effortBody": "O quanto o modelo pensa antes de responder. Mais esforço custa mais e demora mais; só alguns modelos aceitam, cada um com os seus níveis.",
       "thinkingHeading": "Thinking",
-      "thinkingBody": "Se o modelo raciocina passo a passo antes de responder, mostrado dobrado na sessão. Desligado é mais rápido e mais barato.",
-      "outputStyleHeading": "Output style",
-      "outputStyleBody": "Como o Claude escreve as respostas — conciso, explicativo, um estilo do projeto. Um estilo que não existe mais cai no da instalação."
+      "thinkingBody": "Se o modelo raciocina passo a passo antes de responder, mostrado dobrado na sessão. Desligado é mais rápido e mais barato."
     },
     "sections": {
-      "label": "Seções da configuração do Claude"
-    },
-    "account": {
-      "title": "Conta",
-      "purpose": "Para quem o Claude cobra nesta máquina, e como entrou.",
-      "refresh": "Ler a conta de novo",
-      "loading": "Lendo a conta da instalação",
-      "loginRequiredTitle": "O Claude não está logado nesta máquina",
-      "loginRequiredBody": "Este produto usa o login do Claude instalado na máquina e nunca loga ninguém remotamente. Na máquina, rode `claude`, digite `/login` e siga os passos; depois leia a conta de novo aqui.",
-      "provider": "Provedor",
-      "plan": "Plano",
-      "organization": "Organização",
-      "email": "E-mail",
-      "tokenSource": "De onde vem o token",
-      "apiKeySource": "De onde vem a chave de API",
-      "notSaid": "não informado"
-    },
-    "installation": {
-      "title": "Instalação",
-      "purpose": "Qual Claude roda aqui, e por que ele pode não funcionar.",
-      "notInstalled": "não instalado",
-      "unreadable": "não pôde ser lido",
-      "loading": "Lendo a instalação",
-      "checkOk": "O modelo respondeu.",
-      "checkNotLoggedIn": "O Claude não está logado nesta máquina: rode `claude` e `/login` nela.",
-      "checkRateLimited": "O plano desta conta chegou ao limite de uso: espere e tente de novo.",
-      "checkFailed": "O modelo não respondeu como esperado.",
-      "loginReady": "logado",
-      "loginRequired": "não logado",
-      "loginUnknown": "ainda não se sabe — abra a seção Conta ou teste a conexão",
-      "agentSdk": "Agent SDK",
-      "bundledCli": "Claude que o produto roda",
-      "pathCli": "claude no PATH",
-      "pathCliDiffers": "Difere do que o produto roda: o terminal e este produto rodam versões diferentes.",
-      "configDir": "Diretório de configuração",
-      "configDirFromEnvironment": "definido por CLAUDE_CONFIG_DIR",
-      "configDirDefault": "o padrão — CLAUDE_CONFIG_DIR não está definido",
-      "login": "Login",
-      "checkTitle": "Testar a conexão com o modelo",
-      "checkCost": "O teste manda uma frase fixa ao modelo e espera uma palavra de volta: gasta um pouco da cota desta conta, e não é registrado como sessão.",
-      "check": "Testar a conexão",
-      "checking": "Testando…",
-      "checkDetails": "Modelo: {{model}} · {{latency}} ms · US$ {{cost}}"
+      "label": "Seções da configuração do {{agent}}"
     },
     "models": {
       "title": "Modelos e padrões",
@@ -2501,7 +2448,6 @@
       "permissionMode": "Modo de permissão",
       "effort": "Esforço",
       "thinking": "Thinking",
-      "outputStyle": "Output style",
       "fallbackModel": "Modelo reserva",
       "modeAsk": "Perguntar antes de toda tool que precise",
       "modeAcceptEdits": "Editar arquivos sem perguntar",
@@ -2530,32 +2476,103 @@
     },
     "mcp": {
       "title": "Servidores MCP",
-      "purpose": "Os programas e endereços que dão mais tools ao Claude — cada um aprovado por você."
-    },
-    "plugins": {
-      "title": "Plugins",
-      "purpose": "Pacotes de comandos, agents, skills e hooks, de uma pasta ou de um marketplace declarado."
-    },
-    "skills": {
-      "title": "Skills",
-      "purpose": "As skills do projeto, as suas e as do sistema — ligadas ou não, para você ou para uma pasta."
-    },
-    "project": {
-      "title": "Projeto",
-      "purpose": "O que um repositório traz ao Claude, e o que disso vale aqui."
+      "purpose": "Os programas e endereços que dão mais tools ao {{agent}} — cada um aprovado por você."
     },
     "folder": {
       "label": "Pasta",
       "none": "Nenhuma — só os meus padrões"
     }
   },
-  "engine": {
-    "name": {
-      "fallback": "agente"
-    },
+  "engines": {
+    "claude": {
+      "navigation": {
+        "entry": "Configuração do Claude"
+      },
+      "command": {
+        "defaultModel": "Claude: trocar o modelo padrão",
+        "testConnection": "Claude: testar a conexão com o modelo"
+      },
+      "error": {
+        "pluginNotFound": "Esse plugin não existe.",
+        "pluginPathInvalid": "Isso não é um plugin que este produto consiga carregar ({{reason}}).",
+        "pluginMarketplaceNotAllowed": "O marketplace {{marketplace}} não está declarado no arquivo de allowlist desta máquina, então nada é instalado dele.",
+        "pluginSourceUnavailable": "A fonte do marketplace {{marketplace}} não respondeu. Nada foi instalado; tente de novo mais tarde.",
+        "skillNameInvalid": "O nome de uma skill usa só letras minúsculas, dígitos e hífen, até 64 caracteres."
+      },
+      "help": {
+        "accountHeading": "A conta",
+        "accountBody": "Toda sessão de toda pessoa nesta máquina gasta a mesma conta do Claude — a que o CLI da máquina logou. A tela mostra o provedor, o plano, a organização e o e-mail, e da origem da credencial só o nome, nunca um token.",
+        "checkHeading": "O teste de conexão",
+        "checkBody": "Um turno do modelo com uma frase fixa e nenhuma tool: diz se o Claude responde aqui, quanto demorou e quanto custou. É a única coisa desta tela que gasta cota, e só roda quando você clica.",
+        "outputStyleHeading": "Output style",
+        "outputStyleBody": "Como o Claude escreve as respostas — conciso, explicativo, um estilo do projeto. Um estilo que não existe mais cai no da instalação."
+      },
+      "account": {
+        "title": "Conta",
+        "purpose": "Para quem o Claude cobra nesta máquina, e como entrou.",
+        "refresh": "Ler a conta de novo",
+        "loading": "Lendo a conta da instalação",
+        "loginRequiredTitle": "O Claude não está logado nesta máquina",
+        "loginRequiredBody": "Este produto usa o login do Claude instalado na máquina e nunca loga ninguém remotamente. Na máquina, rode `claude`, digite `/login` e siga os passos; depois leia a conta de novo aqui.",
+        "provider": "Provedor",
+        "plan": "Plano",
+        "organization": "Organização",
+        "email": "E-mail",
+        "tokenSource": "De onde vem o token",
+        "apiKeySource": "De onde vem a chave de API",
+        "notSaid": "não informado"
+      },
+      "installation": {
+        "title": "Instalação",
+        "purpose": "Qual Claude roda aqui, e por que ele pode não funcionar.",
+        "notInstalled": "não instalado",
+        "unreadable": "não pôde ser lido",
+        "loading": "Lendo a instalação",
+        "checkOk": "O modelo respondeu.",
+        "checkNotLoggedIn": "O Claude não está logado nesta máquina: rode `claude` e `/login` nela.",
+        "checkRateLimited": "O plano desta conta chegou ao limite de uso: espere e tente de novo.",
+        "checkFailed": "O modelo não respondeu como esperado.",
+        "loginReady": "logado",
+        "loginRequired": "não logado",
+        "loginUnknown": "ainda não se sabe — abra a seção Conta ou teste a conexão",
+        "agentSdk": "Agent SDK",
+        "bundledCli": "Claude que o produto roda",
+        "pathCli": "claude no PATH",
+        "pathCliDiffers": "Difere do que o produto roda: o terminal e este produto rodam versões diferentes.",
+        "configDir": "Diretório de configuração",
+        "configDirFromEnvironment": "definido por CLAUDE_CONFIG_DIR",
+        "configDirDefault": "o padrão — CLAUDE_CONFIG_DIR não está definido",
+        "login": "Login",
+        "checkTitle": "Testar a conexão com o modelo",
+        "checkCost": "O teste manda uma frase fixa ao modelo e espera uma palavra de volta: gasta um pouco da cota desta conta, e não é registrado como sessão.",
+        "check": "Testar a conexão",
+        "checking": "Testando…",
+        "checkDetails": "Modelo: {{model}} · {{latency}} ms · US$ {{cost}}"
+      },
+      "plugins": {
+        "title": "Plugins",
+        "purpose": "Pacotes de comandos, agents, skills e hooks, de uma pasta ou de um marketplace declarado."
+      },
+      "skills": {
+        "title": "Skills",
+        "purpose": "As skills do projeto, as suas e as do sistema — ligadas ou não, para você ou para uma pasta."
+      },
+      "project": {
+        "title": "Projeto",
+        "purpose": "O que um repositório traz ao Claude, e o que disso vale aqui."
+      },
+      "defaults": {
+        "outputStyle": "Output style"
+      }
+    }
+  },
+  "mcp": {
     "error": {
-      "capabilityUnavailable": "O {{agent}} não consegue fazer isso.",
-      "notInstalled": "O {{agent}} não está instalado nesta máquina."
+      "serverNotFound": "Esse servidor MCP não existe, ou esta sessão não o tem.",
+      "serverNameTaken": "Você já tem um servidor MCP chamado {{name}} aqui. Escolha outro nome.",
+      "serverConfigInvalid": "Essa configuração de servidor MCP não pode ser usada: confira o campo {{field}} e tente de novo.",
+      "approvalStale": "O .mcp.json desta pasta mudou desde que foi mostrado. Veja a entrada {{name}} de novo antes de aprovar.",
+      "secretStoreUnavailable": "Esta máquina não tem o arquivo de chave dos segredos de MCP, então um servidor com segredo não pode ser gravado. Os servidores sem segredo continuam funcionando."
     }
   }
 }

@@ -171,6 +171,7 @@ Normalizados a partir do `SDKMessage` do Agent SDK. **Nunca emita `SDKMessage` c
 | `permission.extended` | `{ requestId, expiresAt, remainingExtensions }` | derivado do `permission.extend` |
 | `session.rewound` | `{ promptId, reverted[], preserved[], unchanged[], failed[], hunkId? }` | derivado do `session.rewindFiles`, do `session.rejectChange` (com `hunkId`) e do `session.restoreChange` |
 | `session.compacted` | `{ trigger, preTokens? }` — `trigger`: `manual`·`auto` | `system:compact_boundary` |
+| `session.commandsChanged` | `{ commands: [{ name, description, argumentHint, aliases, builtin?, suggested, origin, label, shadowed }] }` — a lista inteira, sempre, já ordenada e com o selo do menu, como o `GET /sessions/:sessionId/commands` devolve | `system:commands_changed` — a lista nova, por inteiro, depois de uma skill descoberta durante a sessão (achado ao vivo, plano 28, B-46) |
 | `prompt.queued` | `{ queueId, position, promptedBy, preview }` | a fila do backend |
 | `prompt.dequeued` | `{ queueId, reason }` — `started`·`cancelled` | a fila do backend |
 | `workspace.filesChanged` | `{ watchId, changes[{ path, kind, origin?, engine? }], overflow? }` — `kind`: `created`·`changed`·`deleted`; `origin`: `agent`·`user`·`external` (`claude` até o [28 · B-25](../../plans/28-agent-neutral-core/F3-interactions.md#b-25--a-origem-agent-da-mudança-de-arquivo-), e ainda na `v1`); `engine` ao lado de `agent` | o watcher da pasta assistida |
@@ -279,10 +280,10 @@ Toda chamada de ferramenta chega ao cliente **já interpretada pelo adapter do m
   uma substituição não se aplicaria ([28 · B-17](../../plans/28-agent-neutral-core/F2-canonical-tools.md#b-17--o-diff-e-a-prévia-pelo-backend-)).
 - A pergunta e o plano chegam na `interaction` (no `tool.started` e no `permission.requested`), e a
   lista de tarefas no `session.tasksChanged` (F3): nenhum cliente lê campo do `rawInput`.
-- Na [janela da `v1`](#a-janela-da-v1--plano-28), uma conexão `v1` recebe `toolName` (o
+- Na [janela da `v1`](#a-janela-da-v1--plano-28-fechada), uma conexão `v1` recebia `toolName` (o
   `origin.native`) e `input` (o `rawInput`) no lugar dos seis campos, e o `title` por nome; o
-  `tool.progress` dela chega sem o nome. As respostas REST que levam esses eventos mantêm `toolName` e
-  `input` ao lado dos novos até a F7 ([28 · D-22](../../plans/28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)).
+  `tool.progress` dela chegava sem o nome. Fechada na F7 ([28 · B-47](../../plans/28-agent-neutral-core/F7-e2e.md)):
+  nenhuma conexão fala mais `v1`, e nenhuma resposta REST leva `toolName`/`input` ao lado dos novos.
 
 ### A lista de tarefas — `session.tasksChanged`
 
@@ -978,30 +979,41 @@ que ninguém decidiu aquilo.
 - Adicionar campo opcional ou evento novo **não** incrementa `v`. Cliente ignora o que não
   conhece — nunca quebre por campo desconhecido.
 - Remover campo, renomear `type` ou mudar semântica **incrementa `v`**.
-- O servidor suporta `v` atual e `v-1` durante uma janela de depreciação (o app publicado na
-  loja não atualiza sozinho).
+- O servidor suportou `v` atual e `v-1` durante a janela de depreciação do plano 28 (o app publicado
+  na loja não atualiza sozinho); fechada na F7, só a `v` atual é aceita — ver abaixo.
 
-### A janela da `v1` — plano 28
+O mesmo gerador cobre o REST: toda rota tem schema em `packages/contracts/schema/http/`, sem
+envelope nem versionamento de `v` — ver [shared/07](07-repository-layout.md#engines-nas-três-pontas-e-o-rest-no-contrato)
+(plano 28, B-48).
+
+### A janela da `v1` — plano 28, fechada
 
 A `v2` nasceu na F1 do [plano 28](../../plans/28-agent-neutral-core/F1-engine-port.md)
 ([D-08](../../plans/28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)): a conversa passou
 a ser `{ engine, id }`, e o `session.started` ganhou `engine` e `capabilities`. A `v` atual é o
-`x-protocol-version` do schema do envelope, de onde o gerador tira o `PROTOCOL_VERSION`.
+`x-protocol-version` do schema do envelope, de onde o gerador tira o `PROTOCOL_VERSION`. Da F1 à F7 o
+servidor também falava `v1`, o formato de antes do plano, para o app publicado que ainda não tinha
+atualizado — fechada na F7 ([B-47](../../plans/28-agent-neutral-core/F7-e2e.md)), o que segue é
+histórico.
 
-- **Cada conexão fala a versão do último frame que mandou**, e recebe tudo nela: um cliente em `v1` e
-  outro em `v2` na mesma sessão recebem cada um a sua forma.
-- **O núcleo só emite a forma atual.** A tradução é da borda, em
-  `backend/src/infrastructure/websocket/protocol-window.ts`: para a `v1`, `conversation` vira
-  `claudeSessionId`, `resumedFrom` vira o id sozinho, e `engine`/`capabilities` saem; nos `transcript.*`,
-  `conversation` vira `conversationId`. No sentido contrário, o `session.start` da `v1` com
-  `resumeSessionId` e o `transcript.follow` com `conversationId` viram os da `v2`, no único motor que a
-  `v1` conhecia.
-- **No REST**, as rotas da `v1` (`/transcripts/:sessionId/…`) respondem o mesmo que as novas
-  (`/transcripts/:engine/:id/…`), e as respostas lidas pelo app publicado guardam os campos da `v1` ao
-  lado dos novos (`sessionId` ao lado de `conversation`; `claudeSessionId` e `resumedFrom` ao lado de
-  `conversation` e `resumedFromConversation` em `GET /sessions`).
-- **A janela fecha na F7** ([B-47](../../plans/28-agent-neutral-core/F7-e2e.md)): a tradução, as rotas e os
-  campos da `v1` saem juntos.
+- **Cada conexão falava a versão do último frame que mandou**, e recebia tudo nela: um cliente em
+  `v1` e outro em `v2` na mesma sessão recebiam cada um a sua forma.
+- **O núcleo só emitia a forma atual.** A tradução era da borda, em
+  `backend/src/infrastructure/websocket/protocol-window.ts`: para a `v1`, `conversation` virava
+  `claudeSessionId`, `resumedFrom` virava o id sozinho, e `engine`/`capabilities` saíam; nos
+  `transcript.*`, `conversation` virava `conversationId`. No sentido contrário, o `session.start` da
+  `v1` com `resumeSessionId` e o `transcript.follow` com `conversationId` viravam os da `v2`, no único
+  motor que a `v1` conhecia.
+- **No REST**, as rotas da `v1` (`/transcripts/:sessionId/…`, `/claude/account`,
+  `/claude/installation`, `/claude/diagnostics/model-check`, `/claude/models`, `/claude/defaults…`)
+  respondiam o mesmo que as novas, e as respostas lidas pelo app publicado guardavam os campos da `v1`
+  ao lado dos novos (`sessionId` ao lado de `conversation`; `claudeSessionId` e `resumedFrom` ao lado
+  de `conversation` e `resumedFromConversation` em `GET /sessions`; `agentSdk`/`claudeCli` ao lado de
+  `engines[]` em `GET /diag/versions`).
+- **A janela fechou na F7**: `protocol-window.ts` e `previous-tool-fields.ts` saíram inteiros,
+  `SUPPORTED_VERSIONS` só tem a `v` atual (um cliente em `v1` fecha com `4426`), as rotas acima saíram,
+  e uma migration (`0026`) derrubou `claude_session_id`, a última coluna que o núcleo ainda guardava
+  com o nome de antes, das três tabelas que a copiavam para `(engine, conversation_id)` desde a F1.
 
 ### Campo obrigatório por condição
 

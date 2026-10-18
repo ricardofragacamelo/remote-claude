@@ -1,4 +1,22 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Post, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+
+import type {
+  AccountViewPayload,
+  InstallationViewPayload,
+  ModelCheckOutcomePayload,
+  OutputStyleViewPayload,
+} from '@remote-claude/contracts';
 
 import {
   CheckModelUseCase,
@@ -7,20 +25,15 @@ import {
   ReadOutputStyleUseCase,
   SaveOutputStyleUseCase,
 } from '@application/engines/claude';
-import type {
-  AccountView,
-  InstallationView,
-  ModelCheckOutcome,
-  OutputStyleView,
-} from '@application/engines/claude';
+import type { InstallationView, ModelCheckOutcome } from '@application/engines/claude';
 import type { UserId } from '@domain/auth';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../../auth/bearer.guard';
 import {
   folderQuerySchema,
   requiredFolderQuerySchema,
+  type FolderQueryDto,
 } from '../../agent-settings/agent-settings.dto';
-import type { FolderQueryDto } from '../../agent-settings/agent-settings.dto';
 import {
   accountQuerySchema,
   folderOutputStyleSchema,
@@ -34,9 +47,6 @@ import {
  * sessions open with. The defaults and the models every engine has are the core's, at
  * `/engines/:engine/…`; plugins, marketplaces, skills and the project's `.claude/` arrive here with
  * plan 13.
- *
- * The account, the installation and the test of the connection also answer at their `/claude/…`
- * address of plan 13, the same, for the window of the previous protocol (`v-1`, until F7).
  *
  * Every route is Bearer and scoped by who asks; a folder clears the allowlist before anything else.
  * The answers are views, never a token, a credential path nor a secret.
@@ -61,33 +71,33 @@ export class ClaudeController {
     @Inject(SaveOutputStyleUseCase) private readonly saveStyle: SaveOutputStyleUseCase,
   ) {}
 
-  @Get(['engines/claude/account', 'claude/account'])
+  @Get('engines/claude/account')
   readAccount(
     @Query(new ZodPipe(accountQuerySchema)) query: { refresh?: 'true' | 'false' },
     @CurrentUser() userId: UserId,
-  ): Promise<AccountView> {
+  ): Promise<AccountViewPayload> {
     return this.account.execute(userId, query.refresh === 'true');
   }
 
-  @Get(['engines/claude/installation', 'claude/installation'])
-  readInstallation(@CurrentUser() userId: UserId): Promise<InstallationView> {
-    return this.installation.execute(userId);
+  @Get('engines/claude/installation')
+  async readInstallation(@CurrentUser() userId: UserId): Promise<InstallationViewPayload> {
+    return toInstallationViewDto(await this.installation.execute(userId));
   }
 
-  @Post(['engines/claude/diagnostics/model-check', 'claude/diagnostics/model-check'])
+  @Post('engines/claude/diagnostics/model-check')
   @HttpCode(200)
-  checkModel(
+  async checkModel(
     @Body(new ZodPipe(modelCheckSchema)) body: { model?: string },
     @CurrentUser() userId: UserId,
-  ): Promise<ModelCheckOutcome> {
-    return this.modelCheck.execute(userId, body.model ?? null);
+  ): Promise<ModelCheckOutcomePayload> {
+    return toModelCheckDto(await this.modelCheck.execute(userId, body.model ?? null));
   }
 
   @Get('engines/claude/output-style')
   readOutputStyle(
     @Query(new ZodPipe(folderQuerySchema)) query: FolderQueryDto,
     @CurrentUser() userId: UserId,
-  ): Promise<OutputStyleView> {
+  ): Promise<OutputStyleViewPayload> {
     return this.readStyle.execute(userId, query.folder ?? null);
   }
 
@@ -95,15 +105,16 @@ export class ClaudeController {
   saveUserOutputStyle(
     @Body(new ZodPipe(userOutputStyleSchema)) body: { outputStyle: string | null },
     @CurrentUser() userId: UserId,
-  ): Promise<OutputStyleView> {
+  ): Promise<OutputStyleViewPayload> {
     return this.saveStyle.execute(userId, null, body.outputStyle);
   }
 
   @Put('engines/claude/output-style/folder')
   saveFolderOutputStyle(
-    @Body(new ZodPipe(folderOutputStyleSchema)) body: { folder: string; outputStyle: string | null },
+    @Body(new ZodPipe(folderOutputStyleSchema))
+    body: { folder: string; outputStyle: string | null },
     @CurrentUser() userId: UserId,
-  ): Promise<OutputStyleView> {
+  ): Promise<OutputStyleViewPayload> {
     return this.saveStyle.execute(userId, body.folder, body.outputStyle);
   }
 
@@ -115,4 +126,29 @@ export class ClaudeController {
   ): Promise<void> {
     await this.saveStyle.execute(userId, query.folder, null);
   }
+}
+
+/**
+ * A test of the connection, on the wire: `costUsd` is a real `number` in the domain, but the
+ * generator's JSON Schema subset has no float type — only `string`, `integer` and `boolean` — so
+ * money travels as a decimal string, the same convention this contract already uses for
+ * `turn.completed`'s `costUsd` (a float would round where nobody looked). Six places, like there.
+ */
+function toModelCheckDto(outcome: ModelCheckOutcome): ModelCheckOutcomePayload {
+  return {
+    result: outcome.result,
+    model: outcome.model,
+    latencyMs: outcome.latencyMs,
+    costUsd: outcome.costUsd === null ? null : outcome.costUsd.toFixed(6),
+    reason: outcome.reason,
+    at: outcome.at.toISOString(),
+  };
+}
+
+/** The installation's diagnostic, on the wire — `lastModelCheck` goes through the same money rule. */
+function toInstallationViewDto(view: InstallationView): InstallationViewPayload {
+  return {
+    ...view,
+    lastModelCheck: view.lastModelCheck === null ? null : toModelCheckDto(view.lastModelCheck),
+  };
 }

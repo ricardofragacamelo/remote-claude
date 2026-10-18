@@ -41,7 +41,6 @@ export class DrizzleSessionFileRepository {
           set: {
             engine: row.engine,
             conversationId: row.conversationId,
-            claudeSessionId: row.claudeSessionId,
             hash: row.hash,
             mtime: row.mtime,
             sizeBytes: row.sizeBytes,

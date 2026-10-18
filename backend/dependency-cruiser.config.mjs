@@ -211,6 +211,20 @@ export default {
       to: { path: '^src/.+\\.(spec|test)\\.ts$' },
     },
     {
+      name: 'no-test-engine-in-production',
+      comment:
+        'The test engine of plan 28, B-43 (`backend/test/fakes/engine/`) is a real, honest second ' +
+        '`AgentEnginePort` built only so the port contract suite and the web/app e2e of B-44…B-45 ' +
+        'have a second engine to run against — it must never be reachable from a production build ' +
+        '(S-121). This is the structural half of that guarantee: `lint:arch` cruises `src`, and this ' +
+        'rule fails it the moment anything there imports the fake, however indirectly. The other ' +
+        'half is that nothing under `src/infrastructure/modules/engines/` ever does — see ' +
+        '`docs/architecture/backend/07-testing.md`.',
+      severity: 'error',
+      from: { path: '^src/' },
+      to: { path: '^test/fakes/engine/' },
+    },
+    {
       name: 'no-circular',
       comment: 'A cycle is a module that cannot be built, tested or reasoned about on its own.',
       severity: 'error',

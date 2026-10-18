@@ -24,6 +24,7 @@ const entry: HistoryEntry = {
   reason: 'save',
   kept: 'yes',
   sizeBytes: 1,
+  hash: null,
   author: { self: true, id: 'me' },
   at: '2026-10-01T10:00:00.000Z',
   batchId: null,

@@ -20,7 +20,7 @@ export type PermissionOutcome =
 /**
  * The four steps `canUseTool` takes, in the one order that is safe.
  *
- * 1. **idempotency.** The SDK redelivers a pending call after a transport gap, and a request id it
+ * 1. **idempotency.** The engine redelivers a pending call after a transport gap, and a request id it
  *    has seen before gets the answer it already has — never a second question and never a second
  *    execution;
  * 2. **a rule or Permitir tudo answers without disturbing anybody** ({@link PermissionAutoAnswer}).
@@ -35,7 +35,7 @@ export type PermissionOutcome =
  *    It is the only deadline there is.
  *
  * What it does **not** do is wait. Waiting belongs to the session runtime, which is holding the
- * SDK's promise — this returns what is known now, and the loop is released by the resolution
+ * engine's promise — this returns what is known now, and the loop is released by the resolution
  * event ([backend/03](../../../../docs/architecture/backend/03-modules.md#comunicação-assíncrona)).
  */
 export class RequestPermissionUseCase {
@@ -53,7 +53,7 @@ export class RequestPermissionUseCase {
   async execute(command: RequestPermissionCommand): Promise<PermissionOutcome> {
     const known = this.registry.find(command.requestId);
 
-    // The **same** question only when it is the same session's. `requestId` is minted by the SDK
+    // The **same** question only when it is the same session's. `requestId` is minted by the engine
     // and is expected to be unique, but "expected" is not a guarantee we can afford here: reusing
     // another session's settled answer would silently authorise a tool nobody was asked about.
     // A collision therefore starts a new question rather than inheriting an old verdict.

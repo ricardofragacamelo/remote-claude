@@ -68,7 +68,8 @@ export const FILE_TEMPLATES: readonly FileTemplate[] = [
   {
     id: 'agentInstructions',
     labelKey: 'explorer.template.agentInstructions',
-    suggestedName: 'CLAUDE.md',
+    // The multi-agent convention, not any one coding agent's own file — plan 28, F7.
+    suggestedName: 'AGENTS.md',
     content: '# ${fileName}\n\n<!-- ${date} -->\n',
   },
 ];

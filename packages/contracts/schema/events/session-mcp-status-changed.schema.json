@@ -27,7 +27,7 @@
           "source": {
             "type": "string",
             "enum": ["ours", "project", "plugin", "other"],
-            "description": "Where the definition came from, read off the SDK's `source` and never off the name: `ours` is a server of the store, `project` an approved entry of `.mcp.json` (both reach the CLI as `dynamic`), `plugin` one a plugin brought, `other` anything else — never trusted as ours."
+            "description": "Where the definition came from, read off the engine's own `source` and never off the name: `ours` is a server of the store, `project` an approved entry of `.mcp.json` (both reach the CLI as `dynamic`), `plugin` one a plugin brought, `other` anything else — never trusted as ours."
           },
           "toolCount": { "type": "integer", "minimum": 0 },
           "error": {

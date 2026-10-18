@@ -1,4 +1,3 @@
-import { PROTOCOL_VERSION } from '@remote-claude/contracts';
 import type { UserId } from '@domain/auth';
 
 /** The half of a socket this code needs. Narrow on purpose, so a test can stand in for it. */
@@ -34,12 +33,6 @@ export interface Connection {
 
   expiresAt: Date | null;
   readonly attached: Set<string>;
-
-  /**
-   * The protocol version the connection speaks — the `v` of the last frame it sent; the current one
-   * until it sent any. What it receives is translated to it (plan 28, D-08).
-   */
-  version: number;
 }
 
 /**
@@ -62,7 +55,6 @@ export class ConnectionRegistry {
       installId: null,
       expiresAt: null,
       attached: new Set<string>(),
-      version: PROTOCOL_VERSION,
     };
 
     this.connections.set(id, connection);

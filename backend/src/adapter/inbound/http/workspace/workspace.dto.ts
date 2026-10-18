@@ -2,22 +2,15 @@ import { isAbsolute } from 'node:path';
 
 import { z } from 'zod';
 
+import type {
+  DirectoryListingPayload,
+  OpenFolderEntryPayload,
+  RecentFoldersPayload,
+  Workspace as WorkspacePayload,
+} from '@remote-claude/contracts';
+
 import type { FolderState, FolderView, RecentFolderView } from '@application/workspace';
 import type { DirectoryListing, Workspace } from '@domain/workspace';
-
-/** One allowed root, as the client sees it. */
-export interface WorkspaceDto {
-  /** Absolute path of the root, with every symlink already resolved. */
-  readonly path: string;
-  readonly label: string;
-  /** ISO-8601, or `null` when this user has never opened anything under it. */
-  readonly lastUsedAt: string | null;
-}
-
-/** The listing. An object and not a bare array, so the response can grow a field later. */
-export interface WorkspaceListDto {
-  readonly workspaces: readonly WorkspaceDto[];
-}
 
 /**
  * What `GET /workspaces/resolve` is asked.
@@ -29,12 +22,6 @@ export interface WorkspaceListDto {
 export const resolveWorkspaceSchema = z.object({ path: z.string().min(1) });
 
 export type ResolveWorkspaceDto = z.infer<typeof resolveWorkspaceSchema>;
-
-/** A path that cleared every check, and the root it cleared under. */
-export interface ResolvedWorkspaceDto {
-  readonly path: string;
-  readonly root: WorkspaceDto;
-}
 
 /**
  * A path as the workbench routes take it: absolute, without NUL, and without a `..` segment.
@@ -80,28 +67,6 @@ export const listDirectoriesSchema = z.object({
 
 export type ListDirectoriesQueryDto = z.infer<typeof listDirectoriesSchema>;
 
-/** One subdirectory of a listing. */
-export interface DirectoryEntryDto {
-  readonly name: string;
-  /** Absolute path of the entry as listed — for a symlink, the link, not its target. */
-  readonly path: string;
-  /** The name starts with `.`. Listed only when `hidden=true` was asked. */
-  readonly hidden: boolean;
-  /** A symlink whose target is a directory inside the same root. One that escapes is omitted. */
-  readonly symlink: boolean;
-}
-
-/** One level of one directory, never the tree. */
-export interface DirectoryListingDto {
-  readonly path: string;
-  readonly root: WorkspaceDto;
-  /** `null` at the root: the picker never climbs above it. */
-  readonly parent: string | null;
-  readonly entries: readonly DirectoryEntryDto[];
-  /** The ceiling cut the listing; `prefix` reaches what was left out. */
-  readonly truncated: boolean;
-}
-
 /**
  * One folder, named by itself: the body of `POST /workspaces/open-folders`, and the query string of
  * closing a tab or forgetting a recent one.
@@ -125,36 +90,8 @@ export const reorderOpenFoldersSchema = z.object({ paths: z.array(folderPath).mi
 
 export type ReorderOpenFoldersDto = z.infer<typeof reorderOpenFoldersSchema>;
 
-/** One folder this user opened, as the welcome screen lists it. */
-export interface RecentFolderDto {
-  readonly path: string;
-  /** The label of the root it lives under now, or `null` once it lives under none. */
-  readonly rootLabel: string | null;
-  /** ISO-8601. */
-  readonly lastOpenedAt: string;
-  readonly pinned: boolean;
-  /** `false` for a folder that left the allowlist or the disk — marked, rather than dropped. */
-  readonly available: boolean;
-}
-
-export interface RecentFoldersDto {
-  readonly folders: readonly RecentFolderDto[];
-}
-
 /** Whether an open tab can still be used, revalidated on every read. */
 export type OpenFolderState = FolderState;
-
-/** One folder tab, in the order the user left them. */
-export interface OpenFolderEntryDto {
-  readonly path: string;
-  /** The label of the root it lives under, or `null` once it lives under none. */
-  readonly rootLabel: string | null;
-  readonly state: OpenFolderState;
-}
-
-export interface OpenFoldersDto {
-  readonly folders: readonly OpenFolderEntryDto[];
-}
 
 /**
  * The transport shape of a root.
@@ -162,7 +99,7 @@ export interface OpenFoldersDto {
  * `authorisedUsers` deliberately never crosses: who else may reach a root is nobody's business but
  * the operator's, and the caller already knows they themselves may.
  */
-export function toWorkspaceDto(workspace: Workspace): WorkspaceDto {
+export function toWorkspaceDto(workspace: Workspace): WorkspacePayload {
   return {
     path: workspace.root.value,
     label: workspace.label,
@@ -171,7 +108,7 @@ export function toWorkspaceDto(workspace: Workspace): WorkspaceDto {
 }
 
 /** A listing, as the picker reads it. */
-export function toDirectoryListingDto(listing: DirectoryListing): DirectoryListingDto {
+export function toDirectoryListingDto(listing: DirectoryListing): DirectoryListingPayload {
   return {
     path: listing.path.value,
     root: toWorkspaceDto(listing.workspace),
@@ -187,7 +124,7 @@ export function toDirectoryListingDto(listing: DirectoryListing): DirectoryListi
 }
 
 /** A recent folder, as the welcome screen lists it. */
-export function toRecentFolderDto(view: RecentFolderView): RecentFolderDto {
+export function toRecentFolderDto(view: RecentFolderView): RecentFoldersPayload['folders'][number] {
   return {
     path: view.folder.path.value,
     rootLabel: view.rootLabel,
@@ -198,6 +135,6 @@ export function toRecentFolderDto(view: RecentFolderView): RecentFolderDto {
 }
 
 /** A folder tab. */
-export function toOpenFolderEntryDto(view: FolderView): OpenFolderEntryDto {
+export function toOpenFolderEntryDto(view: FolderView): OpenFolderEntryPayload {
   return { path: view.folder.path.value, rootLabel: view.rootLabel, state: view.state };
 }

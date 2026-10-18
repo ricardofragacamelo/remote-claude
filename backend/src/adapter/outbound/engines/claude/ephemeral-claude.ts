@@ -65,6 +65,7 @@ export class EphemeralClaude {
         {
           op: question.op,
           layer: 'adapter',
+          engine: CLAUDE_ENGINE,
           subject: question.subject,
           err: error,
           durationMs: Date.now() - startedAt,

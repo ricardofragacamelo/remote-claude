@@ -4,7 +4,7 @@ import type { PushTarget } from '@domain/notification';
  * Which devices were told about which open question.
  *
  * In memory, and singleton with the process, exactly like the permission registry and for the
- * same reason: an open request is a promise the SDK is holding its loop for, and none of that
+ * same reason: an open request is a promise the engine is holding its loop for, and none of that
  * survives a restart. What is lost with it is the ability to cancel a notification the phone is
  * still showing — which the deadline on the card itself already covers, because the payload
  * carries `expiresAt` and the screen revalidates on the server before it renders (S-57).

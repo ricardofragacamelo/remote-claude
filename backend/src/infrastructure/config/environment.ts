@@ -339,7 +339,7 @@ export interface AppConfig {
    */
   readonly permission: {
     readonly timeoutMs: number;
-    /** How long a question of Claude waits — longer than a permission (plan 24, D-07). */
+    /** How long a question of the agent waits — longer than a permission (plan 24, D-07). */
     readonly questionTimeoutMs: number;
     readonly extensionMs: number;
     readonly maxExtensions: number;
@@ -411,7 +411,7 @@ export interface AppConfig {
     readonly history: HistoryLimits & { readonly directory: string };
   };
 
-  /** What the history says about each conversation beyond what the SDK reports (plan 08, B-08). */
+  /** What the history says about each conversation beyond what the engine reports (plan 08, B-08). */
   readonly transcript: {
     /**
      * How recently a conversation begun elsewhere was written for it to read as `activeElsewhere`.

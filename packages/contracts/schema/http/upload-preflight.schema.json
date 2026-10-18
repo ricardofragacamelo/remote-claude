@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/upload-preflight.json",
+  "title": "UploadPreflight",
+  "description": "`POST /files/upload/preflight`: what is already where each item of an upload would go — asked before anything is sent (plan 07, F7).",
+  "x-kind": "http",
+  "x-type": "files.upload.preflight",
+  "x-route": [{ "method": "POST", "path": "/files/upload/preflight" }],
+  "type": "object",
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["path", "existing"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative to the open folder."
+          },
+          "existing": {
+            "type": "object",
+            "x-nullable": true,
+            "required": ["kind", "etag"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["file", "directory", "symlink", "other"]
+              },
+              "etag": {
+                "type": "string",
+                "x-nullable": true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

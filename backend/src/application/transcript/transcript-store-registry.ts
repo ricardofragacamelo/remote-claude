@@ -17,7 +17,7 @@ export class TranscriptStoreRegistry implements TranscriptStore {
 
   /**
    * @param stores one per engine enabled, at least one
-   * @param defaultEngine the engine a route of the previous protocol names — one of [stores]
+   * @param defaultEngine the installation's own default — one of [stores]
    * @throws {Error} no store, or a default that is not one of them
    */
   constructor(

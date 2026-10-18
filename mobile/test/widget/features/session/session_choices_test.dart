@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/widgets/agent_names.dart';
+import 'package:remote_claude/features/session/domain/entities/engine.dart';
 import 'package:remote_claude/features/session/domain/entities/insight.dart';
 import 'package:remote_claude/features/session/presentation/widgets/composer_bar.dart';
 import 'package:remote_claude/features/session/presentation/widgets/session_choices.dart';
@@ -233,6 +234,137 @@ void main() {
       expect(modeName(en, 'auto'), 'auto');
       expect(modeDescription(en, 'auto', anEngineName), isEmpty);
       expect(modeWarning(en, 'auto', anEngineName), isNull);
+    });
+  });
+
+  group('plan 28, B-45 · the engine', () {
+    const Engine oneEngine = Engine(
+      id: anEngine,
+      displayName: anEngineName,
+      isAvailable: true,
+      capabilities: someCapabilities,
+    );
+    const Engine anotherEngine = Engine(
+      id: 'test',
+      displayName: 'Test agent',
+      isAvailable: true,
+      capabilities: someCapabilities,
+    );
+    const Engine unavailableEngine = Engine(
+      id: 'offline',
+      displayName: 'Offline agent',
+      isAvailable: false,
+      capabilities: someCapabilities,
+    );
+
+    testWidgets('S-126 · fewer than two available engines is no choice at all: no chip', (
+      WidgetTester tester,
+    ) async {
+      for (final EngineCatalogue? catalogue in <EngineCatalogue?>[
+        null,
+        const EngineCatalogue(defaultEngine: anEngine),
+        const EngineCatalogue(defaultEngine: anEngine, engines: <Engine>[oneEngine]),
+        // A second engine that is not available (not installed, its security assertion unmet) is
+        // never offered, the same way it never opens a session when named by hand.
+        const EngineCatalogue(
+          defaultEngine: anEngine,
+          engines: <Engine>[oneEngine, unavailableEngine],
+        ),
+      ]) {
+        await pumpChip(
+          tester,
+          (BuildContext context) =>
+              engineChoice(context, catalogue: catalogue, current: null, onPick: picked.add),
+        );
+
+        expect(find.text('no chip'), findsOneWidget, reason: '$catalogue');
+      }
+    });
+
+    testWidgets('two or more available engines: the installation default and each of them', (
+      WidgetTester tester,
+    ) async {
+      const EngineCatalogue catalogue = EngineCatalogue(
+        defaultEngine: anEngine,
+        engines: <Engine>[oneEngine, anotherEngine],
+      );
+
+      await pumpChip(
+        tester,
+        (BuildContext context) =>
+            engineChoice(context, catalogue: catalogue, current: null, onPick: picked.add),
+      );
+
+      expect(find.text(l10n.engineDefault), findsOneWidget);
+      await tester.tap(find.text(l10n.engineDefault));
+      await tester.pumpAndSettle();
+
+      final Finder sheet = find.byType(BottomSheet);
+      expect(find.descendant(of: sheet, matching: find.text(l10n.engineDefault)), findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text(anEngineName)), findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('Test agent')), findsOneWidget);
+
+      await tester.tap(find.text('Test agent'));
+      await tester.pumpAndSettle();
+      expect(picked, <Object?>['test']);
+    });
+
+    testWidgets('a pick of the installation default sends null', (WidgetTester tester) async {
+      const EngineCatalogue catalogue = EngineCatalogue(
+        defaultEngine: anEngine,
+        engines: <Engine>[oneEngine, anotherEngine],
+      );
+
+      await pumpChip(
+        tester,
+        (BuildContext context) =>
+            engineChoice(context, catalogue: catalogue, current: 'test', onPick: picked.add),
+      );
+
+      expect(find.text('Test agent'), findsOneWidget);
+      await tester.tap(find.text('Test agent'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.engineDefault));
+      await tester.pumpAndSettle();
+
+      expect(picked, <Object?>[null]);
+    });
+
+    testWidgets('an engine chosen that the catalogue no longer lists is shown by its id', (
+      WidgetTester tester,
+    ) async {
+      const EngineCatalogue catalogue = EngineCatalogue(
+        defaultEngine: anEngine,
+        engines: <Engine>[oneEngine, anotherEngine],
+      );
+
+      await pumpChip(
+        tester,
+        (BuildContext context) =>
+            engineChoice(context, catalogue: catalogue, current: 'gone', onPick: picked.add),
+      );
+
+      expect(find.text('gone'), findsOneWidget);
+    });
+
+    testWidgets('picking what is already chosen sends nothing', (WidgetTester tester) async {
+      const EngineCatalogue catalogue = EngineCatalogue(
+        defaultEngine: anEngine,
+        engines: <Engine>[oneEngine, anotherEngine],
+      );
+
+      await pumpChip(
+        tester,
+        (BuildContext context) =>
+            engineChoice(context, catalogue: catalogue, current: 'test', onPick: picked.add),
+      );
+
+      await tester.tap(find.text('Test agent'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Test agent').last);
+      await tester.pumpAndSettle();
+
+      expect(picked, isEmpty);
     });
   });
 

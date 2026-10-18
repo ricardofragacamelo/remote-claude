@@ -24,6 +24,7 @@ import 'package:remote_claude/core/config/app_config_provider.dart';
 import 'package:remote_claude/core/config/connection_choice.dart';
 import 'package:remote_claude/core/device/device_identity_provider.dart';
 import 'package:remote_claude/core/logging/app_logger.dart';
+import 'package:remote_claude/core/network/contracts/protocol.g.dart';
 import 'package:remote_claude/core/storage/credential_store.dart';
 import 'package:remote_claude/core/storage/credential_store_provider.dart';
 import 'package:remote_claude/features/auth/auth.dart';
@@ -452,7 +453,9 @@ class BrowserSocket {
 
   /// Opens the socket and completes the handshake, as a browser — no installation.
   static Future<BrowserSocket> open(BuildConfig build, String accessToken) async {
-    final WebSocket socket = await WebSocket.connect('${talkingThrough(build).wsUrl}?v=1');
+    final WebSocket socket = await WebSocket.connect(
+      '${talkingThrough(build).wsUrl}?v=$protocolVersion',
+    );
     final Stream<Map<String, Object?>> frames = socket
         .map((Object? raw) => jsonDecode(raw! as String) as Map<String, Object?>)
         .asBroadcastStream();
@@ -551,7 +554,7 @@ class BrowserSocket {
     final Map<String, Object?> payload = asked['payload']! as Map<String, Object?>;
     _socket.add(
       jsonEncode(<String, Object?>{
-        'v': 1,
+        'v': protocolVersion,
         'id': '${DateTime.now().microsecondsSinceEpoch}-permission.resolve',
         'kind': 'response',
         'type': 'permission.resolve',
@@ -577,7 +580,7 @@ class BrowserSocket {
     final String id = '${DateTime.now().microsecondsSinceEpoch}-$type';
     _socket.add(
       jsonEncode(<String, Object?>{
-        'v': 1,
+        'v': protocolVersion,
         'id': id,
         'kind': 'command',
         'type': type,

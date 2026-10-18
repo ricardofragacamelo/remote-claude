@@ -5,7 +5,7 @@ import type { SessionId } from '@domain/session';
 export interface ToolInvocation {
   readonly sessionId: SessionId;
 
-  /** The SDK's id for this invocation, when it gave one. */
+  /** The engine's id for this invocation, when it gave one. */
   readonly toolUseId: string | null;
 
   readonly toolName: string;
@@ -22,7 +22,7 @@ export interface ToolInvocation {
   /**
    * The turn this invocation belongs to.
    *
-   * The SDK correlates a prompt with every event until the next one, so the turn of an invocation
+   * The engine correlates a prompt with every event until the next one, so the turn of an invocation
    * is known without reading the transcript.
    */
   readonly promptId: string | null;

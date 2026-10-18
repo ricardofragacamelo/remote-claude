@@ -37,24 +37,24 @@ export interface SavedFile {
 }
 
 /**
- * Saves a file of an open folder **without ever losing Claude's work** — plan 07, B-11.
+ * Saves a file of an open folder **without ever losing the agent's work** — plan 07, B-11.
  *
  * The rules, in the order they run ([07 · D-03](../../../../docs/plans/07-explorer-and-editor/decisions.md#d-03--a-semântica-de-concorrência)):
  *
- * 1. a file that changes what Claude may do needs the explicit confirmation (S-79);
+ * 1. a file that changes what the agent may do needs the explicit confirmation (S-79);
  * 2. `If-Match` is required, and `*` is not a version (S-63) — `428`;
  * 3. the text has to fit the encoding and the ceiling (S-73, S-76) — nothing touched otherwise;
  * 4. under the lock of the file's real path — the undo of a session writes there too (S-125):
  *    - the disk already holds exactly this → `200`, nothing written, nothing in the trail (S-66);
  *    - the disk holds another version, or nothing → `412` with the current one (S-64, S-68). A file
- *      Claude removed is never re-created in silence;
+ *      the agent removed is never re-created in silence;
  *    - the version about to be replaced goes to the local history — and a history that fails does
  *      not stop the save, the answer says so (F8, S-336);
  *    - the trail first, then the atomic write, which checks the version once more right before its
  *      rename, against writers outside this process.
  *
- * Exported by the module: plan 11's replace-in-files and plan 13's `CLAUDE.md` write through this,
- * and inherit the `ETag`, the trail and the atomicity rather than writing their own.
+ * Exported by the module: plan 11's replace-in-files and plan 13's project memory file write through
+ * this, and inherit the `ETag`, the trail and the atomicity rather than writing their own.
  */
 export class SaveFileUseCase {
   constructor(

@@ -1442,6 +1442,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get composerChoicePending => 'Trocando…';
 
   @override
+  String get engineLabel => 'Agente';
+
+  @override
+  String get engineDefault => 'Padrão da instalação';
+
+  @override
   String get modeLabel => 'Modo';
 
   @override

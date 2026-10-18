@@ -48,7 +48,8 @@ describe('the anatomy of the workbench from md up — plan 06, S-116', () => {
 
     expect(sideBar('workbench.explorer.label')).toBeVisible();
     expect(screen.getByRole('region', { name: t('workbench.editor.label') })).toBeVisible();
-    const claude = sideBar('workbench.agent.label')!;
+    // No `/engines` mocked here: the side bar names the generic fallback (plan 28, B-44).
+    const claude = sideBar('engine.name.fallback')!;
     expect(within(claude).getByRole('group', { name: t('sessions.draft.choices') })).toBeVisible();
     // Held places say what will live there, never a blank.
     expect(screen.getByText(t('workbench.explorer.placeholder'))).toBeVisible();

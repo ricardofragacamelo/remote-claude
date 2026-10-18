@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/events/message-delta.json",
   "title": "MessageDelta",
-  "description": "A fragment of the assistant's answer, from the SDK's `stream_event`. The client accumulates by `messageId`; it never concatenates blindly in arrival order.",
+  "description": "A fragment of the assistant's answer, from the engine's own streaming event. The client accumulates by `messageId`; it never concatenates blindly in arrival order.",
   "x-kind": "event",
   "x-type": "message.delta",
   "type": "object",
@@ -19,7 +19,7 @@
     "blockType": {
       "type": "string",
       "enum": ["text", "thinking"],
-      "description": "What the fragment is part of: the answer, or Claude's thinking before it. Absent reads as `text`. An enum read as a string, so a block kind added later is not a crash."
+      "description": "What the fragment is part of: the answer, or the model's thinking before it. Absent reads as `text`. An enum read as a string, so a block kind added later is not a crash."
     },
     "parentToolUseId": {
       "type": "string",

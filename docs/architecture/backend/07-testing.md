@@ -119,6 +119,70 @@ avisa quando o SDK muda o contrato.
 
 ---
 
+## A dimensão motor — a suíte de contrato da porta (plano 28, B-43)
+
+Desde o plano 28, a matriz de teste de uma sessão ganhou uma dimensão a mais: **motor**. Todo
+comportamento de `AgentSessionHandle`/`AgentEnginePort` que não é específico do Claude — uma sessão
+abre, um prompt enfileira enquanto outro roda, uma chamada de ferramenta passa pela
+`SessionPermissionGate` antes de rodar, `interrupt()` encerra um turno preso, `close()` é idempotente
+— é rodado **duas vezes**: contra o adapter do Claude (sobre o fake do SDK gravado,
+`backend/test/fakes/agent-sdk/`) e contra um segundo motor construído só para teste
+(`backend/test/fakes/engine/`), com outras ferramentas nativas (`write_file`, `run_shell`,
+`ask_user`) e menos capacidades (sem esforço, sem compactação, sem plano, sem contexto, sem custo em
+US$) — `TEST_CAPABILITIES` documenta, capacidade por capacidade, por que cada uma está ligada ou
+desligada.
+
+**Por quê dois motores, e não um fake mais elaborado do Claude.** Um teste que só o Claude passa
+prova, na melhor das hipóteses, que o adapter do Claude está certo — nunca que a abstração do port
+aguenta um motor diferente. A ausência de palavra do portão de neutralidade (`pnpm neutral:check`)
+prova que o núcleo não *fala* de um motor; só um segundo motor, de verdade, prova que ele não
+*depende* de um (discovery 03, §7.7).
+
+A suíte vive em `backend/test/integration/port-contract/`:
+
+- `engine-port-contract.spec.ts` — a bateria universal, parametrizada por motor
+  (`describe.each(['claude', 'test'])`), sobre o gateway real;
+- `concurrent-engines.spec.ts` — S-122: uma sessão do Claude e uma do motor de teste, na mesma
+  pasta, ao mesmo tempo, não se misturam.
+
+**O que entra na bateria universal, e o que fica só do Claude** está documentado no comentário de
+topo de `engine-port-contract.spec.ts`, cenário a cenário, com a suíte de hoje de onde cada um veio
+e por que generaliza (ou não). A leitura obrigatória antes de adicionar um cenário novo ali.
+
+**Uma descoberta de design, não um corte de escopo:** retomar uma conversa (`resume`) é decidido por
+`ResumableConversationSource`, que pergunta ao **transcript store do motor** pela conversa antes de
+qualquer coisa ser aberta — isso não é controlado pela flag de capacidade `resume` (que só o
+`EngineCapabilities` declara): roda independentemente dela. O motor de teste não tem transcript store
+(`history: false`, B-43 não constrói um) — por isso `TEST_CAPABILITIES.resume` é `false`, e
+`session-resume.spec.ts` continua inteiramente específico do Claude. Um motor real futuro (Codex,
+Copilot) que queira `resume: true` precisa de um transcript store próprio, do mesmo jeito que
+`AgentSdkTranscriptAdapter` é o do Claude.
+
+**Como um motor real futuro se encaixa.** O molde é o mesmo que o motor de teste já segue:
+
+1. um adapter de `AgentEnginePort` em `src/adapter/outbound/engines/<motor>/`, com sua própria tabela
+   de classificação de ferramentas (`CanonicalTool`/`ToolKind`) e seu próprio `EngineCapabilities`;
+2. um `EngineSecurityContract` que realmente se sustenta — não apenas declarado;
+3. a composição em `src/infrastructure/modules/engines/` registra o novo adapter nas mesmas
+   registries que o Claude usa (`EngineRegistry`, `TranscriptStoreRegistry`, `ToolClassifiers`,
+   `RuleDialects`) — nunca um `if (engine === 'codex')` espalhado pelo núcleo;
+4. a suíte de contrato da porta ganha uma terceira entrada no `describe.each`, e roda a mesma bateria
+   sem reescrevê-la — é exatamente o que provar o motor de teste contra ela já demonstrou que
+   funciona.
+
+**S-121 — o motor de teste nunca entra em produção**, estruturalmente: ele vive só em
+`backend/test/fakes/engine/`, e a regra `no-test-engine-in-production` de
+`dependency-cruiser.config.mjs` quebra o `lint:arch` se qualquer arquivo de `src/` importar dali —
+provado por `test/unit/architecture/dependency-rule.spec.ts`. A composição de produção
+(`engineSessionProviders`, `claude.providers.ts`) só registra o adapter do Claude, então nomear
+`test` em `RC_ENGINES_ENABLED`/`RC_ENGINE_DEFAULT` é tão desconhecido ali quanto nomear `codex`
+— `test/unit/infrastructure/modules/engines.spec.ts` prova os dois pelo mesmo mecanismo.
+
+Só a composição de teste wira o motor de teste — `backend/test/fakes/engine/compose.ts`, usado
+apenas quando uma suíte pede explicitamente (nunca em `test-app.ts` por padrão).
+
+---
+
 ## Cenários obrigatórios do backend
 
 Além dos [cenários e2e](../shared/06-testing-strategy.md#cenários-e2e-obrigatórios):
@@ -152,5 +216,6 @@ A Dependency Rule é verificada por `dependency-cruiser`, e a violação **quebr
 | `no-cross-domain-internals` | importar caminho profundo de outro domínio em vez do barril |
 | `sdk-is-isolated` | `@anthropic-ai/*` fora de `adapter/outbound/claude/` |
 | `no-test-in-src` | qualquer `*.spec.ts` dentro de `src/` |
+| `no-test-engine-in-production` | `src/` importando `backend/test/fakes/engine/` (plano 28, B-43, S-121) |
 
 Isto não é burocracia: são exatamente as regras que erodem primeiro sob pressa.

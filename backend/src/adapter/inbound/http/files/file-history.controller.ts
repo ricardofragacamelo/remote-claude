@@ -13,6 +13,12 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 
+import type {
+  FileContentPayload,
+  HistoryPagePayload,
+  RestoredEntryPayload,
+} from '@remote-claude/contracts';
+
 import {
   ListHistoryUseCase,
   ReadHistoryContentUseCase,
@@ -31,15 +37,8 @@ import {
   toHistoryPageDto,
   toRestoredEntryDto,
 } from './file-history.dto';
-import type {
-  HistoryContentQueryDto,
-  HistoryPageDto,
-  HistoryQueryDto,
-  RestoreBodyDto,
-  RestoredEntryDto,
-} from './file-history.dto';
+import type { HistoryContentQueryDto, HistoryQueryDto, RestoreBodyDto } from './file-history.dto';
 import { toFileContentDto } from './files.dto';
-import type { FileContentDto } from './files.dto';
 
 /**
  * The local history of an open folder — plan 07, B-58: the versions, what one held, and putting one
@@ -67,7 +66,7 @@ export class FileHistoryController {
   async list(
     @Query(new ZodPipe(historyQuerySchema)) query: HistoryQueryDto,
     @CurrentUser() userId: UserId,
-  ): Promise<HistoryPageDto> {
+  ): Promise<HistoryPagePayload> {
     const page = await this.listing.execute(
       {
         folder: query.folder,
@@ -90,7 +89,7 @@ export class FileHistoryController {
     @Query(new ZodPipe(historyContentQuerySchema)) query: HistoryContentQueryDto,
     @CurrentUser() userId: UserId,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<FileContentDto> {
+  ): Promise<FileContentPayload> {
     const opened = await this.reader.execute(
       { folder: query.folder, entryId, encoding: query.encoding ?? null },
       userId,
@@ -109,7 +108,7 @@ export class FileHistoryController {
     @Headers('if-match') ifMatch: string | undefined,
     @CurrentUser() userId: UserId,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<RestoredEntryDto> {
+  ): Promise<RestoredEntryPayload> {
     const restored = await this.restorer.execute(
       {
         folder: body.folder,

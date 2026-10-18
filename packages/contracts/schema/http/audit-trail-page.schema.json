@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/audit-trail-page.json",
+  "title": "AuditTrailPage",
+  "description": "`GET /audit-entries`: the caller's trail, newest first, one page at a time — \"what ran on my machine, and who let it?\" (plan 03).",
+  "x-kind": "http",
+  "x-type": "audit.trail.page",
+  "x-route": [{ "method": "GET", "path": "/audit-entries" }],
+  "type": "object",
+  "required": ["entries", "nextCursor"],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "sessionId",
+          "toolUseId",
+          "toolName",
+          "kind",
+          "input",
+          "decision",
+          "at",
+          "traceId",
+          "verdict"
+        ],
+        "description": "One entry of the trail, as the client sees it. The owner is not here: it is always the caller.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "toolUseId": {
+            "type": "string",
+            "x-nullable": true
+          },
+          "toolName": {
+            "type": "string",
+            "description": "The engine's own name of the tool, kept beside the kind."
+          },
+          "kind": {
+            "type": "string",
+            "description": "The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33)."
+          },
+          "input": {
+            "type": "object",
+            "description": "Exactly as the tool was called — except a `file.read`, which shows its path and window alone. Open: shaped by the tool, never fixed."
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["recorded", "allowed", "denied"]
+          },
+          "at": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string",
+            "x-nullable": true,
+            "description": "What leads from the entry to the log and the events of the same turn."
+          },
+          "verdict": {
+            "type": "object",
+            "x-nullable": true,
+            "required": ["requestId", "auto", "ruleId", "scope", "resolvedBy", "resolvedFrom"],
+            "description": "What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one.",
+            "properties": {
+              "requestId": {
+                "type": "string"
+              },
+              "auto": {
+                "type": "boolean"
+              },
+              "ruleId": {
+                "type": "string",
+                "x-nullable": true
+              },
+              "scope": {
+                "type": "string",
+                "enum": ["once", "session", "project", "always"]
+              },
+              "resolvedBy": {
+                "type": "string",
+                "x-nullable": true
+              },
+              "resolvedFrom": {
+                "type": "string",
+                "x-nullable": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "nextCursor": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Opaque to the client: send it back as `cursor` for the next page. `null` on the last one."
+    }
+  }
+}

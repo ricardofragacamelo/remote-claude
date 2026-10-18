@@ -115,7 +115,7 @@ O `GET /health` público continua exatamente como está — `{ status, database 
 - **Este navegador**: versão do web e do backend, protocolo, conectado desde, reconexões, último
   `gap`, limites anunciados no `connection.ready`, diferença de relógio com o servidor, idioma (S-113);
 - **sonda do Claude** para o operador, com o aviso de custo antes do clique — a ação é da extensão
-  (`web/src/engines/claude/diagnostics/`), registrada pelo `web/src/app/engines.ts` no item do motor;
+  (`web/src/engines/claude/diagnostics/`), registrada pelo `web/src/app/engines/index.ts` no item do motor;
   a tela não a importa;
 - atualização automática a cada 60 s só com a tela visível (S-114).
 

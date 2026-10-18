@@ -57,6 +57,13 @@ export interface ChatComposerProps {
   readonly folder?: string | undefined;
   readonly sessionId?: string | null | undefined;
 
+  /**
+   * The engine of the conversation — the draft's chosen one, or the live session's — for the
+   * `{{agent}}` of the box's own text (plan 28, B-44). `null`/absent names the installation's
+   * default: the box never spells out which engine it is on its own.
+   */
+  readonly engine?: string | null | undefined;
+
   /** A turn is running: what is sent now waits in the queue, and the button says so (S-217). */
   readonly queued?: boolean | undefined;
 
@@ -297,7 +304,7 @@ function ComposerBox({
       rows={2}
       className="field-sizing-content min-h-16 resize-none rounded-t-lg bg-transparent p-2 text-sm outline-none"
       style={{ maxHeight: MAX_BOX_HEIGHT }}
-      placeholder={t('session.composer.placeholder')}
+      placeholder={t('session.composer.placeholder', { engine: props.engine ?? undefined })}
       {...ariaOf(props, form, completions)}
       {...field}
       onCompositionStart={() => {

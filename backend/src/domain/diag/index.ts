@@ -1,5 +1,5 @@
 /**
- * Public surface of the `diag` domain: the round trip that proves the gateway without Claude.
+ * Public surface of the `diag` domain: the round trip that proves the gateway without the agent.
  *
  * It is a separate domain from `session` on purpose. They shared a name while the walking skeleton
  * was the only thing there was, and keeping that would have meant two different things called

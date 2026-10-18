@@ -113,6 +113,14 @@ describe('the WebSocket gateway', () => {
       await expect(socket.closed()).resolves.toMatchObject({ code: 4426 });
     });
 
+    it('closes with 4426 for the window of the previous protocol, now closed — plan 28, B-47, S-130', async () => {
+      const socket = await connect();
+
+      socket.send(commandFrame('connection.authenticate', {}, { v: 1 as never }));
+
+      await expect(socket.closed()).resolves.toMatchObject({ code: 4426 });
+    });
+
     it('says which versions it speaks before closing, so the client can tell its user', async () => {
       const socket = await connect();
 
@@ -123,7 +131,7 @@ describe('the WebSocket gateway', () => {
       expect(answer.payload).toMatchObject({
         code: 'INVALID_INPUT',
         messageKey: 'connection.error.unsupportedVersion',
-        params: { supportedVersions: [2, 1] },
+        params: { supportedVersions: [2] },
       });
     });
 

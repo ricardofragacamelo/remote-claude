@@ -3,12 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import {
-  forgetEmptyClaudeConfigDir,
-  loadDotEnv,
-  repositoryDotEnv,
-  SHUTDOWN_SIGNALS,
-} from '../../src/bootstrap';
+import { loadDotEnv, repositoryDotEnv, SHUTDOWN_SIGNALS } from '../../src/bootstrap';
 
 /**
  * The `.env` the product loads when nobody exported it.
@@ -60,32 +55,6 @@ describe('loadDotEnv', () => {
     // From `src/`, two levels up: a path computed from `import.meta.url` rather than from the
     // working directory, because the process is started from the package and from the repository.
     expect(repositoryDotEnv().endsWith(path.join('remote-claude', '.env'))).toBe(true);
-  });
-});
-
-describe('forgetEmptyClaudeConfigDir', () => {
-  it('drops a value that is only blank, exported or loaded alike', () => {
-    const env: NodeJS.ProcessEnv = { CLAUDE_CONFIG_DIR: '  ', OTHER: '' };
-
-    forgetEmptyClaudeConfigDir(env);
-
-    expect(env).toEqual({ OTHER: '' });
-  });
-
-  it('keeps a directory that was really chosen', () => {
-    const env: NodeJS.ProcessEnv = { CLAUDE_CONFIG_DIR: '/srv/claude' };
-
-    forgetEmptyClaudeConfigDir(env);
-
-    expect(env).toEqual({ CLAUDE_CONFIG_DIR: '/srv/claude' });
-  });
-
-  it('leaves an environment without it as it was', () => {
-    const env: NodeJS.ProcessEnv = {};
-
-    forgetEmptyClaudeConfigDir(env);
-
-    expect(env).toEqual({});
   });
 });
 

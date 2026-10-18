@@ -1,3 +1,5 @@
+import type { NotificationPayload } from '@remote-claude/contracts';
+
 import { api } from '@/shared/api/api';
 import type {
   NotificationEntry,
@@ -5,16 +7,11 @@ import type {
   PendingNotification,
 } from '../types/notification';
 
-/** The shape the backend answers with. It stops existing at the end of this file. */
-interface NotificationDto {
-  readonly id: string;
+/** The shape the backend answers one notification with. It stops existing at the end of this file. */
+type NotificationDto = Omit<NotificationPayload, 'severity' | 'params'> & {
   readonly severity: NotificationEntry['severity'];
-  readonly messageKey: string;
   readonly params: NotificationEntry['params'];
-  readonly count: number;
-  readonly createdAt: string;
-  readonly readAt: string | null;
-}
+};
 
 interface NotificationPageDto {
   readonly items: readonly NotificationDto[];

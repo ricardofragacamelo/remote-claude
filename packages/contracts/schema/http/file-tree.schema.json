@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/file-tree.json",
+  "title": "FileTree",
+  "description": "`GET /files/tree`: one level of one folder, never the whole tree (plan 07, F1).",
+  "x-kind": "http",
+  "x-type": "files.tree",
+  "x-route": [{ "method": "GET", "path": "/files/tree" }],
+  "type": "object",
+  "required": ["folder", "path", "entries", "truncated"],
+  "properties": {
+    "folder": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative to the open folder."
+    },
+    "entries": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "path",
+          "kind",
+          "size",
+          "mtime",
+          "hidden",
+          "unreadableName",
+          "outside",
+          "targetKind"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "description": "Relative to the open folder."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["file", "directory", "symlink", "other"]
+          },
+          "size": {
+            "type": "integer"
+          },
+          "mtime": {
+            "type": "string",
+            "description": "ISO-8601."
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "One of the names the explorer hides unless \"show hidden\" is on — marked, never left out."
+          },
+          "unreadableName": {
+            "type": "boolean",
+            "description": "Not UTF-8 on disk: shown, and never operated on."
+          },
+          "outside": {
+            "type": "boolean",
+            "description": "A link that leads outside the open folder: not navigable. `false` for anything but a link."
+          },
+          "targetKind": {
+            "type": "string",
+            "enum": ["file", "directory", "other", "missing"],
+            "x-nullable": true,
+            "description": "What a link inside leads to — `missing` when it is broken; `null` outside and for non-links."
+          }
+        }
+      }
+    },
+    "truncated": {
+      "type": "boolean"
+    }
+  }
+}

@@ -5,11 +5,8 @@ import type { AppConfig } from '../config/environment';
 /** Events kept per session for replay after a reconnect. */
 export const REPLAY_BUFFER_SIZE = 1_000;
 
-/**
- * Protocol versions this build speaks: the current one first, and the one before it, for the window
- * of deprecation (plan 28, D-08).
- */
-export const SUPPORTED_VERSIONS = [PROTOCOL_VERSION, PROTOCOL_VERSION - 1];
+/** Protocol versions this build speaks — the window of deprecation closed in plan 28, F7, B-47. */
+export const SUPPORTED_VERSIONS = [PROTOCOL_VERSION];
 
 /** How long a fresh connection has to authenticate before it is closed. */
 export const HANDSHAKE_TIMEOUT_MS = 5_000;

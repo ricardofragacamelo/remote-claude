@@ -20,8 +20,8 @@ const strictUtf8 = new TextDecoder('utf-8', { fatal: true });
  * Iterated, so the read **stops** at the ceiling and its cost is the ceiling, never the folder.
  * Each child costs an `lstat` (the tree shows size and date) and a link a `realpath` too; nothing is
  * ever opened, so a FIFO is listed as `other` and never blocks the listing (S-35). A child that
- * vanishes between the read and its `lstat` is left out without an error — Claude deletes files all
- * the time (S-36).
+ * vanishes between the read and its `lstat` is left out without an error — the agent deletes files
+ * all the time (S-36).
  */
 export class FolderTreeReader {
   constructor(

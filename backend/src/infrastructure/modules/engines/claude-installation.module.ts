@@ -52,7 +52,13 @@ import { SessionRegistryModule } from '../session-registry.module';
     },
     {
       provide: ClaudeInstallationCatalog,
-      inject: [LIVE_INSTALLATION, INSTALLATION_PROBE, CLOCK, BUNDLED_CLI_VERSION, INSTALLATION_FACTS],
+      inject: [
+        LIVE_INSTALLATION,
+        INSTALLATION_PROBE,
+        CLOCK,
+        BUNDLED_CLI_VERSION,
+        INSTALLATION_FACTS,
+      ],
       useFactory: (
         live: LiveInstallation,
         probe: InstallationProbe,

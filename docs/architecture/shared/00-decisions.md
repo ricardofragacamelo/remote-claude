@@ -310,7 +310,7 @@ Fica em aberto, e bloqueia ligar as skills de usuário e de sistema: se o shell 
 desliga. Toda sessão leva `settings: { disableSkillShellExecution: true }`, pela camada de flag, para
 todas as origens ([13 · D-24](../../plans/13-claude-settings/decisions.md#d-24--shell-inline-desligado-pela-camada-de-flag)).
 O plugin sintético carrega as skills do usuário como `rc-user-skills:<nome>`, e a `allow` pessoal
-continua sem dispensar o `canUseTool`. Ver a [ADR-018](#adr-018--extensões-do-claude-só-entram-pelo-produto).
+continua sem dispensar o `canUseTool`. Ver a [ADR-018](#adr-018--a-extensão-do-claude-só-entra-pelo-produto).
 
 ---
 
@@ -604,13 +604,18 @@ restart do backend.
 
 ---
 
-## ADR-018 — Extensões do Claude só entram pelo produto
+## ADR-018 — A extensão do Claude só entra pelo produto
 
 **Status:** aceita · 2026-10-09 · **decorre de spike** ([plano 13 · B-01](../../plans/13-claude-settings/F0-contract.md),
 [descoberta §11](../../discovery/01-descoberta-claude-agent-sdk.md#11--quinta-rodada-de-spikes-2026-10-09)),
-e da ADR-011
+e da ADR-011 · **reclassificada pelo [ADR-025](#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)**
+como ADR da extensão `engines/claude/`, na [F6 do plano 28](../../plans/28-agent-neutral-core/F6-engine-extensions.md), B-36
 
-> **Será reclassificada pelo [ADR-025](#adr-025--núcleo-neutro-de-agente-extensões-isoladas-por-motor-nas-três-pontas)** como ADR da extensão `engines/claude/`, e o MCP sai dela para o núcleo, na [F6 do plano 28](../../plans/28-agent-neutral-core/F6-engine-extensions.md).
+> O que o MCP **é** — o servidor, o segredo, a aprovação do `.mcp.json`, com o resto dos padrões da
+> sessão — é núcleo, por motor ([agent-settings](../backend/03-modules.md#agent-settings),
+> [28 · D-06](../../plans/28-agent-neutral-core/decisions.md#f6--extensões-isoladas)). O que esta ADR
+> continua a documentar é só **como o `query()` do Claude** mantém essa configuração fora do argv —
+> uma garantia do SDK deste motor, não do domínio de MCP.
 
 **Contexto.** Servidor MCP, plugin, skill, subagent, hook e camada de flag são, cada um, uma forma de o
 Claude rodar código na máquina ou de a aprovação ser decidida por outra coisa que não o `canUseTool`.
@@ -994,7 +999,7 @@ Cada motor novo custaria essa interpretação duas vezes, e cada uma podia diver
 
 1. **Três anéis em cada ponta.** O **núcleo** é neutro. A **extensão de motor**
    (`engines/<motor>/`) guarda o que só aquele motor tem e só depende do núcleo. A **composição** é o
-   único ponto que conhece as extensões: `infrastructure/modules/engines/` no backend, `app/engines.ts`
+   único ponto que conhece as extensões: `infrastructure/modules/engines/` no backend, `app/engines/index.ts`
    no web e `app/engines.dart` no app. A seta aponta para o núcleo, nas três pontas.
 2. **O cliente desenha pelo `kind`.** Toda ferramenta, interação e aviso chega com um `kind` canônico,
    que é uma string aberta: o que o cliente não conhece é desenhado pela linha genérica (`other`). O

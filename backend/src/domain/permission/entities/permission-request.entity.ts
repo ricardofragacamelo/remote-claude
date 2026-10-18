@@ -73,7 +73,7 @@ export interface PermissionSettling {
   /** `true` when this answer is the one that settled the request. */
   readonly won: boolean;
 
-  /** The decision that reached the SDK — not necessarily the one just offered. */
+  /** The decision that reached the engine — not necessarily the one just offered. */
   readonly resolution: PermissionResolution;
 }
 
@@ -90,7 +90,7 @@ export interface PermissionExtension {
 
 /** What opening a request needs to know. */
 export interface PermissionRequestOpening {
-  /** The idempotency key. It is the SDK's `requestId`, never the `toolUseId`. */
+  /** The idempotency key. It is the engine's `requestId`, never the `toolUseId`. */
   readonly id: string;
 
   readonly sessionId: SessionId;
@@ -113,7 +113,7 @@ export interface PermissionRequestOpening {
   readonly tool: CanonicalTool;
 
   /**
-   * The questions, when the request is Claude asking the person something rather than asking leave
+   * The questions, when the request is the agent asking the person something rather than asking leave
    * to run a tool — absent or `null` for every other request (plan 24).
    */
   readonly interaction?: Interaction | null;
@@ -237,7 +237,7 @@ export class PermissionRequest {
    * of the object rules out.
    *
    * @throws {PermissionReasonRequiredError} when a **person** refuses without saying why. The
-   *   reason goes into the trail and back to Claude as a message, which is how the agent learns to
+   *   reason goes into the trail and back to the agent as a message, which is how the agent learns to
    *   propose something else rather than retry the same command.
    */
   resolve(answer: PermissionAnswer): PermissionSettling {

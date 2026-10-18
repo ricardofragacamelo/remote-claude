@@ -118,8 +118,8 @@ verde.
 | F3 | [Interações e estado](F3-interactions.md) | plano, pergunta, subagent, tarefas, compactação, contexto e origem da mudança, todos canônicos | B-20…B-25 | ✅ |
 | F4 | [Modos, esforço, uso e blocos](F4-modes-and-usage.md) | modos canônicos, esforço anunciado, `usage` canônico, blocos com nome nosso | B-26…B-30 | ✅ |
 | F5 | [Permissão pelo dialeto](F5-permission-dialect.md) | a gramática canônica de regra, o `RuleDialect` tradutor, as regras migradas, `engine` e `tool_kind` no banco, ADR-011 reescrito | B-31…B-35 | ✅ |
-| F6 | [Extensões isoladas](F6-engine-extensions.md) | o `claude-config` dividido, `engines/claude/` no backend e no web, nomes, kinds e i18n neutros nas três pontas, todo o REST no pacote | B-36…B-42, B-48 | 🔲 |
-| F7 | [E2E](F7-e2e.md) | o motor de teste, os e2e com ele e com o Claude, o baseline vazio | B-43…B-47 | 🔲 |
+| F6 | [Extensões isoladas](F6-engine-extensions.md) | o `claude-config` dividido, `engines/claude/` no backend e no web, nomes, kinds e i18n neutros nas três pontas, todo o REST no pacote | B-36…B-42, B-48 | ✅ |
+| F7 | [E2E](F7-e2e.md) | o motor de teste, os e2e com ele e com o Claude, o baseline vazio | B-43…B-47 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -176,7 +176,7 @@ backend/src/
 backend/test/fakes/engine/                   F7 — o motor de teste
 web/src/
 ├── engines/claude/                          F6 (ex-features/claude-settings/)
-└── app/engines.ts                           F6 — a composição
+└── app/engines/index.ts                           F6 — a composição
 mobile/lib/
 ├── engines/                                 F0 — vazio, com o lint (D-15)
 └── app/engines.dart                         F6

@@ -7,9 +7,18 @@ import { typeIn } from './workbench';
 const t = translator('en');
 const AT = '2026-09-30T12:00:00.000Z';
 
-/** The panel of the agent beside the editor. */
-export function agentAside(): HTMLElement {
-  return screen.getByRole('complementary', { name: t('workbench.agent.label') });
+/**
+ * The generic name the side bar carries with nothing to name it by its own engine — no `/engines`
+ * mocked, or a tab whose conversation the fixture never names (plan 28, B-44).
+ */
+export const NO_AGENT_KNOWN = t('engine.name.fallback');
+
+/**
+ * The panel of the agent beside the editor — named [name], the generic fallback unless the spec
+ * mocks `/engines` and names its own conversation's engine (plan 28, B-44).
+ */
+export function agentAside(name: string = NO_AGENT_KNOWN): HTMLElement {
+  return screen.getByRole('complementary', { name });
 }
 
 /** `session.started`, as the hub answers the `session.start` of id `correlationId`. */
@@ -38,8 +47,9 @@ export async function startFromDraft(
   user: Parameters<typeof typeIn>[0] & { click(element: Element): Promise<void> },
   live: LiveSocket,
   session: { readonly id: string; readonly folder: string; readonly text?: string },
+  agentName: string = NO_AGENT_KNOWN,
 ): Promise<void> {
-  const aside = await screen.findByRole('complementary', { name: t('workbench.agent.label') });
+  const aside = await screen.findByRole('complementary', { name: agentName });
   await typeIn(
     user,
     await within(aside).findByLabelText(t('composer.box.label')),
@@ -48,7 +58,7 @@ export async function startFromDraft(
   await user.click(within(aside).getByRole('button', { name: t('session.composer.send') }));
 
   live.receive(startedFrame(live.lastSent('session.start')?.['id'], session.id, session.folder));
-  await within(agentAside()).findByRole('region', {
+  await within(agentAside(agentName)).findByRole('region', {
     name: t('session.screen.sessionLabel', { sessionId: session.id }),
   });
 }

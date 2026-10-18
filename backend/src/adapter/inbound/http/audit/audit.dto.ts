@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { AuditTrailPagePayload } from '@remote-claude/contracts';
+
 import { AUDIT_DECISIONS } from '@domain/audit';
 import type { DisclosedAuditPage, DisclosedAuditRecord } from '@application/audit';
 
@@ -57,60 +59,13 @@ export const auditTrailQuerySchema = z
 
 export type AuditTrailQuery = z.infer<typeof auditTrailQuerySchema>;
 
-/** What was decided, as the client sees it. */
-export interface AuditVerdictDto {
-  readonly requestId: string;
-  readonly auto: boolean;
-  readonly ruleId: string | null;
-  readonly scope: string;
-  readonly resolvedBy: string | null;
-  readonly resolvedFrom: string | null;
-}
-
-/**
- * One entry of the trail, as the client sees it.
- *
- * The owner is not here: it is always the caller, since nobody reads another person's trail.
- */
-export interface AuditEntryDto {
-  readonly id: string;
-  readonly sessionId: string;
-  readonly toolUseId: string | null;
-
-  /** The engine's own name of the tool, kept beside the kind. */
-  readonly toolName: string;
-
-  /** The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33). */
-  readonly kind: string;
-
-  /** Exactly as the tool was called — except a `file.read`, which shows its path and window alone. */
-  readonly input: Readonly<Record<string, unknown>>;
-
-  readonly decision: string;
-  readonly at: string;
-
-  /** What leads from the entry to the log and the events of the same turn. */
-  readonly traceId: string | null;
-
-  /** `null` on a `recorded` entry, and on a decision written before the trail kept one. */
-  readonly verdict: AuditVerdictDto | null;
-}
-
-/** A page. An object and not a bare array, so the next cursor has somewhere to go. */
-export interface AuditTrailPageDto {
-  readonly entries: readonly AuditEntryDto[];
-
-  /** Opaque to the client: send it back as `cursor` for the next page. `null` on the last one. */
-  readonly nextCursor: string | null;
-}
-
 /** The transport shape of one entry. */
 export function toAuditEntryDto({
   entry,
   traceId,
   disclosed,
   kind,
-}: DisclosedAuditRecord): AuditEntryDto {
+}: DisclosedAuditRecord): AuditTrailPagePayload['entries'][number] {
   const verdict = entry.verdict;
 
   return {
@@ -138,7 +93,7 @@ export function toAuditEntryDto({
 }
 
 /** The transport shape of a page. */
-export function toAuditTrailPageDto(page: DisclosedAuditPage): AuditTrailPageDto {
+export function toAuditTrailPageDto(page: DisclosedAuditPage): AuditTrailPagePayload {
   return {
     entries: page.records.map(toAuditEntryDto),
     nextCursor: page.nextCursor === null ? null : String(page.nextCursor),

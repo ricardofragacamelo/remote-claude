@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { AuditEventPagePayload } from '@remote-claude/contracts';
+
 import type { AuditEventPage, AuditEventRecord } from '@application/audit';
 import { pageQuery } from './audit.dto';
 
@@ -20,26 +22,7 @@ export const auditEventsQuerySchema = z.object({
 
 export type AuditEventsQuery = z.infer<typeof auditEventsQuerySchema>;
 
-/** One fact, as the client sees it. The owner is the caller, so it is not here. */
-export interface AuditEventDto {
-  readonly id: string;
-  readonly kind: string;
-  /** What the fact is about — for a file, its real path. */
-  readonly subjectId: string;
-  /** How to show the subject — for a file, its path relative to the open folder. */
-  readonly subjectLabel: string;
-  /** Sizes, hashes, origin and destination, counts — never the contents of a file. */
-  readonly details: Readonly<Record<string, unknown>> | null;
-  readonly at: string;
-}
-
-export interface AuditEventPageDto {
-  readonly events: readonly AuditEventDto[];
-  /** Opaque to the client: send it back as `cursor`. `null` on the last page. */
-  readonly nextCursor: string | null;
-}
-
-function toAuditEventDto({ event }: AuditEventRecord): AuditEventDto {
+function toAuditEventDto({ event }: AuditEventRecord): AuditEventPagePayload['events'][number] {
   return {
     id: event.id,
     kind: event.kind,
@@ -50,7 +33,7 @@ function toAuditEventDto({ event }: AuditEventRecord): AuditEventDto {
   };
 }
 
-export function toAuditEventPageDto(page: AuditEventPage): AuditEventPageDto {
+export function toAuditEventPageDto(page: AuditEventPage): AuditEventPagePayload {
   return {
     events: page.records.map(toAuditEventDto),
     nextCursor: page.nextCursor === null ? null : String(page.nextCursor),

@@ -125,7 +125,7 @@ ele constrói, não **o que** ele entrega. A linha de corte:
 - **extensão do Claude** (`*/engines/claude/`, `/engines/claude/usage/rate-limits`,
   `web/src/engines/claude/usage/`, chaves `engines.claude.usage.*`): as janelas de limite da conta, o
   tipo de assinatura e as seções de ajuda que falam deles, registradas no slot da tela de uso e na
-  gaveta pelo `web/src/app/engines.ts`;
+  gaveta pelo `web/src/app/engines/index.ts`;
 - **orçamento**: em US$ só para motor com `cost: 'usd'`; para motor que só informa tokens, em tokens
   ([discovery 03 §6.8](../../discovery/03-multiplos-motores-de-agente.md#68-uso-e-custo)). Com o Claude
   como único motor, a tela só oferece US$.

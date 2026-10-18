@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/commands/session-prompt.json",
   "title": "SessionPrompt",
-  "description": "Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way the Claude Code UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`).",
+  "description": "Sends one turn. A prompt that arrives while a turn is running is **queued** by the backend and runs next, on its own, the way a coding agent's own UI does it — it is never refused, and every watcher sees it waiting (`prompt.queued`) until it starts or is taken out (`prompt.dequeued`).",
   "x-kind": "command",
   "x-type": "session.prompt",
   "type": "object",
@@ -16,7 +16,7 @@
     "attachments": {
       "type": "array",
       "maxItems": 20,
-      "description": "The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and Claude reads it through `Read`, which the trail records; its content never travels here (plan 08, D-01).",
+      "description": "The context of the prompt, chosen with `@`, a drag or the editor: files, folders, ranges of lines, an uploaded attachment, or text a provider of the client holds (the terminal). A file or a folder is a **reference** — the backend checks it inside the session's folder, all or nothing, and the agent reads it through its own `Read`-kind tool, which the trail records; its content never travels here (plan 08, D-01).",
       "items": {
         "type": "object",
         "x-required-when": [
@@ -43,7 +43,7 @@
           {
             "field": "source",
             "when": { "field": "kind", "equals": "text" },
-            "because": "text a provider holds goes to Claude labelled with where it came from, never as if the user had typed it"
+            "because": "text a provider holds goes to the agent labelled with where it came from, never as if the user had typed it"
           },
           {
             "field": "label",
@@ -91,7 +91,7 @@
           "label": {
             "type": "string",
             "maxLength": 200,
-            "description": "How the `text` is introduced to Claude and shown on the chip: \"terminal: bash\"."
+            "description": "How the `text` is introduced to the agent and shown on the chip: \"terminal: bash\"."
           },
           "content": {
             "type": "string",

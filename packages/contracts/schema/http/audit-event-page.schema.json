@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/audit-event-page.json",
+  "title": "AuditEventPage",
+  "description": "`GET /audit-events`: the account facts, read — devices, rules, conversations, undos, file writes (plan 06, B-40; plan 07, B-17).",
+  "x-kind": "http",
+  "x-type": "audit.events.page",
+  "x-route": [{ "method": "GET", "path": "/audit-events" }],
+  "type": "object",
+  "required": ["events", "nextCursor"],
+  "properties": {
+    "events": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "subjectId", "subjectLabel", "details", "at"],
+        "description": "One fact, as the client sees it. The owner is the caller, so it is not here.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "A genuinely open vocabulary — `file.`, `file.written`, a device or a rule event — never a fixed enum."
+          },
+          "subjectId": {
+            "type": "string",
+            "description": "What the fact is about — for a file, its real path."
+          },
+          "subjectLabel": {
+            "type": "string",
+            "description": "How to show the subject — for a file, its path relative to the open folder."
+          },
+          "details": {
+            "type": "object",
+            "x-nullable": true,
+            "description": "Sizes, hashes, origin and destination, counts — never the contents of a file. Open: shaped by the kind."
+          },
+          "at": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "nextCursor": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Opaque to the client: send it back as `cursor`. `null` on the last page."
+    }
+  }
+}

@@ -93,7 +93,7 @@ export function modelOf(model: Readonly<Record<string, unknown>>): InstallationM
 
 /**
  * One category of the window, or none when it is not one this build can draw: a canonical one with
- * its key, any other with the engine's text — `name` is kept only for the previous protocol.
+ * its key, any other with the engine's text.
  */
 function categoryOf(category: Readonly<Record<string, unknown>>): ContextCategory[] {
   const id = readText(category, 'id');
@@ -108,7 +108,6 @@ function categoryOf(category: Readonly<Record<string, unknown>>): ContextCategor
           id,
           ...(messageKey === null ? {} : { messageKey }),
           ...(text === null ? {} : { text }),
-          name: readText(category, 'name') ?? id,
           tokens: numberOf(category['tokens']),
           kind: kind as ContextCategory['kind'],
         },

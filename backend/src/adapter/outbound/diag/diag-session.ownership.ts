@@ -10,7 +10,7 @@ import type { SessionId } from '@domain/session';
  * A diagnostic session is owned by whoever opened it, and it outlives the process.
  *
  * It is attachable for the same reason it exists: the round trip is the cheapest way to exercise
- * fan-out, `seq` and replay end to end, and none of those needs a Claude subprocess.
+ * fan-out, `seq` and replay end to end, and none of those needs an agent subprocess.
  */
 @Injectable()
 export class DiagSessionOwnership implements SessionOwnership {

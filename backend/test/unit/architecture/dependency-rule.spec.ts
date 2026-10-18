@@ -178,19 +178,23 @@ describe('the Dependency Rule, as the build enforces it', () => {
     ).toBe(true);
   });
 
-  it('refuses `claude-config` reaching `session`, even through its barrel — plan 13, S-14', async () => {
+  it('refuses the engine settings reaching `session`, even through its barrel — plan 28, B-36', async () => {
     expect(
       broke(
         await violations(),
-        'claude-config-never-reaches-session',
-        'application/claude-config/reaches-session.ts',
+        'settings-never-reach-session',
+        'application/agent-settings/reaches-session.ts',
       ),
     ).toBe(true);
   });
 
-  it('refuses `claude-config` importing the SDK outside the Claude adapter — plan 13, S-14', async () => {
+  it('refuses the engine settings importing the SDK outside the Claude adapter — plan 28, B-36', async () => {
     expect(
-      broke(await violations(), 'sdk-is-isolated', 'application/claude-config/talks-to-the-sdk.ts'),
+      broke(
+        await violations(),
+        'sdk-is-isolated',
+        'application/agent-settings/talks-to-the-sdk.ts',
+      ),
     ).toBe(true);
   });
 
@@ -266,6 +270,16 @@ describe('the Dependency Rule, as the build enforces it', () => {
       expect(broke(found, 'adapters-do-not-know-each-other', file), file).toBe(true);
       expect(broke(found, 'engine-extension-is-isolated', file), file).toBe(true);
     }
+  });
+
+  it('refuses production composition importing the test engine — plan 28, B-43, S-121', async () => {
+    expect(
+      broke(
+        await violations(),
+        'no-test-engine-in-production',
+        'infrastructure/modules/engines/imports-test-engine.ts',
+      ),
+    ).toBe(true);
   });
 
   it('refuses the SDK at the old home of the adapter, now that it moved — plan 28, S-31', async () => {

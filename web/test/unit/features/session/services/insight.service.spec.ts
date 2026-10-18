@@ -84,10 +84,10 @@ describe('the use of the context window — B-37, S-173', () => {
       maxTokens: 200000,
       percentage: 0.6,
       categories: [
-        { id: 'messages', name: 'Messages', tokens: 800, kind: 'used' },
+        { id: 'messages', tokens: 800, kind: 'used' },
         { id: 'freeSpace', tokens: 'many', kind: 'free' },
-        { id: 'odd', name: 'Odd', tokens: 1, kind: 'unknown' },
-        { name: 'no id', kind: 'used' },
+        { id: 'odd', tokens: 1, kind: 'unknown' },
+        { kind: 'used' },
       ],
     });
 
@@ -97,8 +97,8 @@ describe('the use of the context window — B-37, S-173', () => {
       maxTokens: 200000,
       percentage: 0.6,
       categories: [
-        { id: 'messages', name: 'Messages', tokens: 800, kind: 'used' },
-        { id: 'freeSpace', name: 'freeSpace', tokens: 0, kind: 'free' },
+        { id: 'messages', tokens: 800, kind: 'used' },
+        { id: 'freeSpace', tokens: 0, kind: 'free' },
       ],
     });
     expect(get).toHaveBeenCalledWith(`/sessions/${SESSION}/context`);
@@ -111,26 +111,14 @@ describe('the use of the context window — B-37, S-173', () => {
       maxTokens: 100,
       percentage: 10,
       categories: [
-        {
-          id: 'system',
-          messageKey: 'sessions.context.system',
-          name: 'System prompt',
-          tokens: 4,
-          kind: 'used',
-        },
-        { id: 'skills', text: 'Skills', name: 'Skills', tokens: 6, kind: 'used' },
+        { id: 'system', messageKey: 'sessions.context.system', tokens: 4, kind: 'used' },
+        { id: 'skills', text: 'Skills', tokens: 6, kind: 'used' },
       ],
     });
 
     expect((await fetchContext(SESSION)).categories).toEqual([
-      {
-        id: 'system',
-        messageKey: 'sessions.context.system',
-        name: 'System prompt',
-        tokens: 4,
-        kind: 'used',
-      },
-      { id: 'skills', text: 'Skills', name: 'Skills', tokens: 6, kind: 'used' },
+      { id: 'system', messageKey: 'sessions.context.system', tokens: 4, kind: 'used' },
+      { id: 'skills', text: 'Skills', tokens: 6, kind: 'used' },
     ]);
   });
 

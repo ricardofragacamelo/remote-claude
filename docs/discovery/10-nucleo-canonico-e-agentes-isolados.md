@@ -1,6 +1,6 @@
 # Proposta — Núcleo canônico e agentes de código isolados nas três pontas
 
-**Estado:** virou o [plano 28 — Núcleo neutro de agente](../plans/28-agent-neutral-core/README.md) em 2026-10-10, com as decisões do §13 com os mesmos IDs; a D-01 (a ordem do §10, alternativa A) foi decidida pelo usuário na criação. Nenhum código escrito.
+**Estado:** virou o [plano 28 — Núcleo neutro de agente](../plans/28-agent-neutral-core/README.md) em 2026-10-10, com as decisões do §13 com os mesmos IDs; a D-01 (a ordem do §10, alternativa A) foi decidida pelo usuário na criação. **Implementada**: o plano 28 concluiu as 8 fases (F0…F7) em 2026-10-17, com o baseline de neutralidade vazio e a janela do protocolo anterior fechada.
 **Criada em:** 2026-10-10. O pedido do usuário chegou em seis mensagens:
 
 1. "fazer uma descoberta, preparar para multi agente de código. Todas as mensagens que são usadas no
@@ -360,7 +360,7 @@ web/src/
 │   └── claude/                 ex-features/claude-settings, e a ajuda própria do Claude
 │       ├── settings/           as seções que só o Claude tem (plugins, skills, projeto, conta)
 │       └── index.ts            registra seções, comandos e ajuda nos registros do núcleo
-└── app/engines.ts              a composição: o único arquivo que importa engines/*
+└── app/engines/index.ts              a composição: o único arquivo que importa engines/*
 ```
 
 Ao mesmo tempo, renomeia-se o que é núcleo mas tem nome de produto:
@@ -507,7 +507,7 @@ verificações, e as três quebram o build.
 | backend | `engines-do-not-know-each-other` | `engines/<a>/` importar `engines/<b>/` |
 | backend | `sdk-is-isolated` (revista) | o SDK fora de `adapter/outbound/engines/claude/` |
 | backend | `adapters-do-not-know-each-other` | um adapter importar arquivo interno de outro; hoje, os 2 casos do §4.1 |
-| web (ESLint `no-restricted-imports`) | `core-cannot-import-engines` | `features/`, `shared/` e `app/` (menos `app/engines.ts`) importando `engines/` |
+| web (ESLint `no-restricted-imports`) | `core-cannot-import-engines` | `features/`, `shared/` e `app/` (menos `app/engines/index.ts`) importando `engines/` |
 | web | `engines-are-isolated` | `engines/<a>/` importando `engines/<b>/`, ou um caminho profundo de `features/` (só o barril) |
 | app (`import_lint`) | `core_cannot_import_engines`, `features_cannot_import_engines` | `core/` e `features/` importando `engines/` |
 | app | `engines_are_isolated` | `engines/<a>/` importando `engines/<b>/` |
@@ -611,7 +611,7 @@ entrega, como manda o AGENTS para contrato. A tabela é a lista que o plano tem 
 | [backend/04a-claude](../architecture/backend/04a-claude.md) | vira `04-engine-integration.md` (a porta, as capacidades, o classificador, o dialeto de regra), mais um anexo `04a-claude.md` com o que é do Claude |
 | [backend/05-persistence](../architecture/backend/05-persistence.md) | `engine`, `conversation_id` e `tool_kind` nas tabelas; tabelas de extensão com o prefixo do motor |
 | [backend/07-testing](../architecture/backend/07-testing.md) | a suíte de contrato da porta e o motor de teste |
-| [web/01-architecture](../architecture/web/01-architecture.md), [web/02-folder-structure](../architecture/web/02-folder-structure.md) | `engines/` e a composição em `app/engines.ts`; os registros do núcleo como ponto de extensão |
+| [web/01-architecture](../architecture/web/01-architecture.md), [web/02-folder-structure](../architecture/web/02-folder-structure.md) | `engines/` e a composição em `app/engines/index.ts`; os registros do núcleo como ponto de extensão |
 | [web/04-state-and-data](../architecture/web/04-state-and-data.md) | os modelos de conversa sobre o `kind` |
 | [mobile/01-architecture](../architecture/mobile/01-architecture.md), [mobile/02-folder-structure](../architecture/mobile/02-folder-structure.md) | `engines/` e `app/engines.dart` |
 | [mobile/04-ui](../architecture/mobile/04-ui.md) | o cartão de ferramenta e o de permissão pelo `kind` |

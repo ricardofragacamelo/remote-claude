@@ -635,7 +635,7 @@ describe('SessionRunner', () => {
 
       expect(
         novel.log
-          .withOp('claude.output')
+          .withOp('engine.output')
           .some((line) => line['variant'] === 'something_new_in_0_4'),
       ).toBe(true);
       expect(novel.closed).toEqual([]);
@@ -647,7 +647,7 @@ describe('SessionRunner', () => {
       const noisy = runner({ stderr: ['warning: something ordinary\n'] });
       noisy.runner.run();
 
-      expect(noisy.log.withOp('claude.output')[0]).toMatchObject({
+      expect(noisy.log.withOp('engine.output')[0]).toMatchObject({
         stderr: 'warning: something ordinary',
       });
     });
@@ -687,9 +687,9 @@ describe('SessionRunner', () => {
       harness.runner.prompt('hello');
       await harness.settle();
 
-      expect(harness.log.withOp('claude.session.lifecycle').length).toBeGreaterThan(0);
-      expect(harness.log.withOp('claude.input')).toHaveLength(1);
-      expect(harness.log.withOp('claude.output').length).toBeGreaterThan(0);
+      expect(harness.log.withOp('engine.session.lifecycle').length).toBeGreaterThan(0);
+      expect(harness.log.withOp('engine.input')).toHaveLength(1);
+      expect(harness.log.withOp('engine.output').length).toBeGreaterThan(0);
     });
 
     it('logs the type and subtype of a message, never its payload', async () => {
@@ -699,7 +699,7 @@ describe('SessionRunner', () => {
       tools.runner.prompt('do the work');
       await tools.settle();
 
-      for (const line of tools.log.withOp('claude.output')) {
+      for (const line of tools.log.withOp('engine.output')) {
         expect(line).not.toHaveProperty('message');
         expect(line['messageType']).toBeDefined();
       }
@@ -710,7 +710,7 @@ describe('SessionRunner', () => {
       harness.runner.prompt('x'.repeat(5_000));
       await harness.settle();
 
-      const line = harness.log.withOp('claude.input')[0];
+      const line = harness.log.withOp('engine.input')[0];
       expect(line?.['truncated']).toBe(true);
       expect(String(line?.['prompt'])).toHaveLength(2_048);
     });
@@ -730,7 +730,7 @@ describe('SessionRunner', () => {
       );
       await harness.settle();
 
-      const line = harness.log.withOp('claude.input')[0];
+      const line = harness.log.withOp('engine.input')[0];
       expect(line).toMatchObject({
         prompt: 'explain',
         images: 1,
@@ -747,7 +747,7 @@ describe('SessionRunner', () => {
       harness.runner.run();
       await harness.settle();
 
-      expect(harness.log.withOp('claude.session.lifecycle')[0]).toMatchObject({
+      expect(harness.log.withOp('engine.session.lifecycle')[0]).toMatchObject({
         trustMark: expect.any(String),
       });
     });
@@ -840,7 +840,7 @@ describe('SessionRunner', () => {
       harness.runner.prompt('hello');
       await harness.settle();
 
-      expect(harness.log.withOp('claude.output').every((line) => !('traceId' in line))).toBe(true);
+      expect(harness.log.withOp('engine.output').every((line) => !('traceId' in line))).toBe(true);
     });
   });
 
@@ -876,7 +876,7 @@ describe('SessionRunner', () => {
       harness.runner.run();
       await harness.runner.supportedCommands();
 
-      const [line] = harness.log.withOp('claude.commands');
+      const [line] = harness.log.withOp('engine.commands');
       expect(line).toMatchObject({ level: 'debug', count: loadCommands().commands.length });
       expect(JSON.stringify(line)).not.toContain('Initialize a new CLAUDE.md');
     });
@@ -886,7 +886,7 @@ describe('SessionRunner', () => {
       failing.runner.run();
 
       await expect(failing.runner.supportedCommands()).rejects.toThrow(AgentUnavailableError);
-      expect(failing.log.withOp('claude.commands')[0]).toMatchObject({ level: 'warn' });
+      expect(failing.log.withOp('engine.commands')[0]).toMatchObject({ level: 'warn' });
     });
 
     it('answers a timeout when the CLI never answers — S-31', async () => {

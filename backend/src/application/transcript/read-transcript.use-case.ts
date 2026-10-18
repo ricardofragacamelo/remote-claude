@@ -58,7 +58,7 @@ export class ReadTranscriptUseCase {
 
     return {
       session,
-      // The questions of Claude on the page, with what was answered (plan 24, B-21).
+      // The questions of the agent on the page, with what was answered (plan 24, B-21).
       page: { ...page, items: await this.questions.of(query.userId, page.items, messages) },
       lastMessageId: messages.at(-1)?.id ?? null,
     };

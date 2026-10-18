@@ -22,9 +22,17 @@ const session = {
 
 const versions = {
   backend: { version: '0.4.0', reason: null },
-  agentSdk: { version: '0.2.7', reason: null },
-  claudeCli: { version: null, reason: 'notInstalled' },
   node: { version: '24.16.0', reason: null },
+  defaultEngine: 'claude',
+  engines: [
+    {
+      engine: 'claude',
+      displayName: 'Claude',
+      state: 'available',
+      binary: { version: null, reason: 'notInstalled' },
+      library: { version: '0.2.7', reason: null },
+    },
+  ],
 };
 
 /** The backend answers the versions as the test says; everything else, never. */
@@ -56,7 +64,7 @@ describe('About — plan 06, B-32', () => {
 
     expect(await screen.findByText('0.4.0')).toBeVisible();
     expect(row(t('about.version.web'))).toHaveTextContent(config.appVersion);
-    expect(row(t('about.version.agentSdk'))).toHaveTextContent('0.2.7');
+    expect(row(t('about.version.library', { agent: 'Claude' }))).toHaveTextContent('0.2.7');
     expect(row(t('about.version.node'))).toHaveTextContent('24.16.0');
   });
 
@@ -66,7 +74,9 @@ describe('About — plan 06, B-32', () => {
     mountApp('/about');
 
     await screen.findByText('0.4.0');
-    expect(row(t('about.version.claudeCli'))).toHaveTextContent(t('about.version.notInstalled'));
+    expect(row(t('about.version.binary', { agent: 'Claude' }))).toHaveTextContent(
+      t('about.version.notInstalled'),
+    );
   });
 
   it('copies the whole block, in the language on screen, for a bug report — S-148', async () => {
@@ -82,8 +92,8 @@ describe('About — plan 06, B-32', () => {
       [
         `${t('about.version.web')}: ${config.appVersion}`,
         `${t('about.version.backend')}: 0.4.0`,
-        `${t('about.version.agentSdk')}: 0.2.7`,
-        `${t('about.version.claudeCli')}: ${t('about.version.notInstalled')}`,
+        `${t('about.version.binary', { agent: 'Claude' })}: ${t('about.version.notInstalled')}`,
+        `${t('about.version.library', { agent: 'Claude' })}: 0.2.7`,
         `${t('about.version.node')}: 24.16.0`,
       ].join('\n'),
     );

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/directory-listing.json",
+  "title": "DirectoryListing",
+  "description": "`GET /workspaces/directories`: one level of one directory, never the tree (plan 06, D-05).",
+  "x-kind": "http",
+  "x-type": "workspaces.directories",
+  "x-route": [{ "method": "GET", "path": "/workspaces/directories" }],
+  "type": "object",
+  "required": ["path", "root", "parent", "entries", "truncated"],
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "root": {
+      "$ref": "../definitions/workspace.schema.json"
+    },
+    "parent": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "`null` at the root: the picker never climbs above it."
+    },
+    "entries": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["name", "path", "hidden", "symlink"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "description": "Absolute path of the entry as listed — for a symlink, the link, not its target."
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "The name starts with `.`. Listed only when `hidden=true` was asked."
+          },
+          "symlink": {
+            "type": "boolean",
+            "description": "A symlink whose target is a directory inside the same root. One that escapes is omitted."
+          }
+        }
+      }
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "The ceiling cut the listing; `prefix` reaches what was left out."
+    }
+  }
+}

@@ -689,8 +689,7 @@
       "devices": "Devices",
       "diagnostics": "Logs and diagnostics",
       "settings": "Settings",
-      "about": "About",
-      "claude": "Claude settings"
+      "about": "About"
     },
     "menu": {
       "open": "Open the menu",
@@ -750,7 +749,6 @@
       "placeholderDescription": "The terminal and the output of a session will be here."
     },
     "agent": {
-      "label": "{{agent}}",
       "backToStart": "Back to a new conversation",
       "showChanges": "What the session changed"
     },
@@ -943,10 +941,6 @@
       "cycleMode": "{{agent}}: switch the mode of the conversation",
       "goToRequest": "{{agent}}: Go to the question waiting for you ({{count}})",
       "goToRequestNone": "{{agent}}: Go to the question waiting for you — nothing is waiting"
-    },
-    "claude": {
-      "defaultModel": "Claude: Change the default model",
-      "testConnection": "Claude: Test the connection to the model"
     }
   },
   "palette": {
@@ -1086,7 +1080,7 @@
       "restoreLabel": "Restore the default of {{option}}"
     },
     "links": {
-      "claude": "How Claude works — models, defaults, MCP servers, plugins, skills — is in Claude settings."
+      "agentSettings": "How {{agent}} works on this machine — its models and defaults, its MCP servers, and whatever its own extension adds — is in its own settings."
     }
   },
   "about": {
@@ -1095,7 +1089,7 @@
       "purpose": "The versions this installation runs — ready to paste into a bug report."
     },
     "help": {
-      "what": "The version of every part of this installation: this web, the backend, the Agent SDK, {{agent}}'s command-line tool and Node. When something goes wrong, copy the block and paste it into the report: it is the first thing anybody helping you will ask.",
+      "what": "The version of every part of this installation: this web, the backend, Node, and {{agent}} — its library and its command-line tool. When something goes wrong, copy the block and paste it into the report: it is the first thing anybody helping you will ask.",
       "states": "A version the backend could not read says why: not installed, or installed but unreadable. When the backend cannot be reached, only this web's version is shown, with the way to try again.",
       "notRecorded": "Reading the versions records nothing. Copying puts the block on your clipboard and nowhere else."
     },
@@ -1110,8 +1104,8 @@
     "version": {
       "web": "Web",
       "backend": "Backend",
-      "agentSdk": "Agent SDK",
-      "claudeCli": "Claude CLI",
+      "binary": "{{agent}} CLI",
+      "library": "{{agent}} library",
       "node": "Node",
       "notInstalled": "not installed",
       "unreadable": "could not be read"
@@ -2109,6 +2103,10 @@
       "readOnly": "The effort is chosen when a conversation starts. Changing it in a running one would stop {{agent}} from asking before each tool.",
       "unknown": "As it started"
     },
+    "engine": {
+      "default": "Installation default",
+      "label": "Agent"
+    },
     "export": {
       "compacted": "The conversation was compacted here.",
       "failed": "The conversation could not be exported: {{reason}} Nothing was saved.",
@@ -2406,93 +2404,42 @@
       "close": "Close this message"
     }
   },
-  "claudeConfig": {
+  "engine": {
+    "name": {
+      "fallback": "The agent"
+    },
     "error": {
-      "mcpServerNotFound": "That MCP server does not exist, or this session does not have it.",
-      "mcpServerNameTaken": "You already have an MCP server named {{name}} here. Pick another name.",
-      "mcpServerConfigInvalid": "That MCP server configuration cannot be used: check the {{field}} field and try again.",
-      "mcpApprovalStale": "The .mcp.json of this folder changed since it was shown. Look at the entry {{name}} again before approving it.",
-      "modelNotAvailable": "This installation does not offer the model {{model}}. Refresh the list of models and pick one of them.",
-      "defaultModeNotAllowed": "{{mode}} turns the approval off, so it can never be a default.",
-      "pluginNotFound": "That plugin does not exist.",
-      "pluginPathInvalid": "That is not a plugin this product can load ({{reason}}).",
-      "pluginMarketplaceNotAllowed": "The marketplace {{marketplace}} is not declared in this machine’s allowlist file, so nothing is installed from it.",
-      "pluginSourceUnavailable": "The source of the marketplace {{marketplace}} could not be reached. Nothing was installed; try again later.",
-      "forbidden": "That belongs to somebody else.",
-      "secretStoreUnavailable": "This machine has no key file for MCP secrets, so a server with a secret cannot be saved. Servers without secrets still work.",
-      "effortUnsupported": "The model {{model}} does not take the effort level {{level}}. Pick one it offers, or none.",
-      "fallbackSameAsModel": "The fallback model has to be a different model from {{model}}.",
-      "skillNameInvalid": "A skill name uses lower-case letters, digits and hyphens only, up to 64 characters."
+      "capabilityUnavailable": "{{agent}} cannot do this.",
+      "notInstalled": "{{agent}} is not installed on this machine."
     }
   },
-  "claudeSettings": {
+  "agentSettings": {
+    "error": {
+      "forbidden": "That belongs to somebody else.",
+      "modelNotAvailable": "This installation does not offer the model {{model}}. Refresh the list of models and pick one of them.",
+      "defaultModeNotAllowed": "{{mode}} turns the approval off, so it can never be a default.",
+      "effortUnsupported": "The model {{model}} does not take the effort level {{level}}. Pick one it offers, or none.",
+      "fallbackSameAsModel": "The fallback model has to be a different model from {{model}}."
+    },
     "screen": {
-      "title": "Claude settings",
-      "purpose": "How Claude works on this machine: the account, models and defaults, MCP servers, plugins, skills and what a project brings."
+      "title": "{{agent}} settings",
+      "purpose": "How {{agent}} works on this machine, in sections: its models and defaults, its MCP servers, and whatever its own extension adds."
     },
     "help": {
-      "what": "Everything here changes how Claude runs your sessions on this machine. The account and the installation say who Claude bills and which version runs. Defaults choose the model and mode a new session starts with — for you, or for one folder and its subfolders. MCP servers and plugins are programs that start with a session and run with your credentials, so each one is added through a second step that says, in full, what it runs. The project section shows what a repository brings to Claude: its memory, slash commands, skills, subagents, output styles, hooks and permissions.",
-      "states": "Each section loads on its own: while it loads it keeps its place, if the installation does not answer it says why and offers to try again, and an empty section says how to fill it. A change to a server or a default applies to the next session; removing or switching a server off applies at once, in the sessions already running.",
+      "what": "Everything here changes how {{agent}} runs your sessions on this machine: its models, defaults and MCP servers, and whatever its own extension adds for itself. Defaults choose the model and mode a new session starts with — for you, or for one folder and its subfolders. MCP servers are programs that start with a session and run with your credentials, so each one is added through a second step that says, in full, what it runs.",
+      "states": "Each section loads on its own: while it loads it keeps its place, and an empty section says how to fill it. A change to a server or a default applies to the next session; removing or switching a server off applies at once, in the sessions already running.",
       "notRecorded": "Secret values — the environment variables and headers of an MCP server — are never shown, sent back or written to the trail: only their names. The trail records every change that widens what runs on this machine, before it takes effect.",
-      "accountHeading": "The account",
-      "accountBody": "Every session of every person on this machine spends the same Claude account — the one the CLI of the machine signed in to. The screen shows the provider, the plan, the organization and the e-mail, and of where the credential comes from only its name, never a token.",
-      "checkHeading": "The test of the connection",
-      "checkBody": "One turn of the model with a fixed sentence and no tool: it says whether Claude answers here, how long it took and what it cost. It is the only thing on this screen that spends quota, and it runs only when you click.",
       "modelHeading": "Models",
       "modelBody": "The model is who answers in the session. The list comes from the installation itself and changes with its version and its plan. The fallback model is used when the main one is overloaded.",
       "modesHeading": "Permission modes",
-      "modesBody": "Ask before every tool that needs it — the safe default. Edit files without asking — Claude writes and edits files in the folder with nobody approving each change. Only plan — Claude reads and proposes, and changes nothing. Allow everything nobody’s rule refuses — every tool runs unless a rule of yours refuses it, and questions still come to you. Bypassing permissions can never be a default: it would switch the approval off for every session that starts.",
+      "modesBody": "Ask before every tool that needs it — the safe default. Edit files without asking — {{agent}} writes and edits files in the folder with nobody approving each change. Only plan — {{agent}} reads and proposes, and changes nothing. Allow everything nobody’s rule refuses — every tool runs unless a rule of yours refuses it, and questions still come to you. Bypassing permissions can never be a default: it would switch the approval off for every session that starts.",
       "effortHeading": "Effort",
       "effortBody": "How hard the model thinks before it answers. More effort costs more and takes longer; only some models take it, each with its own levels.",
       "thinkingHeading": "Thinking",
-      "thinkingBody": "Whether the model reasons step by step before answering, shown folded in the session. Off is faster and cheaper.",
-      "outputStyleHeading": "Output style",
-      "outputStyleBody": "How Claude writes its answers — concise, explanatory, a style of the project. A style that no longer exists falls back to the installation’s."
+      "thinkingBody": "Whether the model reasons step by step before answering, shown folded in the session. Off is faster and cheaper."
     },
     "sections": {
-      "label": "Sections of Claude settings"
-    },
-    "account": {
-      "title": "Account",
-      "purpose": "Who Claude bills on this machine, and how it signed in.",
-      "refresh": "Read the account again",
-      "loading": "Reading the account of the installation",
-      "loginRequiredTitle": "Claude is not signed in on this machine",
-      "loginRequiredBody": "This product uses the login of the Claude installed on the machine and never signs anybody in remotely. On the machine, run `claude`, type `/login` and follow the steps; then read the account again here.",
-      "provider": "Provider",
-      "plan": "Plan",
-      "organization": "Organization",
-      "email": "E-mail",
-      "tokenSource": "Where the token comes from",
-      "apiKeySource": "Where the API key comes from",
-      "notSaid": "not said"
-    },
-    "installation": {
-      "title": "Installation",
-      "purpose": "Which Claude runs here, and why it might not work.",
-      "notInstalled": "not installed",
-      "unreadable": "could not be read",
-      "loading": "Reading the installation",
-      "checkOk": "The model answered.",
-      "checkNotLoggedIn": "Claude is not signed in on this machine: run `claude` and `/login` on it.",
-      "checkRateLimited": "The plan of this account hit its usage limit: wait and try again.",
-      "checkFailed": "The model did not answer as expected.",
-      "loginReady": "signed in",
-      "loginRequired": "not signed in",
-      "loginUnknown": "not known yet — open the Account section or test the connection",
-      "agentSdk": "Agent SDK",
-      "bundledCli": "Claude the product runs",
-      "pathCli": "claude on the PATH",
-      "pathCliDiffers": "Differs from the one the product runs: the terminal and this product run different versions.",
-      "configDir": "Configuration directory",
-      "configDirFromEnvironment": "set by CLAUDE_CONFIG_DIR",
-      "configDirDefault": "the default — CLAUDE_CONFIG_DIR is not set",
-      "login": "Login",
-      "checkTitle": "Test the connection to the model",
-      "checkCost": "The test sends one fixed sentence to the model and waits for one word back: it spends a little of the quota of this account, and it is not recorded as a session.",
-      "check": "Test the connection",
-      "checking": "Testing…",
-      "checkDetails": "Model: {{model}} · {{latency}} ms · US$ {{cost}}"
+      "label": "Sections of {{agent}} settings"
     },
     "models": {
       "title": "Models and defaults",
@@ -2501,7 +2448,6 @@
       "permissionMode": "Permission mode",
       "effort": "Effort",
       "thinking": "Thinking",
-      "outputStyle": "Output style",
       "fallbackModel": "Fallback model",
       "modeAsk": "Ask before every tool that needs it",
       "modeAcceptEdits": "Edit files without asking",
@@ -2530,32 +2476,103 @@
     },
     "mcp": {
       "title": "MCP servers",
-      "purpose": "The programs and endpoints that give Claude more tools — each one approved by you."
-    },
-    "plugins": {
-      "title": "Plugins",
-      "purpose": "Bundles of commands, agents, skills and hooks, from a folder or a declared marketplace."
-    },
-    "skills": {
-      "title": "Skills",
-      "purpose": "The skills of the project, yours and the system’s — on or off, for you or for a folder."
-    },
-    "project": {
-      "title": "Project",
-      "purpose": "What a repository brings to Claude, and what of it applies here."
+      "purpose": "The programs and endpoints that give {{agent}} more tools — each one approved by you."
     },
     "folder": {
       "label": "Folder",
       "none": "None — only my own defaults"
     }
   },
-  "engine": {
-    "name": {
-      "fallback": "The agent"
-    },
+  "engines": {
+    "claude": {
+      "navigation": {
+        "entry": "Claude settings"
+      },
+      "command": {
+        "defaultModel": "Claude: Change the default model",
+        "testConnection": "Claude: Test the connection to the model"
+      },
+      "error": {
+        "pluginNotFound": "That plugin does not exist.",
+        "pluginPathInvalid": "That is not a plugin this product can load ({{reason}}).",
+        "pluginMarketplaceNotAllowed": "The marketplace {{marketplace}} is not declared in this machine’s allowlist file, so nothing is installed from it.",
+        "pluginSourceUnavailable": "The source of the marketplace {{marketplace}} could not be reached. Nothing was installed; try again later.",
+        "skillNameInvalid": "A skill name uses lower-case letters, digits and hyphens only, up to 64 characters."
+      },
+      "help": {
+        "accountHeading": "The account",
+        "accountBody": "Every session of every person on this machine spends the same Claude account — the one the CLI of the machine signed in to. The screen shows the provider, the plan, the organization and the e-mail, and of where the credential comes from only its name, never a token.",
+        "checkHeading": "The test of the connection",
+        "checkBody": "One turn of the model with a fixed sentence and no tool: it says whether Claude answers here, how long it took and what it cost. It is the only thing on this screen that spends quota, and it runs only when you click.",
+        "outputStyleHeading": "Output style",
+        "outputStyleBody": "How Claude writes its answers — concise, explanatory, a style of the project. A style that no longer exists falls back to the installation’s."
+      },
+      "account": {
+        "title": "Account",
+        "purpose": "Who Claude bills on this machine, and how it signed in.",
+        "refresh": "Read the account again",
+        "loading": "Reading the account of the installation",
+        "loginRequiredTitle": "Claude is not signed in on this machine",
+        "loginRequiredBody": "This product uses the login of the Claude installed on the machine and never signs anybody in remotely. On the machine, run `claude`, type `/login` and follow the steps; then read the account again here.",
+        "provider": "Provider",
+        "plan": "Plan",
+        "organization": "Organization",
+        "email": "E-mail",
+        "tokenSource": "Where the token comes from",
+        "apiKeySource": "Where the API key comes from",
+        "notSaid": "not said"
+      },
+      "installation": {
+        "title": "Installation",
+        "purpose": "Which Claude runs here, and why it might not work.",
+        "notInstalled": "not installed",
+        "unreadable": "could not be read",
+        "loading": "Reading the installation",
+        "checkOk": "The model answered.",
+        "checkNotLoggedIn": "Claude is not signed in on this machine: run `claude` and `/login` on it.",
+        "checkRateLimited": "The plan of this account hit its usage limit: wait and try again.",
+        "checkFailed": "The model did not answer as expected.",
+        "loginReady": "signed in",
+        "loginRequired": "not signed in",
+        "loginUnknown": "not known yet — open the Account section or test the connection",
+        "agentSdk": "Agent SDK",
+        "bundledCli": "Claude the product runs",
+        "pathCli": "claude on the PATH",
+        "pathCliDiffers": "Differs from the one the product runs: the terminal and this product run different versions.",
+        "configDir": "Configuration directory",
+        "configDirFromEnvironment": "set by CLAUDE_CONFIG_DIR",
+        "configDirDefault": "the default — CLAUDE_CONFIG_DIR is not set",
+        "login": "Login",
+        "checkTitle": "Test the connection to the model",
+        "checkCost": "The test sends one fixed sentence to the model and waits for one word back: it spends a little of the quota of this account, and it is not recorded as a session.",
+        "check": "Test the connection",
+        "checking": "Testing…",
+        "checkDetails": "Model: {{model}} · {{latency}} ms · US$ {{cost}}"
+      },
+      "plugins": {
+        "title": "Plugins",
+        "purpose": "Bundles of commands, agents, skills and hooks, from a folder or a declared marketplace."
+      },
+      "skills": {
+        "title": "Skills",
+        "purpose": "The skills of the project, yours and the system’s — on or off, for you or for a folder."
+      },
+      "project": {
+        "title": "Project",
+        "purpose": "What a repository brings to Claude, and what of it applies here."
+      },
+      "defaults": {
+        "outputStyle": "Output style"
+      }
+    }
+  },
+  "mcp": {
     "error": {
-      "capabilityUnavailable": "{{agent}} cannot do this.",
-      "notInstalled": "{{agent}} is not installed on this machine."
+      "serverNotFound": "That MCP server does not exist, or this session does not have it.",
+      "serverNameTaken": "You already have an MCP server named {{name}} here. Pick another name.",
+      "serverConfigInvalid": "That MCP server configuration cannot be used: check the {{field}} field and try again.",
+      "approvalStale": "The .mcp.json of this folder changed since it was shown. Look at the entry {{name}} again before approving it.",
+      "secretStoreUnavailable": "This machine has no key file for MCP secrets, so a server with a secret cannot be saved. Servers without secrets still work."
     }
   }
 }

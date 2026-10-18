@@ -855,7 +855,7 @@ CLI **2.1.277**, SDK **0.3.277**, turnos em `haiku`. Toda sessão com `settingSo
 | 10 | de onde o CLI lê o `.mcp.json` | aberto numa subpasta de um repositório (`.git` na raiz), o CLI subiu o servidor do `.mcp.json` da **raiz** | D-11: a tela lê da pasta até a raiz do repositório |
 
 **Consequências para o produto**, todas registradas nas decisões do plano 13 e na
-[ADR-018](../architecture/shared/00-decisions.md#adr-018--extensões-do-claude-só-entram-pelo-produto):
+[ADR-018](../architecture/shared/00-decisions.md#adr-018--a-extensão-do-claude-só-entra-pelo-produto):
 
 - a sessão leva `strictMcpConfig: true` e nada mais de MCP no `query()`; os nossos servidores chegam por
   `setMcpServers()` depois do início, e `${VAR}` é expandido pelo backend, no ambiente já sem os

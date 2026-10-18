@@ -134,7 +134,7 @@ export class HttpPushSender implements PushSender {
 
     const text =
       message.subject === 'question'
-        ? this.text.question(message.target.locale.value)
+        ? this.text.question(message.target.locale.value, message.params)
         : this.text.permission(message.target.locale.value, message.params);
 
     return {

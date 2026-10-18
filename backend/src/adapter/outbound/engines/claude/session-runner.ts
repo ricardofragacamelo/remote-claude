@@ -139,6 +139,14 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
   /** The mode the SDK runs the session in, now — what a call's own mode is compared with (D-23). */
   private sdkMode: string;
 
+  /** The three fields every log line of this adapter carries, whatever else it says. */
+  private logFields(
+    op: string,
+    sessionId: string,
+  ): { op: string; engine: string; layer: 'adapter'; sessionId: string } {
+    return { op, engine: CLAUDE_ENGINE, layer: 'adapter', sessionId };
+  }
+
   constructor(
     private readonly start: AgentSessionStart,
     private readonly deps: SessionRunnerDeps,
@@ -166,15 +174,13 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
     this.deps.logger.debug(
       {
-        op: 'claude.session.lifecycle',
-        layer: 'adapter',
-        sessionId,
+        ...this.logFields('engine.session.lifecycle', sessionId),
         phase: 'starting',
         workspacePath: directory,
         claudeSessionId: this.start.conversation.ref.id,
         resumedFrom: this.start.conversation.resumedFrom?.id ?? null,
         trustMark: clearance,
-        cliVersion: this.deps.bundledCliVersion,
+        engineVersion: this.deps.bundledCliVersion,
       },
       'opening a claude session',
     );
@@ -264,9 +270,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
         this.deps.logger.debug(
           {
-            op: 'claude.permission.request',
-            layer: 'adapter',
-            sessionId: this.start.sessionId.value,
+            ...this.logFields('engine.permission.request', this.start.sessionId.value),
             requestId: options.requestId,
             toolName,
             decision: verdict.decision,
@@ -293,9 +297,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
     this.deps.logger.debug(
       {
-        op: 'claude.input',
-        layer: 'adapter',
-        sessionId: this.start.sessionId.value,
+        ...this.logFields('engine.input', this.start.sessionId.value),
         length: text.length,
         prompt: typed.slice(0, PROMPT_LOG_LIMIT),
         truncated: typed.length > PROMPT_LOG_LIMIT,
@@ -335,7 +337,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
    * `.claude/` brings commands of its own — and on the settings it was opened with.
    */
   async supportedCommands(): Promise<readonly SlashCommand[]> {
-    const listed = await this.askControl('list its slash commands', 'claude.commands', (query) =>
+    const listed = await this.askControl('list its slash commands', 'engine.commands', (query) =>
       query.supportedCommands(),
     );
     return listed.map(toSlashCommand);
@@ -344,7 +346,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
   /** `initializationResult()`, under the same deadline — the catalogue of plan 13 (B-10). */
   async initialization(): Promise<ClaudeInitialization> {
     return toSessionInitialization(
-      await this.askControl('answer its initialisation', 'claude.initialization', (query) =>
+      await this.askControl('answer its initialisation', 'engine.initialization', (query) =>
         query.initializationResult(),
       ),
     );
@@ -352,7 +354,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
   /** `supportedModels()`, under the same deadline — the selector of the panel (plan 08, B-36). */
   async supportedModels(): Promise<readonly InstallationModel[]> {
-    const models = await this.askControl('list its models', 'claude.models', (query) =>
+    const models = await this.askControl('list its models', 'engine.models', (query) =>
       query.supportedModels(),
     );
     return models.map(toInstallationModel);
@@ -361,7 +363,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
   /** `getContextUsage()`, the summary that asks the model nothing (B-37). */
   async contextUse(): Promise<ContextUse> {
     return toContextUse(
-      await this.askControl('measure its context', 'claude.context', (query) =>
+      await this.askControl('measure its context', 'engine.context', (query) =>
         query.getContextUsage({ detail: 'summary' }),
       ),
     );
@@ -369,7 +371,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
   /** `mcpServerStatus()`, reduced — never the configuration nor the raw error (B-38). */
   async mcpServers(): Promise<readonly McpServer[]> {
-    const servers = await this.askControl('list its MCP servers', 'claude.mcp', (query) =>
+    const servers = await this.askControl('list its MCP servers', 'engine.mcp', (query) =>
       query.mcpServerStatus(),
     );
     return servers.map(toMcpServer);
@@ -405,11 +407,9 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
       this.deps.logger.debug(
         {
-          op,
-          layer: 'adapter',
-          sessionId,
+          ...this.logFields(op, sessionId),
           count: Array.isArray(answer) ? answer.length : undefined,
-          cliVersion: this.cliVersion,
+          engineVersion: this.cliVersion,
           durationMs: Date.now() - startedAt,
         },
         `the cli answered: ${what}`,
@@ -420,7 +420,11 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       const timedOut = error instanceof AgentTimeoutError;
 
       this.deps.logger.warn(
-        { op, layer: 'adapter', sessionId, durationMs: Date.now() - startedAt, err: error },
+        {
+          ...this.logFields(op, sessionId),
+          durationMs: Date.now() - startedAt,
+          err: error,
+        },
         timedOut ? `the cli did not ${what} in time` : `the cli failed to ${what}`,
       );
 
@@ -453,9 +457,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       reason = 'failed';
       this.deps.logger.error(
         {
-          op: 'claude.session.lifecycle',
-          layer: 'adapter',
-          sessionId: this.start.sessionId.value,
+          ...this.logFields('engine.session.lifecycle', this.start.sessionId.value),
           phase: 'crashed',
           err: error,
         },
@@ -473,9 +475,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
     this.deps.logger.debug(
       {
-        op: 'claude.output',
-        layer: 'adapter',
-        sessionId,
+        ...this.logFields('engine.output', sessionId),
         // Type and subtype always, payload never: a `Read` result carries the contents of a file,
         // and that must not reach the log.
         messageType: message.type,
@@ -489,7 +489,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       // The survival rule. A variant added by an SDK release costs a log line and a follow-up,
       // never an outage on somebody's machine.
       this.deps.logger.warn(
-        { op: 'claude.output', layer: 'adapter', sessionId, variant: mapped.unknown },
+        { ...this.logFields('engine.output', sessionId), variant: mapped.unknown },
         'unmapped sdk message variant — dropped',
       );
     }
@@ -500,7 +500,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       // The point an edit-and-resend forks from was refused, and it would be refused again: said
       // once, and the session ends with its stream (D-19).
       this.deps.logger.warn(
-        { op: 'claude.session.lifecycle', layer: 'adapter', sessionId, phase: 'forkRejected' },
+        { ...this.logFields('engine.session.lifecycle', sessionId), phase: 'forkRejected' },
         'the cli refused the point of the fork',
       );
       this.start.onForkRejected?.();
@@ -528,9 +528,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
     if (this.reportedVersion === null && reported !== this.deps.bundledCliVersion) {
       this.deps.logger.warn(
         {
-          op: 'claude.session.lifecycle',
-          layer: 'adapter',
-          sessionId: this.start.sessionId.value,
+          ...this.logFields('engine.session.lifecycle', this.start.sessionId.value),
           bundledCliVersion: this.deps.bundledCliVersion,
           reportedCliVersion: reported,
         },
@@ -580,9 +578,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
         } catch (error) {
           this.deps.logger.error(
             {
-              op: 'claude.permission.request',
-              layer: 'adapter',
-              sessionId,
+              ...this.logFields('engine.permission.request', sessionId),
               toolName: hook.tool_name,
               err: error,
             },
@@ -600,9 +596,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
         this.deps.logger.debug(
           {
-            op: 'claude.permission.request',
-            layer: 'adapter',
-            sessionId,
+            ...this.logFields('engine.permission.request', sessionId),
             toolUseId,
             toolName: hook.tool_name,
             // The whole input, deliberately: this line is part of the trail, not a sample of it.
@@ -642,9 +636,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
     this.deps.logger.debug(
       {
-        op: 'claude.permission.request',
-        layer: 'adapter',
-        sessionId: this.start.sessionId.value,
+        ...this.logFields('engine.permission.request', this.start.sessionId.value),
         toolName: hook.tool_name,
         sessionMode: this.sdkMode,
         callMode: hook.permission_mode,
@@ -751,7 +743,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
     const shadowed = data.includes('CAN_USE_TOOL_SHADOWED');
 
     this.deps.logger.debug(
-      { op: 'claude.output', layer: 'adapter', sessionId, stderr: data.trim() },
+      { ...this.logFields('engine.output', sessionId), stderr: data.trim() },
       'sdk stderr',
     );
 
@@ -760,7 +752,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       // only place the SDK says so, and a backend that did not read this channel would see a
       // session behaving normally with the approval quietly switched off.
       this.deps.logger.error(
-        { op: 'claude.session.lifecycle', layer: 'adapter', sessionId, stderr: data.trim() },
+        { ...this.logFields('engine.session.lifecycle', sessionId), stderr: data.trim() },
         'the sdk reports canUseTool was shadowed by our own options',
       );
     }
@@ -784,12 +776,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       this.query?.close();
     } catch (error) {
       this.deps.logger.warn(
-        {
-          op: 'claude.session.lifecycle',
-          layer: 'adapter',
-          sessionId: this.start.sessionId.value,
-          err: error,
-        },
+        { ...this.logFields('engine.session.lifecycle', this.start.sessionId.value), err: error },
         'closing the query failed',
       );
     }
@@ -800,9 +787,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
     this.deps.logger.debug(
       {
-        op: 'claude.session.lifecycle',
-        layer: 'adapter',
-        sessionId: this.start.sessionId.value,
+        ...this.logFields('engine.session.lifecycle', this.start.sessionId.value),
         phase: 'closed',
         exitReason: reason,
       },

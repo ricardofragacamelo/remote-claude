@@ -5,7 +5,7 @@ import type { SessionId } from '@domain/session';
  * Whether a user owns a session — whatever kind of session it is.
  *
  * `session.attach` asks one question, and it is a transport question: may this connection receive
- * this stream? Two very different things answer it. A live session of Claude is a subprocess held
+ * this stream? Two very different things answer it. A live session of the agent is a subprocess held
  * in memory; a diagnostic session is a row and a counter. Neither knows about the other, and a use
  * case that reached into both would be the coupling this port exists to avoid.
  *

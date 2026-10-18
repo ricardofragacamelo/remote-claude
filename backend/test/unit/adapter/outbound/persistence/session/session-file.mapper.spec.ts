@@ -14,7 +14,6 @@ const stateRow = {
   sessionId: '01J0ABCDEFGHJKMNPQRSTVWXYZ',
   engine: 'claude',
   conversationId: CONVERSATION,
-  claudeSessionId: CONVERSATION,
   path: '/srv/a.md',
   hash: 'h',
   mtime: at,
@@ -26,7 +25,6 @@ const checkpointRow = {
   sessionId: '01J0ABCDEFGHJKMNPQRSTVWXYZ',
   engine: 'claude',
   conversationId: CONVERSATION,
-  claudeSessionId: CONVERSATION,
   promptId: 'p1',
   path: '/srv/a.md',
   existedBefore: 'present',
@@ -39,14 +37,6 @@ const checkpointRow = {
 };
 
 describe('the journal mapper', () => {
-  it('writes the old column beside the new two, until the window closes — plan 28, B-11', () => {
-    expect(toStateRow(toStateEntity(stateRow))).toMatchObject({
-      engine: 'claude',
-      conversationId: CONVERSATION,
-      claudeSessionId: CONVERSATION,
-    });
-  });
-
   it('reads and writes the conversation a state belongs to', () => {
     const entity = toStateEntity(stateRow);
 
@@ -59,18 +49,12 @@ describe('the journal mapper', () => {
       ...stateRow,
       engine: null,
       conversationId: null,
-      claudeSessionId: null,
       hash: null,
     });
 
     expect(entity.snapshot().conversation).toBeNull();
     expect(entity.hash).toBeNull();
-    expect(toStateRow(entity)).toMatchObject({
-      engine: null,
-      conversationId: null,
-      claudeSessionId: null,
-      hash: null,
-    });
+    expect(toStateRow(entity)).toMatchObject({ engine: null, conversationId: null, hash: null });
   });
 
   it('reads and writes the conversation a checkpoint belongs to', () => {
@@ -81,14 +65,8 @@ describe('the journal mapper', () => {
   });
 
   it('reads a checkpoint older than migration 0013 as belonging to no conversation', () => {
-    const entity = toCheckpointEntity({
-      ...checkpointRow,
-      engine: null,
-      conversationId: null,
-      claudeSessionId: null,
-    });
+    const entity = toCheckpointEntity({ ...checkpointRow, engine: null, conversationId: null });
 
     expect(toCheckpointRow(entity)).toMatchObject({ engine: null, conversationId: null });
-    expect(toCheckpointRow(entity).claudeSessionId).toBeNull();
   });
 });

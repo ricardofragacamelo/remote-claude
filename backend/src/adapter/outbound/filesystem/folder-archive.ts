@@ -151,7 +151,7 @@ export class FolderArchive {
   /**
    * What a child of a folder is to the zip: itself, when it is a file or a folder; the file it leads
    * to, for a link to a file inside the open folder; `null` for anything left out — and for what
-   * vanished between the listing and the look, which Claude does all the time.
+   * vanished between the listing and the look, which the agent does all the time.
    */
   private async followed(directory: FilePath, real: string): Promise<Stats | null> {
     try {

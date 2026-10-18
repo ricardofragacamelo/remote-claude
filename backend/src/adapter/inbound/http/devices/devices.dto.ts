@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { DevicePayload } from '@remote-claude/contracts';
+
 import { DEVICE_LOCALES, DEVICE_PLATFORMS } from '@domain/auth';
 import type { Device } from '@domain/auth';
 
@@ -24,35 +26,8 @@ export const registerDeviceSchema = z.object({
 
 export type RegisterDeviceBody = z.infer<typeof registerDeviceSchema>;
 
-/**
- * One device, as the client sees it.
- *
- * **The push token never crosses.** Not truncated, not hashed, not the last six characters: the
- * screen that lists devices has no use for it, and a value that is in a response is a value that
- * is in a browser's network tab and in whatever is proxying.
- */
-export interface DeviceDto {
-  readonly id: string;
-  readonly name: string;
-  readonly platform: string;
-  readonly appVersion: string;
-  readonly locale: string;
-  readonly status: string;
-  /** Whether this device has a push token at all — which is what the screen can act on. */
-  readonly pushEnabled: boolean;
-  readonly registeredAt: string;
-  readonly lastSeenAt: string;
-  readonly approvedAt: string | null;
-  readonly revokedAt: string | null;
-}
-
-/** The listing. An object and not a bare array, so the response can grow a field later. */
-export interface DeviceListDto {
-  readonly devices: readonly DeviceDto[];
-}
-
 /** The transport shape of a device. */
-export function toDeviceDto(device: Device): DeviceDto {
+export function toDeviceDto(device: Device): DevicePayload {
   const snapshot = device.snapshot();
 
   return {

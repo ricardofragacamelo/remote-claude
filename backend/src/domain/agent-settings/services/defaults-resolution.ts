@@ -39,6 +39,19 @@ export function nearestOverride<T extends { readonly folder: string }>(
 }
 
 /**
+ * The override stored for exactly `folder` — never an ancestor's, unlike {@link nearestOverride}.
+ * What a screen shows as "this folder's own override", `null` when it has none of its own.
+ */
+export function exactOverride<T extends { readonly folder: string }>(
+  overrides: readonly T[],
+  folder: string | null,
+): T | null {
+  return folder === null
+    ? null
+    : (overrides.find((override) => override.folder === folder) ?? null);
+}
+
+/**
  * One field as it applies: the override's value when it sets one, over the user's, over the
  * installation's (D-04).
  *

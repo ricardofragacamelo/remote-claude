@@ -52,7 +52,7 @@ Semente: a [discovery §12](../../discovery/10-nucleo-canonico-e-agentes-isolado
 | S-17 | `backend/src/application/` importando `*/engines/claude/` reprova o `lint:arch` | err | unit | `engine-extension-is-isolated` | B-06 | ✅ |
 | S-18 | `infrastructure/modules/engines/claude.module.ts` importando a extensão passa | eq | unit | — | B-06 | ✅ |
 | S-19 | `engines/<a>/` importando `engines/<b>/` reprova, no backend e no web | err | unit | `engines-do-not-know-each-other` | B-06 | ✅ |
-| S-20 | `web/src/features/` importando `web/src/engines/` reprova; `web/src/app/engines.ts` passa | eq | unit | `core-cannot-import-engines` | B-06 | ✅ |
+| S-20 | `web/src/features/` importando `web/src/engines/` reprova; `web/src/app/engines/index.ts` passa | eq | unit | `core-cannot-import-engines` | B-06 | ✅ |
 | S-21 | `mobile/lib/features/` importando `mobile/lib/engines/` reprova pelo `scripts/mobile.mjs arch` (o `import_lint` sai 0 e o script não) | err | unit | `features_cannot_import_engines` | B-06 | ✅ |
 | S-22 | um adapter importando arquivo interno de outro adapter reprova, exceto os 2 conhecidos com prazo na F5 | fron | unit | `adapters-do-not-know-each-other` | B-06 | ✅ |
 
@@ -312,27 +312,27 @@ Semente: a [discovery §12](../../discovery/10-nucleo-canonico-e-agentes-isolado
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-120 | a suíte de contrato da porta passa contra o adapter do Claude e contra o motor de teste | eq | integração | — | B-43 | ⬜ |
-| S-121 | o motor de teste nunca é registrado no build de produção | err | unit | — | B-43 | ⬜ |
-| S-122 | uma sessão do Claude e uma do motor de teste ao mesmo tempo, na mesma pasta, não se misturam | conc | integração | — | B-43 | ⬜ |
+| S-120 | a suíte de contrato da porta passa contra o adapter do Claude e contra o motor de teste | eq | integração | — | B-43 | ✅ |
+| S-121 | o motor de teste nunca é registrado no build de produção | err | unit | — | B-43 | ✅ |
+| S-122 | uma sessão do Claude e uma do motor de teste ao mesmo tempo, na mesma pasta, não se misturam | conc | integração | — | B-43 | ✅ |
 
 ## E2E — B-44…B-46
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-123 | web: uma conversa no motor de teste desenha cada `kind` igual ao do Claude, e a permissão é aprovada pela mesma tela | eq | e2e | — | B-44 | ⬜ |
-| S-124 | web: no motor de teste, os controles sem capacidade não existem, e nenhuma tela do núcleo diz "Claude" | fron | e2e | — | B-44 | ⬜ |
-| S-125 | app: a mesma conversa do S-123, no emulador | eq | e2e | — | B-45 | ⬜ |
-| S-126 | app: os controles sem capacidade não existem, e o texto diz "Test agent" | fron | e2e | — | B-45 | ⬜ |
-| S-127 | todos os e2e de hoje, do web e do app, verdes sem mudar cenário | eq | e2e | — | B-46 | ⬜ |
-| S-128 | o `smoke-live` contra o Claude real: as formas canônicas saem do CLI instalado | eq | e2e | — | B-46 | ⬜ |
+| S-123 | web: uma conversa no motor de teste desenha cada `kind` igual ao do Claude, e a permissão é aprovada pela mesma tela | eq | e2e | — | B-44 | ✅ |
+| S-124 | web: no motor de teste, os controles sem capacidade não existem, e nenhuma tela do núcleo diz "Claude" | fron | e2e | — | B-44 | ✅ |
+| S-125 | app: a mesma conversa do S-123, no emulador | eq | e2e | — | B-45 | ✅ |
+| S-126 | app: os controles sem capacidade não existem, e o texto diz "Test agent" | fron | e2e | — | B-45 | ✅ |
+| S-127 | todos os e2e de hoje, do web e do app, verdes sem mudar cenário | eq | e2e | — | B-46 | ✅ |
+| S-128 | o `smoke-live` contra o Claude real: as formas canônicas saem do CLI instalado | eq | e2e | — | B-46 | ✅ |
 
 ## Fim da janela — B-47
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-129 | com o baseline vazio, qualquer violação nova no núcleo reprova o portão 11 | err | unit | violação nova | B-47 | ⬜ |
-| S-130 | fechada a janela, um cliente em `v` recebe o fechamento de versão do handshake, e a migration remove `claude_session_id` | est | integração | `4426` | B-47 | ⬜ |
+| S-129 | com o baseline vazio, qualquer violação nova no núcleo reprova o portão 11 | err | unit | violação nova | B-47 | ✅ |
+| S-130 | fechada a janela, um cliente em `v` recebe o fechamento de versão do handshake, e a migration remove `claude_session_id` | est | integração | `4426` | B-47 | ✅ |
 
 ## A gramática canônica e a migração das regras — B-31, B-33
 

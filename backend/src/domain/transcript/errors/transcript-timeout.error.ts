@@ -1,7 +1,7 @@
 import { DomainError } from '@domain/shared';
 
 /**
- * The Agent SDK did not finish reading the history within the deadline.
+ * The engine did not finish reading the history within the deadline.
  *
  * Every call that leaves the process has an explicit deadline, and a read of the store is one
  * (docs/architecture/shared/04-errors-and-http.md). `504`, because upstream did not answer — which

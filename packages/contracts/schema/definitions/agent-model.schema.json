@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/agent-model.json",
+  "title": "AgentModel",
+  "description": "A model of an engine's installation, as the clients read it (plan 13, B-13; plan 28, B-36) — discovered from the engine, never a list in the code.",
+  "type": "object",
+  "required": [
+    "value",
+    "resolvedModel",
+    "displayName",
+    "description",
+    "supportedEffortLevels",
+    "supportsEffort"
+  ],
+  "properties": {
+    "value": {
+      "type": "string",
+      "description": "What `setModel` and `session.start.model` take."
+    },
+    "resolvedModel": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The id an alias resolves to, when the installation says."
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Data of the installation, shown as it is — like the description of a slash command."
+    },
+    "description": {
+      "type": "string"
+    },
+    "supportedEffortLevels": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "string",
+        "enum": ["low", "medium", "high", "xhigh", "max"]
+      },
+      "description": "The levels of effort this model takes — empty when it takes none."
+    },
+    "supportsEffort": {
+      "type": "boolean",
+      "description": "Whether the model takes an effort at all, said by whether `supportedEffortLevels` is empty — kept on the wire for clients that read the flag rather than the list."
+    }
+  }
+}

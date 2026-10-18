@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/notification.json",
+  "title": "Notification",
+  "description": "`POST /notifications`: keeps a notification — `201` when new, `200` with the one already kept under the same client id. The same shape as one entry of `NotificationPage.items`, named again rather than declared twice (plan 28, B-48).",
+  "x-kind": "http",
+  "x-type": "notifications.notification",
+  "x-route": [{ "method": "POST", "path": "/notifications" }],
+  "$ref": "../definitions/notification.schema.json"
+}

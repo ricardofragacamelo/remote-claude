@@ -166,16 +166,16 @@ Fonte da verdade. Erro novo entra aqui **antes** de existir no código.
 | `TRANSCRIPT_FOLLOW_LIMIT` | 429 | transcript | Teto de conversas acompanhadas: por connection ou no total do servidor (`transcript.error.followLimit`, `params.limit`, `params.scope`: `connection`·`server`). Soltar uma assinatura abre lugar ([22 · D-11](../../plans/22-live-history/decisions.md#f2--seguidor-no-backend)) |
 | `TRANSCRIPT_FOLLOW_LIVE_HERE` | 409 | transcript | `transcript.follow` de uma conversa que uma sessão viva **do chamador** segura: quem a mostra é a tela da sessão, por `session.attach` (`transcript.error.followLiveHere`, `params.liveSessionId`) |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | transcript | A imagem de um prompt do histórico em tipo que a rota não serve — só `image/png`, `image/jpeg`, `image/gif` e `image/webp`; SVG executa script (`transcript.error.imageTypeUnsupported`, `params.mediaType`). Acima do teto é `PAYLOAD_TOO_LARGE` com `transcript.error.imageTooLarge` (`params.size`, `params.limit`) ([22 · D-10](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)) |
-| `MCP_SERVER_NOT_FOUND` | 404 | claude-config | Servidor MCP do store que não existe, ou nome que a sessão viva não tem (`claudeConfig.error.mcpServerNotFound`, `params.serverId`) ([plano 13](../../plans/13-claude-settings/README.md)) |
-| `MCP_SERVER_NAME_TAKEN` | 409 | claude-config | Outro servidor do mesmo usuário, no mesmo escopo, tem o nome — as tools são chamadas por ele (`claudeConfig.error.mcpServerNameTaken`, `params.name`) |
-| `MCP_SERVER_CONFIG_INVALID` | 422 | claude-config | Configuração entendida e impossível: nome com `__`, URL fora de `http(s)`, variável que muda como o processo carrega, teto passado (`claudeConfig.error.mcpServerConfigInvalid`, `params.rule`, `params.field`) |
-| `MCP_APPROVAL_STALE` | 409 | claude-config | O `.mcp.json` mudou entre mostrar e aprovar: o digest enviado não é o da entrada de agora (`claudeConfig.error.mcpApprovalStale`, `params.folder`, `params.name`) |
-| `MODEL_NOT_AVAILABLE` | 422 | claude-config | Padrão com um modelo que a instalação não oferece, conferido no catálogo ao gravar (`claudeConfig.error.modelNotAvailable`, `params.model`) |
-| `DEFAULT_MODE_NOT_ALLOWED` | 422 | claude-config | `bypassPermissions` como padrão (`claudeConfig.error.defaultModeNotAllowed`, `params.mode`) |
-| `PLUGIN_NOT_FOUND` | 404 | claude-config | Plugin do store que não existe (`claudeConfig.error.pluginNotFound`, `params.pluginId`) |
-| `PLUGIN_PATH_INVALID` | 422 | claude-config | Diretório sem manifesto de plugin, fonte de marketplace de tipo que não buscamos, caminho que sai do repositório (`claudeConfig.error.pluginPathInvalid`, `params.reason`) |
-| `PLUGIN_MARKETPLACE_NOT_ALLOWED` | 403 | claude-config | Marketplace fora do arquivo da allowlist: só quem tem acesso ao disco acrescenta fonte (`claudeConfig.error.pluginMarketplaceNotAllowed`, `params.marketplace`) |
-| `PLUGIN_SOURCE_UNAVAILABLE` | 502 | claude-config | A fonte de um marketplace declarado não respondeu, ou não tem o commit; nada foi gravado nem ficou pela metade (`claudeConfig.error.pluginSourceUnavailable`, `params.marketplace`) |
+| `MCP_SERVER_NOT_FOUND` | 404 | mcp | Servidor MCP do store que não existe, ou nome que a sessão viva não tem (`mcp.error.serverNotFound`, `params.serverId`) ([plano 13](../../plans/13-claude-settings/README.md)) |
+| `MCP_SERVER_NAME_TAKEN` | 409 | mcp | Outro servidor do mesmo usuário, no mesmo escopo, tem o nome — as tools são chamadas por ele (`mcp.error.serverNameTaken`, `params.name`) |
+| `MCP_SERVER_CONFIG_INVALID` | 422 | mcp | Configuração entendida e impossível: nome com `__`, URL fora de `http(s)`, variável que muda como o processo carrega, teto passado (`mcp.error.serverConfigInvalid`, `params.rule`, `params.field`) |
+| `MCP_APPROVAL_STALE` | 409 | mcp | O `.mcp.json` mudou entre mostrar e aprovar: o digest enviado não é o da entrada de agora (`mcp.error.approvalStale`, `params.folder`, `params.name`) |
+| `MODEL_NOT_AVAILABLE` | 422 | agent-settings | Padrão com um modelo que a instalação não oferece, conferido no catálogo ao gravar (`agentSettings.error.modelNotAvailable`, `params.model`) |
+| `DEFAULT_MODE_NOT_ALLOWED` | 422 | agent-settings | `bypassPermissions` como padrão (`agentSettings.error.defaultModeNotAllowed`, `params.mode`) |
+| `PLUGIN_NOT_FOUND` | 404 | engines/claude | Plugin do store que não existe (`engines.claude.error.pluginNotFound`, `params.pluginId`) |
+| `PLUGIN_PATH_INVALID` | 422 | engines/claude | Diretório sem manifesto de plugin, fonte de marketplace de tipo que não buscamos, caminho que sai do repositório (`engines.claude.error.pluginPathInvalid`, `params.reason`) |
+| `PLUGIN_MARKETPLACE_NOT_ALLOWED` | 403 | engines/claude | Marketplace fora do arquivo da allowlist: só quem tem acesso ao disco acrescenta fonte (`engines.claude.error.pluginMarketplaceNotAllowed`, `params.marketplace`) |
+| `PLUGIN_SOURCE_UNAVAILABLE` | 502 | engines/claude | A fonte de um marketplace declarado não respondeu, ou não tem o commit; nada foi gravado nem ficou pela metade (`engines.claude.error.pluginSourceUnavailable`, `params.marketplace`) |
 | `AGENT_UNAVAILABLE` | 502 | session, transcript | O agente falhou ou morreu — o subprocesso, a leitura do histórico ou a lista de slash commands; `params.engine` diz qual (`session.error.agentUnavailable`, `transcript.error.agentUnavailable`) |
 | `AGENT_TIMEOUT` | 504 | session, transcript | O agente não respondeu no prazo — inclusive a leitura do histórico e a lista de slash commands; `params.engine` diz qual (`session.error.agentTimeout`, `transcript.error.agentTimeout`) |
 | `ENGINE_CAPABILITY_UNAVAILABLE` | 409 | engine | Pediu-se o que o motor da sessão não tem — um `control` ausente, `session.compact` sem `compaction`, `GET /sessions/:id/context` sem `contextUse`; nunca `500` nem `undefined` (`engine.error.capabilityUnavailable`, params `engine`, `capability`) |
@@ -197,10 +197,11 @@ Ver [backend/03](../backend/03-modules.md#session).
 
 ---
 
-O `claude-config` reusa ainda `INVALID_INPUT` (`claudeConfig.error.effortUnsupported`,
-`claudeConfig.error.fallbackSameAsModel`, `claudeConfig.error.skillNameInvalid`), `FORBIDDEN`
-(`claudeConfig.error.forbidden` — servidor, plugin ou sobreposição de outra pessoa) e `SERVICE_UNAVAILABLE`
-(`claudeConfig.error.secretStoreUnavailable` — sem o arquivo de chave, servidor **com** segredo não é
+O `agent-settings`, o `mcp` e o `engines/claude` reusam ainda `INVALID_INPUT`
+(`agentSettings.error.effortUnsupported`, `agentSettings.error.fallbackSameAsModel`,
+`engines.claude.error.skillNameInvalid`), `FORBIDDEN` (`agentSettings.error.forbidden` — servidor,
+plugin ou sobreposição de outra pessoa, do núcleo e da extensão) e `SERVICE_UNAVAILABLE`
+(`mcp.error.secretStoreUnavailable` — sem o arquivo de chave, servidor **com** segredo não é
 gravado; o resto funciona).
 
 ## Erro no WebSocket

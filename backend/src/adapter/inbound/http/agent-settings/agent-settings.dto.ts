@@ -37,13 +37,26 @@ export const folderDefaultsSchema = z.object({ folder: folderField, ...defaultsF
 export type UserDefaultsBody = z.infer<typeof userDefaultsSchema>;
 export type FolderDefaultsBody = z.infer<typeof folderDefaultsSchema>;
 
-/** The defaults a body states, in the domain's shape. */
-export function defaultsOf(body: UserDefaultsBody): AgentDefaults {
+/**
+ * The four fields every default body shares, whatever `permissionMode` of its own it validates —
+ * the window of the previous protocol widens that one to a name this core no longer has
+ * ([D-40](../../../../../../docs/plans/28-agent-neutral-core/decisions.md#f4--modos-esforço-uso-e-blocos)).
+ */
+export function commonDefaultFields(body: {
+  readonly model: string | null;
+  readonly effort: AgentDefaults['effort'];
+  readonly thinking: AgentDefaults['thinking'];
+  readonly fallbackModel: string | null;
+}): Omit<AgentDefaults, 'permissionMode'> {
   return {
     model: body.model,
-    permissionMode: body.permissionMode,
     effort: body.effort,
     thinking: body.thinking,
     fallbackModel: body.fallbackModel,
   };
+}
+
+/** The defaults a body states, in the domain's shape. */
+export function defaultsOf(body: UserDefaultsBody): AgentDefaults {
+  return { ...commonDefaultFields(body), permissionMode: body.permissionMode };
 }

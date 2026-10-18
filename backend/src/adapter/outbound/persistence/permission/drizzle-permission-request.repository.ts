@@ -12,7 +12,7 @@ import { toRow } from './permission-request.mapper';
 /**
  * `permission_requests`, in PostgreSQL.
  *
- * The open write ignores a conflict on the primary key. The SDK redelivers a pending tool call
+ * The open write ignores a conflict on the primary key. The engine redelivers a pending tool call
  * after a transport gap with the **same** `requestId`, and that redelivery is the same question,
  * not a second one — the registry already answers it from memory, and the row must not be
  * replaced by one that would reset a settlement already recorded.

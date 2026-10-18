@@ -311,7 +311,7 @@ describe('engine-neutrality.mjs', () => {
     const second = runScript('engine-neutrality.mjs');
 
     expect(first.code).toBe(0);
-    expect(first.stdout).toContain('the core names no coding agent beyond the baseline');
+    expect(first.stdout).toContain('the core names no coding agent');
     expect(second.stdout).toBe(first.stdout);
     expect(fs.readFileSync(baseline, 'utf8')).toBe(before);
   });

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/open-folders.json",
+  "title": "OpenFolders",
+  "description": "`GET /workspaces/open-folders`: the folder tabs, in the order the user left them, each revalidated (plan 06).",
+  "x-kind": "http",
+  "x-type": "workspaces.openFolders",
+  "x-route": [{ "method": "GET", "path": "/workspaces/open-folders" }],
+  "type": "object",
+  "required": ["folders"],
+  "properties": {
+    "folders": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "../definitions/open-folder-entry.schema.json"
+      }
+    }
+  }
+}

@@ -178,7 +178,7 @@ web/src/features/diagnostics/
 ├── services/ · hooks/             logs, tail, facetas, rastreio, nível, capacidades, saúde, ping
 └── components/                    LogsScreen · LogList · LogLine · LogFilters · TraceDrawer · LogLevelControl
                                    HealthScreen · HealthCheckCard · BrowserPanel · PingCheck · DiagnosticReport
-web/src/engines/claude/diagnostics/   a ação da sonda e a ajuda própria, registradas pelo web/src/app/engines.ts
+web/src/engines/claude/diagnostics/   a ação da sonda e a ajuda própria, registradas pelo web/src/app/engines/index.ts
 web/src/shared/components/         TraceLink (o "ver nos logs" de todo estado de erro)
 web/src/shared/logging/            nível do navegador em execução
 

@@ -6,7 +6,7 @@ export { devices } from './auth.schema';
 export { agentDefaults } from './agent-settings.schema';
 export { mcpProjectApprovals, mcpServerSecrets, mcpServers } from './mcp.schema';
 // The tables of the engines' extensions, each under its prefix.
-export * from './engines/claude.schema';
+export * from './engines';
 export { fileHistoryEntries } from './file-history.schema';
 export { notifications } from './notifications.schema';
 export { diagSessions } from './diag.schema';
