@@ -103,7 +103,6 @@ import { TranscriptModuleConversationSource } from '@adapter/outbound/session/tr
 import { AuditToolInvocationRecorder } from '@adapter/outbound/session/audit-tool-invocation.recorder';
 import { DiskSessionFileJournal } from '@adapter/outbound/session/disk-session-file.journal';
 import { EmitterSessionFileEvents } from '@adapter/outbound/session/emitter-session-file.events';
-import { HubSessionBroadcaster } from '@adapter/outbound/session/hub-session.broadcaster';
 import { RegistrySessionOwnership } from '@adapter/outbound/session/registry-session.ownership';
 import { WorkspaceModuleResolver } from '@adapter/outbound/session/workspace-module.resolver';
 import { APP_CONFIG } from '../config/environment';
@@ -279,7 +278,6 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     ReleaseAgentLoopOnResolved,
     RecordDecisionOnResolved,
     LogQuestionAnswered,
-    { provide: SESSION_BROADCASTER, useClass: HubSessionBroadcaster },
     WorkspaceModuleResolver,
     { provide: WORKSPACE_RESOLVER, useExisting: WorkspaceModuleResolver },
     { provide: FOLDER_LOCATOR, useExisting: WorkspaceModuleResolver },

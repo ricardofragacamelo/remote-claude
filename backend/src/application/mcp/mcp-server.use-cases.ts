@@ -9,6 +9,7 @@ import { mergeSecretFields } from './merge-secret-fields';
 import type { McpEngineCapabilities } from './mcp-engine-capabilities';
 import type { McpEngineDialects } from './mcp-engine-dialects';
 import { ownedServer } from './owned-server';
+import type { LiveSessionMcpRevocation } from './ports/live-session-mcp-revocation.port';
 import {
   DuplicateMcpServerNameError,
   type McpSecretField,
@@ -25,6 +26,9 @@ export interface McpServerDependencies {
   readonly trail: RecordAuditEventUseCase;
   readonly ids: IdGenerator;
   readonly clock: Clock;
+
+  /** Reaches every live session when a server is disabled or removed (plan 13, B-23). */
+  readonly liveSessions: LiveSessionMcpRevocation;
 }
 
 const NO_SECRETS: readonly McpSecretField[] = [];
@@ -229,12 +233,17 @@ export class UpdateMcpServerUseCase {
 
 /**
  * `PATCH /engines/:engine/mcp-servers/:id` — turning a server on or off within the store (plan 13,
- * B-19; the session-wide effect of this is B-23).
+ * B-19).
  *
  * Disabling narrows what can run, so it is safe by default: the store write happens first and
  * stands even if the audit write that follows fails — the same shape {@link
  * import('@application/permission').RevokePermissionRuleUseCase} uses for revoking a rule. Enabling
  * widens it back, so an audit failure reverts it, like {@link CreateMcpServerUseCase}.
+ *
+ * Disabling also reaches every live session that has the server, turning it off there too, right
+ * away — never waiting for the audit, which can fail without undoing either effect (plan 13, B-23,
+ * D-10). Enabling reaches no live session: the asymmetry is the same one revoking and granting a
+ * permission rule already have.
  */
 export class SetMcpServerEnabledUseCase {
   constructor(private readonly deps: McpServerDependencies) {}
@@ -255,6 +264,11 @@ export class SetMcpServerEnabledUseCase {
     }
 
     const stored = await this.deps.servers.setEnabled(serverId, enabled, at);
+
+    if (!enabled) {
+      await this.deps.liveSessions.disableEverywhere(userId, engine, before.name);
+    }
+
     const event = serverEvent('mcp.serverToggled', userId, engine, serverId, before, null, at);
 
     if (enabled) {
@@ -277,7 +291,8 @@ export class SetMcpServerEnabledUseCase {
  *
  * Narrowing, so it is safe by default — the row is gone whether or not the trail could keep up, the
  * same choice {@link import('@application/permission').RevokePermissionRuleUseCase} makes for a
- * revocation.
+ * revocation. Reaches every live session that has the server too, the same as disabling it does
+ * (plan 13, B-23, D-10).
  */
 export class DeleteMcpServerUseCase {
   constructor(private readonly deps: McpServerDependencies) {}
@@ -294,6 +309,7 @@ export class DeleteMcpServerUseCase {
     const at = this.deps.clock.now();
 
     await this.deps.servers.delete(serverId);
+    await this.deps.liveSessions.disableEverywhere(userId, engine, server.name);
     await this.deps.trail.execute(
       serverEvent('mcp.serverRemoved', userId, engine, serverId, server, null, at),
     );

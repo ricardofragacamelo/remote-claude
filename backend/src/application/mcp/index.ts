@@ -34,3 +34,6 @@ export type {
   RevealedMcpServer,
   StoredMcpServer,
 } from './ports/mcp-server-repository.port';
+
+export { LIVE_SESSION_MCP_REVOCATION } from './ports/live-session-mcp-revocation.port';
+export type { LiveSessionMcpRevocation } from './ports/live-session-mcp-revocation.port';

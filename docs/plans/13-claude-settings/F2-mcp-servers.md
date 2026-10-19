@@ -153,10 +153,12 @@ capacidade; sem ações, que ficam no web ([D-32](decisions.md#decididas-durante
 das duas pontas decide pelo nome do motor. Os rótulos de status entram no `i18n-shared.json`, com chaves neutras.
 Cenários S-88…S-96, S-215.
 
-### B-23 — Mudança de configuração e sessões vivas 🔲
+### B-23 — Mudança de configuração e sessões vivas ✅
 
 [D-10](decisions.md#d-10--mudança-de-mcp-e-sessões-vivas): **apertar vale já, afrouxar vale na próxima
-sessão** — a mesma assimetria que a revogação de regra tem no plano 03. Remover ou desligar um servidor
+sessão** — a mesma assimetria que a revogação de regra tem no plano 03, mas não o mesmo mecanismo de
+código: a regra lá não empurra nada (lida de novo a cada request); B-23 varre `SessionRegistry.all()`
+e empurra, o mesmo formato de `ReapIdleSessionsUseCase`/`ShutdownSessionsUseCase` ([D-47](decisions.md#d-47--b-23-usa-o-formato-de-varredura-não-o-de-revogação-de-regra)). Remover ou desligar um servidor
 no store desliga-o, pela porta do motor (no Claude, o adapter chama `toggleMcpServer(name, false)`), em toda
 sessão viva do usuário que o tem naquele motor, com `session.mcpStatusChanged`; um servidor descoberto malicioso não pode continuar rodando até a sessão
 fechar. Adicionar ou ligar vale na próxima sessão, e a resposta e a tela dizem isso. Cenários S-97…S-99.

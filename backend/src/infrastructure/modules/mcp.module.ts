@@ -3,10 +3,12 @@ import { Module } from '@nestjs/common';
 import { McpServersController } from '@adapter/inbound/http/engines/mcp-servers.controller';
 import { DrizzleMcpServerRepository } from '@adapter/outbound/persistence/mcp/mcp-server.repository';
 import { MCP_SECRET_KEY_FILE } from '@adapter/outbound/persistence/mcp/mcp-server.repository';
+import { SessionRegistryLiveMcpRevocation } from '@adapter/outbound/mcp/session-registry.live-mcp-revocation';
 import {
   ComposeSessionMcpServersUseCase,
   CreateMcpServerUseCase,
   DeleteMcpServerUseCase,
+  LIVE_SESSION_MCP_REVOCATION,
   ListMcpServersUseCase,
   MCP_SERVER_REPOSITORY,
   McpEngineCapabilities,
@@ -15,7 +17,17 @@ import {
   SetMcpServerEnabledUseCase,
   UpdateMcpServerUseCase,
 } from '@application/mcp';
-import type { McpServerDependencies, McpServerRepository } from '@application/mcp';
+import type {
+  LiveSessionMcpRevocation,
+  McpServerDependencies,
+  McpServerRepository,
+} from '@application/mcp';
+import {
+  DisableMcpServerEverywhereUseCase,
+  SESSION_BROADCASTER,
+  SessionRegistry,
+} from '@application/session';
+import type { SessionBroadcaster } from '@application/session';
 import { RecordAuditEventUseCase } from '@application/audit';
 import { CLOCK, ID_GENERATOR } from '@application/shared';
 import type { Clock, IdGenerator } from '@domain/shared';
@@ -24,6 +36,7 @@ import type { AppConfig } from '../config/environment';
 import { engineMcpProviders } from './engines';
 import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
+import { SessionRegistryModule } from './session-registry.module';
 
 /** What every MCP server use case is built with. */
 const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
@@ -34,10 +47,16 @@ const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
  * through {@link McpEngineDialects}, built by {@link engineMcpProviders} from whichever engines the
  * composition enables, never imported here by name.
  *
+ * Disabling or removing a server reaches a live session too (plan 13, B-23), through
+ * {@link LiveSessionMcpRevocation} — never `application/session` directly, which already imports
+ * this module for B-21 (`ComposeSessionMcpServersUseCase`) and would cycle back. `SessionRegistry`
+ * and the broadcaster come from `SessionRegistryModule`, a leaf of `session`'s own for exactly this
+ * (docs/architecture/backend/03-modules.md#fronteiras).
+ *
  * See docs/architecture/backend/03-modules.md#mcp.
  */
 @Module({
-  imports: [AuditModule, AuthModule],
+  imports: [AuditModule, AuthModule, SessionRegistryModule],
   controllers: [McpServersController],
   providers: [
     ...engineMcpProviders,
@@ -48,6 +67,13 @@ const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
       useFactory: (config: AppConfig) => config.mcp.secretKeyFile,
     },
     {
+      provide: DisableMcpServerEverywhereUseCase,
+      inject: [SessionRegistry, SESSION_BROADCASTER],
+      useFactory: (registry: SessionRegistry, broadcaster: SessionBroadcaster) =>
+        new DisableMcpServerEverywhereUseCase(registry, broadcaster),
+    },
+    { provide: LIVE_SESSION_MCP_REVOCATION, useClass: SessionRegistryLiveMcpRevocation },
+    {
       provide: MCP_SERVER_DEPENDENCIES,
       inject: [
         MCP_SERVER_REPOSITORY,
@@ -56,6 +82,7 @@ const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
         RecordAuditEventUseCase,
         ID_GENERATOR,
         CLOCK,
+        LIVE_SESSION_MCP_REVOCATION,
       ],
       useFactory: (
         servers: McpServerRepository,
@@ -64,7 +91,16 @@ const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
         trail: RecordAuditEventUseCase,
         ids: IdGenerator,
         clock: Clock,
-      ): McpServerDependencies => ({ servers, capabilities, dialects, trail, ids, clock }),
+        liveSessions: LiveSessionMcpRevocation,
+      ): McpServerDependencies => ({
+        servers,
+        capabilities,
+        dialects,
+        trail,
+        ids,
+        clock,
+        liveSessions,
+      }),
     },
     {
       provide: ListMcpServersUseCase,

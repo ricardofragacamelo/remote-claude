@@ -2,6 +2,7 @@
 export { AttachSessionUseCase } from './attach-session.use-case';
 export type { AttachedSession, SessionConversations } from './attach-session.use-case';
 export { StartSessionUseCase } from './start-session.use-case';
+export { DisableMcpServerEverywhereUseCase } from './disable-mcp-server-everywhere.use-case';
 export { ListLiveSessionsUseCase } from './list-live-sessions.use-case';
 export type { LiveSessionListing } from './list-live-sessions.use-case';
 export type { FolderLocator } from './ports/folder-locator.port';

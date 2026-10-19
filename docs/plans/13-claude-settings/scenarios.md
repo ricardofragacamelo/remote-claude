@@ -150,9 +150,9 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-94 | `needs-auth` aparece com explicação; nenhuma URL de OAuth trafega pelo produto | fron | integração | — | B-22 | ✅ |
 | S-95 | depois de um `gap`, o cliente relê o status por HTTP e o indicador do painel volta coerente | est | integração | — | B-22 | ✅ |
 | S-96 | a mensagem de erro que o servidor devolve é redigida antes de ir ao cliente (URL com token) | err | unit | — | B-22 | ✅ |
-| S-97 | remover ou desligar no store com sessão viva do usuário → desligado já nela, com `session.mcpStatusChanged` | est | integração | — | B-23 | ⬜ |
-| S-98 | adicionar ou ligar com sessão viva → vale na próxima sessão, e a resposta diz isso | est | integração | — | B-23 | ⬜ |
-| S-99 | remover durante um turno que usa a tool do servidor → a próxima invocação falha, e o turno não trava | conc | integração | — | B-23 | ⬜ |
+| S-97 | remover ou desligar no store com sessão viva do usuário → desligado já nela, com `session.mcpStatusChanged` | est | integração | — | B-23 | ✅ |
+| S-98 | adicionar ou ligar com sessão viva → vale na próxima sessão, e a resposta diz isso | est | integração | — | B-23 | ✅ |
+| S-99 | remover durante um turno que usa a tool do servidor → a próxima invocação falha, e o turno não trava | conc | integração | — | B-23 | ✅ |
 
 ## `.mcp.json` do projeto — B-24
 

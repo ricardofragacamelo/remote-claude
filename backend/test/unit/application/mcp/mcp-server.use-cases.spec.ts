@@ -12,6 +12,7 @@ import {
   UpdateMcpServerUseCase,
 } from '@application/mcp';
 import type {
+  LiveSessionMcpRevocation,
   McpServerDependencies,
   McpServerFieldsInput,
   McpServerRepository,
@@ -125,6 +126,17 @@ class RevealRacingMcpServerRepository implements McpServerRepository {
   }
 }
 
+/** Records every call, so a test can tell whether the narrowing path reached it — plan 13, B-23. */
+class RecordingLiveSessionMcpRevocation implements LiveSessionMcpRevocation {
+  readonly calls: { readonly userId: UserId; readonly engine: string; readonly name: string }[] =
+    [];
+
+  disableEverywhere(userId: UserId, engine: string, name: string): Promise<void> {
+    this.calls.push({ userId, engine, name });
+    return Promise.resolve();
+  }
+}
+
 function harness(
   wrap: (base: InMemoryMcpServerRepository) => McpServerRepository = (base) => base,
 ) {
@@ -132,6 +144,7 @@ function harness(
   const base = new InMemoryMcpServerRepository();
   const repository = wrap(base);
   const clock = new FixedClock(new Date('2026-10-19T12:00:00Z'));
+  const liveSessions = new RecordingLiveSessionMcpRevocation();
   const deps: McpServerDependencies = {
     servers: repository,
     capabilities: new McpEngineCapabilities([ENGINE]),
@@ -139,11 +152,13 @@ function harness(
     trail: new RecordAuditEventUseCase(events, new SequentialIds()),
     ids: new SequentialIds('server-'),
     clock,
+    liveSessions,
   };
   return {
     events,
     repository,
     clock,
+    liveSessions,
     create: new CreateMcpServerUseCase(deps),
     update: new UpdateMcpServerUseCase(deps),
     setEnabled: new SetMcpServerEnabledUseCase(deps),
@@ -243,6 +258,7 @@ describe('MCP server use cases — plan 13, B-19', () => {
         trail: new RecordAuditEventUseCase(new RecordingAuditEvents(), new SequentialIds()),
         ids: new SequentialIds('server-'),
         clock: new FixedClock(new Date('2026-10-19T12:00:00Z')),
+        liveSessions: new RecordingLiveSessionMcpRevocation(),
       });
 
       await expect(create.execute(USER, ENGINE, STDIO_FIELDS)).rejects.toThrow('disk full');
@@ -356,6 +372,7 @@ describe('MCP server use cases — plan 13, B-19', () => {
         trail: new RecordAuditEventUseCase(events, new SequentialIds()),
         ids: new SequentialIds('server-'),
         clock: new FixedClock(new Date('2026-10-19T12:00:00Z')),
+        liveSessions: new RecordingLiveSessionMcpRevocation(),
       });
 
       await expect(update.execute(USER, ENGINE, created.id, STDIO_FIELDS)).rejects.toThrow(
@@ -374,6 +391,7 @@ describe('MCP server use cases — plan 13, B-19', () => {
         trail: new RecordAuditEventUseCase(events, new SequentialIds()),
         ids: new SequentialIds('server-'),
         clock: new FixedClock(new Date('2026-10-19T12:00:00Z')),
+        liveSessions: new RecordingLiveSessionMcpRevocation(),
       });
 
       await expect(
@@ -428,6 +446,36 @@ describe('MCP server use cases — plan 13, B-19', () => {
       events.failure = null;
       expect((await repository.findById(created.id))?.enabled).toBe(false);
     });
+
+    it('reaches every live session that has the server when disabling it — S-97', async () => {
+      const { create, setEnabled, liveSessions } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+
+      await setEnabled.execute(USER, ENGINE, created.id, false);
+
+      expect(liveSessions.calls).toEqual([{ userId: USER, engine: ENGINE, name: 'github' }]);
+    });
+
+    it('reaches no live session when enabling it — the widening half waits for the next session, S-98', async () => {
+      const { create, setEnabled, liveSessions } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+      await setEnabled.execute(USER, ENGINE, created.id, false);
+      liveSessions.calls.length = 0;
+
+      await setEnabled.execute(USER, ENGINE, created.id, true);
+
+      expect(liveSessions.calls).toEqual([]);
+    });
+
+    it('still reaches every live session even when the trail that follows fails — S-97', async () => {
+      const { create, setEnabled, events, liveSessions } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+      events.failure = new Error('trail unavailable');
+
+      await expect(setEnabled.execute(USER, ENGINE, created.id, false)).rejects.toThrow();
+
+      expect(liveSessions.calls).toEqual([{ userId: USER, engine: ENGINE, name: 'github' }]);
+    });
   });
 
   describe('DeleteMcpServerUseCase — S-78', () => {
@@ -459,6 +507,24 @@ describe('MCP server use cases — plan 13, B-19', () => {
         McpServerForbiddenError,
       );
       expect(await repository.findById(created.id)).not.toBeNull();
+    });
+
+    it('reaches every live session that has the server — S-97', async () => {
+      const { create, remove, liveSessions } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+
+      await remove.execute(USER, ENGINE, created.id);
+
+      expect(liveSessions.calls).toEqual([{ userId: USER, engine: ENGINE, name: 'github' }]);
+    });
+
+    it('does not reach any live session for somebody else’s server', async () => {
+      const { create, remove, liveSessions } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+
+      await expect(remove.execute(OTHER_USER, ENGINE, created.id)).rejects.toThrow();
+
+      expect(liveSessions.calls).toEqual([]);
     });
   });
 
