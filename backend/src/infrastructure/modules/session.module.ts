@@ -46,6 +46,7 @@ import {
   TOOL_INVOCATION_RECORDER,
   WORKSPACE_RESOLVER,
   SESSION_CONFIGURATION_SOURCE,
+  SESSION_MCP_SERVERS_SOURCE,
 } from '@application/session';
 import type {
   ChangeStores,
@@ -61,6 +62,7 @@ import type {
   SessionPermissionGate,
   WorkspaceResolver,
   SessionConfigurationSource,
+  SessionMcpServersSource,
 } from '@application/session';
 import { CLOCK, ID_GENERATOR, PATH_LOCK } from '@application/shared';
 import type { PathLock } from '@application/shared';
@@ -92,6 +94,7 @@ import {
 import { SESSION_HANDLERS, sessionSchemas } from '@adapter/inbound/ws/session/session-commands';
 import { SessionStartHandler } from '@adapter/inbound/ws/session/session-start.gateway-handler';
 import { AgentSettingsModuleConfiguration } from '@adapter/outbound/session/agent-settings-module.configuration';
+import { McpModuleSessionMcpServers } from '@adapter/outbound/session/mcp-module.session-mcp-servers';
 import { FileSnapshotStore } from '@adapter/outbound/checkpoint/file-snapshot.store';
 import { DrizzleSessionFileRepository } from '@adapter/outbound/persistence/session/drizzle-session-file.repository';
 import { TranscriptModuleConversationSource } from '@adapter/outbound/session/transcript-module-conversation.source';
@@ -110,6 +113,7 @@ import { AuthModule } from './auth.module';
 import { EnginesController } from '@adapter/inbound/http/engines/engines.controller';
 import { AgentSettingsModule } from './agent-settings.module';
 import { EngineModule, engineSessionProviders } from './engines';
+import { McpModule } from './mcp.module';
 import { PermissionModule } from './permission.module';
 import { WebsocketModule } from './websocket.module';
 import { SessionOriginModule } from './session-origin.module';
@@ -136,6 +140,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     AgentSettingsModule,
     AuthModule,
     EngineModule,
+    McpModule,
     PermissionModule,
     SessionOriginModule,
     SessionRegistryModule,
@@ -154,6 +159,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
   ],
   providers: [
     { provide: SESSION_CONFIGURATION_SOURCE, useClass: AgentSettingsModuleConfiguration },
+    { provide: SESSION_MCP_SERVERS_SOURCE, useClass: McpModuleSessionMcpServers },
     ...engineSessionProviders,
     { provide: TOOL_INVOCATION_RECORDER, useClass: AuditToolInvocationRecorder },
     DrizzleSessionFileRepository,
@@ -324,6 +330,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         RecordAuditEventUseCase,
         ModelCatalog,
         SESSION_CONFIGURATION_SOURCE,
+        SESSION_MCP_SERVERS_SOURCE,
       ],
       useFactory: (
         workspaces: WorkspaceResolver,
@@ -338,6 +345,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         trail: RecordAuditEventUseCase,
         models: ModelCatalog,
         configuration: SessionConfigurationSource,
+        mcpServers: SessionMcpServersSource,
       ) =>
         new StartSessionUseCase(
           workspaces,
@@ -351,6 +359,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
           { conversations, trail },
           models,
           configuration,
+          mcpServers,
         ),
     },
 

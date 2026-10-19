@@ -2,6 +2,7 @@ import { CLAUDE_CAPABILITIES } from './claude-capabilities';
 import { CLAUDE_ENGINE } from './claude-engine';
 import { AgentUnavailableError, AgentTimeoutError, pathsChangedBy } from '@domain/engine';
 import type { CanonicalTool } from '@domain/engine';
+import type { McpServerConfig, McpServerSetOutcome } from '@domain/mcp';
 import type {
   CanUseTool,
   HookJSONOutput,
@@ -43,6 +44,7 @@ import type { QueryFactory } from './query.factory';
 import { hostEnvironment } from '@shared/process/host-environment';
 import { markedEnvironment } from '@shared/process/process-marker';
 import { toContextUse, toInstallationModel, toMcpServer } from './installation-mapping';
+import { toSdkMcpServerConfig } from './mcp-config-mapping';
 import { toSessionInitialization } from './initialization-mapping';
 import { withAnswers } from './question-answers';
 import { toSlashCommand } from './slash-command-mapping';
@@ -375,6 +377,62 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       query.mcpServerStatus(),
     );
     return servers.map(toMcpServer);
+  }
+
+  /**
+   * `setMcpServers()`, right after the session starts and never in its options (plan 13, B-21,
+   * D-02): this is the one path a server's secret takes into a running session. Logged with the
+   * names only — never a value, and never the error text a server itself produced (B-22's to
+   * redact before it reaches a client).
+   */
+  async setMcpServers(servers: readonly McpServerConfig[]): Promise<McpServerSetOutcome> {
+    const sessionId = this.start.sessionId.value;
+    this.deps.logger.debug(
+      {
+        op: 'engine.mcp.set',
+        layer: 'adapter',
+        sessionId,
+        names: servers.map((server) => server.name),
+      },
+      'composing the MCP servers of this session',
+    );
+
+    const env = hostEnvironment(process.env);
+    const payload = Object.fromEntries(
+      servers.map((server) => [server.name, toSdkMcpServerConfig(server, env)]),
+    );
+
+    const result = await this.askControl('set its MCP servers', 'engine.mcp.set', (query) =>
+      query.setMcpServers(payload),
+    );
+
+    this.deps.logger.debug(
+      {
+        op: 'engine.mcp.set',
+        layer: 'adapter',
+        sessionId,
+        added: result.added,
+        removed: result.removed,
+        erroredNames: Object.keys(result.errors),
+      },
+      'the cli answered: set its MCP servers',
+    );
+
+    return { added: result.added, removed: result.removed, errors: result.errors };
+  }
+
+  /** `toggleMcpServer()` — enables or disables one server of this session by name (B-22, B-23). */
+  async toggleMcpServer(name: string, enabled: boolean): Promise<void> {
+    await this.askControl('toggle an MCP server', 'engine.mcp.toggle', (query) =>
+      query.toggleMcpServer(name, enabled),
+    );
+  }
+
+  /** `reconnectMcpServer()` — reconnects one server of this session by name (B-22). */
+  async reconnectMcpServer(name: string): Promise<void> {
+    await this.askControl('reconnect an MCP server', 'engine.mcp.reconnect', (query) =>
+      query.reconnectMcpServer(name),
+    );
   }
 
   /**

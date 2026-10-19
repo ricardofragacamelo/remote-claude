@@ -4,6 +4,7 @@ import { McpServersController } from '@adapter/inbound/http/engines/mcp-servers.
 import { DrizzleMcpServerRepository } from '@adapter/outbound/persistence/mcp/mcp-server.repository';
 import { MCP_SECRET_KEY_FILE } from '@adapter/outbound/persistence/mcp/mcp-server.repository';
 import {
+  ComposeSessionMcpServersUseCase,
   CreateMcpServerUseCase,
   DeleteMcpServerUseCase,
   ListMcpServersUseCase,
@@ -95,6 +96,12 @@ const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
       inject: [MCP_SERVER_DEPENDENCIES],
       useFactory: (deps: McpServerDependencies) => new DeleteMcpServerUseCase(deps),
     },
+    {
+      provide: ComposeSessionMcpServersUseCase,
+      inject: [MCP_SERVER_REPOSITORY, McpEngineCapabilities],
+      useFactory: (servers: McpServerRepository, capabilities: McpEngineCapabilities) =>
+        new ComposeSessionMcpServersUseCase(servers, capabilities),
+    },
   ],
   exports: [
     MCP_SERVER_REPOSITORY,
@@ -106,6 +113,7 @@ const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
     UpdateMcpServerUseCase,
     SetMcpServerEnabledUseCase,
     DeleteMcpServerUseCase,
+    ComposeSessionMcpServersUseCase,
   ],
 })
 export class McpModule {}

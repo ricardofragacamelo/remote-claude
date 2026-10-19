@@ -129,17 +129,17 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-78 | remover de novo responde `404` e não grava segundo evento | idem | integração | `MCP_SERVER_NOT_FOUND` | B-19 | ✅ |
 | S-79 | adicionar, alterar, remover e ligar gravam `mcp.server*`, com o `engine`, **antes** do efeito, com o comando/URL por extenso e só os nomes das variáveis; trilha indisponível não grava nada | err | integração | `INTERNAL_ERROR` | B-19 | ✅ |
 | S-80 | duas alterações simultâneas do mesmo servidor → uma vence por inteiro, e a trilha registra as duas na ordem do banco | conc | integração | — | B-19 | ✅ |
-| S-81 | o subprocesso do CLI — e portanto todo servidor stdio — não recebe as variáveis de configuração do backend (banco, OIDC, push, chave de segredo) | err | integração | — | B-20 | ⬜ |
-| S-82 | chave nova no schema de configuração do backend entra na lista de remoção sem lista à mão — o teste falha se o schema ganhar chave não coberta | fron | unit | — | B-20 | ⬜ |
+| S-81 | o subprocesso do CLI — e portanto todo servidor stdio — não recebe as variáveis de configuração do backend (banco, OIDC, push, chave de segredo) | err | integração | — | B-20 | ✅ |
+| S-82 | chave nova no schema de configuração do backend entra na lista de remoção sem lista à mão — o teste falha se o schema ganhar chave não coberta | fron | unit | — | B-20 | ✅ |
 
 ## Composição, status e sessões vivas — B-21…B-23
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-83 | a sessão nasce com os servidores ligados do usuário (escopo usuário + escopo da pasta que casa) e os aprovados do `.mcp.json` cujo digest confere | eq | integração | — | B-21 | ⬜ |
-| S-84 | servidor desligado, ou de escopo de outra pasta, não entra | fron | unit | — | B-21 | ⬜ |
-| S-85 | servidor de outro usuário nunca entra na sessão de alguém | err | unit | — | B-21 | ⬜ |
-| S-86 | o segredo chega ao servidor sem passar pelo argv do CLI, pela via que o spike escolheu | err | integração | — | B-21 | ⬜ |
+| S-83 | a sessão nasce com os servidores ligados do usuário (escopo usuário + escopo da pasta que casa) e os aprovados do `.mcp.json` cujo digest confere — a metade do `.mcp.json` fica para a B-24, ver D-41 | eq | integração | — | B-21 | ✅ |
+| S-84 | servidor desligado, ou de escopo de outra pasta, não entra | fron | unit | — | B-21 | ✅ |
+| S-85 | servidor de outro usuário nunca entra na sessão de alguém | err | unit | — | B-21 | ✅ |
+| S-86 | o segredo chega ao servidor sem passar pelo argv do CLI, pela via que o spike escolheu | err | integração | — | B-21 | ✅ |
 | S-87 | nome nosso igual ao de um servidor do `.mcp.json` → o nosso vale, e o do projeto aparece sombreado | fron | unit | — | B-21 | ⬜ |
 | S-88 | `session.toggleMcpServer` e `session.reconnectMcpServer` chamam o motor pela porta, respondem `ack`, e o resultado chega em `session.mcpStatusChanged` com o `seq` da sessão | eq | integração | — | B-22 | ⬜ |
 | S-89 | comando de MCP em sessão de outra pessoa ou inexistente | err | integração | `FORBIDDEN`, `SESSION_NOT_FOUND` | B-22 | ⬜ |

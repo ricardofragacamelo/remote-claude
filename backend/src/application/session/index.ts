@@ -150,5 +150,10 @@ export type {
   SessionConfigurationSource,
 } from './ports/session-configuration.source';
 export { SESSION_CONFIGURATION_SOURCE } from './ports/session-configuration.source';
+export type {
+  SessionMcpServersRequest,
+  SessionMcpServersSource,
+} from './ports/session-mcp-servers.source';
+export { SESSION_MCP_SERVERS_SOURCE } from './ports/session-mcp-servers.source';
 export type { SessionOrigin, SessionOriginRepository } from './ports/session-origin.repository';
 export { SESSION_ORIGIN_REPOSITORY } from './ports/session-origin.repository';

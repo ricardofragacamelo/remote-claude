@@ -97,7 +97,7 @@ efeito, com o `engine`, o comando/URL por extenso e só os nomes das variáveis;
 [audit](../../architecture/backend/03-modules.md#audit) para fato de conta. Integração com Postgres real
 e varredura do log da suíte atrás de qualquer valor de segredo usado no teste. Cenários S-69…S-80.
 
-### B-20 — O subprocesso sem os segredos do backend 🔲
+### B-20 — O subprocesso sem os segredos do backend ✅
 
 Hoje o subprocesso do CLI recebe o ambiente **inteiro** do backend (`markedEnvironment(process.env, …)`
 em `session-runner.ts`) — e todo servidor MCP stdio herda o ambiente do CLI (medido na B-01). Um
@@ -112,7 +112,7 @@ variáveis que o adapter do motor declara (no Claude, `CLAUDE_CONFIG_DIR`) — a
 não conhece nome de motor. O plano 12 precisa da mesma função para o terminal: quem chegar primeiro a cria em
 `shared/`, e o outro reusa. Cenários S-81, S-82.
 
-### B-21 — Composição por sessão 🔲
+### B-21 — Composição por sessão ✅
 
 No `session.start` (e na sonda do teste), o **núcleo** compõe o conjunto
 ([D-01](decisions.md#d-01--onde-mora-o-servidor-mcp)), só para motor com a capacidade `mcp`: servidores ligados

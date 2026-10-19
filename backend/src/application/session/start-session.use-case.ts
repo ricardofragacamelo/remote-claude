@@ -1,5 +1,5 @@
 import type { RecordAuditEventUseCase } from '@application/audit';
-import { AgentUnavailableError } from '@domain/engine';
+import { AgentUnavailableError, hasCapability } from '@domain/engine';
 import type { ConversationRef, EngineCapabilities } from '@domain/engine';
 import type { Clock, IdGenerator } from '@domain/shared';
 import {
@@ -19,10 +19,12 @@ import type { StartSessionCommand } from './commands/start-session.command';
 import type { EngineRegistry } from './engine-registry';
 import type {
   AgentEnginePort,
+  AgentSessionHandle,
   AgentSessionStart,
   SessionConversation,
   SessionEvent,
 } from './ports/agent-engine.port';
+import { controlOf } from './ports/agent-engine.port';
 import type { ResumableConversationSource } from './ports/resumable-conversation.source';
 import type {
   DefaultsFrom,
@@ -30,6 +32,7 @@ import type {
   SessionConfigurationSource,
 } from './ports/session-configuration.source';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
+import type { SessionMcpServersSource } from './ports/session-mcp-servers.source';
 import type { SessionOriginRepository } from './ports/session-origin.repository';
 import type { WorkspaceResolver } from './ports/workspace-resolver.port';
 import { observedStatus } from './session-status';
@@ -147,6 +150,7 @@ export class StartSessionUseCase {
     private readonly resumption: SessionResumption,
     private readonly models: ModelCatalog | null = null,
     private readonly configuration: SessionConfigurationSource | null = null,
+    private readonly mcpServers: SessionMcpServersSource | null = null,
   ) {}
 
   /**
@@ -420,6 +424,7 @@ export class StartSessionUseCase {
       // transition, be dropped by `observe`, and leave the status frozen for the life of the
       // session.
       session.observe('idle');
+      await this.composeMcpServers(command.userId, engine, workspace, handle);
       this.registry.add({ session, handle, conversation });
 
       return {
@@ -435,6 +440,32 @@ export class StartSessionUseCase {
       this.registry.withdraw(session.id);
       this.registry.release();
     }
+  }
+
+  /**
+   * Hands the engine the MCP servers this session opens with — after it starts, never in its
+   * options (plan 13, B-21, D-02): a server composed here never reaches the engine's own argv.
+   * A no-op for an engine without the `mcp` capability, or when nothing composes the servers at
+   * all (`this.mcpServers === null`, the same optionality `SessionConfigurationSource` already
+   * has). A failure here fails the whole start — the same "nothing is spawned on a half-read state"
+   * rule the configuration and the provenance already follow.
+   */
+  private async composeMcpServers(
+    userId: StartSessionCommand['userId'],
+    engine: AgentEnginePort,
+    workspace: WorkspacePath,
+    handle: AgentSessionHandle,
+  ): Promise<void> {
+    if (this.mcpServers === null || !hasCapability(handle.capabilities, 'mcp')) {
+      return;
+    }
+
+    const composed = await this.mcpServers.composeFor({
+      userId,
+      engine: engine.engine.value,
+      workspace,
+    });
+    await controlOf(engine.engine, handle, 'setMcpServers')(composed);
   }
 
   /** What the session opens with: the owner's configuration, or the client's choice alone. */

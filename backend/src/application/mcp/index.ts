@@ -15,6 +15,9 @@ export {
 } from './mcp-server.use-cases';
 export type { McpServerDependencies } from './mcp-server.use-cases';
 
+export { ComposeSessionMcpServersUseCase } from './compose-session-mcp-servers.use-case';
+export type { ComposeSessionMcpServersQuery } from './compose-session-mcp-servers.use-case';
+
 export type {
   McpSecretFieldInput,
   McpServerFieldsInput,

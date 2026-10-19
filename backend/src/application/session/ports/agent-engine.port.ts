@@ -18,6 +18,7 @@ import type {
   EngineDescription,
   EngineId,
 } from '@domain/engine';
+import type { McpServerConfig, McpServerSetOutcome } from '@domain/mcp';
 import type { WorkspacePath } from '@domain/workspace';
 import type { EventPayloads } from '@remote-claude/contracts';
 import type { EngineSecurityContract } from './engine-security.port';
@@ -144,6 +145,20 @@ export interface EngineControl {
 
   /** The MCP servers, reduced (`mcp`). @throws as {@link supportedCommands} */
   mcpServers?(): Promise<readonly McpServer[]>;
+
+  /**
+   * Replaces the dynamically-added MCP servers of this session (`mcp`, plan 13, B-21) — secrets
+   * included, and never through the engine's own argv (D-02): this is the one path a server's
+   * configuration takes into a running session, called once right after it starts, with whatever
+   * the core composed from the store. @throws as {@link supportedCommands}
+   */
+  setMcpServers?(servers: readonly McpServerConfig[]): Promise<McpServerSetOutcome>;
+
+  /** Turns one of this session's MCP servers on or off, by name (`mcp`, B-22). @throws as {@link supportedCommands} */
+  toggleMcpServer?(name: string, enabled: boolean): Promise<void>;
+
+  /** Reconnects one of this session's MCP servers, by name (`mcp`, B-22). @throws as {@link supportedCommands} */
+  reconnectMcpServer?(name: string): Promise<void>;
 
   /**
    * What the installation says about itself in one question: commands, agents, models and the

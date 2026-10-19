@@ -4,6 +4,7 @@ import type { McpEngineDialect, McpServerConfig, McpServerDescription } from '@d
 import type { UserId } from '@domain/auth';
 import type { Clock, IdGenerator } from '@domain/shared';
 import type { McpServerFieldsInput } from './commands/mcp-server-fields.command';
+import { configFromRevealed } from './config-from-revealed';
 import { mergeSecretFields } from './merge-secret-fields';
 import type { McpEngineCapabilities } from './mcp-engine-capabilities';
 import type { McpEngineDialects } from './mcp-engine-dialects';
@@ -49,21 +50,6 @@ function configOf(
     },
     dialect,
   );
-}
-
-/** [revealed] as the {@link McpServerConfig} it was built from — what a revert writes back. */
-function configFromRevealed(revealed: RevealedMcpServer): McpServerConfig {
-  return {
-    name: revealed.name,
-    scope: revealed.scope,
-    folderPath: revealed.folderPath,
-    transport: revealed.transport,
-    command: revealed.command,
-    args: revealed.args,
-    env: revealed.env,
-    url: revealed.url,
-    headers: revealed.headers,
-  };
 }
 
 /**

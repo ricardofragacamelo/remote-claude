@@ -30,3 +30,5 @@ export type {
 
 export { describeMcpServer } from './services/mcp-server-description';
 export type { McpServerDescription } from './services/mcp-server-description';
+
+export type { McpServerSetOutcome } from './services/mcp-server-set-outcome';
