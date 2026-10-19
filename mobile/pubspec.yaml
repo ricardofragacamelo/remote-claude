@@ -48,6 +48,9 @@ dependencies:
   markdown: ^7.3.1
   # Mermaid drawn by the web's own engine, in a WebView never on screen (ADR-024, D-10).
   webview_flutter: 4.14.1
+  # Code highlight in a markdown block (plan 26, B-08, D-10): highlight.js grammars, a maintained
+  # fork of the abandoned `highlight`.
+  re_highlight: ^0.0.3
   # PDF by PDFium, read by ranges through the app's own client (D-06, D-22). 2.4.8 is the last one
   # for Flutter 3.44; 2.5 asks for 3.47.
   pdfrx: 2.4.8

@@ -47,4 +47,4 @@ final class SessionScopeProvider extends $FunctionalProvider<void, void, void>
   }
 }
 
-String _$sessionScopeHash() => r'fe6287e92e3b3f762e3d5612f1dd7c6985284b17';
+String _$sessionScopeHash() => r'e8e1ffad1d9a05a4a5d8ff408c000691a23533e0';

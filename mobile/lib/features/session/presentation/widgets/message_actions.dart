@@ -9,11 +9,23 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:remote_claude/core/widgets/message_strip.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
+
+/// Copies [text] exactly, and announces it (plan 26, B-11) — the one way every message is copied,
+/// a prompt's sheet and the answer's button alike.
+Future<void> copyMessage(BuildContext context, String text) async {
+  final ScaffoldMessengerState? messenger = ScaffoldMessenger.maybeOf(context);
+  final String copied = AppLocalizations.of(context).sessionMessageCopied;
+
+  await Clipboard.setData(ClipboardData(text: text));
+  messenger?.showSnackBar(SnackBar(content: Text(copied)));
+}
 
 /// What the screen does with a prompt.
 class PromptActions {
@@ -33,7 +45,11 @@ class PromptActions {
 
   /// The actions of [prompt], in order: what each says, its icon, and what it does — `null` for
   /// the undo while it cannot be done. The undo is not there at all once the session ended.
-  List<(String, IconData, VoidCallback?)> of(AppLocalizations l10n, StreamMessage prompt) {
+  List<(String, IconData, VoidCallback?)> of(
+    BuildContext context,
+    AppLocalizations l10n,
+    StreamMessage prompt,
+  ) {
     final void Function(StreamMessage prompt)? undo = onUndo;
     final String? blocked = undoBlocked;
 
@@ -46,6 +62,11 @@ class PromptActions {
           Icons.history_toggle_off,
           blocked == null ? () => undo(prompt) : null,
         ),
+      (
+        l10n.sessionMessageCopy,
+        Icons.copy_outlined,
+        () => unawaited(copyMessage(context, prompt.text)),
+      ),
     ];
   }
 }
@@ -70,10 +91,14 @@ class PromptHold extends StatelessWidget {
       excludeSemantics: true,
       hint: l10n.sessionMessageHold,
       customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
-        for (final (String label, IconData _, VoidCallback? run) in actions.of(l10n, prompt))
+        for (final (String label, IconData _, VoidCallback? run) in actions.of(
+          context,
+          l10n,
+          prompt,
+        ))
           CustomSemanticsAction(label: label): ?run,
       },
-      child: GestureDetector(
+      child: LongPressTrigger(
         onLongPress: () => unawaited(
           showSheet(
             context,
@@ -84,6 +109,76 @@ class PromptHold extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A message of the model, copied on a long press (plan 26, B-11) — the prompt's own sheet already
+/// offers "copy" among edit, fork and undo.
+class MessageCopyHold extends StatelessWidget {
+  const MessageCopyHold({required this.message, required this.child, super.key});
+
+  final StreamMessage message;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LongPressTrigger(
+    onLongPress: () => unawaited(copyMessage(context, message.text)),
+    child: child,
+  );
+}
+
+/// A long press that fires even over a [SelectionArea] — which otherwise wins the gesture arena for
+/// the same pointer, since both ask for the same gesture: a plain [GestureDetector.onLongPress]
+/// inside, above or below one is never called (plan 26, B-11). [Listener] sees every pointer event
+/// regardless of which recognizer wins it, so the press is timed by hand instead.
+class LongPressTrigger extends StatefulWidget {
+  const LongPressTrigger({required this.onLongPress, required this.child, super.key});
+
+  final VoidCallback onLongPress;
+  final Widget child;
+
+  @override
+  State<LongPressTrigger> createState() => _LongPressTriggerState();
+}
+
+class _LongPressTriggerState extends State<LongPressTrigger> {
+  Timer? _timer;
+  Offset? _downAt;
+
+  void _down(PointerDownEvent event) {
+    _downAt = event.position;
+    _timer = Timer(kLongPressTimeout, () {
+      _timer = null;
+      widget.onLongPress();
+    });
+  }
+
+  void _moved(PointerMoveEvent event) {
+    final Offset? downAt = _downAt;
+    if (downAt != null && (event.position - downAt).distance > kTouchSlop) {
+      _cancel();
+    }
+  }
+
+  void _cancel([PointerEvent? event]) {
+    _timer?.cancel();
+    _timer = null;
+    _downAt = null;
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: _down,
+    onPointerMove: _moved,
+    onPointerUp: _cancel,
+    onPointerCancel: _cancel,
+    child: widget.child,
+  );
 }
 
 /// The three actions of a prompt, in a sheet.
@@ -104,7 +199,11 @@ class PromptActionsSheet extends StatelessWidget {
           ListTile(
             title: Text(l10n.sessionMessageActions, style: Theme.of(context).textTheme.titleMedium),
           ),
-          for (final (String label, IconData icon, VoidCallback? run) in actions.of(l10n, prompt))
+          for (final (String label, IconData icon, VoidCallback? run) in actions.of(
+            context,
+            l10n,
+            prompt,
+          ))
             ListTile(
               enabled: run != null,
               leading: Icon(icon),

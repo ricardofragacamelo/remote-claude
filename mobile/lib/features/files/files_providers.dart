@@ -12,13 +12,10 @@ import 'package:remote_claude/features/files/data/datasources/files_api_data_sou
 import 'package:remote_claude/features/files/data/datasources/stored_viewer_preferences.dart';
 import 'package:remote_claude/features/files/data/engines/app_temporary_files.dart';
 import 'package:remote_claude/features/files/data/engines/channel_file_saver.dart';
-import 'package:remote_claude/features/files/data/engines/webview_diagram_engine.dart';
 import 'package:remote_claude/features/files/data/repositories/files_repository_impl.dart';
-import 'package:remote_claude/features/files/domain/ports/diagram_engine.dart';
 import 'package:remote_claude/features/files/domain/ports/file_saver.dart';
 import 'package:remote_claude/features/files/domain/ports/temporary_files.dart';
 import 'package:remote_claude/features/files/domain/repositories/files_repository.dart';
-import 'package:remote_claude/features/files/domain/services/diagram_queue.dart';
 import 'package:remote_claude/features/files/domain/repositories/viewer_preferences.dart';
 import 'package:remote_claude/features/files/domain/usecases/download_file.dart';
 import 'package:remote_claude/features/files/domain/usecases/read_folder.dart';
@@ -58,15 +55,6 @@ ReadRawFile readRawFile(Ref ref) => ReadRawFile(ref.watch(filesRepositoryProvide
 @Riverpod(keepAlive: true)
 ViewerPreferences viewerPreferences(Ref ref) =>
     StoredViewerPreferences(ref.watch(credentialStoreProvider));
-
-/// The engine of the diagrams — Mermaid in a WebView off screen (ADR-024). One for the app: its
-/// start is paid once.
-@Riverpod(keepAlive: true)
-DiagramEngine diagramEngine(Ref ref) => WebViewDiagramEngine();
-
-/// The diagrams, one at a time, within ceilings, and kept.
-@Riverpod(keepAlive: true)
-DiagramQueue diagramQueue(Ref ref) => DiagramQueue(ref.watch(diagramEngineProvider));
 
 /// A file of the folder, read by ranges.
 @Riverpod(keepAlive: true)

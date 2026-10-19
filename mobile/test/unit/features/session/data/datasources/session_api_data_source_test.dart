@@ -105,6 +105,16 @@ void main() {
     ]);
   });
 
+  test('asks for the diff of a tool, both ids encoded as their own path segment', () async {
+    http.adapter.body =
+        '{"path":"/w/a.ts","kind":"file.edit","pending":false,"scope":"file","before":{"state":"content"},"after":{"state":"content"},"hunks":[]}';
+
+    await source().toolDiff('s/1', 't u1');
+
+    expect(http.adapter.requests.single.method, 'GET');
+    expect(http.adapter.requests.single.uri.path, '/sessions/s%2F1/tools/t%20u1/diff');
+  });
+
   test('S-21 · a catalogue with no slot for its question arrives as the refusal', () async {
     http.adapter
       ..status = 429

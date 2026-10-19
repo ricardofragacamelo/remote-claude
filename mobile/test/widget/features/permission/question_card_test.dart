@@ -193,24 +193,22 @@ void main() {
     ]);
   });
 
-  testWidgets('S-92 · "See preview" opens the preview, monospaced; a multiple choice has none', (
-    WidgetTester tester,
-  ) async {
-    await pumpQuestion(tester);
-    expect(find.text(l10n.permissionQuestionSeePreview), findsNothing);
+  testWidgets(
+    'S-92 · "See preview" opens the preview as markdown; a multiple choice has none (D-13)',
+    (WidgetTester tester) async {
+      await pumpQuestion(tester);
+      expect(find.text(l10n.permissionQuestionSeePreview), findsNothing);
 
-    await tap(tester, find.text(l10n.permissionQuestionNext));
-    expect(find.text(l10n.permissionQuestionSeePreview), findsNWidgets(2));
+      await tap(tester, find.text(l10n.permissionQuestionNext));
+      expect(find.text(l10n.permissionQuestionSeePreview), findsNWidgets(2));
 
-    await tap(tester, find.text(l10n.permissionQuestionSeePreview).at(1));
-    final SelectableText preview = tester.widget<SelectableText>(
-      find.byWidgetPredicate(
-        (Widget widget) => widget is SelectableText && (widget.data ?? '').contains('<div'),
-      ),
-    );
-    expect(preview.style?.fontFamily, 'monospace');
-    expect(find.text(l10n.permissionQuestionPreview), findsOneWidget);
-  });
+      await tap(tester, find.text(l10n.permissionQuestionSeePreview).at(1));
+
+      // The option's preview is raw HTML, shown as the code it is — never rendered as HTML.
+      expect(find.textContaining('<div', findRichText: true), findsOneWidget);
+      expect(find.text(l10n.permissionQuestionPreview), findsOneWidget);
+    },
+  );
 
   testWidgets('D-23 · the recommended option is marked, and not chosen', (
     WidgetTester tester,

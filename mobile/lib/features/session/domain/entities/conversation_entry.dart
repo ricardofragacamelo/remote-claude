@@ -27,38 +27,41 @@ sealed class ConversationEntry extends Equatable {
 /// One message of the conversation.
 ///
 /// The CLI finishes a message one **block** at a time, every block under the same `messageId`, so a
-/// message is the text blocks finished so far, in order, plus the one still streaming. The fragments
-/// of one `messageId` accumulate there and nowhere else: accumulating in arrival order across
-/// messages is how two answers in flight end up as one paragraph of nonsense.
+/// message is the blocks finished so far, **in the order they arrived** — text and image mixed as
+/// they were (plan 26, B-09) — plus the one still streaming. The fragments of one `messageId`
+/// accumulate there and nowhere else: accumulating in arrival order across messages is how two
+/// answers in flight end up as one paragraph of nonsense.
 class StreamMessage extends ConversationEntry {
   const StreamMessage({
     required this.messageId,
-    this.blocks = const <String>[],
+    this.blocks = const <MessageBlock>[],
     this.streaming,
     this.isFromUser = false,
-    this.blockIds = const <String>[],
-    this.images = const <PromptImage>[],
+    this.parentToolUseId,
   });
 
   final String messageId;
 
-  /// The text blocks that finished, in order.
-  final List<String> blocks;
+  /// The blocks that finished, in the order the model gave them.
+  final List<MessageBlock> blocks;
 
-  /// The identities of the finished text blocks a server named (plan 22, D-06).
-  final List<String> blockIds;
-
-  /// The block arriving now, fragment by fragment — `null` once it finished.
+  /// The text arriving now, fragment by fragment — `null` once it finished.
   final String? streaming;
 
   /// Whether the person wrote it. Everything else came from the model.
   final bool isFromUser;
 
-  /// The images the prompt carried — markers of them, never their bytes (plan 22, D-09).
-  final List<PromptImage> images;
+  /// The subagent this message belongs to, when it is not the main conversation's own (plan 26,
+  /// B-18, B-19) — `null` for the main thread.
+  final String? parentToolUseId;
 
-  /// Everything of this message the client has: the finished blocks and the one arriving.
-  String get text => <String>[...blocks, ?streaming].join();
+  /// Everything of this message the client has, as the web's `message.text` is: every text block
+  /// joined with the one still arriving, with **no** separator — what "copy" copies (B-11).
+  String get text => <String>[
+    for (final MessageBlock block in blocks)
+      if (block is TextBlock) block.text,
+    ?streaming,
+  ].join();
 
   /// Nothing of it is still arriving.
   bool get isComplete => streaming == null;
@@ -67,17 +70,54 @@ class StreamMessage extends ConversationEntry {
   String get entryId => 'message:$messageId';
 
   /// A copy with some fields replaced. [streaming] is a function so it can be cleared.
-  StreamMessage copyWith({List<String>? blocks, String? Function()? streaming}) => StreamMessage(
-    messageId: messageId,
-    blocks: blocks ?? this.blocks,
-    streaming: streaming == null ? this.streaming : streaming(),
-    isFromUser: isFromUser,
-    blockIds: blockIds,
-    images: images,
-  );
+  StreamMessage copyWith({List<MessageBlock>? blocks, String? Function()? streaming}) =>
+      StreamMessage(
+        messageId: messageId,
+        blocks: blocks ?? this.blocks,
+        streaming: streaming == null ? this.streaming : streaming(),
+        isFromUser: isFromUser,
+        parentToolUseId: parentToolUseId,
+      );
 
   @override
-  List<Object?> get props => <Object?>[messageId, blocks, streaming, isFromUser, blockIds, images];
+  List<Object?> get props => <Object?>[messageId, blocks, streaming, isFromUser, parentToolUseId];
+}
+
+/// One drawable piece of a finished message — a paragraph of text, or an image — in the order the
+/// model gave it (plan 26, B-09). Sealed: a kind the client does not draw does not arrive here, the
+/// same way a block kind the mapper does not know does not become one (S-09).
+sealed class MessageBlock extends Equatable {
+  const MessageBlock();
+
+  /// What a server named this block by (plan 22, D-06) — `null` from an older one, and then two
+  /// blocks are the same block only by their content.
+  String? get blockId;
+}
+
+/// A paragraph of the answer, or of a prompt.
+final class TextBlock extends MessageBlock {
+  const TextBlock(this.text, {this.blockId});
+
+  final String text;
+
+  @override
+  final String? blockId;
+
+  @override
+  List<Object?> get props => <Object?>[text, blockId];
+}
+
+/// An image block, wrapping the [PromptImage] marker the rest of the app already draws it by.
+final class ImageBlock extends MessageBlock {
+  const ImageBlock(this.image);
+
+  final PromptImage image;
+
+  @override
+  String? get blockId => image.blockId;
+
+  @override
+  List<Object?> get props => <Object?>[image];
 }
 
 /// An image a prompt carried, as the conversation keeps it: what it is and how large, never the
@@ -112,12 +152,17 @@ class ThinkingEntry extends ConversationEntry {
     this.endedAt,
     this.blockId,
     this.atMost,
+    this.parentToolUseId,
   });
 
   final String messageId;
 
   /// Which thinking of the message, from 0.
   final int index;
+
+  /// The subagent this thinking belongs to, when it is not the main conversation's own (plan 26,
+  /// B-18, B-19) — `null` for the main thread.
+  final String? parentToolUseId;
 
   /// The block's identity, once a finished block named it (plan 22, D-06).
   final String? blockId;
@@ -169,11 +214,17 @@ class ThinkingEntry extends ConversationEntry {
         endedAt: endedAt ?? (at.isEmpty ? null : at),
         blockId: blockId ?? this.blockId,
         atMost: atMost,
+        parentToolUseId: parentToolUseId,
       );
 
   /// The same thinking with [delta] added.
-  ThinkingEntry continued(String delta) =>
-      ThinkingEntry(messageId: messageId, index: index, text: text + delta, startedAt: startedAt);
+  ThinkingEntry continued(String delta) => ThinkingEntry(
+    messageId: messageId,
+    index: index,
+    text: text + delta,
+    startedAt: startedAt,
+    parentToolUseId: parentToolUseId,
+  );
 
   @override
   List<Object?> get props => <Object?>[
@@ -186,6 +237,7 @@ class ThinkingEntry extends ConversationEntry {
     endedAt,
     blockId,
     atMost,
+    parentToolUseId,
   ];
 }
 
@@ -198,9 +250,9 @@ class ToolExecution extends ConversationEntry {
     required this.toolUseId,
     required this.call,
     this.status = ToolStatus.running,
-    this.output = '',
+    this.elapsed,
     this.summary,
-    this.isSubagent = false,
+    this.parentToolUseId,
     this.title,
     this.question,
   });
@@ -219,14 +271,19 @@ class ToolExecution extends ConversationEntry {
 
   final ToolStatus status;
 
-  /// Everything `tool.progress` has sent, in order.
-  final String output;
+  /// How long it has run, as `tool.progress` last said — `<seconds>s`, never the tool's own output
+  /// any more (plan 26, B-14). `null` before the first tick, or once it finished.
+  final String? elapsed;
 
   /// What `tool.completed` said about it, when it said anything.
   final String? summary;
 
-  /// A subagent ran it, not the main conversation.
-  final bool isSubagent;
+  /// The subagent that ran it, when it is not the main conversation's own (plan 26, B-18) — `null`
+  /// for the main thread.
+  final String? parentToolUseId;
+
+  /// A subagent ran it, not the main conversation — [parentToolUseId], read as a question.
+  bool get isSubagent => parentToolUseId != null;
 
   @override
   String get entryId => 'tool:$toolUseId';
@@ -234,16 +291,16 @@ class ToolExecution extends ConversationEntry {
   /// A copy with some fields replaced.
   ToolExecution copyWith({
     ToolStatus? status,
-    String? output,
+    String? elapsed,
     String? summary,
     Map<String, Object?>? question,
   }) => ToolExecution(
     toolUseId: toolUseId,
     call: call,
     status: status ?? this.status,
-    output: output ?? this.output,
+    elapsed: elapsed ?? this.elapsed,
     summary: summary ?? this.summary,
-    isSubagent: isSubagent,
+    parentToolUseId: parentToolUseId,
     title: title,
     question: question ?? this.question,
   );
@@ -253,9 +310,9 @@ class ToolExecution extends ConversationEntry {
     toolUseId,
     call,
     status,
-    output,
+    elapsed,
     summary,
-    isSubagent,
+    parentToolUseId,
     title,
     question,
   ];
@@ -263,7 +320,17 @@ class ToolExecution extends ConversationEntry {
 
 /// What a finished turn cost — the line that closes it in the conversation.
 class TurnSummary extends ConversationEntry {
-  const TurnSummary({required this.turnId, required this.durationMs, this.costUsd});
+  const TurnSummary({
+    required this.turnId,
+    required this.durationMs,
+    this.costUsd,
+    this.inputTokens,
+    this.outputTokens,
+    this.cacheReadTokens,
+    this.cacheWriteTokens,
+    this.reasoningTokens,
+    this.webSearches,
+  });
 
   final String turnId;
 
@@ -273,11 +340,34 @@ class TurnSummary extends ConversationEntry {
 
   final int durationMs;
 
+  /// The canonical `usage` of `turn.completed` (plan 28, B-17's own), every field optional: one the
+  /// engine did not report, or sent as something other than a number, is absent rather than zero
+  /// (plan 26, B-17, S-62) — the line says what it knows, nothing it does not.
+  final int? inputTokens;
+  final int? outputTokens;
+  final int? cacheReadTokens;
+  final int? cacheWriteTokens;
+
+  /// Carried for parity with the canonical contract (plan 28 · D-17) — the web's own `TurnRow` does
+  /// not draw either yet, so neither does this line.
+  final int? reasoningTokens;
+  final int? webSearches;
+
   @override
   String get entryId => 'turn:$turnId';
 
   @override
-  List<Object?> get props => <Object?>[turnId, costUsd, durationMs];
+  List<Object?> get props => <Object?>[
+    turnId,
+    costUsd,
+    durationMs,
+    inputTokens,
+    outputTokens,
+    cacheReadTokens,
+    cacheWriteTokens,
+    reasoningTokens,
+    webSearches,
+  ];
 }
 
 /// The conversation was compacted here: what came before is now a summary the agent carries.

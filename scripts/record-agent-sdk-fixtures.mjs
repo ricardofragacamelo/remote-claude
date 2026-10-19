@@ -428,6 +428,15 @@ const SCENARIOS = [
     requires: subagentPermissionProblems,
     subagentHistory: true,
   },
+  {
+    name: 'ansi-output-turn',
+    why: 'plan 26, F7 (B-29) — a shell call whose output carries real ANSI SGR codes: bold, reset, and the five 16-colour foregrounds the app actually colours (D-17 of this plan), replayed instead of typed by hand',
+    prompt:
+      "Run exactly this command with the Bash tool, in the foreground: printf '\\033[1mBold\\033[0m " +
+      "\\033[31mred\\033[0m \\033[32mgreen\\033[0m \\033[33myellow\\033[0m \\033[34mblue\\033[0m\\n'. " +
+      'Then reply with exactly: done.',
+    files: {},
+  },
 ];
 
 /**

@@ -1,0 +1,116 @@
+[
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "d2d16d0e-4b24-403b-a216-773b9bb179e3",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "d2d16d0e-4b24-403b-a216-773b9bb179e3:0",
+          "text": "Use the Agent tool with the writer subagent, not in the background, to create the file from-subagent.txt containing the single word parity. Do not write it yourself. Then repeat what the subagent reported, in one line."
+        }
+      ],
+      "at": "2026-10-10T02:53:01.634Z"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "blockId": "e55212e9-9d9a-4cb2-bc27-a069ada023c3:0",
+          "thinking": "The user wants me to:\n1. Use the Agent tool with the writer subagent to create a file called from-subagent.txt with the content \"parity\"\n2. Not write the file myself\n3. Run it NOT in the background (run_in_background: false)\n4. Then repeat what the subagent reported in one line\n\nLet me call the Agent tool with subagent_type \"writer\" to write this file."
+        }
+      ],
+      "at": "2026-10-10T02:53:04.551Z"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "6694be9e-40d2-4fcc-b0ba-4a2b425ee1cf:0",
+          "toolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+        }
+      ],
+      "at": "2026-10-10T02:53:05.742Z"
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD",
+      "kind": "agent",
+      "label": {
+        "messageKey": "sessions.tool.agent",
+        "params": {
+          "description": "Write file from-subagent.txt",
+          "type": "writer"
+        }
+      },
+      "subject": {
+        "description": "Write file from-subagent.txt"
+      },
+      "changes": [],
+      "origin": {
+        "engine": "claude",
+        "native": "Agent"
+      },
+      "rawInput": {
+        "description": "Write file from-subagent.txt",
+        "subagent_type": "writer",
+        "prompt": "Write a file called from-subagent.txt in the current directory (/workspace) containing the single word: parity",
+        "run_in_background": false
+      },
+      "title": "Write file from-subagent.txt",
+      "at": "2026-10-10T02:53:05.742Z"
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD",
+      "status": "succeeded",
+      "summary": "…  /workspace/from-subagent.txt\nagentId: a7fc4cc2d1b5fc2e0 (use SendMessage with to: 'a7fc4cc2d1b5fc2e0', summary: '<5-10 word recap>' to continue this agent)\n<usage>subagent_tokens: 3347\ntool_uses: 1\nduration_ms: 4494</usage>",
+      "at": "2026-10-10T02:53:10.257Z"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "blockId": "bdaf75bf-d998-4bc7-8c36-626340c97544:0",
+          "thinking": "The subagent reported that it successfully created the file at `/workspace/from-subagent.txt`. The report shows:\n- File path: /workspace/from-subagent.txt\n- It used 1 tool call (Write)\n- Duration: 4494ms\n- Subagent tokens: 3347\n\nI need to repeat what the subagent reported in one line."
+        }
+      ],
+      "at": "2026-10-10T02:53:12.669Z"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "0e3b9473-0969-46e6-afb9-92c6bad9a53f:0",
+          "text": "The writer subagent created the file `/workspace/from-subagent.txt` with the word \"parity\" in it."
+        }
+      ],
+      "at": "2026-10-10T02:53:13.014Z"
+    }
+  }
+]

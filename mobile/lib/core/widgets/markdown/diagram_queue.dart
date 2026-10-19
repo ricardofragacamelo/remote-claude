@@ -3,7 +3,7 @@ library;
 
 import 'dart:async';
 
-import 'package:remote_claude/features/files/domain/ports/diagram_engine.dart';
+import 'package:remote_claude/core/widgets/markdown/diagram_engine.dart';
 
 /// The longest code drawn — the `maxTextSize` of Mermaid (S-96).
 const int maxDiagramSource = 50000;

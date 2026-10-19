@@ -57,9 +57,14 @@ class PermissionCardView extends StatefulWidget {
     this.canApprove = true,
     this.notice,
     this.onOpenRules,
+    this.subagent,
   });
 
   final PermissionCard card;
+
+  /// The subagent this request's tool belongs to, by its type — `null` for the main conversation's
+  /// own (plan 26, B-21).
+  final String? subagent;
 
   /// The instant the countdown is computed against.
   final DateTime now;
@@ -120,7 +125,7 @@ class _PermissionCardViewState extends State<PermissionCardView> {
         child: ContentColumn(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            _Heading(request: request),
+            _Heading(request: request, subagent: widget.subagent),
             const SizedBox(height: Tokens.spaceSm),
             _Command(command: request.command),
             const SizedBox(height: Tokens.spaceSm),
@@ -200,9 +205,13 @@ class _PermissionCardViewState extends State<PermissionCardView> {
 
 /// What the tool is, and how dangerous — in words and an icon, never in colour alone.
 class _Heading extends StatelessWidget {
-  const _Heading({required this.request});
+  const _Heading({required this.request, this.subagent});
 
   final PermissionRequest request;
+
+  /// The subagent this request's tool belongs to, by its type — `null` for the main conversation's
+  /// own (plan 26, B-21).
+  final String? subagent;
 
   @override
   Widget build(BuildContext context) {
@@ -226,7 +235,10 @@ class _Heading extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(permissionTitleOf(context, request), style: theme.textTheme.titleSmall),
+              Text(
+                permissionTitleOf(context, request, subagent: subagent),
+                style: theme.textTheme.titleSmall,
+              ),
               Text(risk, style: theme.textTheme.labelMedium?.copyWith(color: colour)),
             ],
           ),

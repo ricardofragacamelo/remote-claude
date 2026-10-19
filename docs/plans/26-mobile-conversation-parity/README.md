@@ -121,12 +121,12 @@ verde.
 |---|---|---|---|---|
 | F0 | [Spike](F0-spike.md) | a forma medida das mensagens novas, as fixtures gravadas, o custo do markdown e o motor de realce | B-01…B-03 | ✅ |
 | F1 | [Mapa de paridade](F1-parity-map.md) | o `render-parity.json`, o `render:check` com as pendências por fase, e o normativo | B-04…B-06 | ✅ |
-| F2 | [Markdown compartilhado](F2-shared-markdown.md) | o renderizador em `core/widgets/markdown/` e o bloco de código com realce | B-07, B-08 | 🔲 |
-| F3 | [Markdown na mensagem](F3-message-markdown.md) | o balão com markdown, blocos em ordem, autor, selecionar e copiar | B-09…B-12 | 🔲 |
-| F4 | [Card da tool e linha do turno](F4-tool-cards.md) | o rótulo do evento, `tool.progress`, ANSI, diff, tokens, trilha | B-13…B-17, B-32 | 🔲 |
-| F5 | [Subagents](F5-subagents.md) | o subagent aninhado, ao vivo e no histórico, e a permissão com o dono | B-18…B-21 | 🔲 |
-| F6 | [Portão de paridade](F6-parity-gate.md) | `render:check` sem pendência e a paridade de conteúdo por fixture | B-27, B-28 | 🔲 |
-| F7 | [E2E](F7-e2e.md) | a conversa pela porta do usuário no app, e a forma das mensagens contra o Claude real | B-29, B-31 | 🔲 |
+| F2 | [Markdown compartilhado](F2-shared-markdown.md) | o renderizador em `core/widgets/markdown/` e o bloco de código com realce | B-07, B-08 | ✅ |
+| F3 | [Markdown na mensagem](F3-message-markdown.md) | o balão com markdown, blocos em ordem, autor, selecionar e copiar | B-09…B-12 | ✅ |
+| F4 | [Card da tool e linha do turno](F4-tool-cards.md) | o rótulo do evento, `tool.progress`, ANSI, diff, tokens, trilha | B-13…B-17, B-32 | ✅ |
+| F5 | [Subagents](F5-subagents.md) | o subagent aninhado, ao vivo e no histórico, e a permissão com o dono | B-18…B-21 | ✅ |
+| F6 | [Portão de paridade](F6-parity-gate.md) | `render:check` sem pendência e a paridade de conteúdo por fixture | B-27, B-28 | ✅ |
+| F7 | [E2E](F7-e2e.md) | a conversa pela porta do usuário no app, e a forma das mensagens contra o Claude real | B-29, B-31 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 

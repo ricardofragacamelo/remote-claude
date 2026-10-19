@@ -303,6 +303,8 @@ void main() {
         read(turnCompleted(seq: 1, costUsd: '0.2740', durationMs: 4200))! as TurnFinished;
     expect(turn.turn.costUsd, '0.2740');
     expect(turn.turn.durationMs, 4200);
+    expect(turn.turn.inputTokens, 10);
+    expect(turn.turn.outputTokens, 20);
 
     const Map<String, SessionCloseReason> known = <String, SessionCloseReason>{
       'closedByUser': SessionCloseReason.closedByUser,
@@ -316,6 +318,65 @@ void main() {
     known.forEach((String raw, SessionCloseReason expected) {
       final SessionEvent? event = read(sessionClosed(seq: 1, reason: raw));
       expect((event! as SessionFinished).ending.reason, expected, reason: raw);
+    });
+  });
+
+  group('plan 26, B-17 · the usage of a turn', () {
+    test('S-61 · reads every field the engine reported, cache included', () {
+      final TurnFinished turn =
+          read(
+                turnCompleted(
+                  seq: 1,
+                  usage: const <String, Object?>{
+                    'inputTokens': 100,
+                    'outputTokens': 50,
+                    'cacheReadTokens': 30,
+                    'cacheWriteTokens': 5,
+                    'reasoningTokens': 7,
+                    'webSearches': 2,
+                  },
+                ),
+              )!
+              as TurnFinished;
+
+      expect(turn.turn.inputTokens, 100);
+      expect(turn.turn.outputTokens, 50);
+      expect(turn.turn.cacheReadTokens, 30);
+      expect(turn.turn.cacheWriteTokens, 5);
+      expect(turn.turn.reasoningTokens, 7);
+      expect(turn.turn.webSearches, 2);
+    });
+
+    test('S-62 · a field missing, or not a number, is absent — never zero', () {
+      final TurnFinished turn =
+          read(
+                turnCompleted(
+                  seq: 1,
+                  usage: const <String, Object?>{'inputTokens': 100, 'outputTokens': '50'},
+                ),
+              )!
+              as TurnFinished;
+
+      expect(turn.turn.inputTokens, 100);
+      expect(turn.turn.outputTokens, isNull);
+      expect(turn.turn.cacheReadTokens, isNull);
+      expect(turn.turn.cacheWriteTokens, isNull);
+    });
+
+    test('S-62 · no `usage` object at all is read the same as an empty one', () {
+      final TurnFinished turn =
+          read(
+                frame(
+                  kind: 'event',
+                  type: 'turn.completed',
+                  seq: 1,
+                  payload: <String, Object?>{'turnId': 't', 'durationMs': 1000},
+                ),
+              )!
+              as TurnFinished;
+
+      expect(turn.turn.inputTokens, isNull);
+      expect(turn.turn.outputTokens, isNull);
     });
   });
 
@@ -410,24 +471,47 @@ void main() {
       }
     });
 
-    test(
-      'S-09 · a subagent and a block kind this build does not know are unread, with the seq',
-      () {
-        // The web panel nests a subagent (B-02); this app does not, and its text read as the answer
-        // would interleave with it. A block kind added later reaches nothing either.
-        final List<String> notDrawn = <String>[
-          frame(
-            kind: 'event',
-            type: 'message.delta',
-            seq: 21,
-            payload: <String, Object?>{'messageId': 'm', 'delta': 'hm', 'blockType': 'hologram'},
-          ),
+    test('S-09 · a block kind this build does not know is unread, with the seq', () {
+      // A block kind added to the contract later reaches nothing (S-09) — unrelated to who it
+      // belongs to.
+      final SessionEvent? event = read(
+        frame(
+          kind: 'event',
+          type: 'message.delta',
+          seq: 21,
+          payload: <String, Object?>{'messageId': 'm', 'delta': 'hm', 'blockType': 'hologram'},
+        ),
+      );
+
+      expect(event, isA<UnreadEvent>());
+      expect(event!.seq, 21);
+    });
+
+    group('plan 26, B-18 · a subagent\'s own text and thinking reach it, never dropped', () {
+      test('S-63 · message.delta with a parentToolUseId is read, carrying it', () {
+        final SessionEvent? event = read(
           frame(
             kind: 'event',
             type: 'message.delta',
             seq: 21,
             payload: <String, Object?>{'messageId': 'm', 'delta': 'x', 'parentToolUseId': 'task'},
           ),
+        );
+
+        expect(
+          event,
+          const MessageFragment(
+            21,
+            messageId: 'm',
+            delta: 'x',
+            at: '2026-09-14T12:00:00.000Z',
+            parentToolUseId: 'task',
+          ),
+        );
+      });
+
+      test('S-63 · message.completed with a parentToolUseId is read, carrying it', () {
+        final SessionEvent? event = read(
           frame(
             kind: 'event',
             type: 'message.completed',
@@ -439,16 +523,51 @@ void main() {
               'parentToolUseId': 'task',
             },
           ),
-        ];
+        );
 
-        for (final String line in notDrawn) {
-          final SessionEvent? event = read(line);
+        expect((event! as MessageFinished).parentToolUseId, 'task');
+      });
 
-          expect(event, isA<UnreadEvent>(), reason: line);
-          expect(event!.seq, 21, reason: line);
-        }
-      },
-    );
+      test('a thinking fragment with a parentToolUseId is read, carrying it too', () {
+        final SessionEvent? event = read(
+          frame(
+            kind: 'event',
+            type: 'message.delta',
+            seq: 21,
+            payload: <String, Object?>{
+              'messageId': 'm',
+              'delta': 'hm',
+              'blockType': 'thinking',
+              'parentToolUseId': 'task',
+            },
+          ),
+        );
+
+        expect(
+          event,
+          const ThinkingFragment(
+            21,
+            messageId: 'm',
+            delta: 'hm',
+            at: '2026-09-14T12:00:00.000Z',
+            parentToolUseId: 'task',
+          ),
+        );
+      });
+
+      test('with no parentToolUseId at all, it is still the main conversation\'s own', () {
+        final SessionEvent? event = read(
+          frame(
+            kind: 'event',
+            type: 'message.delta',
+            seq: 21,
+            payload: <String, Object?>{'messageId': 'm', 'delta': 'x'},
+          ),
+        );
+
+        expect((event! as MessageFragment).parentToolUseId, isNull);
+      });
+    });
 
     test('S-08 · a fragment of thinking is thinking, with when it arrived — never the answer', () {
       final SessionEvent? event = read(
@@ -665,7 +784,12 @@ void main() {
 
       expect(
         historical,
-        const MessageFinished(historySeq, messageId: 'm1', text: 'Hello', isFromUser: true),
+        const MessageFinished(
+          historySeq,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('Hello')],
+          isFromUser: true,
+        ),
       );
       expect(historical.seq, 0);
     });
@@ -746,8 +870,8 @@ void main() {
           parentToolUseId: 'task-0',
         ),
       );
-      expect((started! as ToolInvoked).isSubagent, isTrue);
-      expect((read(toolStarted(toolUseId: 't2', seq: 2))! as ToolInvoked).isSubagent, isFalse);
+      expect((started! as ToolInvoked).parentToolUseId, 'task-0');
+      expect((read(toolStarted(toolUseId: 't2', seq: 2))! as ToolInvoked).parentToolUseId, isNull);
 
       // The task the call made is the previous protocol's: the list comes in an event of its own.
       expect(
@@ -864,9 +988,11 @@ void main() {
         const MessageFinished(
           historySeq,
           messageId: 'm1',
-          text: 'AB',
+          blocks: <MessageBlock>[
+            TextBlock('A', blockId: 'u1:2'),
+            TextBlock('B'),
+          ],
           isFromUser: false,
-          textBlockIds: <String>['u1:2'],
           thoughts: <Thought>[
             Thought('', blockId: 'u1:0'),
             Thought('', isRedacted: true, blockId: 'u1:1'),
@@ -903,14 +1029,13 @@ void main() {
         const MessageFinished(
           historySeq,
           messageId: 'u1',
-          text: 'see',
-          isFromUser: true,
-          textBlockIds: <String>['u1:0'],
-          images: <PromptImage>[
-            PromptImage(blockId: 'u1:1', mediaType: 'image/png', size: 48213),
-            PromptImage(),
-            PromptImage(),
+          blocks: <MessageBlock>[
+            TextBlock('see', blockId: 'u1:0'),
+            ImageBlock(PromptImage(blockId: 'u1:1', mediaType: 'image/png', size: 48213)),
+            ImageBlock(PromptImage()),
+            ImageBlock(PromptImage()),
           ],
+          isFromUser: true,
           writtenAt: '2026-10-07T12:00:00.000Z',
         ),
       );
@@ -931,8 +1056,7 @@ void main() {
               as MessageFinished;
 
       expect(prompt.isFromUser, isTrue);
-      expect(prompt.text, isEmpty);
-      expect(prompt.images, const <PromptImage>[PromptImage(blockId: 'u1:0')]);
+      expect(prompt.blocks, const <MessageBlock>[ImageBlock(PromptImage(blockId: 'u1:0'))]);
     });
 
     test('S-111 · a call says what it is for when the model said; blank or absent is no title', () {
@@ -1063,7 +1187,7 @@ void main() {
 
       for (final MessageFinished finished in <MessageFinished>[live, history]) {
         expect(finished.text, 'Done.');
-        expect(finished.textBlockIds, <String>['b3']);
+        expect(finished.blocks.map((MessageBlock b) => b.blockId), <String?>['b3']);
         expect(finished.thoughts, const <Thought>[Thought('', isRedacted: true, blockId: 'b0')]);
       }
     });

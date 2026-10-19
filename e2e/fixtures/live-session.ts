@@ -121,6 +121,12 @@ export async function closeSession(socket: E2eSocket, sessionId: string): Promis
   socket.close();
 }
 
+/** The teardown of a live spec's own throwaway folder — the socket, then the folder, gone. */
+export function closedAfterTheRun(socket: E2eSocket, folder: string): void {
+  socket.close();
+  fs.rmSync(folder, { recursive: true, force: true });
+}
+
 /**
  * Sends a turn, naming the recording the scripted backend should replay.
  *

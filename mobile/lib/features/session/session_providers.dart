@@ -12,6 +12,7 @@ import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
 import 'package:remote_claude/features/session/data/datasources/engine_api_data_source.dart';
 import 'package:remote_claude/features/session/data/datasources/history_api_data_source.dart';
+import 'package:remote_claude/features/session/data/datasources/subagent_api_data_source.dart';
 import 'package:remote_claude/features/session/data/datasources/session_api_data_source.dart';
 import 'package:remote_claude/features/session/data/datasources/session_ws_data_source.dart';
 import 'package:remote_claude/features/session/data/datasources/transcript_content_api_data_source.dart';
@@ -20,18 +21,22 @@ import 'package:remote_claude/features/session/data/repositories/checkpoint_repo
 import 'package:remote_claude/features/session/data/repositories/command_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/engine_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/history_repository_impl.dart';
+import 'package:remote_claude/features/session/data/repositories/subagent_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/insight_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/live_session_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/session_repository_impl.dart';
+import 'package:remote_claude/features/session/data/repositories/tool_diff_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/transcript_content_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/transcript_follow_repository_impl.dart';
 import 'package:remote_claude/features/session/domain/repositories/checkpoint_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/command_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/engine_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/history_repository.dart';
+import 'package:remote_claude/features/session/domain/repositories/subagent_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/insight_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/live_session_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/session_repository.dart';
+import 'package:remote_claude/features/session/domain/repositories/tool_diff_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/transcript_content_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/transcript_follow_repository.dart';
 import 'package:remote_claude/features/session/domain/usecases/drive_session.dart';
@@ -42,7 +47,9 @@ import 'package:remote_claude/features/session/domain/usecases/list_engines.dart
 import 'package:remote_claude/features/session/domain/usecases/list_live_sessions.dart';
 import 'package:remote_claude/features/session/domain/usecases/ping_session.dart';
 import 'package:remote_claude/features/session/domain/usecases/read_history.dart';
+import 'package:remote_claude/features/session/domain/usecases/read_subagent_messages.dart';
 import 'package:remote_claude/features/session/domain/usecases/read_insight.dart';
+import 'package:remote_claude/features/session/domain/usecases/read_tool_diff.dart';
 import 'package:remote_claude/features/session/domain/usecases/read_transcript_content.dart';
 import 'package:remote_claude/features/session/domain/usecases/watch_session.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -99,6 +106,21 @@ HistoryRepository historyRepository(Ref ref) =>
 /// Reads a page of a conversation's history.
 @Riverpod(keepAlive: true)
 ReadHistory readHistory(Ref ref) => ReadHistory(ref.watch(historyRepositoryProvider));
+
+/// The subagent's edge of the backend (plan 26, B-20).
+@Riverpod(keepAlive: true)
+SubagentApiDataSource subagentApiDataSource(Ref ref) =>
+    HttpSubagentApiDataSource(ref.watch(apiClientProvider));
+
+/// The subagent repository.
+@Riverpod(keepAlive: true)
+SubagentRepository subagentRepository(Ref ref) =>
+    SubagentRepositoryImpl(ref.watch(subagentApiDataSourceProvider));
+
+/// Reads a page of a subagent's own messages.
+@Riverpod(keepAlive: true)
+ReadSubagentMessages readSubagentMessages(Ref ref) =>
+    ReadSubagentMessages(ref.watch(subagentRepositoryProvider));
 
 /// The routes of what a conversation's timeline only marks: a tool's whole output, a prompt's
 /// image (plan 22, B-32, B-33).
@@ -190,3 +212,12 @@ EngineRepository engineRepository(Ref ref) =>
 /// Lists the engines, and what each can do.
 @Riverpod(keepAlive: true)
 ListEngines listEngines(Ref ref) => ListEngines(ref.watch(engineRepositoryProvider));
+
+/// The diff of a tool that wrote a file (plan 26, B-16).
+@Riverpod(keepAlive: true)
+ToolDiffRepository toolDiffRepository(Ref ref) =>
+    ToolDiffRepositoryImpl(ref.watch(sessionApiDataSourceProvider));
+
+/// Reads the diff of one file-writing call.
+@Riverpod(keepAlive: true)
+ReadToolDiff readToolDiff(Ref ref) => ReadToolDiff(ref.watch(toolDiffRepositoryProvider));

@@ -16,7 +16,7 @@ Plano: [26 — Paridade da conversa no app](README.md) · Cenários: [scenarios.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-27 — O mapa sem pendência 🔲
+### B-27 — O mapa sem pendência ✅
 
 O `render:check` passa a reprovar **qualquer** entrada `pending`. Depois desta fase, só existem `ok`
 e `excluded` com decisão ✅. Um componente novo da conversa no web exige o par no app na mesma
@@ -25,7 +25,7 @@ entrega, ou uma decisão. As entradas de rótulo são as que a
 `tool-labels.ts` que a [B-05](F1-parity-map.md) lia do fonte deixou de existir: um `kind` novo sem par
 no app reprova como um componente novo. Cenários S-77…S-79.
 
-### B-28 — A paridade de conteúdo por fixture 🔲
+### B-28 — A paridade de conteúdo por fixture ✅
 
 Em `packages/contracts/fixtures/conversation-parity/`, uma pasta por fixture da B-02. Cada pasta tem:
 

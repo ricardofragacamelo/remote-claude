@@ -209,33 +209,37 @@ SessionEvent _fragment(_Frame frame) {
   final String? delta = _text(payload, 'delta');
   final String blockType = blockTypeOf(payload);
 
-  if (messageId == null ||
-      delta == null ||
-      _isSubagent(payload) ||
-      !_drawnFragments.contains(blockType)) {
+  if (messageId == null || delta == null || !_drawnFragments.contains(blockType)) {
     return UnreadEvent(frame.seq);
   }
 
+  final String? parent = _text(payload, 'parentToolUseId');
+
   return blockType == 'thinking'
-      ? ThinkingFragment(frame.seq, messageId: messageId, delta: delta, at: frame.at)
-      : MessageFragment(frame.seq, messageId: messageId, delta: delta, at: frame.at);
+      ? ThinkingFragment(
+          frame.seq,
+          messageId: messageId,
+          delta: delta,
+          at: frame.at,
+          parentToolUseId: parent,
+        )
+      : MessageFragment(
+          frame.seq,
+          messageId: messageId,
+          delta: delta,
+          at: frame.at,
+          parentToolUseId: parent,
+        );
 }
 
 /// What a fragment is part of, as the frame says — absent reads as the answer.
 String blockTypeOf(Map<String, Object?> payload) => _text(payload, 'blockType') ?? 'text';
 
-/// Whether a fragment or a message is a subagent's.
-///
-/// What a subagent says reaches the web panel, which nests it under the `agent` call that opened it
-/// (plan 08, B-02); this app does not. Read as the answer, a subagent's text would interleave with it. It
-/// is not dropped from the numbering: the event is unread, and its `seq` still moves past.
-bool _isSubagent(Map<String, Object?> payload) => payload['parentToolUseId'] != null;
-
 SessionEvent _finished(_Frame frame) {
   final Map<String, Object?> payload = frame.payload;
   final String? messageId = _text(payload, 'messageId');
 
-  if (messageId == null || _isSubagent(payload)) {
+  if (messageId == null) {
     return UnreadEvent(frame.seq);
   }
 
@@ -246,26 +250,26 @@ SessionEvent _finished(_Frame frame) {
   return MessageFinished(
     frame.seq,
     messageId: messageId,
-    // Only the `text` blocks are the answer. Thinking has a field of its own, and a block that
-    // calls a tool is drawn as the tool — joined into the text it would erase the answer before it.
-    text: blocks
-        .where((Map<String, Object?> block) => block['type'] == 'text')
-        .map((Map<String, Object?> block) => _text(block, 'text') ?? '')
-        .join(),
+    // Only `text` and `image` become a block of the message, in the order the model gave them.
+    // Thinking has a field of its own, and a block that calls a tool is drawn as the tool.
+    blocks: <MessageBlock>[
+      for (final Map<String, Object?> block in blocks) ?_messageBlockOf(block),
+    ],
     isFromUser: _text(payload, 'role') == 'user',
     thoughts: <Thought>[for (final Map<String, Object?> block in blocks) ?_thoughtOf(block)],
     at: frame.at,
-    textBlockIds: <String>[
-      for (final Map<String, Object?> block in blocks)
-        if (block['type'] == 'text') ?_text(block, 'blockId'),
-    ],
-    images: <PromptImage>[
-      for (final Map<String, Object?> block in blocks)
-        if (block['type'] == 'image') _imageOf(block),
-    ],
     writtenAt: _writtenAt(payload),
+    parentToolUseId: _text(payload, 'parentToolUseId'),
   );
 }
+
+/// The block of a message [block] becomes, in the order it arrived — `null` for a block that is not
+/// text or an image (a tool call, say), which plays no part in the message.
+MessageBlock? _messageBlockOf(Map<String, Object?> block) => switch (block['type']) {
+  'text' => TextBlock(_text(block, 'text') ?? '', blockId: _text(block, 'blockId')),
+  'image' => ImageBlock(_imageOf(block)),
+  _ => null,
+};
 
 /// An image block, as the marker it travels as: its type and size, never the bytes (plan 22, D-09).
 /// A size that is not a whole, non-negative number is not one.
@@ -311,7 +315,7 @@ SessionEvent _invoked(_Frame frame) {
     frame.seq,
     toolUseId: toolUseId,
     call: call,
-    isSubagent: _isSubagent(payload),
+    parentToolUseId: _text(payload, 'parentToolUseId'),
     title: _titleOf(payload),
     writtenAt: _writtenAt(payload),
   );
@@ -386,6 +390,10 @@ SessionEvent _turn(_Frame frame) {
   final String? turnId = _text(frame.payload, 'turnId');
   final String? costUsd = _text(frame.payload, 'costUsd');
   final Object? durationMs = frame.payload['durationMs'];
+  final Object? usage = frame.payload['usage'];
+  final Map<String, Object?> tokens = usage is Map<String, Object?>
+      ? usage
+      : const <String, Object?>{};
 
   // No cost is not an unreadable turn: the engine reports none (plan 28, B-29, S-86).
   if (turnId == null || durationMs is! int) {
@@ -394,7 +402,17 @@ SessionEvent _turn(_Frame frame) {
 
   return TurnFinished(
     frame.seq,
-    TurnSummary(turnId: turnId, costUsd: costUsd, durationMs: durationMs),
+    TurnSummary(
+      turnId: turnId,
+      costUsd: costUsd,
+      durationMs: durationMs,
+      inputTokens: _int(tokens, 'inputTokens'),
+      outputTokens: _int(tokens, 'outputTokens'),
+      cacheReadTokens: _int(tokens, 'cacheReadTokens'),
+      cacheWriteTokens: _int(tokens, 'cacheWriteTokens'),
+      reasoningTokens: _int(tokens, 'reasoningTokens'),
+      webSearches: _int(tokens, 'webSearches'),
+    ),
   );
 }
 
@@ -457,7 +475,14 @@ Map<String, Object?>? _record(Map<String, Object?> payload, String key) => switc
 };
 
 /// A string field, or `null` when it is absent or is something else.
-String? _text(Map<String, Object?> payload, String key) {
-  final Object? value = payload[key];
-  return value is String ? value : null;
-}
+String? _text(Map<String, Object?> payload, String key) => switch (payload[key]) {
+  final String value => value,
+  _ => null,
+};
+
+/// A number field, or `null` when it is absent or is something else (plan 26, B-17, S-62) — never
+/// zero for a field the engine did not report.
+int? _int(Map<String, Object?> payload, String key) => switch (payload[key]) {
+  final int value => value,
+  _ => null,
+};

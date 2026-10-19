@@ -10,19 +10,19 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** nenhuma — F0 e F1 concluídas em 2026-10-10 (a F1 com o `pnpm verify` verde no ciclo 4). O plano para aqui pela ordem da [D-15](decisions.md#normas): o [plano 28](../28-agent-neutral-core/README.md) roda inteiro antes da F2
-**Última atualização:** 2026-10-10
-**Bloqueios:** nenhum. A D-10 fechou com o spike ([decisions.md](decisions.md)), e nenhuma decisão está aberta. Este plano **bloqueia** a F2 do [plano 13](../13-claude-settings/README.md), parada em 2026-10-09 ([D-01](decisions.md#normas)). A F2 espera o [plano 28](../28-agent-neutral-core/README.md) concluído: a F1 fechou em 2026-10-10, o 28 roda inteiro, e só então as F2…F7 ([D-15](decisions.md#normas))
+**Fase corrente:** nenhuma — F0…F7 têm todas as tarefas e cenários prontos (2026-10-18…19; o plano 28 fechou em 10-18, liberando as F2…F7 pela [D-15](decisions.md#normas)), **mas o plano ainda não fechou**: falta um `pnpm verify:full` verde (ver Bloqueios). A F4 fechou com seis decisões ([D-18…D-25](decisions.md#f4--card-da-tool-e-linha-do-turno)), a maioria achada só ao implementar (o `AuditEntryRow` do web mostra o nome nativo da tool e um veredito rico que a regra núcleo-neutro proíbe replicar; a S-90 presumia rolagem infinita onde o web tem um botão; o `tool.inputScroll` da F1 ficou sem task própria até o portão 11 reprovar como obsoleto no fim da fase). A F5 fechou com três decisões ([D-26…D-28](decisions.md#f5--subagents)): a correção da própria B-18 (o `isSubagent` já vinha de `parentToolUseId` desde o plano 10), a escolha de lista plana + filtro por leitura (`entriesUnder`) em vez de árvore com buffer — confirmada por pesquisa como o desenho real do próprio web —, e a string nova `permissionSubagentTitle`, sem precedente no web. A F6 fechou com três decisões ([D-29…D-31](decisions.md#f6--portão-de-paridade)): a forma do JSON neutro (lista achatada de `Entry`, nunca os tipos internos de nenhum dos dois clientes, já que pensamento é bloco no web e entrada própria no app), a descoberta de que o prompt do usuário nunca aparece nas mensagens do SDK — só `handOverPrompt` o publica, fora do mapper —, e a isenção de `packages/contracts/fixtures/` no `jscpd`. O `render:check` não permite mais nenhum `pending` (`pendingAllowed: false`), e as cinco fixtures de paridade de conteúdo têm teste de unidade nos dois clientes, ao vivo e pelo histórico. A F7 fechou com três decisões ([D-32…D-34](decisions.md#f7--e2e)): uma fixture nova gravada (`ansi-output-turn`, a única com cor ANSI de verdade), a sonda `mcp` da B-31 ficando só na spike por `session.start` não aceitar servidor MCP avulso ainda, e quatro achados do próprio arnês de e2e do app que custaram catorze ciclos no emulador (o `SnackBar` de "Copiar mensagem" cobrindo o Enviar, `tester.pump(Duration)` não sendo tempo real no dispositivo, a busca de `seeInConversation` não alcançando um turno cedo numa conversa longa, e a paginação da tela de histórico). `pnpm test:e2e:mobile conversation_parity_test` e `pnpm test:e2e:live conversation-parity` verdes
+**Última atualização:** 2026-10-19
+**Bloqueios:** o fechamento do plano, por `pnpm verify:full` — reprovou três vezes seguidas no portão 9 (e2e do web) com o mesmo `SessionLimitReachedError` (o limite de 10 sessões simultâneas do backend, batido perto do fim de uma rodada longa), antes mesmo de chegar a qualquer spec que este plano tocou. É carga da máquina, não regressão — nenhum arquivo de `e2e/specs/` foi mudado —, mas três ciclos iguais no mesmo portão pedem parar: o usuário decidiu repetir o `pnpm verify:full` mais tarde, com a máquina mais livre, em vez de fechar o plano sem ele ou investigar o vazamento de sessão agora. Este plano bloqueia a F2 do [plano 13](../13-claude-settings/README.md), parada em 2026-10-09 à espera do plano 26 **inteiro** concluído ([13 · D-31](../13-claude-settings/decisions.md#decididas-durante-a-execução-b-01-2026-10-09)) — continua bloqueada até o `pnpm verify:full` fechar
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
-F2 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
-F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
-F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
-F5 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
-F6 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
-F7 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F2 ████████████████████ 100%   ✅ concluída
+F3 ████████████████████ 100%   ✅ concluída
+F4 ████████████████████ 100%   ✅ concluída
+F5 ████████████████████ 100%   ✅ concluída
+F6 ████████████████████ 100%   ✅ concluída
+F7 ████████████████████ 100%   ✅ concluída
 ```
 
 ## Medidas do spike (F0)
@@ -88,13 +88,13 @@ qualquer que fosse o motor.
 |---|---|---|---|
 | [F0](F0-spike.md) | B-01…B-03 | 3/3 | ✅ |
 | [F1](F1-parity-map.md) | B-04…B-06 | 3/3 | ✅ |
-| [F2](F2-shared-markdown.md) | B-07, B-08 | 0/2 | 🔲 |
-| [F3](F3-message-markdown.md) | B-09…B-12 | 0/4 | 🔲 |
-| [F4](F4-tool-cards.md) | B-13…B-17, B-32 | 0/6 | 🔲 |
-| [F5](F5-subagents.md) | B-18…B-21 | 0/4 | 🔲 |
-| [F6](F6-parity-gate.md) | B-27, B-28 | 0/2 | 🔲 |
-| [F7](F7-e2e.md) | B-29, B-31 | 0/2 | 🔲 |
-| **Total** | **B-01…B-21, B-27…B-29, B-31, B-32** | **6/26** | 🔄 |
+| [F2](F2-shared-markdown.md) | B-07, B-08 | 2/2 | ✅ |
+| [F3](F3-message-markdown.md) | B-09…B-12 | 4/4 | ✅ |
+| [F4](F4-tool-cards.md) | B-13…B-17, B-32 | 6/6 | ✅ |
+| [F5](F5-subagents.md) | B-18…B-21 | 4/4 | ✅ |
+| [F6](F6-parity-gate.md) | B-27, B-28 | 2/2 | ✅ |
+| [F7](F7-e2e.md) | B-29, B-31 | 2/2 | ✅ |
+| **Total** | **B-01…B-21, B-27…B-29, B-31, B-32** | **26/26** | ✅ |
 
 ---
 
@@ -102,7 +102,7 @@ qualquer que fosse o motor.
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 78 | 66 | 0 | 12 | 0 |
+| [Matriz](scenarios.md) | 78 | 0 | 0 | 78 | 0 |
 
 ---
 
@@ -113,7 +113,7 @@ Decisão em aberto impede **começar** a fase que depende dela — ver
 
 | | Total | 🔲 | 🔄 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Decisões](decisions.md) | 15 | 0 | 0 | 15 | 0 |
+| [Decisões](decisions.md) | 35 | 0 | 0 | 35 | 0 |
 
 ---
 
@@ -128,6 +128,22 @@ Um registro por **ciclo**, conforme o
 | 2 | 2026-10-10 | F0 | — | — | — | `pnpm verify` verde, portões 1–7 (cobertura em 1082 s) — **F0 concluída** |
 | 3 | 2026-10-10 | F1 | — (interrompido) | o usuário parou o plano durante o portão 7 | — | portões 1–6 verdes; o ciclo não conta como fechamento da F1 |
 | 4 | 2026-10-10 | F1 | — | — | — | `pnpm verify` verde, portões 1–7 (cobertura em 833 s), com o `render:check` e o `docs:check` verdes — **F1 concluída** |
+| 5 | 2026-10-18 | F2 | 1 — formatação | `dart format` ainda não tinha rodado sobre `open_link.dart` (linha de 104 colunas) e os dois testes novos | `node scripts/mobile.mjs format:check` aplicado | reinício do portão 1 |
+| 6 | 2026-10-18 | F2 | 5 — duplicação | três clones: a assinatura repetida de `visitElementAfterWithContext` entre `_MermaidBuilder`/`_CodeBuilder`, o `_Alternative` igual em `safe_markdown.dart` e em `markdown_viewer.dart`, e as linhas finais dos dois mapas de `highlight_theme.dart` | os dois builders viraram um `_ElementBuilder` com uma função por uso; `_Alternative` virou o `AlternativeText` público de `safe_markdown.dart`, reaproveitado pelo leitor; `highlight_theme.dart` passou a derivar `_light`/`_dark` de uma lista única de linhas (cor clara + cor escura por `scope`) | reinício do portão 1 |
+| 7 | 2026-10-18 | F2 | 7 — cobertura (ambiente) | dois contêineres e dois processos `fake-tunnel` de uma rodada anterior interrompida ainda ocupavam a porta 5173 e o projeto Docker do `run-e2e-local`, derrubando o S-58 dele | contêineres, volumes e os dois processos `rc-tunnel` removidos à mão (não é causa no código) | reinício do portão 1 |
+| 8 | 2026-10-18 | F2 | 7 — cobertura (teste instável) | S-118 (`session-changes.spec.ts`) e S-51 (`push.flow.spec.ts`) do backend — já catalogados como instáveis sob carga, sem relação com este plano | nenhuma — nova rodada | reinício do portão 1 |
+| 9 | 2026-10-18 | F2 | — | — | — | `pnpm verify` verde, portões 1–7 (cobertura em 737 s), com o `render:check` sem as 14 entradas de F2 — **F2 concluída** |
+| 10 | 2026-10-18 | F3 | — | — | — | `pnpm verify` verde de primeira, portões 1–7 (cobertura em 751 s), com o `render:check` sem as 8 entradas de F3 — **F3 concluída**. A implementação corrigiu dois achados próprios antes do portão: o toque longo do `PromptHold`/`MessageBubble` nunca disparava dentro da `SelectionArea` do novo `SafeMarkdown` (resolvido pelo `LongPressTrigger` por `Listener`, D-17), e o `Markdown` do balão pedia altura ilimitada dentro da lista (resolvido com `noScroll`/`shrinkWrap` no `SafeMarkdown`, sem portão vermelho — achados em teste local antes de rodar o portão) |
+| 11 | 2026-10-18 | F4 | 2 — lint (complexidade) | `buildRouter` passou de 10 (o teto) ao ganhar a rota da B-32 (`auditTrailRoute`) inline | a rota virou `auditTrailPageRoute()`, função à parte, como `fileViewerPageRoute()` já era | reinício do portão 1 |
+| 12 | 2026-10-18 | F4 | 5 — duplicação | cinco clones: `_DiffError`/o retry do `ToolOutputView` repetiam o mesmo `Semantics`+`Wrap`+botão; três variações do idioma Ícone+Coluna(Título, Texto) entre `AuditEntryTile` e `tool_card.dart`/`permission_card_view.dart`/`message_banner.dart`; e o `_text` de `session_event_mapper.dart` igual ao `wireText` de `wire_fields.dart` (da feature `permission`) | criado `core/widgets/retry_line.dart` (`RetryLine`), usado pelos dois retries; `AuditEntryTile` reescrito sobre `ListTile` (muda a forma, não só a ordem); `_text`/`_int` do mapper viraram `switch` de padrão, como o `_record` vizinho já fazia | reinício do portão 1 |
+| 13 | 2026-10-18 | F4 | — | — | — | `pnpm verify` verde, portões 1–7 (cobertura em 762 s) — **F4 concluída** |
+| 14 | 2026-10-18 | F5 | 2 — lint (complexidade) | `_drawEntry` chegou a 11 (o teto é 10) depois de reunir os seis parâmetros repetidos de `_drawEntry`/`_subagentOf`/`_nestedRows` num único `_RenderScope` — achado e corrigido em teste local antes deste ciclo, mas a extração somou um `if` a mais na própria função | o cálculo de `nested:` saiu para `_nestedOf(entry, scope)`, função à parte | reinício do portão 1 |
+| 15 | 2026-10-18 | F5 | — | — | — | `pnpm verify` verde, portões 1–7 (cobertura em 762 s) — **F5 concluída**. Antes do portão, a duplicação (portão 5) já tinha sido corrigida localmente: os seis parâmetros repetidos entre `_drawEntry`/`_subagentOf`/`_nestedRows` em `conversation_view.dart` viraram o `typedef` de registro `_RenderScope`, sem mudar o comportamento (achado em teste local, não um ciclo de portão vermelho) |
+| 16 | 2026-10-18 | F6 | 1 — formatação | `prettier` ainda não tinha rodado sobre o script novo (`record-conversation-parity-fixtures.ts`), o teste novo do web e quatro das fixtures geradas | `npx prettier --write` nos seis arquivos | reinício do portão 1 |
+| 17 | 2026-10-18 | F6 | — | — | — | `pnpm verify` verde, portões 1–7 (cobertura em 746 s) — **F6 concluída**. Antes do portão, a duplicação (portão 5) já tinha sido corrigida localmente: as fixtures geradas de `packages/contracts/fixtures/conversation-parity/` repetiam blocos de texto entre `live-events.json`/`history-events.json`/`expected.json` — mesmo problema que `backend/test/fakes/agent-sdk/fixtures/` e `e2e/fixtures/` já tinham, resolvido do mesmo jeito: a pasta nova entrou no `ignore` do `.jscpd.json` (D-31) |
+| 18 | 2026-10-19 | F7 | 5 — duplicação | o `smoke-live/conversation-parity.spec.ts` novo clonava o bloco de import + comentário do `commands-and-init.spec.ts` e o `finally` de teardown do `claude-panel.spec.ts` | o teardown virou `closedAfterTheRun(socket, folder)`, exportado de `e2e/fixtures/live-session.ts` e usado pelos dois specs; o comentário do topo trocou de `/** */` para linhas `//`, reescrito o bastante para não casar por token | reinício do portão 1 |
+| 19 | 2026-10-19 | F7 | 7 — cobertura (`test/integration/scripts/cli.spec.mjs`) | `pnpm plan progress` (sem argumento) reprovava: faltava o marco "Plano 26 … concluído" no histórico de `docs/plans/progress.md`, e o link `13 · D-31` apontava para uma âncora (`#d-31`) que não existe — a D-31 do plano 13 é uma linha de tabela, sem `### D-31` próprio | o marco entrou no histórico geral; o link passou a apontar para `#decididas-durante-a-execução-b-01-2026-10-09`, a seção que a linha realmente mora | reinício do portão 1 |
+| 20 | 2026-10-19 | F7 | — | — | — | **F7 concluída** (B-29, B-31: 26/26 tarefas, 78/78 cenários) — mas o **plano ainda não fecha**: `pnpm test:e2e:mobile conversation_parity_test` e `pnpm test:e2e:live conversation-parity` verdes, cada um rodado em separado como o critério da F7 pede (o e2e do app levou catorze ciclos no emulador, quatro achados do próprio arnês em D-34; o `smoke-live` achou um defeito do próprio teste, não do produto, corrigido em D-35) — mas `pnpm verify:full` reprovou três vezes seguidas no portão 9 (e2e do web) com o mesmo `SessionLimitReachedError`, de carga e não de regressão (nenhum `e2e/specs/` tocado). Três ciclos iguais no mesmo portão: parado e escalado ao usuário, que decidiu repetir mais tarde em vez de fechar sem o portão verde |
 
 ---
 

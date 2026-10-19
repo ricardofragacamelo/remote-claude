@@ -15,12 +15,16 @@ import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// [content], in rows.
 class TextViewer extends StatefulWidget {
-  const TextViewer({required this.content, required this.wrap, super.key});
+  const TextViewer({required this.content, required this.wrap, super.key, this.initialLine});
 
   final String content;
 
   /// Long lines wrap at the edge of the screen.
   final bool wrap;
+
+  /// Where a file-path-like mention of a message pointed (plan 26, B-10) — the viewer opens roughly
+  /// there, by the same ratio a question's card is found by (S-37).
+  final int? initialLine;
 
   @override
   State<TextViewer> createState() => _TextViewerState();
@@ -29,6 +33,7 @@ class TextViewer extends StatefulWidget {
 class _TextViewerState extends State<TextViewer> {
   late List<TextRow> _rows = textRows(widget.content, wrap: widget.wrap);
   double _scale = 1;
+  bool _jumped = false;
 
   /// Kept across a new version of the file, so the reader stays where they were (S-75).
   final ScrollController _vertical = ScrollController();
@@ -45,6 +50,9 @@ class _TextViewerState extends State<TextViewer> {
   Widget build(BuildContext context) {
     if (_rows.isEmpty) {
       return const EmptyFile();
+    }
+    if (widget.initialLine != null && !_jumped) {
+      WidgetsBinding.instance.addPostFrameCallback((Duration _) => _jumpToInitialLine());
     }
     final AppLocalizations l10n = AppLocalizations.of(context);
 
@@ -84,6 +92,24 @@ class _TextViewerState extends State<TextViewer> {
   void dispose() {
     _vertical.dispose();
     super.dispose();
+  }
+
+  /// Scrolls to [TextViewer.initialLine], once — by the row's position among the others, since rows
+  /// wrap and have no height known before they are laid out.
+  void _jumpToInitialLine() {
+    final int? line = widget.initialLine;
+
+    if (_jumped || line == null || !_vertical.hasClients || _rows.isEmpty) {
+      return;
+    }
+
+    final int at = _rows.indexWhere((TextRow row) => row.number == line);
+    if (at < 0) {
+      return;
+    }
+
+    _jumped = true;
+    _vertical.jumpTo(_vertical.position.maxScrollExtent * at / _rows.length);
   }
 
   /// Room for the mark of a cut line, when some line was cut.

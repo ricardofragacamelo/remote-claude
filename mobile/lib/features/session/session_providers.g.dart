@@ -374,6 +374,144 @@ final class ReadHistoryProvider extends $FunctionalProvider<ReadHistory, ReadHis
 
 String _$readHistoryHash() => r'5f716618425ab37076f5e6a695cc2cd1ac90c331';
 
+/// The subagent's edge of the backend (plan 26, B-20).
+
+@ProviderFor(subagentApiDataSource)
+final subagentApiDataSourceProvider = SubagentApiDataSourceProvider._();
+
+/// The subagent's edge of the backend (plan 26, B-20).
+
+final class SubagentApiDataSourceProvider
+    extends $FunctionalProvider<SubagentApiDataSource, SubagentApiDataSource, SubagentApiDataSource>
+    with $Provider<SubagentApiDataSource> {
+  /// The subagent's edge of the backend (plan 26, B-20).
+  SubagentApiDataSourceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'subagentApiDataSourceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$subagentApiDataSourceHash();
+
+  @$internal
+  @override
+  $ProviderElement<SubagentApiDataSource> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  SubagentApiDataSource create(Ref ref) {
+    return subagentApiDataSource(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SubagentApiDataSource value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SubagentApiDataSource>(value),
+    );
+  }
+}
+
+String _$subagentApiDataSourceHash() => r'a7ec1ed16c9692cf93a9ee523bb8606215bba2bd';
+
+/// The subagent repository.
+
+@ProviderFor(subagentRepository)
+final subagentRepositoryProvider = SubagentRepositoryProvider._();
+
+/// The subagent repository.
+
+final class SubagentRepositoryProvider
+    extends $FunctionalProvider<SubagentRepository, SubagentRepository, SubagentRepository>
+    with $Provider<SubagentRepository> {
+  /// The subagent repository.
+  SubagentRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'subagentRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$subagentRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<SubagentRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  SubagentRepository create(Ref ref) {
+    return subagentRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SubagentRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SubagentRepository>(value),
+    );
+  }
+}
+
+String _$subagentRepositoryHash() => r'c9c70756ec9e58d3327cb5cafddf50c92c05c21c';
+
+/// Reads a page of a subagent's own messages.
+
+@ProviderFor(readSubagentMessages)
+final readSubagentMessagesProvider = ReadSubagentMessagesProvider._();
+
+/// Reads a page of a subagent's own messages.
+
+final class ReadSubagentMessagesProvider
+    extends $FunctionalProvider<ReadSubagentMessages, ReadSubagentMessages, ReadSubagentMessages>
+    with $Provider<ReadSubagentMessages> {
+  /// Reads a page of a subagent's own messages.
+  ReadSubagentMessagesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'readSubagentMessagesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$readSubagentMessagesHash();
+
+  @$internal
+  @override
+  $ProviderElement<ReadSubagentMessages> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ReadSubagentMessages create(Ref ref) {
+    return readSubagentMessages(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ReadSubagentMessages value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ReadSubagentMessages>(value),
+    );
+  }
+}
+
+String _$readSubagentMessagesHash() => r'eed91aa43b6ebe94d44857745927514127ce3bc2';
+
 /// The routes of what a conversation's timeline only marks: a tool's whole output, a prompt's
 /// image (plan 22, B-32, B-33).
 
@@ -1222,3 +1360,95 @@ final class ListEnginesProvider extends $FunctionalProvider<ListEngines, ListEng
 }
 
 String _$listEnginesHash() => r'2c7be9b72ddad329d1c83912b59e6dfe5b9ab794';
+
+/// The diff of a tool that wrote a file (plan 26, B-16).
+
+@ProviderFor(toolDiffRepository)
+final toolDiffRepositoryProvider = ToolDiffRepositoryProvider._();
+
+/// The diff of a tool that wrote a file (plan 26, B-16).
+
+final class ToolDiffRepositoryProvider
+    extends $FunctionalProvider<ToolDiffRepository, ToolDiffRepository, ToolDiffRepository>
+    with $Provider<ToolDiffRepository> {
+  /// The diff of a tool that wrote a file (plan 26, B-16).
+  ToolDiffRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'toolDiffRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$toolDiffRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<ToolDiffRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ToolDiffRepository create(Ref ref) {
+    return toolDiffRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ToolDiffRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ToolDiffRepository>(value),
+    );
+  }
+}
+
+String _$toolDiffRepositoryHash() => r'8a2d06ec8faef5024634d13ee5795795aea6bc59';
+
+/// Reads the diff of one file-writing call.
+
+@ProviderFor(readToolDiff)
+final readToolDiffProvider = ReadToolDiffProvider._();
+
+/// Reads the diff of one file-writing call.
+
+final class ReadToolDiffProvider
+    extends $FunctionalProvider<ReadToolDiff, ReadToolDiff, ReadToolDiff>
+    with $Provider<ReadToolDiff> {
+  /// Reads the diff of one file-writing call.
+  ReadToolDiffProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'readToolDiffProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$readToolDiffHash();
+
+  @$internal
+  @override
+  $ProviderElement<ReadToolDiff> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ReadToolDiff create(Ref ref) {
+    return readToolDiff(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ReadToolDiff value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ReadToolDiff>(value),
+    );
+  }
+}
+
+String _$readToolDiffHash() => r'd29d07ea24fbcb32d68153b34f02fce4b837f518';

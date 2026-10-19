@@ -13,7 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/features/files/domain/ports/file_saver.dart';
 import 'package:remote_claude/features/files/files.dart';
 import 'package:remote_claude/features/files/presentation/widgets/viewers/markdown_viewer.dart';
-import 'package:remote_claude/features/files/presentation/widgets/viewers/mermaid_block.dart';
+import 'package:remote_claude/core/widgets/markdown/mermaid_block.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import 'e2e_environment.dart';

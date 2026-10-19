@@ -224,6 +224,23 @@ class Conversation extends Equatable {
   /// The thinking, in order.
   List<ThinkingEntry> get thinking => entries.whereType<ThinkingEntry>().toList(growable: false);
 
+  /// Every entry that belongs to [parent] — the main conversation's own when it is `null`, or one
+  /// subagent's (its text, its thinking, its own tools, possibly its own subagents) when it is a
+  /// `toolUseId` (plan 26, B-19). A subagent's entries are never mixed into the main list (S-68):
+  /// they only ever show up here, under their own `agent`-kind tool.
+  List<ConversationEntry> entriesUnder(String? parent) => entries
+      .where((ConversationEntry entry) => _parentOf(entry) == parent)
+      .toList(growable: false);
+
+  /// Whose [entry] is, by the field only a message, a thinking or a tool carries — anything else
+  /// (a turn, a compaction, a rewind) belongs to nobody's subagent, ever.
+  static String? _parentOf(ConversationEntry entry) => switch (entry) {
+    StreamMessage(:final String? parentToolUseId) => parentToolUseId,
+    ThinkingEntry(:final String? parentToolUseId) => parentToolUseId,
+    ToolExecution(:final String? parentToolUseId) => parentToolUseId,
+    _ => null,
+  };
+
   /// The turns that ended, in order.
   List<TurnSummary> get turns => entries.whereType<TurnSummary>().toList(growable: false);
 
@@ -377,7 +394,7 @@ class Conversation extends Equatable {
     ToolInvoked() => _invoked(event),
     ToolOutput() => _changeTool(
       event.toolUseId,
-      (ToolExecution tool) => tool.copyWith(output: tool.output + event.chunk),
+      (ToolExecution tool) => tool.copyWith(elapsed: event.chunk),
     ),
     ToolFinished() => _changeTool(
       event.toolUseId,
@@ -506,6 +523,7 @@ class Conversation extends Equatable {
         index: _thinkingCount(event.messageId),
         text: event.delta,
         startedAt: event.at.isEmpty ? null : event.at,
+        parentToolUseId: event.parentToolUseId,
       ),
     );
   }
@@ -526,7 +544,13 @@ class Conversation extends Equatable {
     final String id = 'message:${event.messageId}';
 
     if (!stopped.entries.any((ConversationEntry each) => each.entryId == id)) {
-      return stopped._withEntry(StreamMessage(messageId: event.messageId, streaming: event.delta));
+      return stopped._withEntry(
+        StreamMessage(
+          messageId: event.messageId,
+          streaming: event.delta,
+          parentToolUseId: event.parentToolUseId,
+        ),
+      );
     }
 
     return stopped._change<StreamMessage>(
@@ -548,10 +572,11 @@ class Conversation extends Equatable {
   Conversation _finished(MessageFinished event, Duration? atMost) {
     final Conversation thought = event.thoughts.fold(
       this,
-      (Conversation state, Thought each) => state._thought(event.messageId, each, event.at, atMost),
+      (Conversation state, Thought each) =>
+          state._thought(event.messageId, each, event.at, atMost, event.parentToolUseId),
     );
 
-    if (event.text.isEmpty && event.images.isEmpty && !event.isFromUser) {
+    if (event.blocks.isEmpty && !event.isFromUser) {
       return thought;
     }
 
@@ -560,7 +585,13 @@ class Conversation extends Equatable {
 
   /// One finished thinking: the one still arriving, completed — or a new one, unless the message
   /// already has it, which is the history and the stream both delivering it.
-  Conversation _thought(String messageId, Thought finished, String at, Duration? atMost) {
+  Conversation _thought(
+    String messageId,
+    Thought finished,
+    String at,
+    Duration? atMost,
+    String? parentToolUseId,
+  ) {
     final ThinkingEntry? open = _openThinking(messageId);
 
     if (open != null) {
@@ -589,6 +620,7 @@ class Conversation extends Equatable {
               isRedacted: finished.isRedacted,
               blockId: finished.blockId,
               atMost: atMost,
+              parentToolUseId: parentToolUseId,
             ),
           );
   }
@@ -606,7 +638,7 @@ class Conversation extends Equatable {
         each.isRedacted == finished.isRedacted;
   }
 
-  /// The text block that finished, added to its message once.
+  /// The blocks that finished, added to their message once each, in the order they arrived.
   Conversation _text(MessageFinished event) {
     final Conversation stopped = _stopThinking(event.messageId, event.at);
     final String id = 'message:${event.messageId}';
@@ -615,35 +647,47 @@ class Conversation extends Equatable {
             .whereType<StreamMessage>()
             .where((StreamMessage each) => each.entryId == id)
             .firstOrNull ??
-        StreamMessage(messageId: event.messageId, isFromUser: event.isFromUser);
+        StreamMessage(
+          messageId: event.messageId,
+          isFromUser: event.isFromUser,
+          parentToolUseId: event.parentToolUseId,
+        );
 
-    // A prompt of only an image has no text to add: its marker is what is drawn (S-121).
-    final bool known =
-        _knownText(message, event) || (event.text.isEmpty && event.images.isNotEmpty);
-    final StreamMessage whole = StreamMessage(
-      messageId: message.messageId,
-      blocks: known ? message.blocks : <String>[...message.blocks, event.text],
-      isFromUser: event.isFromUser,
-      blockIds: known ? message.blockIds : <String>[...message.blockIds, ...event.textBlockIds],
-      images: <PromptImage>[
-        ...message.images,
-        for (final PromptImage image in event.images)
-          if (!message.images.contains(image)) image,
-      ],
-    );
-
-    return stopped._withEntry(whole);
-  }
-
-  /// Whether the text that finished is already in the message: by identity when the server named its
-  /// blocks (plan 22, S-36), and by its text otherwise (S-37).
-  static bool _knownText(StreamMessage message, MessageFinished event) {
-    if (event.textBlockIds.isNotEmpty && message.blockIds.isNotEmpty) {
-      return event.textBlockIds.every(message.blockIds.contains);
+    final List<MessageBlock> merged = List<MessageBlock>.of(message.blocks);
+    for (final MessageBlock block in event.blocks) {
+      if (!_knownBlock(message.streaming, merged, block)) {
+        merged.add(block);
+      }
     }
 
-    return message.streaming == null && message.blocks.contains(event.text);
+    return stopped._withEntry(
+      StreamMessage(
+        messageId: message.messageId,
+        isFromUser: event.isFromUser,
+        blocks: merged,
+        parentToolUseId: message.parentToolUseId,
+      ),
+    );
   }
+
+  /// Whether [arrived] is already among [existing]: by identity when the server named both it and
+  /// something already there (plan 22, S-36), by content otherwise (S-37) — and then only when
+  /// nothing of the message is still streaming, since a block arriving mid-stream is never a replay.
+  static bool _knownBlock(String? streaming, List<MessageBlock> existing, MessageBlock arrived) {
+    if (arrived.blockId != null && existing.any((MessageBlock each) => each.blockId != null)) {
+      return existing.any((MessageBlock each) => each.blockId == arrived.blockId);
+    }
+
+    return streaming == null && existing.any((MessageBlock each) => _sameContent(each, arrived));
+  }
+
+  /// Whether two blocks say the same thing, ignoring identity.
+  static bool _sameContent(MessageBlock left, MessageBlock right) => switch ((left, right)) {
+    (TextBlock(:final String text), TextBlock(text: final String otherText)) => text == otherText,
+    (ImageBlock(:final PromptImage image), ImageBlock(image: final PromptImage other)) =>
+      image.mediaType == other.mediaType && image.size == other.size,
+    _ => false,
+  };
 
   /// A tool starting — or **starting again**, when the replay re-delivers it (S-78): in its place,
   /// from nothing.
@@ -651,7 +695,7 @@ class Conversation extends Equatable {
     ToolExecution(
       toolUseId: event.toolUseId,
       call: event.call,
-      isSubagent: event.isSubagent,
+      parentToolUseId: event.parentToolUseId,
       title: event.title,
     ),
   );

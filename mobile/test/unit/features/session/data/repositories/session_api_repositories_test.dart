@@ -9,7 +9,9 @@ import 'package:remote_claude/features/session/data/datasources/session_api_data
 import 'package:remote_claude/features/session/data/repositories/checkpoint_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/command_repository_impl.dart';
 import 'package:remote_claude/features/session/data/repositories/insight_repository_impl.dart';
+import 'package:remote_claude/features/session/data/repositories/tool_diff_repository_impl.dart';
 import 'package:remote_claude/features/session/domain/entities/insight.dart';
+import 'package:remote_claude/features/session/domain/entities/tool_diff.dart';
 import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/slash_command.dart';
 
@@ -51,6 +53,12 @@ class ScriptedSessionApi implements SessionApiDataSource {
   @override
   Future<Object?> liveSessions(String workspacePath) async {
     asked.add('live:$workspacePath');
+    return body;
+  }
+
+  @override
+  Future<Object?> toolDiff(String sessionId, String toolUseId) async {
+    asked.add('diff:$sessionId:$toolUseId');
     return body;
   }
 }
@@ -173,6 +181,48 @@ void main() {
 
       await expectLater(
         LiveSessionRepositoryImpl(api).list('/w/a'),
+        throwsA(isA<UnexpectedFailure>()),
+      );
+    });
+  });
+
+  group('the diff of a file-writing call (plan 26, B-16)', () {
+    test('read for the session and the tool asked about', () async {
+      final ScriptedSessionApi api = ScriptedSessionApi()
+        ..body = <String, Object?>{
+          'path': '/w/a.ts',
+          'kind': 'file.edit',
+          'pending': false,
+          'scope': 'file',
+          'before': <String, Object?>{'state': 'content', 'content': 'old'},
+          'after': <String, Object?>{'state': 'content', 'content': 'new'},
+          'hunks': <Object?>[
+            <String, Object?>{
+              'id': 'h1',
+              'oldStart': 1,
+              'oldLines': 1,
+              'newStart': 1,
+              'newLines': 1,
+              'lines': <Object?>[
+                <String, Object?>{'kind': 'removed', 'text': 'old'},
+                <String, Object?>{'kind': 'added', 'text': 'new'},
+              ],
+            },
+          ],
+        };
+
+      final ToolDiff diff = await ToolDiffRepositoryImpl(api).diff('s-1', 't-1');
+
+      expect(diff.path, '/w/a.ts');
+      expect(diff.hunks.single.id, 'h1');
+      expect(api.asked, <String>['diff:s-1:t-1']);
+    });
+
+    test('an answer this build cannot read is a failure, not a crash', () async {
+      final ScriptedSessionApi api = ScriptedSessionApi()..body = 'nope';
+
+      await expectLater(
+        ToolDiffRepositoryImpl(api).diff('s-1', 't-1'),
         throwsA(isA<UnexpectedFailure>()),
       );
     });

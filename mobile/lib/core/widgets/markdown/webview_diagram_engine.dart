@@ -9,7 +9,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:remote_claude/features/files/domain/ports/diagram_engine.dart';
+import 'package:remote_claude/core/widgets/markdown/diagram_engine.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 /// Where the page is, among the assets.

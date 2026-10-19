@@ -23,7 +23,7 @@ O `tool.progress` deixa de sujar a saída.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-13 — O rótulo do evento 🔲
+### B-13 — O rótulo do evento ✅
 
 O app **não** porta o mapa de nomes do web para o Dart. Depois da
 [F2 do plano 28](../28-agent-neutral-core/F2-canonical-tools.md), o `tool.started` e o
@@ -49,7 +49,7 @@ Cada `kind` entra no mapa de paridade como `ok`, no `render-parity.json` que a F
 pelo `kind` (o mapa da B-04 lia os rótulos do `tool-labels.ts`, que aquela fase apaga).
 Cenários S-46…S-50.
 
-### B-14 — O `tool.progress` 🔲
+### B-14 — O `tool.progress` ✅
 
 O backend manda o tempo decorrido como `chunk`. Hoje o texto vem com o nome nativo (`"Bash · 3s"`);
 depois do [plano 28](../28-agent-neutral-core/README.md), o `chunk` não traz nome nenhum, e o texto da
@@ -63,7 +63,7 @@ carrega, no [05-websocket-protocol](../../architecture/shared/05-websocket-proto
 `chunk` e a descrição dizem "saída", e a descrição é corrigida, se o plano 28 não a tiver corrigido.
 Cenários S-51…S-53.
 
-### B-15 — Saída colorida 🔲
+### B-15 — Saída colorida ✅
 
 O par do `AnsiText` do web. Ele usa:
 
@@ -75,7 +75,7 @@ O par do `AnsiText` do web. Ele usa:
 Vale no resumo e na saída inteira pedida sob demanda. O texto copiado sai sem as sequências.
 Cenários S-54…S-56.
 
-### B-16 — O diff das tools de arquivo (`file.edit`, `file.write`) 🔲
+### B-16 — O diff das tools de arquivo (`file.edit`, `file.write`) ✅
 
 O par do `ToolDiffView`. O app **não** calcula o diff a partir da entrada da tool: lê
 `GET /sessions/:id/tools/:toolUseId/diff` ([backend/03](../../architecture/backend/03-modules.md)), a
@@ -93,7 +93,7 @@ Para o `file.write` de arquivo novo, todo o conteúdo como acrescentado, com o m
 pelo usuário pela R4 ([D-09](decisions.md#normas)). A view "Alterações" continua fora. Cenários
 S-57…S-60.
 
-### B-17 — Os tokens do turno 🔲
+### B-17 — Os tokens do turno ✅
 
 O `TurnSummary` ganha o `usage` canônico do [plano 28](../28-agent-neutral-core/F4-modes-and-usage.md),
 lido como o web lê:
@@ -105,7 +105,7 @@ lido como o web lê:
 
 O `TurnLine` mostra custo, segundos e tokens, no formato do `TurnRow`. Cenários S-61, S-62.
 
-### B-32 — O link para a trilha 🔲
+### B-32 — O link para a trilha ✅
 
 O card da tool do web tem o link "Trilha", que abre `/audit` filtrado pela sessão e pela tool
 ([ToolRow.tsx](../../../web/src/features/session/components/conversation/ToolRow.tsx)). Hoje o filtro é o

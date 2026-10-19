@@ -11,7 +11,6 @@ import '../../../../../support/builders/tools.dart';
 MessageFinished thought(String messageId, String writtenAt, {String text = ''}) => MessageFinished(
   0,
   messageId: messageId,
-  text: '',
   isFromUser: false,
   thoughts: <Thought>[Thought(text, blockId: '$messageId:0')],
   writtenAt: writtenAt,
@@ -111,7 +110,6 @@ void main() {
             const MessageFinished(
               2,
               messageId: 'm',
-              text: '',
               isFromUser: false,
               thoughts: <Thought>[Thought('hm')],
               at: '2026-10-07T12:00:04Z',
@@ -159,41 +157,49 @@ void main() {
   group('the image of a prompt — S-118, S-121', () {
     const PromptImage png = PromptImage(blockId: 'u1:1', mediaType: 'image/png', size: 48213);
 
-    test('S-118 · a prompt with text and an image keeps both: the text, and the marker', () {
+    test('S-118 · a prompt with text and an image keeps both, in order', () {
       final Conversation shown = const Conversation().withHistory(const <SessionEvent>[
         MessageFinished(
           0,
           messageId: 'u1',
-          text: 'what is wrong here?',
+          blocks: <MessageBlock>[TextBlock('what is wrong here?'), ImageBlock(png)],
           isFromUser: true,
-          images: <PromptImage>[png],
         ),
       ]);
 
       expect(shown.messages.single.text, 'what is wrong here?');
-      expect(shown.messages.single.images, <PromptImage>[png]);
+      expect(shown.messages.single.blocks, const <MessageBlock>[
+        TextBlock('what is wrong here?'),
+        ImageBlock(png),
+      ]);
     });
 
     test('S-121 · a prompt of only an image is a turn of the person with its marker, and no empty '
         'text', () {
       final Conversation shown = const Conversation().withHistory(const <SessionEvent>[
-        MessageFinished(0, messageId: 'u1', text: '', isFromUser: true, images: <PromptImage>[png]),
+        MessageFinished(
+          0,
+          messageId: 'u1',
+          blocks: <MessageBlock>[ImageBlock(png)],
+          isFromUser: true,
+        ),
       ]);
 
       final StreamMessage prompt = shown.messages.single;
       expect(prompt.isFromUser, isTrue);
-      expect(prompt.blocks, isEmpty);
-      expect(prompt.images, <PromptImage>[png]);
+      expect(prompt.text, isEmpty);
+      expect(prompt.blocks, const <MessageBlock>[ImageBlock(png)]);
     });
 
     test('the same image arriving again is still one marker (S-36)', () {
       const MessageFinished prompt = MessageFinished(
         3,
         messageId: 'u1',
-        text: 'look',
+        blocks: <MessageBlock>[
+          TextBlock('look', blockId: 'u1:0'),
+          ImageBlock(png),
+        ],
         isFromUser: true,
-        images: <PromptImage>[png],
-        textBlockIds: <String>['u1:0'],
       );
       final Conversation shown = const Conversation().apply(prompt).withHistory(
         const <SessionEvent>[prompt],
@@ -204,16 +210,22 @@ void main() {
             const MessageFinished(
               4,
               messageId: 'u1',
-              text: 'look',
+              blocks: <MessageBlock>[
+                TextBlock('look', blockId: 'u1:0'),
+                ImageBlock(png),
+              ],
               isFromUser: true,
-              images: <PromptImage>[png],
-              textBlockIds: <String>['u1:0'],
             ),
           );
 
-      expect(shown.messages.single.images, <PromptImage>[png]);
-      expect(twice.messages.single.images, <PromptImage>[png]);
-      expect(twice.messages.single.blocks, <String>['look']);
+      expect(shown.messages.single.blocks, const <MessageBlock>[
+        TextBlock('look', blockId: 'u1:0'),
+        ImageBlock(png),
+      ]);
+      expect(twice.messages.single.blocks, const <MessageBlock>[
+        TextBlock('look', blockId: 'u1:0'),
+        ImageBlock(png),
+      ]);
     });
 
     test('two images of one prompt are two markers, in their order', () {
@@ -222,13 +234,12 @@ void main() {
         MessageFinished(
           0,
           messageId: 'u1',
-          text: '',
+          blocks: <MessageBlock>[ImageBlock(png), ImageBlock(jpeg)],
           isFromUser: true,
-          images: <PromptImage>[png, jpeg],
         ),
       ]);
 
-      expect(shown.messages.single.images, <PromptImage>[png, jpeg]);
+      expect(shown.messages.single.blocks, const <MessageBlock>[ImageBlock(png), ImageBlock(jpeg)]);
     });
 
     test('an answer of the model that is only an image block adds a message with it', () {
@@ -236,23 +247,22 @@ void main() {
         const MessageFinished(
           1,
           messageId: 'a1',
-          text: '',
+          blocks: <MessageBlock>[ImageBlock(png)],
           isFromUser: false,
-          images: <PromptImage>[png],
         ),
       );
 
-      expect(shown.messages.single.images, <PromptImage>[png]);
+      expect(shown.messages.single.blocks, const <MessageBlock>[ImageBlock(png)]);
     });
 
     test('a message copied keeps its images', () {
       const StreamMessage message = StreamMessage(
         messageId: 'u1',
-        images: <PromptImage>[png],
+        blocks: <MessageBlock>[ImageBlock(png)],
         streaming: 'x',
       );
 
-      expect(message.copyWith(streaming: () => null).images, <PromptImage>[png]);
+      expect(message.copyWith(streaming: () => null).blocks, const <MessageBlock>[ImageBlock(png)]);
     });
   });
 }

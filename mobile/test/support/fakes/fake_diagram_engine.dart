@@ -4,7 +4,7 @@ library;
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:remote_claude/features/files/domain/ports/diagram_engine.dart';
+import 'package:remote_claude/core/widgets/markdown/diagram_engine.dart';
 
 import '../builders/images.dart';
 

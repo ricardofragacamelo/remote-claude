@@ -12,6 +12,7 @@ import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/navigation/deep_link_controller.dart';
 import 'package:remote_claude/core/navigation/page_observer.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
+import 'package:remote_claude/features/audit/audit.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/connection/connection.dart';
 import 'package:remote_claude/features/diagnostics/diagnostics.dart';
@@ -71,8 +72,20 @@ GoRoute fileViewerPageRoute() => GoRoute(
       folder: query[viewerFolderParameter] ?? '',
       path: query[viewerPathParameter] ?? '',
       sessionId: query[viewerSessionParameter],
+      line: int.tryParse(query[viewerLineParameter] ?? ''),
     );
   },
+);
+
+/// The trail of a live session's calls of one kind — the tool card's own "Trail" link (plan 26,
+/// B-32), reachable nowhere else.
+GoRoute auditTrailPageRoute() => GoRoute(
+  path: auditTrailRoute,
+  name: 'audit-trail',
+  builder: (BuildContext context, GoRouterState state) => AuditTrailPage(
+    sessionId: state.uri.queryParameters[auditTrailSessionParameter] ?? '',
+    kind: state.uri.queryParameters[auditTrailKindParameter] ?? '',
+  ),
 );
 
 /// Builds the router.
@@ -163,6 +176,7 @@ GoRouter buildRouter(Ref ref) {
         name: 'rules',
         builder: (BuildContext context, GoRouterState state) => const RulesPage(),
       ),
+      auditTrailPageRoute(),
       GoRoute(
         path: historyRoute,
         name: 'history',

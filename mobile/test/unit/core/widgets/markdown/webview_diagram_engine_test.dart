@@ -3,8 +3,8 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:remote_claude/features/files/data/engines/webview_diagram_engine.dart';
-import 'package:remote_claude/features/files/domain/ports/diagram_engine.dart';
+import 'package:remote_claude/core/widgets/markdown/diagram_engine.dart';
+import 'package:remote_claude/core/widgets/markdown/webview_diagram_engine.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 /// The page of the app, played by the test: it says it is ready when the asset loads, and answers

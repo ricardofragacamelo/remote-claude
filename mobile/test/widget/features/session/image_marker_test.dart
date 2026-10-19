@@ -99,14 +99,13 @@ void main() {
             entries: <ConversationEntry>[
               StreamMessage(
                 messageId: 'u1',
-                blocks: <String>['what is wrong here?'],
+                blocks: <MessageBlock>[TextBlock('what is wrong here?'), ImageBlock(png)],
                 isFromUser: true,
-                images: <PromptImage>[png],
               ),
               StreamMessage(
                 messageId: 'u2',
                 isFromUser: true,
-                images: <PromptImage>[PromptImage(blockId: 'u2:0')],
+                blocks: <MessageBlock>[ImageBlock(PromptImage(blockId: 'u2:0'))],
               ),
             ],
           ),

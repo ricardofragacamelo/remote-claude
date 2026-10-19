@@ -25,7 +25,7 @@ segurança, que acabariam divergindo.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-07 — O renderizador em `core/widgets/markdown/` 🔲
+### B-07 — O renderizador em `core/widgets/markdown/` ✅
 
 Vão para `core/widgets/markdown/`:
 
@@ -47,7 +47,7 @@ O `MarkdownViewer` do leitor passa a montar o `SafeMarkdown` com a pinça, a lis
 imagens relativas dele. O comportamento não muda. Os testes do plano 25 rodam **sem edição** (R-03).
 O teste de arquitetura do app ganha uma regra: `core/` não importa `features/`. Cenários S-17…S-21.
 
-### B-08 — O bloco de código 🔲
+### B-08 — O bloco de código ✅
 
 `core/widgets/markdown/code_block.dart`, o par do `CodeBlock` do web:
 

@@ -9,7 +9,7 @@ import { callApi } from '../fixtures/api';
 import { RED_PNG } from '../fixtures/claude-panel';
 import { environment } from '../fixtures/environment';
 import { startConversation, transcriptOf } from '../fixtures/history';
-import { connected, workspaceFor } from '../fixtures/live-session';
+import { closedAfterTheRun, connected, workspaceFor } from '../fixtures/live-session';
 import { answeredUntilTheTurnEnds, endedWithEveryMessageKnown } from '../fixtures/live-turns';
 import type { E2eSocket } from '../fixtures/ws';
 import { scenario } from '../scenarios';
@@ -254,7 +254,6 @@ test(`${live.id} — the real Claude: references, @path, the installation, the s
 
     await endedWithEveryMessageKnown(socket, sessionId);
   } finally {
-    socket.close();
-    fs.rmSync(folder, { recursive: true, force: true });
+    closedAfterTheRun(socket, folder);
   }
 });

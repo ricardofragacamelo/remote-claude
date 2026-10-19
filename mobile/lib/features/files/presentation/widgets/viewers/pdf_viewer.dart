@@ -12,13 +12,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/loading_view.dart';
+import 'package:remote_claude/core/widgets/markdown/open_link.dart';
 import 'package:remote_claude/core/widgets/message_strip.dart';
 import 'package:remote_claude/features/files/domain/entities/download.dart';
 import 'package:remote_claude/features/files/presentation/engines/pdf_engine.dart';
 import 'package:remote_claude/features/files/presentation/providers/pdf_controller.dart';
 import 'package:remote_claude/features/files/presentation/widgets/downloads.dart';
 import 'package:remote_claude/features/files/presentation/widgets/viewers/no_preview.dart';
-import 'package:remote_claude/features/files/presentation/widgets/viewers/open_link.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The PDF at [path] in [folder].

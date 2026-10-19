@@ -23,6 +23,7 @@
     "contracts:generate": "node scripts/contracts.mjs",
     "contracts:check": "node scripts/contracts.mjs --check",
     "fixtures:record": "node scripts/record-agent-sdk-fixtures.mjs",
+    "fixtures:conversation-parity": "pnpm --filter backend run fixtures:conversation-parity",
     "transcript:follow-bench": "node scripts/transcript-follow-bench.mjs",
     "spike:claude-config": "node scripts/claude-config-spike.mjs",
     "spike:conversation-parity": "node scripts/conversation-parity-spike.mjs",

@@ -18,7 +18,7 @@ streaming) decidida.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-09 — A mensagem guarda os blocos 🔲
+### B-09 — A mensagem guarda os blocos ✅
 
 Hoje o `MessageFinished` junta os blocos `text` com `''` e põe as imagens no fim
 ([session_event_mapper.dart](../../../mobile/lib/features/session/data/mappers/session_event_mapper.dart)).
@@ -32,7 +32,7 @@ O texto "para copiar" é o markdown original, com os blocos separados por linha 
 `message.text` do web. O mesmo vale para o histórico (`historyEventFrom`) e para o seguidor do plano
 22: as três vias passam pelo mesmo mapper. Cenários S-27…S-30.
 
-### B-10 — O balão com markdown 🔲
+### B-10 — O balão com markdown ✅
 
 O `MessageBubble` desenha cada bloco de texto pelo `SafeMarkdown` da F2, para o Claude **e** para o
 usuário, como o web. Desenha também:
@@ -55,7 +55,7 @@ As regras do conteúdo não confiável valem como no leitor:
 
 Cenários S-31…S-40.
 
-### B-11 — Autor, selecionar e copiar 🔲
+### B-11 — Autor, selecionar e copiar ✅
 
 - **Autor:** "Você" e o nome do agente no começo de cada sequência de mensagens do mesmo autor, pela
   regra do web ([plano 22 · D-16](../22-live-history/decisions.md)). O nome do agente entra como o
@@ -69,7 +69,7 @@ Cenários S-31…S-40.
 
 Cenários S-41…S-44.
 
-### B-12 — O preview da pergunta estruturada 🔲
+### B-12 — O preview da pergunta estruturada ✅
 
 O preview de opção da pergunta estruturada (a `interaction` do plano 24, que depois do
 [plano 28](../28-agent-neutral-core/README.md) é escolhida pelo `kind` `question`, e não pelo nome da

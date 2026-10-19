@@ -35,8 +35,8 @@ void main() {
       MessageFragment(1, messageId: 'm', delta: 'a'),
     );
     expect(
-      MessageFinished(1, messageId: 'm', text: 'a', isFromUser: false),
-      MessageFinished(1, messageId: 'm', text: 'a', isFromUser: false),
+      MessageFinished(1, messageId: 'm', blocks: <MessageBlock>[TextBlock('a')], isFromUser: false),
+      MessageFinished(1, messageId: 'm', blocks: <MessageBlock>[TextBlock('a')], isFromUser: false),
     );
     expect(
       ToolInvoked(1, toolUseId: 't', call: shellLs),
@@ -75,8 +75,15 @@ void main() {
       isNot(MessageFragment(1, messageId: 'm', delta: 'b')),
     );
     expect(
-      MessageFinished(1, messageId: 'm', text: 'a', isFromUser: false),
-      isNot(MessageFinished(1, messageId: 'm', text: 'a', isFromUser: true)),
+      MessageFinished(1, messageId: 'm', blocks: <MessageBlock>[TextBlock('a')], isFromUser: false),
+      isNot(
+        MessageFinished(
+          1,
+          messageId: 'm',
+          blocks: <MessageBlock>[TextBlock('a')],
+          isFromUser: true,
+        ),
+      ),
     );
     expect(
       ToolInvoked(1, toolUseId: 't', call: shellLs),
@@ -111,7 +118,7 @@ void main() {
       SessionOpened(7, 's'),
       SessionStatusReported(7, SessionStatus.idle),
       MessageFragment(7, messageId: 'm', delta: 'a'),
-      MessageFinished(7, messageId: 'm', text: 'a', isFromUser: false),
+      MessageFinished(7, messageId: 'm', blocks: <MessageBlock>[TextBlock('a')], isFromUser: false),
       ToolInvoked(7, toolUseId: 't', call: shellLs),
       ToolOutput(7, toolUseId: 't', chunk: 'x'),
       ToolFinished(7, toolUseId: 't', status: ToolStatus.succeeded),
@@ -143,11 +150,11 @@ void main() {
       MessageFinished(
         1,
         messageId: 'm',
-        text: '',
+        blocks: const <MessageBlock>[],
         isFromUser: false,
         thoughts: <Thought>[Thought('x')],
       ),
-      isNot(MessageFinished(1, messageId: 'm', text: '', isFromUser: false)),
+      isNot(MessageFinished(1, messageId: 'm', blocks: const <MessageBlock>[], isFromUser: false)),
     );
     expect(
       PromptQueued(1, QueuedPrompt(queueId: 'q', promptedBy: 'web', preview: 'p')),

@@ -113,7 +113,13 @@ final class SessionStatusReported extends SessionEvent {
 /// A fragment of a message, of the answer or of the thinking before it — accumulated by
 /// `messageId`, never in arrival order across messages.
 sealed class Fragment extends SessionEvent {
-  const Fragment(super.seq, {required this.messageId, required this.delta, this.at = ''});
+  const Fragment(
+    super.seq, {
+    required this.messageId,
+    required this.delta,
+    this.at = '',
+    this.parentToolUseId,
+  });
 
   final String messageId;
   final String delta;
@@ -122,18 +128,34 @@ sealed class Fragment extends SessionEvent {
   /// the thinking before it stopped; the thinking starting is what its time is measured from.
   final String at;
 
+  /// The subagent this fragment belongs to, when it is not the main conversation's own (plan 26,
+  /// B-18) — `null` for the main thread.
+  final String? parentToolUseId;
+
   @override
-  List<Object?> get props => <Object?>[seq, messageId, delta, at];
+  List<Object?> get props => <Object?>[seq, messageId, delta, at, parentToolUseId];
 }
 
 /// A fragment of the answer.
 final class MessageFragment extends Fragment {
-  const MessageFragment(super.seq, {required super.messageId, required super.delta, super.at});
+  const MessageFragment(
+    super.seq, {
+    required super.messageId,
+    required super.delta,
+    super.at,
+    super.parentToolUseId,
+  });
 }
 
 /// A fragment of what the model thought before answering. Never part of the answer.
 final class ThinkingFragment extends Fragment {
-  const ThinkingFragment(super.seq, {required super.messageId, required super.delta, super.at});
+  const ThinkingFragment(
+    super.seq, {
+    required super.messageId,
+    required super.delta,
+    super.at,
+    super.parentToolUseId,
+  });
 }
 
 /// A message — or, from the CLI, one block of it — finished. It completes whatever the fragments
@@ -142,23 +164,20 @@ final class MessageFinished extends SessionEvent {
   const MessageFinished(
     super.seq, {
     required this.messageId,
-    required this.text,
     required this.isFromUser,
+    this.blocks = const <MessageBlock>[],
     this.thoughts = const <Thought>[],
     this.at = '',
-    this.textBlockIds = const <String>[],
-    this.images = const <PromptImage>[],
     this.writtenAt = '',
+    this.parentToolUseId,
   });
 
   final String messageId;
 
-  /// The text blocks that finished, joined. Empty when what finished was thinking or a tool call.
-  final String text;
+  /// The text and image blocks that finished, **in the order the model gave them** (plan 26, B-09).
+  /// Empty when what finished was only thinking, or a tool call.
+  final List<MessageBlock> blocks;
 
-  /// The identities of those text blocks, in order — empty from a server older than them (plan 22,
-  /// D-06). Two blocks are the same block when their ids are.
-  final List<String> textBlockIds;
   final bool isFromUser;
 
   /// The thinking blocks that finished, in order.
@@ -167,23 +186,29 @@ final class MessageFinished extends SessionEvent {
   /// When, by the server's clock — empty from the history.
   final String at;
 
-  /// The images of a prompt, as markers (plan 22, D-09).
-  final List<PromptImage> images;
-
   @override
   final String writtenAt;
+
+  /// The subagent this message belongs to, when it is not the main conversation's own (plan 26,
+  /// B-18) — `null` for the main thread.
+  final String? parentToolUseId;
+
+  /// The text blocks, joined — empty when what finished carried none.
+  String get text => <String>[
+    for (final MessageBlock block in blocks)
+      if (block is TextBlock) block.text,
+  ].join();
 
   @override
   List<Object?> get props => <Object?>[
     seq,
     messageId,
-    text,
+    blocks,
     isFromUser,
     thoughts,
     at,
-    textBlockIds,
-    images,
     writtenAt,
+    parentToolUseId,
   ];
 }
 
@@ -211,7 +236,7 @@ final class ToolInvoked extends SessionEvent {
     super.seq, {
     required this.toolUseId,
     required this.call,
-    this.isSubagent = false,
+    this.parentToolUseId,
     this.title,
     this.writtenAt = '',
   });
@@ -221,8 +246,9 @@ final class ToolInvoked extends SessionEvent {
   /// What the call is — its kind, its label, what it is about and exactly what it was asked to do.
   final ToolCall call;
 
-  /// A subagent ran it, not the main conversation.
-  final bool isSubagent;
+  /// The subagent that ran it, when it is not the main conversation's own (plan 26, B-18) — `null`
+  /// for the main thread. `isSubagent` on the entity is this, read as a question.
+  final String? parentToolUseId;
 
   /// What the model said the call is for, when it said (plan 22, D-05).
   final String? title;
@@ -231,7 +257,7 @@ final class ToolInvoked extends SessionEvent {
   final String writtenAt;
 
   @override
-  List<Object?> get props => <Object?>[seq, toolUseId, call, isSubagent, title, writtenAt];
+  List<Object?> get props => <Object?>[seq, toolUseId, call, parentToolUseId, title, writtenAt];
 }
 
 /// Something a tool printed.

@@ -422,6 +422,38 @@ void main() {
     });
   });
 
+  group('plan 26, B-21 · a subagent\'s own permission card', () {
+    testWidgets('S-71 · nested inside its card, titled with the subagent\'s own type', (
+      WidgetTester tester,
+    ) async {
+      tall(tester);
+      await screen.pump(tester);
+      await emit(tester, toolStarted(toolUseId: 'agent-1', seq: 2, call: agentCall()));
+      await emit(
+        tester,
+        toolStarted(
+          toolUseId: 'sub-1',
+          seq: 3,
+          call: shellCall('cat notes.txt'),
+          parentToolUseId: 'agent-1',
+        ),
+      );
+
+      // Not visible before the subagent's own card opens.
+      expect(find.byType(PermissionPanel), findsNothing);
+
+      await ask(tester, about('sub-1'));
+      await tester.tap(find.byIcon(Icons.expand_more));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PermissionPanel), findsOneWidget);
+      expect(
+        find.text(l10n.permissionSubagentTitle('general-purpose', l10n.permissionToolShell)),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('the plan — B-21', () {
     PermissionRequest plan() => aPermissionRequest(
       toolUseId: 'toolu-plan',

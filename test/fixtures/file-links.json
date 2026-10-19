@@ -1,0 +1,23 @@
+{
+  "$comment": "The rule of fileLinkOf, shared by the web and the app (plan 26, B-10) — a path-like run of text, read the same way on both ends. web/src/features/session/lib/file-links.ts and mobile/lib/features/session/domain/services/file_links.dart both read this.",
+  "folder": "/home/dev/project",
+  "matches": [
+    { "text": "src/app.ts", "path": "src/app.ts", "line": null },
+    { "text": "./src/app.ts", "path": "src/app.ts", "line": null },
+    { "text": "src/app.ts:42", "path": "src/app.ts", "line": 42 },
+    { "text": "src/app.ts:42:7", "path": "src/app.ts", "line": 42 },
+    { "text": "README.md", "path": "README.md", "line": null },
+    { "text": "/home/dev/project/src/app.ts:3", "path": "src/app.ts", "line": 3 }
+  ],
+  "nonMatches": [
+    "/etc/passwd.txt",
+    "/home/dev/project-other/a.ts",
+    "../secrets.env",
+    "src/../../out.ts",
+    "https://example.com/a.ts",
+    "and/or",
+    "a/b",
+    "just words",
+    "/home/dev/project"
+  ]
+}

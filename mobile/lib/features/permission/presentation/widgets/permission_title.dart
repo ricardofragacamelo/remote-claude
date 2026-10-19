@@ -47,12 +47,19 @@ String permissionTitleText(AppLocalizations l10n, PermissionRequest request, {St
     _titles[request.titleKey]?.call(l10n, agent) ??
     toolLabelWords(l10n, kind: request.call.kind, label: request.call.label);
 
-/// What [request] asks, naming the engine by the names above [context].
-String permissionTitleOf(BuildContext context, PermissionRequest request) => permissionTitleText(
-  AppLocalizations.of(context),
-  request,
-  agent: AgentNamesScope.of(context).nameOf(request.engine),
-);
+/// What [request] asks, naming the engine by the names above [context] — and, when it is a
+/// subagent's own tool, naming the subagent too (plan 26, B-21): "Subagent {type} — {title}", the
+/// subagent's type the same word its own card is titled by (`sessions.tool.agent`'s own `type`).
+String permissionTitleOf(BuildContext context, PermissionRequest request, {String? subagent}) {
+  final AppLocalizations l10n = AppLocalizations.of(context);
+  final String title = permissionTitleText(
+    l10n,
+    request,
+    agent: AgentNamesScope.of(context).nameOf(request.engine),
+  );
+
+  return subagent == null ? title : l10n.permissionSubagentTitle(subagent, title);
+}
 
 /// The title of a question of the agent — a request that carries questions —, naming the engine
 /// that asks by the names above [context].

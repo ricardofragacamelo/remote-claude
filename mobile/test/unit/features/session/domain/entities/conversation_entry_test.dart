@@ -10,7 +10,7 @@ void main() {
     test('its text is the finished blocks and the one arriving, in order', () {
       const StreamMessage message = StreamMessage(
         messageId: 'm',
-        blocks: <String>['one ', 'two '],
+        blocks: <MessageBlock>[TextBlock('one '), TextBlock('two ')],
         streaming: 'thr',
       );
 
@@ -22,7 +22,10 @@ void main() {
     test('a copy keeps who wrote it, and can clear what was arriving', () {
       const StreamMessage message = StreamMessage(messageId: 'm', streaming: 'a', isFromUser: true);
 
-      final StreamMessage after = message.copyWith(blocks: <String>['ab'], streaming: () => null);
+      final StreamMessage after = message.copyWith(
+        blocks: <MessageBlock>[const TextBlock('ab')],
+        streaming: () => null,
+      );
 
       expect(after.isFromUser, isTrue);
       expect(after.text, 'ab');
@@ -105,17 +108,31 @@ void main() {
 
     final ToolExecution after = tool.copyWith(
       status: ToolStatus.succeeded,
-      output: 'out',
+      elapsed: '3s',
       summary: 'done',
     );
 
     expect(tool.entryId, 'tool:t');
     expect(after.call.rawInput['command'], 'ls -la');
     expect(after.status, ToolStatus.succeeded);
-    expect(after.output, 'out');
+    expect(after.elapsed, '3s');
     expect(after.summary, 'done');
     expect(tool, tool.copyWith());
-    expect(tool, isNot(tool.copyWith(output: 'x')));
+    expect(tool, isNot(tool.copyWith(elapsed: '9s')));
+  });
+
+  test('plan 26, B-18 · isSubagent is parentToolUseId, read as a question', () {
+    final ToolExecution main = ToolExecution(toolUseId: 't', call: shellCall('ls'));
+    final ToolExecution nested = ToolExecution(
+      toolUseId: 't2',
+      call: shellCall('ls'),
+      parentToolUseId: 'agent-1',
+    );
+
+    expect(main.isSubagent, isFalse);
+    expect(nested.isSubagent, isTrue);
+    // A copy keeps the same owner — a tool never changes whose it is.
+    expect(nested.copyWith(status: ToolStatus.succeeded).parentToolUseId, 'agent-1');
   });
 
   test('a turn is known by its id, and a compaction by where it happened', () {

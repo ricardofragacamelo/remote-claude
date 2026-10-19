@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
+import 'package:remote_claude/core/widgets/markdown/safe_markdown.dart';
 import 'package:remote_claude/features/permission/domain/entities/permission_queue.dart';
 import 'package:remote_claude/features/permission/domain/entities/question.dart';
 import 'package:remote_claude/features/permission/presentation/widgets/permission_card_view.dart';
@@ -374,7 +375,8 @@ class _OptionSubtitle extends StatelessWidget {
   }
 }
 
-/// The preview of an option, in a sheet: monospaced and selectable, never rendered as HTML (D-21).
+/// The preview of an option, in a sheet, as markdown — the web renders it the same way, and the
+/// reason this app once kept it plain text no longer holds (plan 26, D-13).
 Future<void> _showPreview(BuildContext context, String label, String preview) =>
     showModalBottomSheet<void>(
       context: context,
@@ -395,10 +397,7 @@ Future<void> _showPreview(BuildContext context, String label, String preview) =>
                 ),
                 Text(label, style: theme.textTheme.labelMedium),
                 const SizedBox(height: Tokens.spaceSm),
-                SelectableText(
-                  preview,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontFamily: 'monospace'),
-                ),
+                SafeMarkdown(data: preview, shrinkWrap: true),
               ],
             ),
           ),

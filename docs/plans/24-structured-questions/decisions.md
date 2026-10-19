@@ -74,7 +74,7 @@ comportamento existente (D-04, D-07, D-08, D-11, D-15) foram decididas pelo usu�
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
 | D-11 | A biometria (`approvalLock`) vale para responder uma pergunta? | o lock hoje vale para todo `allow`; quem o ligou pode esperar que valha para tudo | B-17 | 2026-10-08, **pelo usuário**: **não**: responder não autoriza execução | ✅ |
-| D-21 | Dependência de markdown no app para o preview? | — | B-18 | 2026-10-08: **não agora**; `SelectableText` monoespaçado. O plano 22 também deixou o markdown do app de fora | ✅ |
+| D-21 | Dependência de markdown no app para o preview? | — | B-18 | 2026-10-08: **não agora**; `SelectableText` monoespaçado. O plano 22 também deixou o markdown do app de fora. 2026-10-18 · **revista pelo [plano 26 · D-13](../26-mobile-conversation-parity/decisions.md#f3--markdown-na-mensagem)**: o motivo (sem dependência de markdown no app) deixou de existir com o `SafeMarkdown` do plano 25/26, e o preview passa a usar o mesmo renderizador do web | ✅ |
 
 ## F5 — Histórico
 

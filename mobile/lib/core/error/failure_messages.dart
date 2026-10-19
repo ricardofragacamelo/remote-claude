@@ -92,6 +92,8 @@ String translateFailure(
       return l10n.sessionErrorRewindTargetUnknown;
     case 'session.error.rewindIncomplete':
       return l10n.sessionErrorRewindIncomplete(failure.params['failed'] ?? '');
+    case 'session.error.diffNotApplicable':
+      return l10n.sessionErrorDiffNotApplicable;
     case 'transcript.error.notFound':
       return l10n.transcriptErrorNotFound;
     case 'transcript.error.invalidSessionId':

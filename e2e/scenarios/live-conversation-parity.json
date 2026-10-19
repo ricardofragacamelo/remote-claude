@@ -1,0 +1,15 @@
+{
+  "id": "26·S-86, S-87",
+  "title": "the shapes plan 26's fixtures assume, confirmed against the real Claude on every version of the CLI: a subagent's own frames all carry parent_tool_use_id, and an answer keeps several text blocks apart and in order",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "writerAgent": "writer",
+    "writerFile": "from-subagent.txt",
+    "writerAgentFile": "---\nname: writer\ndescription: Writes exactly one file it is told to write. Use it whenever the main agent delegates a write.\ntools: Write, Read\n---\n\nBefore writing, say in one short sentence what you are about to do. Then write exactly the\nfile you were asked for, with the Write tool. Then report the path you wrote, in one line.\n",
+    "subagentPrompt": "Use the Agent tool with the writer subagent, not in the background, to create the file from-subagent.txt containing the single word parity. Do not write it yourself. Then repeat what the subagent reported, in one line.",
+    "blocksPrompt": "First write one short sentence saying you will list the folder. Then run `ls` with the Bash tool. Then write one short sentence saying you are done. Write the sentences as text, not in the command."
+  }
+}

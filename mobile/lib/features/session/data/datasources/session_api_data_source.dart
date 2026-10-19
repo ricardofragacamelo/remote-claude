@@ -27,6 +27,9 @@ abstract interface class SessionApiDataSource {
 
   /// `GET /sessions?workspacePath=` — the live sessions of a folder and of the ones below it.
   Future<Object?> liveSessions(String workspacePath);
+
+  /// `GET /sessions/:sessionId/tools/:toolUseId/diff`. Answers the decoded body.
+  Future<Object?> toolDiff(String sessionId, String toolUseId);
 }
 
 /// [SessionApiDataSource] over the one HTTP client — which logs both edges of the call, so
@@ -55,6 +58,10 @@ class HttpSessionApiDataSource implements SessionApiDataSource {
   @override
   Future<Object?> liveSessions(String workspacePath) =>
       _api.get('/sessions', query: <String, Object?>{'workspacePath': workspacePath});
+
+  @override
+  Future<Object?> toolDiff(String sessionId, String toolUseId) =>
+      _api.get('${_of(sessionId, 'tools')}/${Uri.encodeComponent(toolUseId)}/diff');
 
   /// The path of one of the session's resources. The id is a path segment, so it is encoded.
   static String _of(String sessionId, String resource) =>

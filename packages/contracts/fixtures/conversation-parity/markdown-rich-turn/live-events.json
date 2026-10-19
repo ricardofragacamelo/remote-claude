@@ -1,0 +1,388 @@
+[
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "b63e968c-fc56-4892-b0b7-1b4168d922a3",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "b63e968c-fc56-4892-b0b7-1b4168d922a3:0",
+          "text": "Do not use any tool. Reply with exactly the markdown between the lines START and END, without the lines START and END, and nothing else:\nSTART\n# Parity report\n\n## What the app draws\n\n- A list, with a nested one:\n  - the first nested item\n  - the second nested item\n- A second item, with **bold** and *emphasis*\n\n1. An ordered item\n2. Another ordered item\n\n| Client | Markdown | Code | Diagrams | Diff | Colours | Subagents | Tokens |\n|---|---|---|---|---|---|---|---|\n| web | a cell long enough to make the table wider than any phone | yes | yes | yes | yes | yes | yes |\n| app | the same cells, scrolled sideways inside the box | yes | yes | yes | yes | yes | yes |\n\n```typescript\nexport function add(a: number, b: number): number {\n  return a + b;\n}\n```\n\n```dart\nint add(int a, int b) => a + b;\n```\n\n```python\ndef add(a, b):\n    return a + b\n```\n\n> A quotation, with `inline code` in it.\n\nSee [the documentation](https://example.com/docs) and the file `src/app.ts:12`.\n\n![a remote image](https://example.com/tracker.png)\n\n<div onclick=\"alert(1)\">raw HTML that stays text</div>\n\n```mermaid\ngraph TD\n  Web --> App\n```\nEND"
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "# Parity report\n\n## What"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " the app draws\n\n- A list"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": ", with a nested one:"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "\n  - the first nested item"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "\n  - the second nested item"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "\n- A second item, with **b"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "old** and *emphasis"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "*\n\n1. An ordered"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " item\n2. Another ord"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "ered item\n\n| Client |"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " Markdown | Code |"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " Diagrams | Diff"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " | Colours | Subag"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "ents | Tokens |"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "\n|---|---|---|---"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "|---|---|---|---"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "|\n| web | a cell"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " long enough to make the table w"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "ider than any phone | yes"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " | yes | yes | y"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "es | yes | yes |"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "\n| app | the same cells"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": ", scrolled sideways"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " inside the box | yes |"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " yes | yes | yes"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " | yes | yes |"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "\n\n```typescript\nexport function add"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "(a: number, b: number"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "): number {\n  return a +"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " b;\n}\n```\n\n```"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "dart\nint add(int a"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": ", int b) => a + b"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": ";\n```\n\n```python\ndef"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " add(a, b):\n    "
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "return a + b\n```\n\n>"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " A quotation, with `in"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "line code` in it.\n\nSee"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " [the documentation](https://"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "example.com/docs) and"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " the file `src/app."
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "ts:12`.\n\n![a"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " remote image](https://example."
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "com/tracker.png)"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "\n\n<div onclick=\"al"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "ert(1)\">raw H"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "TML that stays text</div"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": ">\n\n```mermaid"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": "\ngraph TD\n  Web"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "delta": " --> App\n```"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoFTJc1tn4FZtxuCp7U",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "241cb3eb-6ece-4658-aa65-ba2814b8c4fb:0",
+          "text": "# Parity report\n\n## What the app draws\n\n- A list, with a nested one:\n  - the first nested item\n  - the second nested item\n- A second item, with **bold** and *emphasis*\n\n1. An ordered item\n2. Another ordered item\n\n| Client | Markdown | Code | Diagrams | Diff | Colours | Subagents | Tokens |\n|---|---|---|---|---|---|---|---|\n| web | a cell long enough to make the table wider than any phone | yes | yes | yes | yes | yes | yes |\n| app | the same cells, scrolled sideways inside the box | yes | yes | yes | yes | yes | yes |\n\n```typescript\nexport function add(a: number, b: number): number {\n  return a + b;\n}\n```\n\n```dart\nint add(int a, int b) => a + b;\n```\n\n```python\ndef add(a, b):\n    return a + b\n```\n\n> A quotation, with `inline code` in it.\n\nSee [the documentation](https://example.com/docs) and the file `src/app.ts:12`.\n\n![a remote image](https://example.com/tracker.png)\n\n<div onclick=\"alert(1)\">raw HTML that stays text</div>\n\n```mermaid\ngraph TD\n  Web --> App\n```"
+        }
+      ]
+    }
+  },
+  {
+    "type": "turn.completed",
+    "payload": {
+      "turnId": "7588d4c3-decf-4807-8d83-9ee35cc1ec8d",
+      "usage": {
+        "inputTokens": 2,
+        "outputTokens": 391,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 16141,
+        "webSearches": 0
+      },
+      "costUsd": "0.172493",
+      "durationMs": 7127
+    }
+  }
+]

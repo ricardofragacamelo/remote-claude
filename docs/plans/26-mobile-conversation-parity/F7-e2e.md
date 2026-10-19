@@ -13,7 +13,7 @@ assumem conferida contra o Claude real a cada versão do CLI.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-29 — E2E do app 🔲
+### B-29 — E2E do app ✅
 
 No `pnpm test:e2e:mobile`, com o SDK roteirizado e as fixtures da B-02, abrir uma sessão pelo app e
 ver na tela:
@@ -30,7 +30,7 @@ ver na tela:
 Depois, reabrir a mesma conversa pelo histórico e ver o mesmo conteúdo, com o subagent carregado ao
 abrir. Cenário S-84.
 
-### B-31 — `smoke-live` da forma das mensagens 🔲
+### B-31 — `smoke-live` da forma das mensagens ✅
 
 No `pnpm test:e2e:live`, contra o Claude real, as sondas da B-01 que as fixtures deste plano assumem: o
 `parent_tool_use_id` em tudo o que o subagent emite, o nome da tool MCP sem título e os vários blocos de

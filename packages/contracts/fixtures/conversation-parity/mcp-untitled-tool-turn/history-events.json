@@ -1,0 +1,131 @@
+[
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "9473a264-f83d-48b0-a721-df13e7f49d1d",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "9473a264-f83d-48b0-a721-df13e7f49d1d:0",
+          "text": "Call the echo tool of the fixture MCP server with the text parity. Then reply with exactly what it returned, and nothing else."
+        }
+      ],
+      "at": "2026-10-10T02:52:08.858Z"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoHrEHzNKFuph1cuCHV",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "05c55729-2cd1-4aa8-8320-d594a3b21f3a:0",
+          "toolUseId": "toolu_01UfbMLyXmAwG77EamKBHyUb"
+        }
+      ],
+      "at": "2026-10-10T02:52:11.457Z"
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_01UfbMLyXmAwG77EamKBHyUb",
+      "kind": "other",
+      "label": {
+        "messageKey": "sessions.tool.other",
+        "params": {
+          "name": "ToolSearch"
+        }
+      },
+      "subject": {},
+      "changes": [],
+      "origin": {
+        "engine": "claude",
+        "native": "ToolSearch"
+      },
+      "rawInput": {
+        "query": "select:mcp__fixture__echo",
+        "max_results": 1
+      },
+      "at": "2026-10-10T02:52:11.457Z"
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_01UfbMLyXmAwG77EamKBHyUb",
+      "status": "succeeded",
+      "summary": "",
+      "at": "2026-10-10T02:52:11.483Z"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoHyKCXgtSjJxF9cdTy",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "63228ce7-c704-4495-a157-7f5de4d50640:0",
+          "toolUseId": "toolu_01WHRXm9tU1kjBAbB6KKEhMV"
+        }
+      ],
+      "at": "2026-10-10T02:52:12.770Z"
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_01WHRXm9tU1kjBAbB6KKEhMV",
+      "kind": "mcp",
+      "label": {
+        "messageKey": "sessions.tool.mcp",
+        "params": {
+          "server": "fixture",
+          "tool": "echo"
+        }
+      },
+      "subject": {
+        "server": "fixture",
+        "tool": "echo"
+      },
+      "changes": [],
+      "origin": {
+        "engine": "claude",
+        "native": "mcp__fixture__echo"
+      },
+      "rawInput": {
+        "text": "parity"
+      },
+      "at": "2026-10-10T02:52:12.770Z"
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_01WHRXm9tU1kjBAbB6KKEhMV",
+      "status": "succeeded",
+      "summary": "parity",
+      "at": "2026-10-10T02:52:12.796Z"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoJ4SWs6cfqrpVPFY7Z",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "1ced14db-3d23-488d-b15f-9cba41897ac6:0",
+          "text": "parity"
+        }
+      ],
+      "at": "2026-10-10T02:52:13.796Z"
+    }
+  }
+]

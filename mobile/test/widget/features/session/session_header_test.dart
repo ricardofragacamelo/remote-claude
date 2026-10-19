@@ -169,14 +169,24 @@ void main() {
 
       expect(find.text(l10n.sessionStatusCostNotReported(anEngineName)), findsOneWidget);
       expect(find.textContaining(r'$0'), findsNothing);
-      expect(find.text(l10n.sessionTurnLineNoCost('1.2')), findsOneWidget);
+      expect(
+        find.text('${l10n.sessionTurnLineNoCost('1.2')} · ${l10n.sessionTurnNoTokens}'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('plan 28 · S-87 · a turn that cost zero costs zero', (WidgetTester tester) async {
       await screen.pump(tester);
       await emit(tester, turnCompleted(seq: 2, turnId: 't1', costUsd: '0.000000'));
 
-      expect(find.text(l10n.sessionTurnLine('0.000000', '1.2')), findsOneWidget);
+      expect(
+        find.text(
+          '${l10n.sessionTurnLine('0.000000', '1.2')} · '
+          '${l10n.sessionTurnTokensIn('10')}, ${l10n.sessionTurnTokensOut('20')}',
+        ),
+        findsOneWidget,
+      );
+
       await tester.tap(find.text(l10n.sessionStandingConnected));
       await tester.pumpAndSettle();
 

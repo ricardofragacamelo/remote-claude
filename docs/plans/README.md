@@ -41,7 +41,7 @@ Voltar para o [índice geral](../architecture/README.md).
 | 23 | [Permissões fluidas](23-fluid-permissions/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 24 | [Perguntas estruturadas](24-structured-questions/README.md) | ✅ concluído | `pnpm verify:full` sai com código 0 |
 | 25 | [Navegador de arquivos no app](25-mobile-file-browser/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
-| 26 | [Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 🔄 em andamento | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 26 | [Paridade da conversa no app](26-mobile-conversation-parity/README.md) | ✅ concluído | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
 | 27 | [Perdas da conversa](27-conversation-losses/README.md) | 🔲 não iniciado | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
 | 28 | [Núcleo neutro de agente](28-agent-neutral-core/README.md) | ✅ concluído | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
 

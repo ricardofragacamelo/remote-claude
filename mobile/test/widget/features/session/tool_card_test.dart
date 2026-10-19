@@ -7,11 +7,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/error/failure.dart';
+import 'package:remote_claude/core/navigation/routes.dart';
+import 'package:remote_claude/core/widgets/scrolling_box.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
+import 'package:remote_claude/features/session/domain/entities/tool_diff.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
+import 'package:remote_claude/features/session/presentation/widgets/ansi_text.dart';
 import 'package:remote_claude/features/session/presentation/widgets/tool_card.dart';
 import 'package:remote_claude/features/session/presentation/widgets/tool_output_view.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
@@ -19,6 +24,7 @@ import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 import 'package:remote_claude/core/conversation/tool_call.dart';
 
+import '../../../support/fakes/fake_tool_diff_repository.dart';
 import '../../../support/fakes/fake_transcript_content_repository.dart';
 import '../../../support/builders/questions.dart';
 import '../../../support/builders/tools.dart';
@@ -26,7 +32,7 @@ import '../../../support/pump_app.dart';
 
 ToolExecution tool({
   ToolStatus status = ToolStatus.running,
-  String output = '',
+  String? elapsed,
   String? summary,
   ToolCall? call,
   String? title,
@@ -36,10 +42,10 @@ ToolExecution tool({
   toolUseId: 't1',
   call: call ?? shellCall('rm -rf /tmp/scratch'),
   status: status,
-  output: output,
+  elapsed: elapsed,
   summary: summary,
   title: title,
-  isSubagent: isSubagent,
+  parentToolUseId: isSubagent ? 'agent-1' : null,
   question: question,
 );
 
@@ -49,20 +55,28 @@ const ConversationKey c1 = ConversationKey(engine: 'engine-a', id: 'c-1');
 void main() {
   late AppLocalizations l10n;
   late FakeTranscriptContentRepository content;
+  late FakeToolDiffRepository diffs;
 
   setUpAll(() async {
     l10n = await englishCatalogue();
   });
 
-  setUp(() => content = FakeTranscriptContentRepository());
+  setUp(() {
+    content = FakeTranscriptContentRepository();
+    diffs = FakeToolDiffRepository();
+  });
 
   Future<void> pump(
     WidgetTester tester,
     ToolExecution shown, {
     ConversationKey? conversationKey = c1,
+    String? sessionId,
   }) => tester.pumpApp(
-    ToolCard(tool: shown, conversationKey: conversationKey),
-    overrides: <Override>[transcriptContentRepositoryProvider.overrideWithValue(content)],
+    ToolCard(tool: shown, conversationKey: conversationKey, sessionId: sessionId),
+    overrides: <Override>[
+      transcriptContentRepositoryProvider.overrideWithValue(content),
+      toolDiffRepositoryProvider.overrideWithValue(diffs),
+    ],
   );
 
   /// Opens or folds the card by its line.
@@ -201,10 +215,15 @@ void main() {
       expect(tester.widget<Text>(find.text('rm -rf /tmp/scratch')).style?.fontFamily, 'monospace');
       expect(find.text('…\nremoved 2 files'), findsOneWidget);
       expect(find.text(l10n.sessionToolRowOutputLoading), findsOneWidget);
+      // IN scrolls sideways rather than wrapping a long command (plan 26, B-13).
+      expect(
+        find.ancestor(of: find.text('rm -rf /tmp/scratch'), matching: find.byType(ScrollingBox)),
+        findsOneWidget,
+      );
       content.gate!.complete();
     });
 
-    testWidgets('the colours of a terminal are dropped, the text kept', (
+    testWidgets('S-54 · the colours of a terminal are drawn, the words kept', (
       WidgetTester tester,
     ) async {
       content.failure = const NetworkFailure(traceId: 't');
@@ -215,18 +234,46 @@ void main() {
       await toggle(tester);
 
       expect(find.text('✓ 12 passed'), findsOneWidget);
+      expect(find.byType(AnsiText), findsOneWidget);
     });
 
-    testWidgets('a command still running shows only IN — and OUT as soon as it prints', (
+    testWidgets('S-56 · copying coloured output copies the words, never the escapes', (
+      WidgetTester tester,
+    ) async {
+      content.failure = const NetworkFailure(traceId: 't');
+      await pump(
+        tester,
+        tool(status: ToolStatus.succeeded, summary: '\x1B[32m✓ 12 passed\x1B[0m\x1B]0;title\x07'),
+      );
+      await toggle(tester);
+
+      final EditableText copied = tester.widget<EditableText>(find.byType(EditableText));
+      expect(copied.controller.text, '✓ 12 passed');
+    });
+
+    testWidgets('S-52 · B-14 · a command still running shows only IN; OUT waits for it to finish', (
       WidgetTester tester,
     ) async {
       await pump(tester, tool());
       await toggle(tester);
       expect(find.text(l10n.sessionToolRowOut), findsNothing);
 
-      await pump(tester, tool(output: 'removing…'));
+      // The engine ticks the elapsed time — never the tool's own output any more.
+      await pump(tester, tool(elapsed: '3s'));
+      expect(find.text(l10n.sessionToolRowOut), findsNothing);
+
+      await pump(tester, tool(status: ToolStatus.succeeded, elapsed: '3s', summary: 'removed'));
       expect(find.text(l10n.sessionToolRowOut), findsOneWidget);
-      expect(find.text('removing…'), findsOneWidget);
+      expect(find.text('removed'), findsOneWidget);
+    });
+
+    testWidgets('B-14 · the elapsed time moves on the line while it runs', (
+      WidgetTester tester,
+    ) async {
+      await pump(tester, tool(elapsed: '3s'));
+
+      expect(find.text('3s'), findsOneWidget);
+      expect(find.text(l10n.sessionToolStatusRunning), findsNothing);
     });
 
     testWidgets('another tool keeps its input as it came, laid out — never Map.toString()', (
@@ -245,6 +292,14 @@ void main() {
       expect(find.text('{\n  "file_path": "/w/a.txt",\n  "limit": 3\n}'), findsOneWidget);
       expect(find.text(l10n.sessionToolRowIn), findsNothing);
       expect(find.text('1: hello'), findsOneWidget);
+      // The exact input scrolls sideways rather than wrapping (plan 26, B-13).
+      expect(
+        find.ancestor(
+          of: find.text('{\n  "file_path": "/w/a.txt",\n  "limit": 3\n}'),
+          matching: find.byType(ScrollingBox),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a value JSON does not know is written as text, not dropped', (
@@ -276,6 +331,138 @@ void main() {
       await toggle(tester);
 
       expect(find.text('{\n  "command": 3\n}'), findsOneWidget);
+    });
+  });
+
+  group('B-16 · the diff of a file-writing call', () {
+    ToolExecution editTool({ToolStatus status = ToolStatus.succeeded}) => tool(
+      status: status,
+      call: aToolCall(
+        kind: 'file.edit',
+        messageKey: 'sessions.tool.fileEdit',
+        changes: const <FileChange>[FileChange(path: '/w/a.ts', op: 'edit')],
+      ),
+    );
+
+    testWidgets('S-57 · a finished edit, in a live session, shows its diff once opened', (
+      WidgetTester tester,
+    ) async {
+      diffs.diffs['t1'] = const ToolDiff(
+        path: '/w/a.ts',
+        hunks: <DiffHunk>[
+          DiffHunk(
+            id: 'h1',
+            lines: <DiffLine>[DiffLine(kind: DiffLineKind.added, text: 'new line', newLine: 1)],
+          ),
+        ],
+      );
+      await pump(tester, editTool(), sessionId: 's1');
+      await toggle(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('new line'), findsOneWidget);
+      expect(diffs.reads, <(String, String)>[('s1', 't1')]);
+    });
+
+    testWidgets('a call still running asks the route nothing — it has no diff yet', (
+      WidgetTester tester,
+    ) async {
+      await pump(tester, editTool(status: ToolStatus.running), sessionId: 's1');
+      await toggle(tester);
+      await tester.pumpAndSettle();
+
+      expect(diffs.reads, isEmpty);
+    });
+
+    testWidgets('reading the history — no live session — never asks for a diff', (
+      WidgetTester tester,
+    ) async {
+      await pump(tester, editTool());
+      await toggle(tester);
+      await tester.pumpAndSettle();
+
+      expect(diffs.reads, isEmpty);
+      expect(find.text('{}'), findsOneWidget);
+    });
+
+    testWidgets('a call that changes no file (shell) never asks the diff route', (
+      WidgetTester tester,
+    ) async {
+      await pump(tester, tool(status: ToolStatus.succeeded), sessionId: 's1');
+      await toggle(tester);
+      await tester.pumpAndSettle();
+
+      expect(diffs.reads, isEmpty);
+    });
+
+    testWidgets('S-60 · DIFF_NOT_APPLICABLE sits under the input, which stays visible', (
+      WidgetTester tester,
+    ) async {
+      diffs.failure = const ServerFailure(
+        code: 'DIFF_NOT_APPLICABLE',
+        messageKey: 'session.error.diffNotApplicable',
+        traceId: 't',
+      );
+      await pump(tester, editTool(), sessionId: 's1');
+      await toggle(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.sessionErrorDiffNotApplicable), findsOneWidget);
+      expect(find.text('{}'), findsOneWidget);
+    });
+  });
+
+  group('B-32 · the link to the trail', () {
+    testWidgets('a live session offers it, whatever the tool\'s kind or status', (
+      WidgetTester tester,
+    ) async {
+      await pump(tester, tool(status: ToolStatus.running), sessionId: 's1');
+      await toggle(tester);
+
+      expect(find.text(l10n.sessionToolRowTrail), findsOneWidget);
+    });
+
+    testWidgets('reading the history — no live session — offers no link to the trail', (
+      WidgetTester tester,
+    ) async {
+      await pump(tester, tool(status: ToolStatus.succeeded));
+      await toggle(tester);
+
+      expect(find.text(l10n.sessionToolRowTrail), findsNothing);
+    });
+
+    testWidgets('opens the trail of the session and the kind of the call — never its own name', (
+      WidgetTester tester,
+    ) async {
+      String? opened;
+      await tester.pumpRouted(
+        <RouteBase>[
+          GoRoute(
+            path: '/',
+            builder: (BuildContext _, GoRouterState _) => ToolCard(
+              tool: tool(status: ToolStatus.succeeded, call: shellCall('ls')),
+              sessionId: 's1',
+            ),
+          ),
+          GoRoute(
+            path: auditTrailRoute,
+            builder: (BuildContext _, GoRouterState state) {
+              opened = state.uri.toString();
+              return const Text('trail');
+            },
+          ),
+        ],
+        overrides: <Override>[
+          transcriptContentRepositoryProvider.overrideWithValue(content),
+          toolDiffRepositoryProvider.overrideWithValue(diffs),
+        ],
+      );
+      await toggle(tester);
+
+      await tester.tap(find.text(l10n.sessionToolRowTrail));
+      await tester.pumpAndSettle();
+
+      expect(opened, '$auditTrailRoute?session=s1&kind=shell');
     });
   });
 

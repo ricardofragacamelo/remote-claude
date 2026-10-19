@@ -425,6 +425,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionToolRowOutputCut => '[… the middle of the output was left out here …]';
 
   @override
+  String sessionDiffLabel(String name) {
+    return 'Changes to $name';
+  }
+
+  @override
+  String get sessionDiffLoading => 'Loading the diff…';
+
+  @override
+  String get sessionDiffUnchanged => 'The file already holds exactly this: nothing would change.';
+
+  @override
+  String get sessionErrorDiffNotApplicable =>
+      'This call changes no file, so there is no change to show.';
+
+  @override
+  String diffHunksShowAll(int count) {
+    return 'Show all $count lines';
+  }
+
+  @override
   String get sessionImageAttached => 'Attached image';
 
   @override
@@ -525,6 +545,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get permissionToolOther => 'Use a tool';
+
+  @override
+  String permissionSubagentTitle(String subagent, String title) {
+    return 'Subagent $subagent — $title';
+  }
 
   @override
   String get permissionRiskRead => 'Reads something';
@@ -1321,6 +1346,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get sessionToolRowTrail => 'See it in the audit trail';
+
+  @override
+  String get sessionSubagentLoading => 'Loading what the subagent said…';
+
+  @override
+  String get sessionSubagentNothing => 'The history keeps nothing the subagent said.';
+
+  @override
+  String get sessionSubagentLabel => 'What the subagent said';
+
+  @override
+  String sessionTurnTokensIn(String count) {
+    return '$count in';
+  }
+
+  @override
+  String sessionTurnTokensOut(String count) {
+    return '$count out';
+  }
+
+  @override
+  String sessionTurnTokensCache(String count) {
+    return '$count cache';
+  }
+
+  @override
+  String get sessionTurnNoTokens => 'no token count';
+
+  @override
   String get sessionCompactedManual => 'Compacted on request: what came before is a summary now';
 
   @override
@@ -1991,6 +2046,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionMessageHold => 'Press and hold for what to do with this prompt';
 
   @override
+  String get sessionMessageCopy => 'Copy the message';
+
+  @override
+  String get sessionMessageCopied => 'Message copied';
+
+  @override
+  String get sessionMessageAuthorYou => 'You';
+
+  @override
+  String sessionMessageAuthorAgent(String agent) {
+    return '$agent';
+  }
+
+  @override
   String get sessionEditEditing => 'Editing a message';
 
   @override
@@ -2536,6 +2605,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markdownLinkRefused => 'This kind of link is not opened from here.';
 
   @override
+  String get codeCopy => 'Copy the code';
+
+  @override
+  String get codeCopied => 'Code copied';
+
+  @override
   String get diagramLabel => 'Diagram';
 
   @override
@@ -2625,5 +2700,59 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String filesErrorChanged(String path) {
     return '$path changed while it was coming. Try again.';
+  }
+
+  @override
+  String auditTrailTitle(String kind) {
+    return 'Trail of $kind';
+  }
+
+  @override
+  String get auditTrailLoading => 'Loading the trail…';
+
+  @override
+  String get auditTrailEmptyTitle => 'Nothing recorded yet';
+
+  @override
+  String get auditTrailEmptyDescription =>
+      'No call of this kind, in this session, is in the trail.';
+
+  @override
+  String get auditTrailLoadMore => 'Load older entries';
+
+  @override
+  String get auditTrailLoadingMore => 'Loading more…';
+
+  @override
+  String get auditDecisionRecorded => 'Recorded';
+
+  @override
+  String get auditDecisionAllowed => 'Allowed';
+
+  @override
+  String get auditDecisionDenied => 'Denied';
+
+  @override
+  String get auditResolvedAuto => 'Decided automatically';
+
+  @override
+  String get auditResolvedByRule => 'Decided by a rule';
+
+  @override
+  String get auditResolvedByPerson => 'Decided by someone';
+
+  @override
+  String auditResolvedByNamed(String who) {
+    return 'Decided by $who';
+  }
+
+  @override
+  String auditResolvedFrom(String place) {
+    return 'From $place';
+  }
+
+  @override
+  String auditResolvedByNamedFrom(String who, String place) {
+    return 'Decided by $who, from $place';
   }
 }

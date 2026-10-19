@@ -50,6 +50,7 @@ void main() {
     WidgetTester tester,
     String path, {
     String? sessionId,
+    int? line,
     Locale locale = const Locale('en'),
     TransitionBuilder? builder,
   }) async {
@@ -61,8 +62,9 @@ void main() {
           path: '/',
           builder: (BuildContext context, GoRouterState _) => Scaffold(
             body: TextButton(
-              onPressed: () =>
-                  unawaited(context.push<void>(viewerRouteFor(folder, path, sessionId: sessionId))),
+              onPressed: () => unawaited(
+                context.push<void>(viewerRouteFor(folder, path, sessionId: sessionId, line: line)),
+              ),
               child: const Text('home'),
             ),
           ),
@@ -73,6 +75,7 @@ void main() {
             folder: state.uri.queryParameters[viewerFolderParameter] ?? '',
             path: state.uri.queryParameters[viewerPathParameter] ?? '',
             sessionId: state.uri.queryParameters[viewerSessionParameter],
+            line: int.tryParse(state.uri.queryParameters[viewerLineParameter] ?? ''),
           ),
         ),
         GoRoute(
@@ -223,6 +226,35 @@ void main() {
         },
       );
     }
+
+    testWidgets('S-37 (plan 26, B-10) · a line a message pointed at opens roughly there', (
+      WidgetTester tester,
+    ) async {
+      files.texts['long.txt'] = TextDocument(
+        path: 'long.txt',
+        content: List<String>.generate(300, (int i) => 'line $i').join('\n'),
+        etag: '"1"',
+      );
+      await pumpViewer(tester, 'long.txt', line: 250);
+      await tester.pumpAndSettle();
+
+      expect(find.text('line 249', skipOffstage: false).hitTestable(), findsOneWidget);
+      expect(find.text('line 0', skipOffstage: false).hitTestable(), findsNothing);
+    });
+
+    testWidgets('a line no message named opens at the top, as it always did', (
+      WidgetTester tester,
+    ) async {
+      files.texts['long.txt'] = TextDocument(
+        path: 'long.txt',
+        content: List<String>.generate(300, (int i) => 'line $i').join('\n'),
+        etag: '"1"',
+      );
+      await pumpViewer(tester, 'long.txt');
+      await tester.pumpAndSettle();
+
+      expect(find.text('line 0', skipOffstage: false).hitTestable(), findsOneWidget);
+    });
 
     testWidgets('S-59 · a file of zero bytes says it is empty', (WidgetTester tester) async {
       files.texts['empty.txt'] = const TextDocument(path: 'empty.txt', content: '', etag: '"1"');

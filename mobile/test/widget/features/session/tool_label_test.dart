@@ -186,6 +186,47 @@ void main() {
         'Shell · Run the tests',
       );
     });
+
+    test('S-48 · an mcp call reads "fixture · echo", never the wire name', () {
+      expect(
+        toolLabelText(
+          en,
+          kind: 'mcp',
+          label: label('sessions.tool.mcp', <String, Object>{'server': 'fixture', 'tool': 'echo'}),
+        ),
+        'fixture · echo',
+      );
+    });
+
+    test('S-49 · an mcp label is drawn exactly as the backend split it, never reparsed', () {
+      // mcp__a__b__c: whatever the adapter put in server/tool, the app draws it as-is.
+      expect(
+        toolLabelText(
+          en,
+          kind: 'mcp',
+          label: label('sessions.tool.mcp', <String, Object>{'server': 'a', 'tool': 'b__c'}),
+        ),
+        'a · b__c',
+      );
+      // mcp__a: the adapter found no tool name — an empty gap, not an error, not a guess.
+      expect(
+        toolLabelText(
+          en,
+          kind: 'mcp',
+          label: label('sessions.tool.mcp', <String, Object>{'server': 'a'}),
+        ),
+        'a · ',
+      );
+      // mcp____x: leading underscores are the adapter's business — the app only prints the strings.
+      expect(
+        toolLabelText(
+          en,
+          kind: 'mcp',
+          label: label('sessions.tool.mcp', <String, Object>{'server': '', 'tool': '_x'}),
+        ),
+        ' · _x',
+      );
+    });
   });
 
   group('S-59 · what this build does not know is the generic line', () {

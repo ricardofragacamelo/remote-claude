@@ -1,4 +1,5 @@
-/// A `mermaid` block of a markdown preview, drawn as an image (plan 25, B-22, D-18).
+/// A `mermaid` block of a markdown preview, drawn as an image (plan 25, B-22, D-18; moved to
+/// `core/` in plan 26, B-07, so the conversation's markdown draws it too).
 ///
 /// Asked for when the block is built — which, in the preview's list, is when it comes near the
 /// view (S-98) —, one at a time through the queue, and kept. While it draws, a reserved space that
@@ -13,9 +14,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/markdown/diagram_engine.dart';
+import 'package:remote_claude/core/widgets/markdown/diagram_providers.dart';
 import 'package:remote_claude/core/widgets/refusal_view.dart';
-import 'package:remote_claude/features/files/domain/ports/diagram_engine.dart';
-import 'package:remote_claude/features/files/files_providers.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// Widths are drawn in steps of this many logical pixels, so a small change of layout keeps the

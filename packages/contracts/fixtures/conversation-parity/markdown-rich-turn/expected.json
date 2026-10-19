@@ -1,0 +1,38 @@
+{
+  "entries": [
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "user",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "Do not use any tool. Reply with exactly the markdown between the lines START and END, without the lines START and END, and nothing else:\nSTART\n# Parity report\n\n## What the app draws\n\n- A list, with a nested one:\n  - the first nested item\n  - the second nested item\n- A second item, with **bold** and *emphasis*\n\n1. An ordered item\n2. Another ordered item\n\n| Client | Markdown | Code | Diagrams | Diff | Colours | Subagents | Tokens |\n|---|---|---|---|---|---|---|---|\n| web | a cell long enough to make the table wider than any phone | yes | yes | yes | yes | yes | yes |\n| app | the same cells, scrolled sideways inside the box | yes | yes | yes | yes | yes | yes |\n\n```typescript\nexport function add(a: number, b: number): number {\n  return a + b;\n}\n```\n\n```dart\nint add(int a, int b) => a + b;\n```\n\n```python\ndef add(a, b):\n    return a + b\n```\n\n> A quotation, with `inline code` in it.\n\nSee [the documentation](https://example.com/docs) and the file `src/app.ts:12`.\n\n![a remote image](https://example.com/tracker.png)\n\n<div onclick=\"alert(1)\">raw HTML that stays text</div>\n\n```mermaid\ngraph TD\n  Web --> App\n```\nEND"
+        }
+      ]
+    },
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "assistant",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "# Parity report\n\n## What the app draws\n\n- A list, with a nested one:\n  - the first nested item\n  - the second nested item\n- A second item, with **bold** and *emphasis*\n\n1. An ordered item\n2. Another ordered item\n\n| Client | Markdown | Code | Diagrams | Diff | Colours | Subagents | Tokens |\n|---|---|---|---|---|---|---|---|\n| web | a cell long enough to make the table wider than any phone | yes | yes | yes | yes | yes | yes |\n| app | the same cells, scrolled sideways inside the box | yes | yes | yes | yes | yes | yes |\n\n```typescript\nexport function add(a: number, b: number): number {\n  return a + b;\n}\n```\n\n```dart\nint add(int a, int b) => a + b;\n```\n\n```python\ndef add(a, b):\n    return a + b\n```\n\n> A quotation, with `inline code` in it.\n\nSee [the documentation](https://example.com/docs) and the file `src/app.ts:12`.\n\n![a remote image](https://example.com/tracker.png)\n\n<div onclick=\"alert(1)\">raw HTML that stays text</div>\n\n```mermaid\ngraph TD\n  Web --> App\n```"
+        }
+      ]
+    },
+    {
+      "kind": "turn",
+      "owner": null,
+      "usage": {
+        "inputTokens": 2,
+        "outputTokens": 391,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 16141,
+        "webSearches": 0
+      },
+      "costUsd": "0.172493"
+    }
+  ]
+}

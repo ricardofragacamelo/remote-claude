@@ -14,6 +14,7 @@
     "test:integration": "vitest run test/integration",
     "test:coverage": "vitest run --coverage",
     "verify": "node ../scripts/verify-workspace.mjs backend",
+    "fixtures:conversation-parity": "tsx scripts/record-conversation-parity-fixtures.ts",
     "db": "tsx src/infrastructure/database/cli.ts"
   },
   "dependencies": {

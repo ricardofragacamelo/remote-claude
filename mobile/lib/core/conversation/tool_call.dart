@@ -88,6 +88,14 @@ class FileChange extends Equatable {
   List<Object?> get props => <Object?>[path, op, to];
 }
 
+/// The ops a diff can be drawn for — `delete` and `move` touch no text a diff would show.
+const Set<String> _diffableOps = <String>{'edit', 'write'};
+
+/// Whether [changes] has a file worth reading a diff of — by the op the backend normalised, never
+/// by the tool's own name (plan 26, B-16, paired with the web's `changesFileText`).
+bool changesFileText(List<FileChange> changes) =>
+    changes.any((FileChange c) => _diffableOps.contains(c.op));
+
 /// One call, as the contract carries it.
 class ToolCall extends Equatable {
   const ToolCall({

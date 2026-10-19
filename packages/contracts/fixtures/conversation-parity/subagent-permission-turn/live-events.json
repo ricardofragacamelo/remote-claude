@@ -1,0 +1,1127 @@
+[
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "d2d16d0e-4b24-403b-a216-773b9bb179e3",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "d2d16d0e-4b24-403b-a216-773b9bb179e3:0",
+          "text": "Use the Agent tool with the writer subagent, not in the background, to create the file from-subagent.txt containing the single word parity. Do not write it yourself. Then repeat what the subagent reported, in one line."
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "The user wants",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " me to:",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "\n1. Use",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " the Agent tool with",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " the writer subag",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "ent to create a",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " file called",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " from",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "-subagent",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": ".txt with",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " the content",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " \"parity\"",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "\n2. Not",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " write the",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " file myself\n3",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": ". Run",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " it NOT",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " in the background (",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "run",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "_",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "in",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "_background:",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " false)",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "\n4. Then",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " repeat what the sub",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "agent reported in",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " one line\n\nLet",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " me call",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " the Agent tool with",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " sub",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "agent_",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "type",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " \"",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "writer",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": "\" to write",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": " this file",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "delta": ".",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "blockId": "e55212e9-9d9a-4cb2-bc27-a069ada023c3:0",
+          "thinking": "The user wants me to:\n1. Use the Agent tool with the writer subagent to create a file called from-subagent.txt with the content \"parity\"\n2. Not write the file myself\n3. Run it NOT in the background (run_in_background: false)\n4. Then repeat what the subagent reported in one line\n\nLet me call the Agent tool with subagent_type \"writer\" to write this file."
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoMjY5UVT3sFfQEX16r",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "6694be9e-40d2-4fcc-b0ba-4a2b425ee1cf:0",
+          "toolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+        }
+      ]
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD",
+      "kind": "agent",
+      "label": {
+        "messageKey": "sessions.tool.agent",
+        "params": {
+          "description": "Write file from-subagent.txt",
+          "type": "writer"
+        }
+      },
+      "subject": {
+        "description": "Write file from-subagent.txt"
+      },
+      "changes": [],
+      "origin": {
+        "engine": "claude",
+        "native": "Agent"
+      },
+      "rawInput": {
+        "description": "Write file from-subagent.txt",
+        "subagent_type": "writer",
+        "prompt": "Write a file called from-subagent.txt in the current directory (/workspace) containing the single word: parity",
+        "run_in_background": false
+      },
+      "title": "Write file from-subagent.txt"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "6cd18ea2-a03b-4663-8975-8adec50de0e4",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "6cd18ea2-a03b-4663-8975-8adec50de0e4:0",
+          "text": "Write a file called from-subagent.txt in the current directory (/workspace) containing the single word: parity"
+        }
+      ],
+      "parentToolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoMxedJFGHuKkWbyyxr",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "blockId": "04d981e7-df83-4c24-8404-bbfafba46656:0",
+          "thinking": "The user wants me to write a file called \"from-subagent.txt\" in the current directory (/workspace) containing the single word \"parity\".\n\nLet me break this down:\n1. File name: from-subagent.txt\n2. Location: /workspace (which is the current working directory)\n3. Content: parity\n\nI need to use the Write tool to create this file. The absolute path would be /workspace/from-subagent.txt\n\nLet me follow the instructions:\n- Say in one short sentence what I'm about to do\n- Write exactly the file requested\n- Report the path\n\nLet me proceed."
+        }
+      ],
+      "parentToolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoMxedJFGHuKkWbyyxr",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "2275775b-3bcb-440a-8bfe-8ac83eeeb398:0",
+          "text": "I will create a file containing the word \"parity\" in the current directory."
+        }
+      ],
+      "parentToolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoMxedJFGHuKkWbyyxr",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "bdd44c94-f12e-4df3-845b-a5f42652f3cf:0",
+          "toolUseId": "toolu_01DQZ5WBpnrp2pAaWvXZqycF"
+        }
+      ],
+      "parentToolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_01DQZ5WBpnrp2pAaWvXZqycF",
+      "kind": "file.write",
+      "label": {
+        "messageKey": "sessions.tool.fileWrite",
+        "params": {
+          "path": "/workspace/from-subagent.txt",
+          "lines": 1
+        }
+      },
+      "subject": {
+        "paths": ["/workspace/from-subagent.txt"]
+      },
+      "changes": [
+        {
+          "path": "/workspace/from-subagent.txt",
+          "op": "write"
+        }
+      ],
+      "origin": {
+        "engine": "claude",
+        "native": "Write"
+      },
+      "rawInput": {
+        "file_path": "/workspace/from-subagent.txt",
+        "content": "parity"
+      },
+      "parentToolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_01DQZ5WBpnrp2pAaWvXZqycF",
+      "status": "succeeded",
+      "summary": "File created successfully at: /workspace/from-subagent.txt (file state is current in your context — no need to Read it back)",
+      "parentToolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoNBiw3EP1cvcKcYNEf",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "blockId": "0207452d-f7dc-4362-b48a-3c57238071c7:0",
+          "thinking": "Perfect! The file has been created successfully at /workspace/from-subagent.txt with the content \"parity\".\n\nNow I need to report the path as instructed."
+        }
+      ],
+      "parentToolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoNBiw3EP1cvcKcYNEf",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "16854f43-bdff-47ad-a589-2207f6ba450a:0",
+          "text": "/workspace/from-subagent.txt"
+        }
+      ],
+      "parentToolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD"
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_014bHDuuubD9hMnLUMxAJUUD",
+      "status": "succeeded",
+      "summary": "…  /workspace/from-subagent.txt\nagentId: a7fc4cc2d1b5fc2e0 (use SendMessage with to: 'a7fc4cc2d1b5fc2e0', summary: '<5-10 word recap>' to continue this agent)\n<usage>subagent_tokens: 3347\ntool_uses: 1\nduration_ms: 4494</usage>"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "The",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " sub",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "ag",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "ent reported",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " that it",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " successfully",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " created the",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " file",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " at",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " `/tmp/rc",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "-",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "fixture",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "-",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "N",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "m",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "K",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "w",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "12",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "/",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "from",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "-",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "sub",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "agent.txt",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "`.",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " The report",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " shows:",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "\n- File path",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": ": /",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "tmp/rc-",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "fixture-Nm",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "Kw12/",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "from-subag",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "ent.txt",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "\n- It",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " used",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " 1",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " ",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "tool",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " call",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " (Write",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": ")",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "\n- Duration",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": ": 4",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "494",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "ms",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "\n- Sub",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "agent tokens",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": ": 3",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "347",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "\n\nI",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " need to repeat",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " what",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " the",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " subagent reported",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " in",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " one",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " line",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": ".",
+      "blockType": "thinking"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "blockId": "bdaf75bf-d998-4bc7-8c36-626340c97544:0",
+          "thinking": "The subagent reported that it successfully created the file at `/workspace/from-subagent.txt`. The report shows:\n- File path: /workspace/from-subagent.txt\n- It used 1 tool call (Write)\n- Duration: 4494ms\n- Subagent tokens: 3347\n\nI need to repeat what the subagent reported in one line."
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "The"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " writer"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " sub"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "agent created"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " the file `/"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "tmp/rc-"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "fixture-Nm"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "Kw12/"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "from-subag"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "ent.txt`"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " with the"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " word"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": " \""
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "p"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "arity"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "delta": "\" in it."
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoNHyTdbpoibeJqfaYn",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "0e3b9473-0969-46e6-afb9-92c6bad9a53f:0",
+          "text": "The writer subagent created the file `/workspace/from-subagent.txt` with the word \"parity\" in it."
+        }
+      ]
+    }
+  },
+  {
+    "type": "turn.completed",
+    "payload": {
+      "turnId": "c4110ea1-1b5c-4801-b0ae-f6602978cf07",
+      "usage": {
+        "inputTokens": 18,
+        "outputTokens": 418,
+        "cacheReadTokens": 28527,
+        "cacheWriteTokens": 4672,
+        "webSearches": 0
+      },
+      "costUsd": "0.022782",
+      "durationMs": 11422
+    }
+  }
+]

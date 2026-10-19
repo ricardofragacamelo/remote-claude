@@ -41,102 +41,102 @@ para a mesma fixture. É conferida pelo teste do app contra a mesma fixture que 
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-17 | os testes do leitor de markdown do plano 25 passam sem edição depois do movimento | eq | integração | — | B-07 | ⬜ |
-| S-18 | HTML no markdown (`<script>`, `<img onerror>`) aparece como texto, nenhum elemento nasce dele | err | unit | — | B-07 | ⬜ |
-| S-19 | link `javascript:` e `data:` não abrem; `http`/`https`/`mailto` pedem confirmação | err | unit | — | B-07 | ⬜ |
-| S-20 | imagem remota nunca é carregada: aparecem o texto alternativo e o endereço | err | unit | — | B-07 | ⬜ |
-| S-21 | `core/` não importa `features/` (teste de arquitetura) | eq | unit | — | B-07 | ⬜ |
-| S-22 | linha de código de 300 colunas rola dentro da caixa, a página não rola na horizontal | fron | widget | — | B-08 | ⬜ |
-| S-23 | copiar o código põe o texto exato na área de transferência e anuncia "copiado" | eq | widget | — | B-08 | ⬜ |
-| S-24 | TypeScript, Dart, Python, JSON e shell com realce, nas cores dos mesmos tokens do `colorizeCode` (paridade) | eq | unit | — | B-08 | ⬜ |
-| S-25 | linguagem desconhecida ou cerca sem linguagem: mesmo texto, sem realce, sem erro | err | unit | — | B-08 | ⬜ |
-| S-26 | bloco acima do teto da B-03: sem realce, com o texto inteiro | fron | unit | — | B-08 | ⬜ |
+| S-17 | os testes do leitor de markdown do plano 25 passam sem edição depois do movimento | eq | integração | — | B-07 | ✅ |
+| S-18 | HTML no markdown (`<script>`, `<img onerror>`) aparece como texto, nenhum elemento nasce dele | err | unit | — | B-07 | ✅ |
+| S-19 | link `javascript:` e `data:` não abrem; `http`/`https`/`mailto` pedem confirmação | err | unit | — | B-07 | ✅ |
+| S-20 | imagem remota nunca é carregada: aparecem o texto alternativo e o endereço | err | unit | — | B-07 | ✅ |
+| S-21 | `core/` não importa `features/` (teste de arquitetura) | eq | unit | — | B-07 | ✅ |
+| S-22 | linha de código de 300 colunas rola dentro da caixa, a página não rola na horizontal | fron | widget | — | B-08 | ✅ |
+| S-23 | copiar o código põe o texto exato na área de transferência e anuncia "copiado" | eq | widget | — | B-08 | ✅ |
+| S-24 | TypeScript, Dart, Python, JSON e shell com realce, nas cores dos mesmos tokens do `colorizeCode` (paridade) | eq | unit | — | B-08 | ✅ |
+| S-25 | linguagem desconhecida ou cerca sem linguagem: mesmo texto, sem realce, sem erro | err | unit | — | B-08 | ✅ |
+| S-26 | bloco acima do teto da B-03: sem realce, com o texto inteiro | fron | unit | — | B-08 | ✅ |
 
 ## Markdown na mensagem — B-09…B-12
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-27 | `multi-text-block-turn`: os blocos de texto aparecem separados e na ordem, nunca colados | eq | unit | — | B-09 | ⬜ |
-| S-28 | prompt com texto, imagem, texto: a imagem fica entre os dois, como no web | eq | unit | — | B-09 | ⬜ |
-| S-29 | a mesma mensagem ao vivo, pelo replay e pelo histórico dá os mesmos blocos, sem duplicar | idem | unit | — | B-09 | ⬜ |
-| S-30 | delta depois de uma tool cai no bloco de texto novo, não no anterior | est | unit | — | B-09 | ⬜ |
-| S-31 | `markdown-rich-turn`: títulos, listas aninhadas, tabela larga, citação e código desenhados (paridade) | eq | widget | — | B-10 | ⬜ |
-| S-32 | prompt do usuário com lista e código: markdown, como no web | eq | widget | — | B-10 | ⬜ |
-| S-33 | cerca de código aberta no meio do streaming: o resto não vira código; ao fechar, o bloco se forma | est | widget | — | B-10 | ⬜ |
-| S-34 | deltas chegando a cada 5 ms: o balão reconstrói no máximo no limite da D-02, e o texto final é o completo | conc | widget | — | B-10 | ⬜ |
-| S-35 | bloco `mermaid` desenhado sob demanda, com tela cheia ao tocar | eq | widget | — | B-10 | ⬜ |
-| S-36 | Mermaid inválido vira código com aviso, sem derrubar o balão | err | widget | — | B-10 | ⬜ |
-| S-37 | `src/x.ts:42` da pasta vira link que abre o leitor do plano 25 na linha 42; os casos da tabela compartilhada com o web dão o mesmo resultado | eq | unit | — | B-10 | ⬜ |
-| S-38 | caminho fora da pasta, ou com `..` que sai dela, não vira link | err | unit | — | B-10 | ⬜ |
-| S-39 | mensagem de texto vazio só com imagem: nenhum balão vazio (a S-121 do plano 22 continua) | fron | widget | — | B-10 | ⬜ |
-| S-40 | mensagem de 20 KB rola sem travar a lista, dentro do teto da B-03 | fron | widget | — | B-10 | ⬜ |
-| S-41 | "Você" e o nome do agente (`{agent}`, do `GET /engines`) no começo de cada sequência do mesmo autor, nunca repetido dentro dela | eq | widget | — | B-11 | ⬜ |
-| S-42 | "Copiar mensagem" do Claude e do usuário copia o markdown original, com os blocos separados | eq | widget | — | B-11 | ⬜ |
-| S-43 | o texto do balão pode ser selecionado | eq | widget | — | B-11 | ⬜ |
-| S-44 | as chaves de autor e de copiar estão no `i18n-shared.json`, en e pt-BR, e o `i18n:check` compara | eq | unit | — | B-11 | ⬜ |
-| S-45 | preview de opção da pergunta estruturada (`kind` `question`) em markdown, como no web | eq | widget | — | B-12 | ⬜ |
+| S-27 | `multi-text-block-turn`: os blocos de texto aparecem separados e na ordem, nunca colados | eq | unit | — | B-09 | ✅ |
+| S-28 | prompt com texto, imagem, texto: a imagem fica entre os dois, como no web | eq | unit | — | B-09 | ✅ |
+| S-29 | a mesma mensagem ao vivo, pelo replay e pelo histórico dá os mesmos blocos, sem duplicar | idem | unit | — | B-09 | ✅ |
+| S-30 | delta depois de uma tool cai no bloco de texto novo, não no anterior | est | unit | — | B-09 | ✅ |
+| S-31 | `markdown-rich-turn`: títulos, listas aninhadas, tabela larga, citação e código desenhados (paridade) | eq | widget | — | B-10 | ✅ |
+| S-32 | prompt do usuário com lista e código: markdown, como no web | eq | widget | — | B-10 | ✅ |
+| S-33 | cerca de código aberta no meio do streaming: o resto não vira código; ao fechar, o bloco se forma | est | widget | — | B-10 | ✅ |
+| S-34 | deltas chegando a cada 5 ms: o balão reconstrói no máximo no limite da D-02, e o texto final é o completo | conc | widget | — | B-10 | ✅ |
+| S-35 | bloco `mermaid` desenhado sob demanda, com tela cheia ao tocar | eq | widget | — | B-10 | ✅ |
+| S-36 | Mermaid inválido vira código com aviso, sem derrubar o balão | err | widget | — | B-10 | ✅ |
+| S-37 | `src/x.ts:42` da pasta vira link que abre o leitor do plano 25 na linha 42; os casos da tabela compartilhada com o web dão o mesmo resultado | eq | unit | — | B-10 | ✅ |
+| S-38 | caminho fora da pasta, ou com `..` que sai dela, não vira link | err | unit | — | B-10 | ✅ |
+| S-39 | mensagem de texto vazio só com imagem: nenhum balão vazio (a S-121 do plano 22 continua) | fron | widget | — | B-10 | ✅ |
+| S-40 | mensagem de 20 KB rola sem travar a lista, dentro do teto da B-03 | fron | widget | — | B-10 | ✅ |
+| S-41 | "Você" e o nome do agente (`{agent}`, do `GET /engines`) no começo de cada sequência do mesmo autor, nunca repetido dentro dela | eq | widget | — | B-11 | ✅ |
+| S-42 | "Copiar mensagem" do Claude e do usuário copia o markdown original, com os blocos separados | eq | widget | — | B-11 | ✅ |
+| S-43 | o texto do balão pode ser selecionado | eq | widget | — | B-11 | ✅ |
+| S-44 | as chaves de autor e de copiar estão no `i18n-shared.json`, en e pt-BR, e o `i18n:check` compara | eq | unit | — | B-11 | ✅ |
+| S-45 | preview de opção da pergunta estruturada (`kind` `question`) em markdown, como no web | eq | widget | — | B-12 | ✅ |
 
 ## Card da tool e linha do turno — B-13…B-17
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-46 | `file.read`, `file.write`, `shell`, `search`, `web`, `agent`, `tasks`: o `label` do evento desenhado igual ao web (paridade de chave e parâmetros) | eq | unit | — | B-13 | ⬜ |
-| S-47 | `file.edit` (o `Edit` e o `MultiEdit` do Claude) com +/− no rótulo, pelos `params` do `label` | eq | unit | — | B-13 | ⬜ |
-| S-48 | `mcp-untitled-tool-turn`: `fixture · echo` (o `label` do `kind` `mcp`), nunca `mcp__fixture__echo` | eq | unit | — | B-13 | ⬜ |
-| S-49 | nomes MCP de borda (`mcp__a__b__c`, `mcp__a`, `mcp____x`): o app desenha o `label` e o `subject` que o adapter montou, igual ao web, sem parsear o nome | fron | unit | — | B-13 | ⬜ |
-| S-50 | tool que o classificador não conhece (`kind` `other`) ou `kind` que o app não conhece: o `label` do evento, sem erro, como no web | err | unit | — | B-13 | ⬜ |
-| S-51 | três `tool.progress` seguidos: a linha mostra o último tempo e o OUT não muda | est | unit | — | B-14 | ⬜ |
-| S-52 | `shell` em andamento sem saída: o OUT não aparece; ao concluir, o resumo | est | widget | — | B-14 | ⬜ |
-| S-53 | `tool.progress` que chega depois do `tool.completed` (replay fora de ordem) não reabre a tool | conc | unit | — | B-14 | ⬜ |
-| S-54 | saída com cores das 16 e das 256 e com negrito: desenhada com a paleta do `AnsiText` (paridade) | eq | widget | — | B-15 | ⬜ |
-| S-55 | sequência ANSI desconhecida ou cortada no meio: descartada, sem lixo no texto | err | unit | — | B-15 | ⬜ |
-| S-56 | copiar a saída colorida copia o texto sem as sequências | eq | widget | — | B-15 | ⬜ |
-| S-57 | `file.edit` com uma troca: o diff da rota, com a linha removida e a acrescentada (paridade com o `ToolDiffView`) | eq | widget | — | B-16 | ⬜ |
-| S-58 | `file.edit` com três trocas (o `MultiEdit` do Claude): os três trechos, na ordem | eq | widget | — | B-16 | ⬜ |
-| S-59 | `file.write` de arquivo novo grande: tudo como acrescentado, com o teto do web e o aviso de corte | fron | widget | — | B-16 | ⬜ |
-| S-60 | a rota de diff responde que não se aplica, ou o arquivo não é texto: sem diff, a entrada exata (`rawInput`) como JSON, como o web | err | widget | `DIFF_NOT_APPLICABLE`, `FILE_NOT_TEXT` | B-16 | ⬜ |
-| S-61 | linha do turno com custo, segundos e tokens de entrada, saída e cache | eq | widget | — | B-17 | ⬜ |
-| S-62 | `usage` sem um campo, ou com campo que não é número, ou sem `costUsd`: só os válidos aparecem | err | unit | — | B-17 | ⬜ |
+| S-46 | `file.read`, `file.write`, `shell`, `search`, `web`, `agent`, `tasks`: o `label` do evento desenhado igual ao web (paridade de chave e parâmetros) | eq | unit | — | B-13 | ✅ |
+| S-47 | `file.edit` (o `Edit` e o `MultiEdit` do Claude) com +/− no rótulo, pelos `params` do `label` | eq | unit | — | B-13 | ✅ |
+| S-48 | `mcp-untitled-tool-turn`: `fixture · echo` (o `label` do `kind` `mcp`), nunca `mcp__fixture__echo` | eq | unit | — | B-13 | ✅ |
+| S-49 | nomes MCP de borda (`mcp__a__b__c`, `mcp__a`, `mcp____x`): o app desenha o `label` e o `subject` que o adapter montou, igual ao web, sem parsear o nome | fron | unit | — | B-13 | ✅ |
+| S-50 | tool que o classificador não conhece (`kind` `other`) ou `kind` que o app não conhece: o `label` do evento, sem erro, como no web | err | unit | — | B-13 | ✅ |
+| S-51 | três `tool.progress` seguidos: a linha mostra o último tempo e o OUT não muda | est | unit | — | B-14 | ✅ |
+| S-52 | `shell` em andamento sem saída: o OUT não aparece; ao concluir, o resumo | est | widget | — | B-14 | ✅ |
+| S-53 | `tool.progress` que chega depois do `tool.completed` (replay fora de ordem) não reabre a tool | conc | unit | — | B-14 | ✅ |
+| S-54 | saída com cores das 16 e das 256 e com negrito: desenhada com a paleta do `AnsiText` (paridade) | eq | widget | — | B-15 | ✅ |
+| S-55 | sequência ANSI desconhecida ou cortada no meio: descartada, sem lixo no texto | err | unit | — | B-15 | ✅ |
+| S-56 | copiar a saída colorida copia o texto sem as sequências | eq | widget | — | B-15 | ✅ |
+| S-57 | `file.edit` com uma troca: o diff da rota, com a linha removida e a acrescentada (paridade com o `ToolDiffView`) | eq | widget | — | B-16 | ✅ |
+| S-58 | `file.edit` com três trocas (o `MultiEdit` do Claude): os três trechos, na ordem | eq | widget | — | B-16 | ✅ |
+| S-59 | `file.write` de arquivo novo grande: tudo como acrescentado, com o teto do web e o aviso de corte | fron | widget | — | B-16 | ✅ |
+| S-60 | a rota de diff responde que não se aplica, ou o arquivo não é texto: sem diff, a entrada exata (`rawInput`) como JSON, como o web | err | widget | `DIFF_NOT_APPLICABLE`, `FILE_NOT_TEXT` | B-16 | ✅ |
+| S-61 | linha do turno com custo, segundos e tokens de entrada, saída e cache | eq | widget | — | B-17 | ✅ |
+| S-62 | `usage` sem um campo, ou com campo que não é número, ou sem `costUsd`: só os válidos aparecem | err | unit | — | B-17 | ✅ |
 
 ## Link para a trilha — B-32
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-88 | o link "Trilha" do card abre a lista só de leitura com as entradas daquela sessão e tool, com os mesmos campos da `AuditEntryRow` do web | eq | widget | — | B-32 | ⬜ |
-| S-89 | a rota da trilha recusa ou falha: estado de erro traduzido com tentar de novo; aparelho não aprovado recebe a recusa da regra da 25 · D-12 | err | widget | `FORBIDDEN`, `DEVICE_NOT_REGISTERED` | B-32 | ⬜ |
-| S-90 | tool sem nenhuma entrada na trilha (sessão de outro cliente): estado vazio que diz por quê; lista de várias páginas carrega a próxima ao rolar | fron | widget | — | B-32 | ⬜ |
+| S-88 | o link "Trilha" do card abre a lista só de leitura com as entradas daquela sessão e tool, com os mesmos campos da `AuditEntryRow` do web | eq | widget | — | B-32 | ✅ |
+| S-89 | a rota da trilha recusa ou falha: estado de erro traduzido com tentar de novo; aparelho não aprovado recebe a recusa da regra da 25 · D-12 | err | widget | `FORBIDDEN`, `DEVICE_NOT_REGISTERED` | B-32 | ✅ |
+| S-90 | tool sem nenhuma entrada na trilha (sessão de outro cliente): estado vazio que diz por quê; lista de várias páginas carrega a próxima ao rolar | fron | widget | — | B-32 | ✅ |
 
 ## Subagents — B-18…B-21
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-63 | `message.delta` e `message.completed` com `parentToolUseId` deixam de ser `UnreadEvent` e chegam ao subagent | eq | unit | — | B-18 | ⬜ |
-| S-64 | frame do subagent que chega antes do `tool.started` do subagent (`kind` `agent`) fica guardado e é anexado quando o card chega | conc | unit | — | B-18 | ⬜ |
-| S-65 | o `seq` avança por todo frame de subagent, e o replay do mesmo frame não duplica | idem | unit | — | B-18 | ⬜ |
-| S-66 | `subagent-permission-turn`: texto, pensamento e tools sob o card do subagent, no estado padrão do web | eq | widget | — | B-19 | ⬜ |
-| S-67 | subagent de subagent: aninhado até a profundidade do web, e o resto como no web | fron | widget | — | B-19 | ⬜ |
-| S-68 | nenhuma tool de subagent aparece na lista principal | eq | unit | — | B-19 | ⬜ |
-| S-69 | no histórico, abrir o card do subagent lê a rota de subagents pelo `engine` e `id` da conversa e mostra os filhos | eq | integração | — | B-20 | ⬜ |
-| S-70 | a rota de subagents falha ou devolve 404: estado de erro traduzido com tentar de novo, o resto da conversa intacto | err | widget | `NOT_FOUND` | B-20 | ⬜ |
-| S-71 | permissão de uma tool do subagent aparece dentro dele, com o nome do subagent no título | eq | widget | — | B-21 | ⬜ |
+| S-63 | `message.delta` e `message.completed` com `parentToolUseId` deixam de ser `UnreadEvent` e chegam ao subagent | eq | unit | — | B-18 | ✅ |
+| S-64 | frame do subagent que chega antes do `tool.started` do subagent (`kind` `agent`) fica guardado e é anexado quando o card chega | conc | unit | — | B-18 | ✅ |
+| S-65 | o `seq` avança por todo frame de subagent, e o replay do mesmo frame não duplica | idem | unit | — | B-18 | ✅ |
+| S-66 | `subagent-permission-turn`: texto, pensamento e tools sob o card do subagent, no estado padrão do web | eq | widget | — | B-19 | ✅ |
+| S-67 | subagent de subagent: aninhado até a profundidade do web, e o resto como no web | fron | widget | — | B-19 | ✅ |
+| S-68 | nenhuma tool de subagent aparece na lista principal | eq | unit | — | B-19 | ✅ |
+| S-69 | no histórico, abrir o card do subagent lê a rota de subagents pelo `engine` e `id` da conversa e mostra os filhos | eq | integração | — | B-20 | ✅ |
+| S-70 | a rota de subagents falha ou devolve 404: estado de erro traduzido com tentar de novo, o resto da conversa intacto | err | widget | `NOT_FOUND` | B-20 | ✅ |
+| S-71 | permissão de uma tool do subagent aparece dentro dele, com o nome do subagent no título | eq | widget | — | B-21 | ✅ |
 
 ## Portão de paridade — B-27, B-28
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-77 | uma entrada `pending` sobrando: o `render:check` reprova | err | unit | saída ≠ 0 | B-27 | ⬜ |
-| S-78 | componente novo no web sem par no app, depois do plano: reprova no portão 11 | err | unit | saída ≠ 0 | B-27 | ⬜ |
-| S-79 | `excluded` com decisão ✅ (o "inserir no editor", D-11): passa | eq | unit | — | B-27 | ⬜ |
-| S-82 | para cada fixture, o redutor do web e o do app projetam o mesmo conteúdo esperado, ao vivo | eq | unit | — | B-28 | ⬜ |
-| S-83 | o mesmo pelo histórico: o conteúdo do `historyEventFrom` é igual ao do ao vivo | idem | unit | — | B-28 | ⬜ |
+| S-77 | uma entrada `pending` sobrando: o `render:check` reprova | err | unit | saída ≠ 0 | B-27 | ✅ |
+| S-78 | componente novo no web sem par no app, depois do plano: reprova no portão 11 | err | unit | saída ≠ 0 | B-27 | ✅ |
+| S-79 | `excluded` com decisão ✅ (o "inserir no editor", D-11): passa | eq | unit | — | B-27 | ✅ |
+| S-82 | para cada fixture, o redutor do web e o do app projetam o mesmo conteúdo esperado, ao vivo | eq | unit | — | B-28 | ✅ |
+| S-83 | o mesmo pelo histórico: o conteúdo do `historyEventFrom` é igual ao do ao vivo | idem | unit | — | B-28 | ✅ |
 
 ## E2E — B-29…B-31
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-84 | pelo app: markdown com tabela, código com realce e Mermaid; subagent aninhado com a permissão respondida dentro dele; `fixture · echo`; diff; saída colorida; tokens; o link da trilha; copiar; e o mesmo ao reabrir pelo histórico | eq | e2e | — | B-29 | ⬜ |
-| S-86 | `smoke-live`: o `parent_tool_use_id` em tudo o que o subagent emite, com a forma que as fixtures assumem | eq | e2e (live) | — | B-31 | ⬜ |
-| S-87 | `smoke-live`: o nome da tool MCP sem título e os vários blocos de texto numa mensagem, com a forma que as fixtures assumem | eq | e2e (live) | — | B-31 | ⬜ |
+| S-84 | pelo app: markdown com tabela, código com realce e Mermaid; subagent aninhado com a permissão respondida dentro dele; `fixture · echo`; diff; saída colorida; tokens; o link da trilha; copiar; e o mesmo ao reabrir pelo histórico | eq | e2e | — | B-29 | ✅ |
+| S-86 | `smoke-live`: o `parent_tool_use_id` em tudo o que o subagent emite, com a forma que as fixtures assumem | eq | e2e (live) | — | B-31 | ✅ |
+| S-87 | `smoke-live`: os vários blocos de texto numa mensagem, com a forma que as fixtures assumem — o nome da tool MCP sem título fica só na spike (D-33), por `session.start` não aceitar um servidor MCP avulso ainda | eq | e2e (live) | — | B-31 | ✅ |
 
 ---
 

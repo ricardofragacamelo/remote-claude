@@ -789,6 +789,36 @@ abstract class AppLocalizations {
   /// **'[… the middle of the output was left out here …]'**
   String get sessionToolRowOutputCut;
 
+  /// Heading of a tool's diff box
+  ///
+  /// In en, this message translates to:
+  /// **'Changes to {name}'**
+  String sessionDiffLabel(String name);
+
+  /// A tool's diff is being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the diff…'**
+  String get sessionDiffLoading;
+
+  /// A diff route answered with no hunks at all
+  ///
+  /// In en, this message translates to:
+  /// **'The file already holds exactly this: nothing would change.'**
+  String get sessionDiffUnchanged;
+
+  /// The server answered DIFF_NOT_APPLICABLE
+  ///
+  /// In en, this message translates to:
+  /// **'This call changes no file, so there is no change to show.'**
+  String get sessionErrorDiffNotApplicable;
+
+  /// Reveals every line of a folded diff
+  ///
+  /// In en, this message translates to:
+  /// **'Show all {count} lines'**
+  String diffHunksShowAll(int count);
+
   /// Marker of an image a prompt carried, of unknown type and size
   ///
   /// In en, this message translates to:
@@ -974,6 +1004,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use a tool'**
   String get permissionToolOther;
+
+  /// The title of a request a subagent's own tool is asking, naming the subagent by its type (plan 26, B-21)
+  ///
+  /// In en, this message translates to:
+  /// **'Subagent {subagent} — {title}'**
+  String permissionSubagentTitle(String subagent, String title);
 
   /// Risk of a read-only invocation
   ///
@@ -2289,6 +2325,54 @@ abstract class AppLocalizations {
   /// **'Turn ended: {seconds} s'**
   String sessionTurnLineNoCost(String seconds);
 
+  /// Opens the audit trail of this call's kind, in this session
+  ///
+  /// In en, this message translates to:
+  /// **'See it in the audit trail'**
+  String get sessionToolRowTrail;
+
+  /// A subagent's own history is being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading what the subagent said…'**
+  String get sessionSubagentLoading;
+
+  /// A subagent's history page answered with no events at all
+  ///
+  /// In en, this message translates to:
+  /// **'The history keeps nothing the subagent said.'**
+  String get sessionSubagentNothing;
+
+  /// Accessible label of the region a subagent's own entries are drawn in
+  ///
+  /// In en, this message translates to:
+  /// **'What the subagent said'**
+  String get sessionSubagentLabel;
+
+  /// Input tokens of a turn
+  ///
+  /// In en, this message translates to:
+  /// **'{count} in'**
+  String sessionTurnTokensIn(String count);
+
+  /// Output tokens of a turn
+  ///
+  /// In en, this message translates to:
+  /// **'{count} out'**
+  String sessionTurnTokensOut(String count);
+
+  /// Cache-read plus cache-write tokens of a turn, summed
+  ///
+  /// In en, this message translates to:
+  /// **'{count} cache'**
+  String sessionTurnTokensCache(String count);
+
+  /// A turn whose engine reported no usage count at all
+  ///
+  /// In en, this message translates to:
+  /// **'no token count'**
+  String get sessionTurnNoTokens;
+
   /// Line where the conversation was compacted on request
   ///
   /// In en, this message translates to:
@@ -3387,6 +3471,30 @@ abstract class AppLocalizations {
   /// **'Press and hold for what to do with this prompt'**
   String get sessionMessageHold;
 
+  /// Copies a whole message — a prompt or an answer (plan 26, B-11)
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the message'**
+  String get sessionMessageCopy;
+
+  /// Announced once a message was copied
+  ///
+  /// In en, this message translates to:
+  /// **'Message copied'**
+  String get sessionMessageCopied;
+
+  /// The author label at the start of a run of the person's own messages
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get sessionMessageAuthorYou;
+
+  /// The author label at the start of a run of the model's own messages; {agent} is the display name of the engine
+  ///
+  /// In en, this message translates to:
+  /// **'{agent}'**
+  String sessionMessageAuthorAgent(String agent);
+
   /// The strip over the box while a prompt is edited
   ///
   /// In en, this message translates to:
@@ -4299,6 +4407,18 @@ abstract class AppLocalizations {
   /// **'This kind of link is not opened from here.'**
   String get markdownLinkRefused;
 
+  /// Copies a code block of a markdown preview or message
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the code'**
+  String get codeCopy;
+
+  /// Announced once the code block was copied
+  ///
+  /// In en, this message translates to:
+  /// **'Code copied'**
+  String get codeCopied;
+
   /// What a drawn Mermaid diagram is called
   ///
   /// In en, this message translates to:
@@ -4442,6 +4562,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{path} changed while it was coming. Try again.'**
   String filesErrorChanged(String path);
+
+  /// Title of the audit trail screen, for one kind of call
+  ///
+  /// In en, this message translates to:
+  /// **'Trail of {kind}'**
+  String auditTrailTitle(String kind);
+
+  /// While the first page of the trail loads
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the trail…'**
+  String get auditTrailLoading;
+
+  /// No entry in the trail for this session and kind
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded yet'**
+  String get auditTrailEmptyTitle;
+
+  /// What an empty trail means
+  ///
+  /// In en, this message translates to:
+  /// **'No call of this kind, in this session, is in the trail.'**
+  String get auditTrailEmptyDescription;
+
+  /// Reads the next page of the trail
+  ///
+  /// In en, this message translates to:
+  /// **'Load older entries'**
+  String get auditTrailLoadMore;
+
+  /// A later page of the trail is being read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading more…'**
+  String get auditTrailLoadingMore;
+
+  /// An entry with nothing to decide
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded'**
+  String get auditDecisionRecorded;
+
+  /// A request the trail says was allowed
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed'**
+  String get auditDecisionAllowed;
+
+  /// A request the trail says was denied
+  ///
+  /// In en, this message translates to:
+  /// **'Denied'**
+  String get auditDecisionDenied;
+
+  /// Nobody answered; the server decided on its own
+  ///
+  /// In en, this message translates to:
+  /// **'Decided automatically'**
+  String get auditResolvedAuto;
+
+  /// A rule the person granted earlier answered
+  ///
+  /// In en, this message translates to:
+  /// **'Decided by a rule'**
+  String get auditResolvedByRule;
+
+  /// A person answered, with no further detail
+  ///
+  /// In en, this message translates to:
+  /// **'Decided by someone'**
+  String get auditResolvedByPerson;
+
+  /// Who decided, as the server said it
+  ///
+  /// In en, this message translates to:
+  /// **'Decided by {who}'**
+  String auditResolvedByNamed(String who);
+
+  /// Where the answer came from, as the server said it
+  ///
+  /// In en, this message translates to:
+  /// **'From {place}'**
+  String auditResolvedFrom(String place);
+
+  /// Who decided and from where, both as the server said them
+  ///
+  /// In en, this message translates to:
+  /// **'Decided by {who}, from {place}'**
+  String auditResolvedByNamedFrom(String who, String place);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

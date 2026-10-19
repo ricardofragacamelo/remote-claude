@@ -28,6 +28,9 @@ import 'package:remote_claude/core/network/trace.dart';
 import 'package:remote_claude/core/network/trace_provider.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/core/network/ws_client_provider.dart';
+import 'package:remote_claude/core/widgets/markdown/diagram_providers.dart';
+import 'package:remote_claude/core/widgets/markdown/diagram_queue.dart';
+import 'package:remote_claude/core/widgets/markdown/webview_diagram_engine.dart';
 import 'package:remote_claude/core/notifications/platform_push_gateway.dart';
 import 'package:remote_claude/core/notifications/push_providers.dart';
 import 'package:remote_claude/core/storage/credential_store.dart';
@@ -40,12 +43,14 @@ import 'package:remote_claude/features/auth/domain/usecases/restore_session.dart
 import 'package:remote_claude/features/auth/domain/usecases/sign_in.dart';
 import 'package:remote_claude/features/auth/domain/usecases/sign_out.dart';
 import 'package:remote_claude/features/device/data/datasources/device_api_data_source.dart';
+import 'package:remote_claude/features/audit/audit_providers.dart';
+import 'package:remote_claude/features/audit/data/datasources/audit_api_data_source.dart';
+import 'package:remote_claude/features/audit/domain/repositories/audit_repository.dart';
+import 'package:remote_claude/features/audit/domain/usecases/read_audit_trail.dart';
 import 'package:remote_claude/features/device/device_providers.dart';
 import 'package:remote_claude/features/files/data/datasources/files_api_data_source.dart';
 import 'package:remote_claude/features/files/data/engines/app_temporary_files.dart';
 import 'package:remote_claude/features/files/data/engines/channel_file_saver.dart';
-import 'package:remote_claude/features/files/data/engines/webview_diagram_engine.dart';
-import 'package:remote_claude/features/files/domain/services/diagram_queue.dart';
 import 'package:remote_claude/features/files/domain/repositories/files_repository.dart';
 import 'package:remote_claude/features/files/domain/usecases/download_file.dart';
 import 'package:remote_claude/features/files/domain/usecases/read_folder.dart';
@@ -174,6 +179,12 @@ void main() {
     expect(container.read(devicePlatformProvider), isNotEmpty);
   });
 
+  test('the audit feature assembles end to end', () {
+    expect(container.read(auditApiDataSourceProvider), isA<AuditApiDataSource>());
+    expect(container.read(auditRepositoryProvider), isA<AuditRepository>());
+    expect(container.read(readAuditTrailProvider), isA<ReadAuditTrail>());
+  });
+
   test('the session feature assembles end to end', () {
     expect(container.read(sessionWsDataSourceProvider), isA<SessionWsDataSource>());
     expect(container.read(sessionRepositoryProvider), isA<SessionRepository>());
@@ -286,6 +297,7 @@ void main() {
       workspacesRoute,
       diagnosticsRoute,
       rulesRoute,
+      auditTrailRoute,
       historyRoute,
       fileViewerRoute,
       draftRoute,

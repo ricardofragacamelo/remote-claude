@@ -21,6 +21,7 @@
     "**/*.module.ts",
     "**/test/**",
     "**/e2e/fixtures/**",
+    "packages/contracts/fixtures/**",
     "packages/contracts/schema/http/upload-preflight.schema.json",
     "packages/contracts/schema/http/upload-result.schema.json",
     "packages/contracts/schema/http/defaults-view.schema.json",

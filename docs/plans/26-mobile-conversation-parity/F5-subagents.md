@@ -29,7 +29,7 @@ a ser comuns e a pedir permissão ([13 · D-23](../13-claude-settings/decisions.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-18 — O mapper guarda o dono 🔲
+### B-18 — O mapper guarda o dono ✅
 
 `message.delta`, `message.completed`, `tool.started`, `tool.progress` e `tool.completed` com
 `parentToolUseId` deixam de ser `UnreadEvent`. Os eventos de domínio ganham o `parentToolUseId`, e o
@@ -38,7 +38,7 @@ Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os con
 Um frame de subagent cujo card (`kind` `agent`) ainda não chegou fica guardado e é anexado quando o
 card chegar, como faz o redutor do web. O `seq` continua avançando por todo frame. Cenários S-63…S-65.
 
-### B-19 — O aninhamento na conversa 🔲
+### B-19 — O aninhamento na conversa ✅
 
 A `Conversation` guarda os filhos de cada tool de `kind` `agent`: mensagens, pensamento e tools, na
 ordem. O que abre um subagent é o `kind`, que o [plano 28](../28-agent-neutral-core/F3-interactions.md)
@@ -51,7 +51,7 @@ do subagent desenha os filhos com o mesmo `EntryView`, recuados, com:
 
 Uma tool de subagent nunca aparece solta na lista principal. Cenários S-66…S-68.
 
-### B-20 — O subagent no histórico 🔲
+### B-20 — O subagent no histórico ✅
 
 Ao abrir o card de um subagent (`kind` `agent`) do histórico, o app lê
 `GET /transcripts/:engine/:id/subagents/:toolUseId/messages` ([04 · rotas](../../architecture/backend/03-modules.md)),
@@ -60,7 +60,7 @@ pôs no lugar do `claudeSessionId`. É como o `SubagentChildren` do web: sob dem
 estados e tentar de novo. A resposta passa pelo `historyEventFrom` e entra como filhos do card.
 Cenários S-69, S-70.
 
-### B-21 — A permissão com o dono 🔲
+### B-21 — A permissão com o dono ✅
 
 O card de permissão inline de uma tool de subagent aparece **dentro** do subagent, como no web, e o
 título diz o subagent ("Subagent *writer* quer escrever `x`"); o resto do título é o `label` do

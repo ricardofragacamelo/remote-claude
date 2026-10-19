@@ -34,11 +34,20 @@ import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The viewer of [path] in [folder], opened from [sessionId] when a session opened it.
 class FileViewerPage extends ConsumerStatefulWidget {
-  const FileViewerPage({required this.folder, required this.path, super.key, this.sessionId});
+  const FileViewerPage({
+    required this.folder,
+    required this.path,
+    super.key,
+    this.sessionId,
+    this.line,
+  });
 
   final String folder;
   final String path;
   final String? sessionId;
+
+  /// Where a file-path-like mention of a message pointed (plan 26, B-10).
+  final int? line;
 
   @override
   ConsumerState<FileViewerPage> createState() => _FileViewerPageState();
@@ -127,6 +136,7 @@ class _FileViewerPageState extends ConsumerState<FileViewerPage>
       path: widget.path,
       preview: _kind == ViewerKind.markdown && !_source,
       sessionId: widget.sessionId,
+      line: widget.line,
     ),
     ViewerKind.image => _ImageBody(folder: widget.folder, path: widget.path),
     ViewerKind.pdf => PdfFileViewer(
@@ -157,6 +167,7 @@ class _TextBody extends _FileBody {
     required super.path,
     required this.preview,
     this.sessionId,
+    this.line,
   });
 
   /// The markdown preview, rather than the text.
@@ -164,6 +175,9 @@ class _TextBody extends _FileBody {
 
   /// The session the viewer was opened from — where a link of the preview keeps the viewer.
   final String? sessionId;
+
+  /// Where a file-path-like mention of a message pointed (plan 26, B-10).
+  final int? line;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -215,7 +229,11 @@ class _TextBody extends _FileBody {
                   content: document.content,
                   sessionId: sessionId,
                 )
-              : TextViewer(content: document.content, wrap: ref.watch(wrapSettingProvider)),
+              : TextViewer(
+                  content: document.content,
+                  wrap: ref.watch(wrapSettingProvider),
+                  initialLine: line,
+                ),
         ),
       ],
     );

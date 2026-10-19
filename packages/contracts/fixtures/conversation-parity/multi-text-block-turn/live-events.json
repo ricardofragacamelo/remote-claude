@@ -1,0 +1,142 @@
+[
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "9dae7839-d78b-42c7-b906-8dd1dbfbc10e",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "9dae7839-d78b-42c7-b906-8dd1dbfbc10e:0",
+          "text": "First write one short sentence saying you will list the folder. Then run `ls` with the Bash tool. Then write one short sentence saying you are done. Write the sentences as text, not in the command."
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoG217eDw1kHBNMqW1k",
+      "delta": "I'll list the folder."
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoG217eDw1kHBNMqW1k",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "8a821301-98fc-4bdd-be3e-f76049a99cb6:0",
+          "text": "I'll list the folder."
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoG217eDw1kHBNMqW1k",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "c52fbe8e-b9b0-4c0c-bbbb-a109ab60ce99:0",
+          "toolUseId": "toolu_01NzqMxF2FBXz2sjygonD42o"
+        }
+      ]
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_01NzqMxF2FBXz2sjygonD42o",
+      "kind": "shell",
+      "label": {
+        "messageKey": "sessions.tool.shell",
+        "params": {
+          "command": "ls"
+        }
+      },
+      "subject": {
+        "command": "ls"
+      },
+      "changes": [],
+      "origin": {
+        "engine": "claude",
+        "native": "Bash"
+      },
+      "rawInput": {
+        "command": "ls",
+        "description": "List files in current directory"
+      },
+      "title": "List files in current directory"
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_01NzqMxF2FBXz2sjygonD42o",
+      "status": "succeeded",
+      "summary": "notes.md"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoGAEi5Mb4V3neznkSF",
+      "delta": "Done — the folder contains"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoGAEi5Mb4V3neznkSF",
+      "delta": " a"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoGAEi5Mb4V3neznkSF",
+      "delta": " single file, `notes.md"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CfsoGAEi5Mb4V3neznkSF",
+      "delta": "`."
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CfsoGAEi5Mb4V3neznkSF",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "81ccc32f-d58c-4fee-8721-3e7f75977121:0",
+          "text": "Done — the folder contains a single file, `notes.md`."
+        }
+      ]
+    }
+  },
+  {
+    "type": "turn.completed",
+    "payload": {
+      "turnId": "9b685161-c8ec-4f30-a448-500951792123",
+      "usage": {
+        "inputTokens": 4,
+        "outputTokens": 104,
+        "cacheReadTokens": 27700,
+        "cacheWriteTokens": 5813,
+        "webSearches": 0
+      },
+      "costUsd": "0.075591",
+      "durationMs": 4354
+    }
+  }
+]

@@ -29,7 +29,7 @@ void main() {
       expect(
         const Conversation(
           entries: <ConversationEntry>[
-            StreamMessage(messageId: 'm', blocks: <String>['x']),
+            StreamMessage(messageId: 'm', blocks: <MessageBlock>[TextBlock('x')]),
           ],
         ).isEmpty,
         isFalse,
@@ -96,9 +96,19 @@ void main() {
   group('the order of the conversation — S-06', () {
     test('a message, a tool and a message are three entries in the order of the seq', () {
       final Conversation after = applyAll(<SessionEvent>[
-        const MessageFinished(1, messageId: 'm1', text: 'let me look', isFromUser: false),
+        const MessageFinished(
+          1,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('let me look')],
+          isFromUser: false,
+        ),
         ToolInvoked(2, toolUseId: 't1', call: shellLs),
-        const MessageFinished(3, messageId: 'm2', text: 'found it', isFromUser: false),
+        const MessageFinished(
+          3,
+          messageId: 'm2',
+          blocks: <MessageBlock>[TextBlock('found it')],
+          isFromUser: false,
+        ),
       ]);
 
       expect(idsOf(after), <String>['message:m1', 'tool:t1', 'message:m2']);
@@ -106,10 +116,20 @@ void main() {
 
     test('the end of each turn and a compaction are entries in their place', () {
       final Conversation after = applyAll(<SessionEvent>[
-        const MessageFinished(1, messageId: 'm1', text: 'done', isFromUser: false),
+        const MessageFinished(
+          1,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('done')],
+          isFromUser: false,
+        ),
         const TurnFinished(2, TurnSummary(turnId: 'turn-1', costUsd: '0.1', durationMs: 5)),
         const ContextCompacted(3, trigger: 'manual', preTokens: 9000),
-        const MessageFinished(4, messageId: 'm2', text: 'again', isFromUser: false),
+        const MessageFinished(
+          4,
+          messageId: 'm2',
+          blocks: <MessageBlock>[TextBlock('again')],
+          isFromUser: false,
+        ),
       ]);
 
       expect(idsOf(after), <String>['message:m1', 'turn:turn-1', 'compaction:3', 'message:m2']);
@@ -150,7 +170,12 @@ void main() {
       expect(streaming.messages.single.isComplete, isFalse);
 
       final Conversation whole = streaming.apply(
-        const MessageFinished(3, messageId: 'm1', text: 'Hello, world', isFromUser: false),
+        const MessageFinished(
+          3,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('Hello, world')],
+          isFromUser: false,
+        ),
       );
 
       expect(whole.messages.single.text, 'Hello, world');
@@ -170,7 +195,12 @@ void main() {
 
     test('a fragment after a block finished starts the next block of the same message', () {
       final Conversation after = applyAll(<SessionEvent>[
-        const MessageFinished(1, messageId: 'm1', text: 'first. ', isFromUser: false),
+        const MessageFinished(
+          1,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('first. ')],
+          isFromUser: false,
+        ),
         const MessageFragment(2, messageId: 'm1', delta: 'second'),
       ]);
 
@@ -180,8 +210,13 @@ void main() {
 
     test('a block that calls a tool adds nothing, and never erases the answer before it', () {
       final Conversation after = applyAll(<SessionEvent>[
-        const MessageFinished(1, messageId: 'm1', text: 'let me run it', isFromUser: false),
-        const MessageFinished(2, messageId: 'm1', text: '', isFromUser: false),
+        const MessageFinished(
+          1,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('let me run it')],
+          isFromUser: false,
+        ),
+        const MessageFinished(2, messageId: 'm1', blocks: <MessageBlock>[], isFromUser: false),
       ]);
 
       expect(after.messages.single.text, 'let me run it');
@@ -189,7 +224,7 @@ void main() {
 
     test('a block with no text for a message nothing announced opens no empty message', () {
       final Conversation after = const Conversation().apply(
-        const MessageFinished(1, messageId: 'm1', text: '', isFromUser: false),
+        const MessageFinished(1, messageId: 'm1', blocks: <MessageBlock>[], isFromUser: false),
       );
 
       expect(after.isEmpty, isTrue);
@@ -197,16 +232,31 @@ void main() {
 
     test('a block finished twice under one message is added once', () {
       final Conversation after = applyAll(<SessionEvent>[
-        const MessageFinished(1, messageId: 'm1', text: 'same', isFromUser: false),
-        const MessageFinished(2, messageId: 'm1', text: 'same', isFromUser: false),
+        const MessageFinished(
+          1,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('same')],
+          isFromUser: false,
+        ),
+        const MessageFinished(
+          2,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('same')],
+          isFromUser: false,
+        ),
       ]);
 
-      expect(after.messages.single.blocks, <String>['same']);
+      expect(after.messages.single.blocks, const <MessageBlock>[TextBlock('same')]);
     });
 
     test('a message that finished without any fragment before it is still shown', () {
       final Conversation after = const Conversation().apply(
-        const MessageFinished(1, messageId: 'm1', text: 'only', isFromUser: true),
+        const MessageFinished(
+          1,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('only')],
+          isFromUser: true,
+        ),
       );
 
       expect(after.messages.single.text, 'only');
@@ -227,23 +277,55 @@ void main() {
       final Conversation after = applyAll(<SessionEvent>[
         ToolInvoked(1, toolUseId: 't1', call: shellLs),
         const ToolOutput(2, toolUseId: 't1', chunk: 'output'),
-        const MessageFinished(3, messageId: 'm1', text: 'meanwhile', isFromUser: false),
+        const MessageFinished(
+          3,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('meanwhile')],
+          isFromUser: false,
+        ),
         ToolInvoked(4, toolUseId: 't1', call: shellLs),
       ]);
 
       expect(idsOf(after), <String>['tool:t1', 'message:m1']);
-      expect(after.tools.single.output, isEmpty);
+      expect(after.tools.single.elapsed, isNull);
     });
 
-    test('collects a tool from its invocation to its outcome', () {
+    test(
+      'S-51 · B-14 · three ticks in a row: the line keeps the last one, and OUT never moves',
+      () {
+        final Conversation after = applyAll(<SessionEvent>[
+          ToolInvoked(1, toolUseId: 't1', call: shellLs),
+          const ToolOutput(2, toolUseId: 't1', chunk: '1s'),
+          const ToolOutput(3, toolUseId: 't1', chunk: '2s'),
+          const ToolOutput(4, toolUseId: 't1', chunk: '3s'),
+        ]);
+
+        expect(after.tools.single.elapsed, '3s');
+        expect(after.tools.single.status, ToolStatus.running);
+        expect(after.tools.single.summary, isNull);
+      },
+    );
+
+    test('B-14 · the elapsed time replaces, never accumulates — the end is the last tick', () {
       final Conversation after = applyAll(<SessionEvent>[
         ToolInvoked(1, toolUseId: 't1', call: shellLs),
-        const ToolOutput(2, toolUseId: 't1', chunk: 'one '),
-        const ToolOutput(3, toolUseId: 't1', chunk: 'two'),
+        const ToolOutput(2, toolUseId: 't1', chunk: '1s'),
+        const ToolOutput(3, toolUseId: 't1', chunk: '2s'),
         const ToolFinished(4, toolUseId: 't1', status: ToolStatus.succeeded, summary: 'done'),
       ]);
 
-      expect(after.tools.single.output, 'one two');
+      expect(after.tools.single.elapsed, '2s');
+      expect(after.tools.single.status, ToolStatus.succeeded);
+      expect(after.tools.single.summary, 'done');
+    });
+
+    test('S-53 · B-14 · a tick out of order, after the tool finished, does not reopen it', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        ToolInvoked(1, toolUseId: 't1', call: shellLs),
+        const ToolFinished(2, toolUseId: 't1', status: ToolStatus.succeeded, summary: 'done'),
+        const ToolOutput(3, toolUseId: 't1', chunk: '9s'),
+      ]);
+
       expect(after.tools.single.status, ToolStatus.succeeded);
       expect(after.tools.single.summary, 'done');
     });
@@ -265,6 +347,126 @@ void main() {
       ]);
 
       expect(after.isEmpty, isTrue);
+    });
+  });
+
+  group('plan 26, B-18 · a subagent\'s own text and thinking', () {
+    test('a message of a subagent carries its parentToolUseId, and is not lost', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const MessageFragment(1, messageId: 'm1', delta: 'wor', parentToolUseId: 'agent-1'),
+        const MessageFinished(
+          2,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('working on it')],
+          isFromUser: false,
+          parentToolUseId: 'agent-1',
+        ),
+      ]);
+
+      expect(after.messages.single.text, 'working on it');
+      expect(after.messages.single.parentToolUseId, 'agent-1');
+    });
+
+    test('a thinking of a subagent carries its parentToolUseId, and is not lost', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const ThinkingFragment(1, messageId: 'm1', delta: 'hmm', parentToolUseId: 'agent-1'),
+      ]);
+
+      final ThinkingEntry thinking = after.entries.whereType<ThinkingEntry>().single;
+      expect(thinking.text, 'hmm');
+      expect(thinking.parentToolUseId, 'agent-1');
+    });
+
+    test('a subagent\'s message never interleaves with the main conversation\'s own', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const MessageFragment(1, messageId: 'main', delta: 'top-level'),
+        const MessageFragment(2, messageId: 'sub', delta: 'nested', parentToolUseId: 'agent-1'),
+      ]);
+
+      final StreamMessage main = after.messages.firstWhere((m) => m.messageId == 'main');
+      final StreamMessage sub = after.messages.firstWhere((m) => m.messageId == 'sub');
+      expect(main.parentToolUseId, isNull);
+      expect(sub.parentToolUseId, 'agent-1');
+    });
+
+    test('S-65 · the seq advances for a subagent frame too, and a replay does not duplicate', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        const MessageFragment(1, messageId: 'm1', delta: 'a', parentToolUseId: 'agent-1'),
+        const MessageFinished(
+          2,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('a')],
+          isFromUser: false,
+          parentToolUseId: 'agent-1',
+        ),
+      ]);
+
+      expect(after.lastSeq, 2);
+
+      final Conversation replayed = after.apply(
+        const MessageFinished(
+          2,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('a')],
+          isFromUser: false,
+          parentToolUseId: 'agent-1',
+        ),
+      );
+
+      expect(replayed.messages, after.messages);
+    });
+
+    test('S-68 · entriesUnder splits the main conversation from each subagent\'s own', () {
+      final Conversation after = applyAll(<SessionEvent>[
+        ToolInvoked(1, toolUseId: 'main-tool', call: shellLs),
+        ToolInvoked(
+          2,
+          toolUseId: 'agent-1',
+          call: aToolCall(kind: 'agent'),
+        ),
+        ToolInvoked(3, toolUseId: 'nested-tool', call: shellLs, parentToolUseId: 'agent-1'),
+        const MessageFragment(4, messageId: 'm1', delta: 'hi', parentToolUseId: 'agent-1'),
+      ]);
+
+      expect(after.entriesUnder(null).map((ConversationEntry e) => e.entryId), <String>[
+        'tool:main-tool',
+        'tool:agent-1',
+      ]);
+      expect(after.entriesUnder('agent-1').map((ConversationEntry e) => e.entryId), <String>[
+        'tool:nested-tool',
+        'message:m1',
+      ]);
+      expect(after.entriesUnder('nested-tool'), isEmpty);
+    });
+
+    test('S-64 · a subagent\'s frame that arrives before its own tool.started is never lost', () {
+      // The child is tagged by the parent's toolUseId the instant its own frame arrives — nothing
+      // is buffered, because entriesUnder reads the tag, not a tree somebody had to build in order
+      // (D-26): the agent's own tool.started has not arrived yet, and the text is already there,
+      // findable by the id its own card will have.
+      final Conversation beforeTheCard = applyAll(<SessionEvent>[
+        const MessageFragment(
+          1,
+          messageId: 'm1',
+          delta: 'already working',
+          parentToolUseId: 'agent-1',
+        ),
+      ]);
+
+      expect(beforeTheCard.entriesUnder('agent-1').single.entryId, 'message:m1');
+      expect(beforeTheCard.entriesUnder(null), isEmpty);
+
+      // The card arrives after: nothing more to attach, nothing lost, nothing duplicated.
+      final Conversation afterTheCard = beforeTheCard.apply(
+        ToolInvoked(
+          2,
+          toolUseId: 'agent-1',
+          call: aToolCall(kind: 'agent'),
+        ),
+      );
+
+      expect(afterTheCard.entriesUnder(null).single.entryId, 'tool:agent-1');
+      expect(afterTheCard.entriesUnder('agent-1').single.entryId, 'message:m1');
     });
   });
 
@@ -290,7 +492,7 @@ void main() {
         const MessageFinished(
           2,
           messageId: 'm1',
-          text: 'the answer',
+          blocks: <MessageBlock>[TextBlock('the answer')],
           isFromUser: false,
           thoughts: <Thought>[Thought('reasoning, whole')],
         ),
@@ -307,7 +509,7 @@ void main() {
         const MessageFinished(
           2,
           messageId: 'm1',
-          text: '',
+          blocks: <MessageBlock>[],
           isFromUser: false,
           thoughts: <Thought>[Thought('')],
           at: '2026-09-14T12:00:02Z',
@@ -353,7 +555,7 @@ void main() {
         const MessageFinished(
           1,
           messageId: 'm1',
-          text: '',
+          blocks: <MessageBlock>[],
           isFromUser: false,
           thoughts: <Thought>[Thought('', isRedacted: true)],
         ),
@@ -369,14 +571,14 @@ void main() {
         const MessageFinished(
           1,
           messageId: 'm1',
-          text: '',
+          blocks: <MessageBlock>[],
           isFromUser: false,
           thoughts: <Thought>[Thought('same')],
         ),
         const MessageFinished(
           2,
           messageId: 'm1',
-          text: '',
+          blocks: <MessageBlock>[],
           isFromUser: false,
           thoughts: <Thought>[Thought('same')],
         ),
@@ -517,11 +719,16 @@ void main() {
 
   group('laying the live stream over the history', () {
     const List<SessionEvent> history = <SessionEvent>[
-      MessageFinished(0, messageId: 'h1', text: 'what broke?', isFromUser: true),
+      MessageFinished(
+        0,
+        messageId: 'h1',
+        blocks: <MessageBlock>[TextBlock('what broke?')],
+        isFromUser: true,
+      ),
       MessageFinished(
         0,
         messageId: 'h2',
-        text: 'the build',
+        blocks: <MessageBlock>[TextBlock('the build')],
         isFromUser: false,
         thoughts: <Thought>[Thought('look at the log')],
       ),
@@ -552,7 +759,12 @@ void main() {
 
     test('what is live and new comes after the history, in the order it arrived', () {
       final Conversation shown = applyAll(<SessionEvent>[
-        const MessageFinished(1, messageId: 'n1', text: 'fixed', isFromUser: false),
+        const MessageFinished(
+          1,
+          messageId: 'n1',
+          blocks: <MessageBlock>[TextBlock('fixed')],
+          isFromUser: false,
+        ),
         const MessageFragment(2, messageId: 'n2', delta: 'and'),
       ]).withHistory(history);
 
@@ -561,7 +773,12 @@ void main() {
 
     test('S-15 · a live entry with a historical id replaces it in place, never twice', () {
       final Conversation shown = applyAll(<SessionEvent>[
-        const MessageFinished(7, messageId: 'h2', text: 'the build, again', isFromUser: false),
+        const MessageFinished(
+          7,
+          messageId: 'h2',
+          blocks: <MessageBlock>[TextBlock('the build, again')],
+          isFromUser: false,
+        ),
         ToolInvoked(8, toolUseId: 't1', call: shellLs),
       ]).withHistory(history);
 
@@ -601,7 +818,12 @@ void main() {
 
     test('laying it over again changes nothing — a reload is idempotent', () {
       final Conversation now = applyAll(<SessionEvent>[
-        const MessageFinished(1, messageId: 'h2', text: 'the build', isFromUser: false),
+        const MessageFinished(
+          1,
+          messageId: 'h2',
+          blocks: <MessageBlock>[TextBlock('the build')],
+          isFromUser: false,
+        ),
       ]);
 
       expect(now.withHistory(history), now.withHistory(history).withHistory(history));
@@ -610,7 +832,12 @@ void main() {
 
   test('plan 28 · S-89 · a message that brought no thinking leaves no room for one', () {
     final Conversation conversation = applyAll(<SessionEvent>[
-      const MessageFinished(1, messageId: 'm1', text: 'Hi', isFromUser: false),
+      const MessageFinished(
+        1,
+        messageId: 'm1',
+        blocks: <MessageBlock>[TextBlock('Hi')],
+        isFromUser: false,
+      ),
     ]);
 
     expect(conversation.entries.whereType<ThinkingEntry>(), isEmpty);
@@ -710,7 +937,7 @@ void main() {
             messageKey: 'sessions.tool.search',
             params: const <String, Object>{'pattern': 'x'},
           ),
-          isSubagent: true,
+          parentToolUseId: 'agent-1',
         ),
       ]);
 
@@ -759,14 +986,12 @@ void main() {
         const MessageFinished(
           1,
           messageId: 'm1',
-          text: '',
           isFromUser: false,
           thoughts: <Thought>[Thought('', blockId: 'u1:0')],
         ),
         const MessageFinished(
           2,
           messageId: 'm1',
-          text: '',
           isFromUser: false,
           thoughts: <Thought>[Thought('', blockId: 'u2:0')],
         ),
@@ -779,45 +1004,47 @@ void main() {
       const MessageFinished block = MessageFinished(
         0,
         messageId: 'm1',
-        text: 'Once.',
+        blocks: <MessageBlock>[TextBlock('Once.', blockId: 'u1:0')],
         isFromUser: false,
-        textBlockIds: <String>['u1:0'],
         thoughts: <Thought>[Thought('', blockId: 'u0:0')],
       );
       final Conversation shown = const Conversation().withHistory(<SessionEvent>[block, block]);
 
-      expect(shown.messages.single.blocks, <String>['Once.']);
-      expect(shown.messages.single.blockIds, <String>['u1:0']);
+      expect(shown.messages.single.blocks, const <MessageBlock>[
+        TextBlock('Once.', blockId: 'u1:0'),
+      ]);
       expect(shown.thinking, hasLength(1));
     });
 
     test('S-37 · a block with no identity keeps the old rule', () {
       final Conversation after = applyAll(<SessionEvent>[
-        const MessageFinished(1, messageId: 'm1', text: 'Same.', isFromUser: false),
+        const MessageFinished(
+          1,
+          messageId: 'm1',
+          blocks: <MessageBlock>[TextBlock('Same.')],
+          isFromUser: false,
+        ),
         const MessageFinished(
           2,
           messageId: 'm1',
-          text: 'Same.',
+          blocks: <MessageBlock>[TextBlock('Same.', blockId: 'u1:0')],
           isFromUser: false,
-          textBlockIds: <String>['u1:0'],
         ),
         const MessageFinished(
           3,
           messageId: 'm1',
-          text: '',
           isFromUser: false,
           thoughts: <Thought>[Thought('t', blockId: 'u2:0')],
         ),
         const MessageFinished(
           4,
           messageId: 'm1',
-          text: '',
           isFromUser: false,
           thoughts: <Thought>[Thought('t')],
         ),
       ]);
 
-      expect(after.messages.single.blocks, <String>['Same.']);
+      expect(after.messages.single.blocks, const <MessageBlock>[TextBlock('Same.')]);
       expect(after.thinking, hasLength(1));
     });
 
@@ -827,29 +1054,26 @@ void main() {
             const MessageFinished(
               5,
               messageId: 'h2',
-              text: 'live',
+              blocks: <MessageBlock>[TextBlock('live', blockId: 'u4:0')],
               isFromUser: false,
-              textBlockIds: <String>['u4:0'],
             ),
           ]).withHistory(const <SessionEvent>[
             MessageFinished(
               0,
               messageId: 'h1',
-              text: 'old',
+              blocks: <MessageBlock>[TextBlock('old', blockId: 'u1:0')],
               isFromUser: true,
-              textBlockIds: <String>['u1:0'],
             ),
             MessageFinished(
               0,
               messageId: 'h2',
-              text: 'live',
+              blocks: <MessageBlock>[TextBlock('live', blockId: 'u4:0')],
               isFromUser: false,
-              textBlockIds: <String>['u4:0'],
             ),
           ]);
 
       expect(idsOf(shown), <String>['message:h1', 'message:h2']);
-      expect(shown.messages.last.blocks, <String>['live']);
+      expect(shown.messages.last.blocks, const <MessageBlock>[TextBlock('live', blockId: 'u4:0')]);
     });
 
     test('S-39 · new entries of an answer already begun fall into it, in order', () {
@@ -857,21 +1081,22 @@ void main() {
         const MessageFinished(
           1,
           messageId: 'm1',
-          text: 'A',
+          blocks: <MessageBlock>[TextBlock('A', blockId: 'u1:0')],
           isFromUser: false,
-          textBlockIds: <String>['u1:0'],
         ),
         const MessageFinished(
           2,
           messageId: 'm1',
-          text: 'B',
+          blocks: <MessageBlock>[TextBlock('B', blockId: 'u2:0')],
           isFromUser: false,
-          textBlockIds: <String>['u2:0'],
         ),
       ]);
 
       expect(after.messages.single.text, 'AB');
-      expect(after.messages.single.blockIds, <String>['u1:0', 'u2:0']);
+      expect(after.messages.single.blocks.map((MessageBlock b) => b.blockId), <String>[
+        'u1:0',
+        'u2:0',
+      ]);
     });
   });
 

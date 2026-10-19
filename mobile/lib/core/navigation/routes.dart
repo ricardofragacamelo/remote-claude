@@ -126,13 +126,37 @@ const String viewerPathParameter = 'path';
 /// questions the viewer says (D-11).
 const String viewerSessionParameter = 'session';
 
+/// The query parameter that names the line a file-path-like mention of a message pointed at (plan
+/// 26, B-10) — absent, the viewer opens at the top as it always did.
+const String viewerLineParameter = 'line';
+
 /// The viewer of [path] in [folder] — both in the query, as every folder of this app travels, so a
 /// proxy that normalises `%2F` cannot change them (S-49).
-String viewerRouteFor(String folder, String path, {String? sessionId}) => Uri(
+String viewerRouteFor(String folder, String path, {String? sessionId, int? line}) => Uri(
   path: fileViewerRoute,
   queryParameters: <String, String>{
     viewerFolderParameter: folder,
     viewerPathParameter: path,
     viewerSessionParameter: ?sessionId,
+    if (line != null) viewerLineParameter: '$line',
+  },
+).toString();
+
+/// The trail of a live session's calls of one kind — the tool card's own "Trail" link, and reachable
+/// nowhere else: no filter form, no entry in a menu (plan 26, B-32, D-11).
+const String auditTrailRoute = '/audit';
+
+/// The query parameter that names the session of a trail screen.
+const String auditTrailSessionParameter = 'session';
+
+/// The query parameter that names the kind of call a trail screen is scoped to.
+const String auditTrailKindParameter = 'kind';
+
+/// The trail of [kind]'s calls in [sessionId].
+String auditTrailRouteFor(String sessionId, String kind) => Uri(
+  path: auditTrailRoute,
+  queryParameters: <String, String>{
+    auditTrailSessionParameter: sessionId,
+    auditTrailKindParameter: kind,
   },
 ).toString();

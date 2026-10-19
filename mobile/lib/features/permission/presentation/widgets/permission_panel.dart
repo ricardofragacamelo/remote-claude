@@ -36,11 +36,16 @@ class PermissionPanel extends ConsumerStatefulWidget {
     super.key,
     this.modes = const <String>[],
     this.onPlanApproved,
+    this.subagent,
   });
 
   final String sessionId;
   final PermissionCard card;
   final DateTime now;
+
+  /// The subagent this card's tool belongs to, by its type — `null` for the main conversation's own
+  /// (plan 26, B-21).
+  final String? subagent;
 
   /// The modes the session's engine announced — what an approved plan's next mode is chosen among.
   final List<String> modes;
@@ -111,6 +116,7 @@ class _PermissionPanelState extends ConsumerState<PermissionPanel> {
       card: widget.card,
       now: widget.now,
       block: block,
+      subagent: widget.subagent,
       canApprove: hasLock && _last != AnswerResult.noLock,
       notice: notice,
       onAnswer: (PermissionDecision decision, PermissionScope scope, {RuleReachKind? reach}) =>

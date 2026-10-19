@@ -6,14 +6,14 @@
   ],
   "labelSources": ["backend/src/adapter/outbound/engines/claude/tool-classifier.ts"],
   "labelPattern": "'(sessions\\.tool\\.[A-Za-z]+)'",
-  "pendingAllowed": true,
+  "pendingAllowed": false,
   "entries": [
     {
       "element": "block.text",
       "web": "web/src/features/session/components/conversation/MessageItem.tsx#TextBlock",
-      "state": "pending",
-      "phase": "F3",
-      "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#MessageBubble"
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#MessageBubble",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart",
+      "state": "ok"
     },
     {
       "element": "block.thinking",
@@ -39,26 +39,30 @@
     {
       "element": "message.blocksInOrder",
       "web": "web/src/features/session/components/conversation/MessageItem.tsx#MessageItem",
-      "state": "pending",
-      "phase": "F3"
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#MessageBubble",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart",
+      "state": "ok"
     },
     {
       "element": "message.author",
       "web": "web/src/features/session/components/conversation/TimelineEntries.tsx#authorsOf",
-      "state": "pending",
-      "phase": "F3"
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#MessageBubble",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart",
+      "state": "ok"
     },
     {
       "element": "message.copy",
       "web": "web/src/features/session/components/conversation/MessageItem.tsx#MessageHeader",
-      "state": "pending",
-      "phase": "F3"
+      "app": "mobile/lib/features/session/presentation/widgets/message_actions.dart#copyMessage",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart",
+      "state": "ok"
     },
     {
       "element": "message.selection",
       "web": "web/src/features/session/components/conversation/MessageItem.tsx#ContextMenu",
-      "state": "pending",
-      "phase": "F3"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "message.promptActions",
@@ -70,101 +74,114 @@
     {
       "element": "message.markdown",
       "web": "web/src/features/session/components/conversation/ChatMarkdown.tsx",
-      "state": "pending",
-      "phase": "F3"
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#MessageBubble",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart",
+      "state": "ok"
     },
     {
       "element": "message.fileLink",
       "web": "web/src/features/session/components/conversation/ChatMarkdown.tsx#fileLinkOf",
-      "state": "pending",
-      "phase": "F3"
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#MessageBubble",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.renderer",
       "web": "web/src/shared/components/markdown/Markdown.tsx",
-      "state": "pending",
-      "phase": "F2",
-      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.heading",
       "web": "web/src/shared/components/markdown/Markdown.tsx#h1-h6",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.emphasis",
       "web": "web/src/shared/components/markdown/Markdown.tsx#strong-em",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.list",
       "web": "web/src/shared/components/markdown/Markdown.tsx#ul-ol",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.table",
       "web": "web/src/shared/components/markdown/Markdown.tsx#table",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.blockquote",
       "web": "web/src/shared/components/markdown/Markdown.tsx#blockquote",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.inlineCode",
       "web": "web/src/shared/components/markdown/Markdown.tsx#code",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.link",
       "web": "web/src/shared/components/markdown/Markdown.tsx#a",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.remoteImage",
       "web": "web/src/shared/components/markdown/Markdown.tsx#img",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.html",
       "web": "web/src/shared/components/markdown/Markdown.tsx#html",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/safe_markdown.dart#SafeMarkdown",
+      "appTest": "mobile/test/widget/core/widgets/markdown/safe_markdown_test.dart",
+      "state": "ok"
     },
     {
       "element": "markdown.mermaid",
       "web": "web/src/shared/components/markdown/MermaidDiagram.tsx",
-      "state": "pending",
-      "phase": "F2",
-      "app": "mobile/lib/core/widgets/markdown/mermaid_block.dart#MermaidBlock"
+      "app": "mobile/lib/core/widgets/markdown/mermaid_block.dart#MermaidBlock",
+      "appTest": "mobile/test/widget/features/files/markdown_viewer_test.dart",
+      "state": "ok"
     },
     {
       "element": "code.block",
       "web": "web/src/features/session/components/conversation/CodeBlock.tsx#CodeBlock",
-      "state": "pending",
-      "phase": "F2",
-      "app": "mobile/lib/core/widgets/markdown/code_block.dart#CodeBlock"
+      "app": "mobile/lib/core/widgets/markdown/code_block.dart#CodeBlock",
+      "appTest": "mobile/test/widget/core/widgets/markdown/code_block_test.dart",
+      "state": "ok"
     },
     {
       "element": "code.highlight",
       "web": "web/src/features/session/components/conversation/CodeBlock.tsx#Coloured",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/code_block.dart#CodeBlock",
+      "appTest": "mobile/test/widget/core/widgets/markdown/code_block_test.dart",
+      "state": "ok"
     },
     {
       "element": "code.copy",
       "web": "web/src/features/session/components/conversation/CodeBlock.tsx#copy",
-      "state": "pending",
-      "phase": "F2"
+      "app": "mobile/lib/core/widgets/markdown/code_block.dart#CodeBlock",
+      "appTest": "mobile/test/widget/core/widgets/markdown/code_block_test.dart",
+      "state": "ok"
     },
     {
       "element": "code.insertIntoEditor",
@@ -203,44 +220,58 @@
     {
       "element": "tool.elapsed",
       "web": "web/src/features/session/components/conversation/ToolRow.tsx#runningFor",
-      "state": "pending",
-      "phase": "F4"
+      "state": "ok",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#_ToolLine",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart"
     },
     {
       "element": "tool.inputScroll",
       "web": "web/src/features/session/components/conversation/ScrollingPre.tsx",
-      "state": "pending",
-      "phase": "F4"
+      "state": "ok",
+      "app": "mobile/lib/core/widgets/scrolling_box.dart#ScrollingBox",
+      "appTest": "mobile/test/widget/core/widgets/scrolling_box_test.dart"
     },
     {
       "element": "tool.ansi",
       "web": "web/src/features/session/components/conversation/AnsiText.tsx",
-      "state": "pending",
-      "phase": "F4"
+      "state": "ok",
+      "app": "mobile/lib/features/session/presentation/widgets/ansi_text.dart#AnsiText",
+      "appTest": "mobile/test/widget/features/session/ansi_text_test.dart"
     },
     {
       "element": "tool.diff",
       "web": "web/src/features/session/components/conversation/ToolDiffView.tsx",
-      "state": "pending",
-      "phase": "F4"
+      "state": "ok",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_diff_view.dart#ToolDiffView",
+      "appTest": "mobile/test/widget/features/session/tool_diff_view_test.dart"
     },
     {
       "element": "tool.trailLink",
       "web": "web/src/features/session/components/conversation/ToolRow.tsx#trail",
-      "state": "pending",
-      "phase": "F4"
+      "state": "ok",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#_ToolDetails",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart"
+    },
+    {
+      "element": "audit.entryRow",
+      "web": "web/src/features/audit/components/AuditEntryRow.tsx",
+      "app": "mobile/lib/features/audit/presentation/widgets/audit_entry_tile.dart#AuditEntryTile",
+      "appTest": "mobile/test/widget/features/audit/audit_entry_tile_test.dart",
+      "state": "ok"
     },
     {
       "element": "tool.subagentChildren",
       "web": "web/src/features/session/components/conversation/SubagentChildren.tsx",
-      "state": "pending",
-      "phase": "F5"
+      "state": "ok",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#_nestedRows",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart"
     },
     {
       "element": "tool.subagentPermission",
       "web": "web/src/features/session/components/conversation/TimelineEntries.tsx#ToolEntry",
-      "state": "pending",
-      "phase": "F5"
+      "state": "ok",
+      "app": "mobile/lib/features/permission/presentation/widgets/permission_card_view.dart#_Heading",
+      "appTest": "mobile/test/widget/features/session/session_inline_test.dart"
     },
     {
       "element": "question.inline",
@@ -266,8 +297,9 @@
     {
       "element": "question.previewMarkdown",
       "web": "web/src/features/permission/components/QuestionCard.tsx#preview",
-      "state": "pending",
-      "phase": "F3"
+      "app": "mobile/lib/features/permission/presentation/widgets/question_card.dart#QuestionCard",
+      "appTest": "mobile/test/widget/features/permission/question_card_test.dart",
+      "state": "ok"
     },
     {
       "element": "timeline",
@@ -279,9 +311,9 @@
     {
       "element": "turn.tokens",
       "web": "web/src/features/session/components/conversation/TurnRow.tsx#TurnRow",
-      "state": "pending",
-      "phase": "F4",
-      "app": "mobile/lib/features/session/presentation/widgets/conversation_lines.dart#TurnLine"
+      "state": "ok",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_lines.dart#TurnLine",
+      "appTest": "mobile/test/widget/features/session/conversation_view_test.dart"
     },
     {
       "element": "turn.compacted",

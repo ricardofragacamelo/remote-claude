@@ -1,0 +1,62 @@
+{
+  "entries": [
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "user",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "First write one short sentence saying you will list the folder. Then run `ls` with the Bash tool. Then write one short sentence saying you are done. Write the sentences as text, not in the command."
+        }
+      ]
+    },
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "assistant",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "I'll list the folder."
+        }
+      ]
+    },
+    {
+      "kind": "tool",
+      "owner": null,
+      "toolKind": "shell",
+      "label": {
+        "messageKey": "sessions.tool.shell",
+        "params": {
+          "command": "ls"
+        }
+      },
+      "status": "succeeded",
+      "media": []
+    },
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "assistant",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "Done — the folder contains a single file, `notes.md`."
+        }
+      ]
+    },
+    {
+      "kind": "turn",
+      "owner": null,
+      "usage": {
+        "inputTokens": 4,
+        "outputTokens": 104,
+        "cacheReadTokens": 27700,
+        "cacheWriteTokens": 5813,
+        "webSearches": 0
+      },
+      "costUsd": "0.075591"
+    }
+  ]
+}

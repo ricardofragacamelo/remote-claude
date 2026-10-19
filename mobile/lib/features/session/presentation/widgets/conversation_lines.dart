@@ -22,12 +22,35 @@ class TurnLine extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String seconds = (turn.durationMs / 1000).toStringAsFixed(1);
     final String? cost = turn.costUsd;
+    final String locale = Localizations.localeOf(context).toLanguageTag();
 
     // No cost said is no cost shown — never "0", which is a cost the engine did report (S-86, S-87).
-    return _Line(
-      cost == null ? l10n.sessionTurnLineNoCost(seconds) : l10n.sessionTurnLine(cost, seconds),
-    );
+    final String base = cost == null
+        ? l10n.sessionTurnLineNoCost(seconds)
+        : l10n.sessionTurnLine(cost, seconds);
+    final String tokens = _tokensOf(l10n, turn, locale) ?? l10n.sessionTurnNoTokens;
+
+    return _Line('$base · $tokens');
   }
+}
+
+/// The input, output and cache tokens of [turn], as the web's `TurnRow` joins them — `null` when the
+/// engine reported none at all (plan 26, B-17, S-61, S-62). A field it did not report, or sent as
+/// something other than a number, is left out rather than drawn as zero — the mapper already turned
+/// that into an absent field.
+String? _tokensOf(AppLocalizations l10n, TurnSummary turn, String locale) {
+  final NumberFormat count = NumberFormat.decimalPattern(locale);
+  final int? cache = switch ((turn.cacheReadTokens, turn.cacheWriteTokens)) {
+    (null, null) => null,
+    (final int? read, final int? write) => (read ?? 0) + (write ?? 0),
+  };
+  final List<String> parts = <String>[
+    if (turn.inputTokens case final int tokens?) l10n.sessionTurnTokensIn(count.format(tokens)),
+    if (turn.outputTokens case final int tokens?) l10n.sessionTurnTokensOut(count.format(tokens)),
+    if (cache case final int tokens?) l10n.sessionTurnTokensCache(count.format(tokens)),
+  ];
+
+  return parts.isEmpty ? null : parts.join(', ');
 }
 
 /// Where the conversation was compacted, and how.

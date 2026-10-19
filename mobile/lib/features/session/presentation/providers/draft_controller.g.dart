@@ -57,7 +57,7 @@ final class DraftControllerProvider extends $NotifierProvider<DraftController, D
   }
 }
 
-String _$draftControllerHash() => r'07dc7d71bed73e3d33b1cc2f56e867656b2ab8a0';
+String _$draftControllerHash() => r'aa83ef59e898164ffe775c7976cc935ae077e45e';
 
 /// The draft of one folder. Disposed with its screen: leaving a draft leaves nothing (S-22).
 
