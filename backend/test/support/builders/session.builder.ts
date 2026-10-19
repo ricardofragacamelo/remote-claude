@@ -207,6 +207,30 @@ export class RecordingHandle implements AgentSessionHandle, EngineControl {
     return this.answer(this.servers);
   }
 
+  /** What `toggleMcpServer()` and `reconnectMcpServer()` were asked, in order. */
+  readonly mcpToggles: { readonly name: string; readonly enabled: boolean }[] = [];
+  readonly mcpReconnects: string[] = [];
+
+  toggleMcpServer(name: string, enabled: boolean): Promise<void> {
+    this.mcpToggles.push({ name, enabled });
+    if (this.failWith === null) {
+      this.servers = this.servers.map((server) =>
+        server.name === name ? { ...server, status: enabled ? 'connected' : 'disabled' } : server,
+      );
+    }
+    return this.settle();
+  }
+
+  reconnectMcpServer(name: string): Promise<void> {
+    this.mcpReconnects.push(name);
+    if (this.failWith === null) {
+      this.servers = this.servers.map((server) =>
+        server.name === name ? { ...server, status: 'connected' } : server,
+      );
+    }
+    return this.settle();
+  }
+
   /** The account `initialization()` answers beside the lists above. */
   account: SessionInitialization['account'] = {
     email: 'person@example.com',

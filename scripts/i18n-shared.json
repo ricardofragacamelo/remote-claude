@@ -1,5 +1,5 @@
 {
-  "$comment": "Texts the web and the app both show, web key -> app key. `pnpm i18n:check` compares them text by text, in every language (plan 10, B-03, D-04). Add a pair when a screen of the app shows a text the web already shows; the verbs of the working indicator and the pending pill joined in plan 10, F4; the resume, the tool states and the refusals of following a conversation joined in plan 22, B-04 (D-04: the web's text wins); the thinking, the tool card and the image of a prompt joined in plan 22, F6; the question of Claude (`AskUserQuestion`) joined in plan 24, B-03; the refusals about a file of the folder that read the same on a phone joined in plan 25, B-06 (the ones that speak of editing or changing stay the app's own); the panel, the viewer and the markdown preview joined in plan 25, F2…F4, and the download in F6; the failures of the agent, which name it by `{agent}`, joined in plan 28, B-13 with the copy of the id of the conversation; the labels of a tool call by kind (`sessions.tool.*`), the short names of the kinds (`sessions.kind.*`) and what a permission request asks by kind (`permission.tool.*`) joined in plan 28, B-18; the disabled rule — its status and why it answers nothing, naming the agent by `{agent}` — joined in plan 28, F5.",
+  "$comment": "Texts the web and the app both show, web key -> app key. `pnpm i18n:check` compares them text by text, in every language (plan 10, B-03, D-04). Add a pair when a screen of the app shows a text the web already shows; the verbs of the working indicator and the pending pill joined in plan 10, F4; the resume, the tool states and the refusals of following a conversation joined in plan 22, B-04 (D-04: the web's text wins); the thinking, the tool card and the image of a prompt joined in plan 22, F6; the question of Claude (`AskUserQuestion`) joined in plan 24, B-03; the refusals about a file of the folder that read the same on a phone joined in plan 25, B-06 (the ones that speak of editing or changing stay the app's own); the panel, the viewer and the markdown preview joined in plan 25, F2…F4, and the download in F6; the failures of the agent, which name it by `{agent}`, joined in plan 28, B-13 with the copy of the id of the conversation; the labels of a tool call by kind (`sessions.tool.*`), the short names of the kinds (`sessions.kind.*`) and what a permission request asks by kind (`permission.tool.*`) joined in plan 28, B-18; the disabled rule — its status and why it answers nothing, naming the agent by `{agent}` — joined in plan 28, F5; the status of a session's MCP servers (`sessions.mcp.*`) joined in plan 13, B-22.",
   "locales": [
     {
       "web": "en",
@@ -73,6 +73,12 @@
     "sessions.context.memory": "contextMemory",
     "sessions.context.free": "contextFree",
     "sessions.context.reserved": "contextReserved",
+    "sessions.mcp.summary": "sessionMcpSummary",
+    "sessions.mcp.connected": "sessionMcpConnected",
+    "sessions.mcp.failed": "sessionMcpFailed",
+    "sessions.mcp.needsAuth": "sessionMcpNeedsAuth",
+    "sessions.mcp.pending": "sessionMcpPending",
+    "sessions.mcp.disabled": "sessionMcpDisabled",
     "sessions.compacted.manual": "sessionCompactedManual",
     "sessions.compacted.auto": "sessionCompactedAuto",
     "sessions.compacted.manualTokens": "sessionCompactedManualTokens",

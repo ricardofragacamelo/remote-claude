@@ -385,6 +385,34 @@ String sessionClosed({
   payload: <String, Object?>{'sessionId': sessionId, 'reason': reason},
 );
 
+/// One MCP server of [mcpStatusChanged], as the contract writes it (plan 13, B-22).
+Map<String, Object?> mcpServerJson({
+  required String name,
+  required String status,
+  String source = 'ours',
+  int toolCount = 0,
+  String? error,
+}) => <String, Object?>{
+  'name': name,
+  'status': status,
+  'source': source,
+  'toolCount': toolCount,
+  'error': ?error,
+};
+
+/// The MCP servers of a session, whole (plan 13, B-22) — [servers], as [mcpServerJson] builds each.
+String mcpStatusChanged({
+  required int seq,
+  required List<Map<String, Object?>> servers,
+  String sessionId = 'session-1',
+}) => frame(
+  kind: 'event',
+  type: 'session.mcpStatusChanged',
+  sessionId: sessionId,
+  seq: seq,
+  payload: <String, Object?>{'servers': servers},
+);
+
 /// One update, exactly as the data source would emit it for [raw].
 ///
 /// The wire goes through the real mapper rather than being hand-assembled into an event: a test

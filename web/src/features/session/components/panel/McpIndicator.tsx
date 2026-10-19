@@ -1,4 +1,4 @@
-import { Plug } from 'lucide-react';
+import { Plug, Power, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { MenuTrigger } from '@/shared/components/MenuTrigger';
@@ -9,7 +9,11 @@ import {
 } from '@/shared/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { cn } from '@/shared/lib/utils';
-import { useMcpServers } from '../../hooks/useSessionInsight';
+import {
+  useMcpServers,
+  useReconnectMcpServer,
+  useToggleMcpServer,
+} from '../../hooks/useSessionInsight';
 import type { McpServer } from '../../types/insight';
 
 /** The words of each status — named in full so the i18n check sees each key. */
@@ -25,10 +29,73 @@ const STATUS_NAMES: Readonly<Record<McpServer['status'], string>> = {
 const HEADER_ICON =
   'inline-flex size-touch shrink-0 items-center justify-center rounded-md hover:bg-accent md:size-7';
 
+/** The look of an icon action of one row — smaller than the header's own, the row is already dense. */
+const ROW_ICON =
+  'inline-flex size-touch shrink-0 items-center justify-center rounded-md hover:bg-accent md:size-6';
+
+/** One server's row: its name, its status, and the two actions this plan adds to plan 08's panel. */
+function ServerRow({
+  server,
+  onToggle,
+  onReconnect,
+}: {
+  readonly server: McpServer;
+  readonly onToggle: (name: string, enabled: boolean) => void;
+  readonly onReconnect: (name: string) => void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const enabled = server.status !== 'disabled';
+
+  return (
+    <li className="flex flex-col gap-0.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate">{server.name}</span>
+        <div className="flex shrink-0 items-center gap-1">
+          <span className="text-ui-xs text-muted-foreground">
+            {t('sessions.mcp.line', {
+              status: t(STATUS_NAMES[server.status]),
+              tools: t('sessions.mcp.tools', { count: server.toolCount }),
+            })}
+          </span>
+          {server.status === 'failed' && (
+            <button
+              type="button"
+              aria-label={t('sessions.mcp.reconnect', { name: server.name })}
+              className={ROW_ICON}
+              onClick={() => {
+                onReconnect(server.name);
+              }}
+            >
+              <RefreshCw className="size-3.5" aria-hidden />
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label={t(enabled ? 'sessions.mcp.turnOff' : 'sessions.mcp.turnOn', {
+              name: server.name,
+            })}
+            aria-pressed={enabled}
+            className={cn(ROW_ICON, enabled && 'text-primary')}
+            onClick={() => {
+              onToggle(server.name, !enabled);
+            }}
+          >
+            <Power className="size-3.5" aria-hidden />
+          </button>
+        </div>
+      </div>
+      {server.error !== undefined && (
+        <span className="truncate text-ui-xs text-destructive">{server.error}</span>
+      )}
+    </li>
+  );
+}
+
 /**
- * The MCP servers of the session (plan 08, B-38), as an icon of the header (plan 09, B-18): neutral
- * with every server connected, in the tone of a warning when one is not, and the list a click away.
- * With none it is not there; a list that cannot be read is an icon that says so, and never breaks the
+ * The MCP servers of the session (plan 08, B-38; plan 13, B-22), as an icon of the header (plan 09,
+ * B-18): neutral with every server connected, in the tone of a warning when one is not, and the list
+ * a click away — turning a server on or off and reconnecting a failed one, right there (D-14). With
+ * none it is not there; a list that cannot be read is an icon that says so, and never breaks the
  * strip (S-44, S-178). Configuring a server is the settings of plan 13 — until that screen exists
  * there is no link to it, rather than a link to nowhere (S-179).
  */
@@ -40,6 +107,8 @@ export function McpIndicator({
   const { t } = useTranslation();
   const loaded = useMcpServers(sessionId);
   const servers = loaded.data;
+  const toggle = useToggleMcpServer(sessionId);
+  const reconnect = useReconnectMcpServer(sessionId);
 
   if (loaded.error !== null) {
     return (
@@ -80,15 +149,12 @@ export function McpIndicator({
         <DropdownMenuLabel>{label}</DropdownMenuLabel>
         <ul className="flex flex-col gap-1 text-ui-sm">
           {servers.map((server) => (
-            <li key={server.name} className="flex justify-between gap-2">
-              <span className="truncate">{server.name}</span>
-              <span className="text-ui-xs text-muted-foreground">
-                {t('sessions.mcp.line', {
-                  status: t(STATUS_NAMES[server.status]),
-                  tools: t('sessions.mcp.tools', { count: server.toolCount }),
-                })}
-              </span>
-            </li>
+            <ServerRow
+              key={server.name}
+              server={server}
+              onToggle={toggle}
+              onReconnect={reconnect}
+            />
           ))}
         </ul>
       </DropdownMenuContent>

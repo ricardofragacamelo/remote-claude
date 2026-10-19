@@ -411,6 +411,100 @@ describe('the MCP servers — plan 08, B-38', () => {
     expect(within(menu).queryByRole('link')).toBeNull();
   });
 
+  it('shows the redacted error of a failed server, never the raw one — plan 13, B-22, S-96', async () => {
+    const user = userEvent.setup();
+    served({
+      mcp: [
+        {
+          servers: [
+            {
+              name: 'jira',
+              status: 'failed',
+              toolCount: 0,
+              error: 'fetch https://jira.example/hook failed',
+            },
+          ],
+        },
+      ],
+    });
+    opened();
+
+    await user.click(
+      await screen.findByRole('button', { name: t('sessions.mcp.summary', { fine: 0, count: 1 }) }),
+    );
+
+    expect(await screen.findByText('fetch https://jira.example/hook failed')).toBeVisible();
+  });
+
+  it('turns a server off, and on again, each a command of its own — plan 13, B-22, S-88', async () => {
+    const user = userEvent.setup();
+    served({ mcp: [{ servers: [{ name: 'docs', status: 'connected', toolCount: 1 }] }] });
+    opened();
+
+    await user.click(
+      await screen.findByRole('button', { name: t('sessions.mcp.summary', { fine: 1, count: 1 }) }),
+    );
+    await user.click(
+      await screen.findByRole('button', { name: t('sessions.mcp.turnOff', { name: 'docs' }) }),
+    );
+
+    expect(live.lastSent('session.toggleMcpServer')).toMatchObject({
+      payload: { sessionId: SESSION, name: 'docs', enabled: false },
+    });
+
+    says('session.mcpStatusChanged', {
+      servers: [{ name: 'docs', status: 'disabled', source: 'ours', toolCount: 1 }],
+    });
+
+    await user.click(
+      await screen.findByRole('button', { name: t('sessions.mcp.turnOn', { name: 'docs' }) }),
+    );
+
+    expect(live.lastSent('session.toggleMcpServer')).toMatchObject({
+      payload: { sessionId: SESSION, name: 'docs', enabled: true },
+    });
+  });
+
+  it('reconnects a failed server — plan 13, B-22, S-88', async () => {
+    const user = userEvent.setup();
+    served({ mcp: [{ servers: [{ name: 'jira', status: 'failed', toolCount: 0 }] }] });
+    opened();
+
+    await user.click(
+      await screen.findByRole('button', { name: t('sessions.mcp.summary', { fine: 0, count: 1 }) }),
+    );
+    await user.click(
+      await screen.findByRole('button', { name: t('sessions.mcp.reconnect', { name: 'jira' }) }),
+    );
+
+    expect(live.lastSent('session.reconnectMcpServer')).toMatchObject({
+      payload: { sessionId: SESSION, name: 'jira' },
+    });
+  });
+
+  it('updates live from session.mcpStatusChanged, with no second read — plan 13, B-22', async () => {
+    const user = userEvent.setup();
+    const get = served({
+      mcp: [{ servers: [{ name: 'docs', status: 'connected', toolCount: 1 }] }],
+    });
+    opened();
+    await screen.findByRole('button', { name: t('sessions.mcp.summary', { fine: 1, count: 1 }) });
+    const readsBefore = get.mock.calls.filter((call) => call[0] === PATHS.mcp).length;
+
+    says('session.mcpStatusChanged', {
+      servers: [{ name: 'docs', status: 'failed', source: 'ours', toolCount: 0 }],
+    });
+
+    expect(
+      await screen.findByRole('button', { name: t('sessions.mcp.summary', { fine: 0, count: 1 }) }),
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole('button', { name: t('sessions.mcp.summary', { fine: 0, count: 1 }) }),
+    );
+    expect(await screen.findByText('docs')).toBeVisible();
+    expect(get.mock.calls.filter((call) => call[0] === PATHS.mcp).length).toBe(readsBefore);
+  });
+
   it('is not there with no server — S-178', async () => {
     const get = served();
     opened();

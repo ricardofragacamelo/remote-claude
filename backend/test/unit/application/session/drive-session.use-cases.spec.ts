@@ -9,12 +9,15 @@ import {
   InterruptSessionUseCase,
   ListSessionCommandsUseCase,
   PromptSessionUseCase,
+  ReconnectMcpServerUseCase,
   SessionEnder,
   SessionRegistry,
   SetSessionModelUseCase,
   SetSessionPermissionModeUseCase,
+  ToggleMcpServerUseCase,
 } from '@application/session';
 import { UserId } from '@domain/auth';
+import { McpServerNotFoundError } from '@domain/mcp';
 import {
   InvalidSessionIdError,
   SessionForbiddenError,
@@ -644,6 +647,151 @@ describe('the commands that drive a running session', () => {
         new InterruptSessionUseCase(registry).execute(SESSION_ID, stranger),
       ).rejects.toThrow(SessionForbiddenError);
       expect(session.lastActivityAt).toEqual(before);
+    });
+  });
+
+  describe('toggleMcpServer — plan 13, B-22', () => {
+    it('switches a disabled server on, and reads the fresh status back — S-88', async () => {
+      handle.servers = [
+        { name: 'docs', status: 'disabled', source: 'ours', toolCount: 0 },
+        { name: 'metrics', status: 'connected', source: 'ours', toolCount: 2 },
+      ];
+
+      const servers = await new ToggleMcpServerUseCase(registry).execute(
+        SESSION_ID,
+        'docs',
+        true,
+        owner,
+      );
+
+      expect(handle.mcpToggles).toEqual([{ name: 'docs', enabled: true }]);
+      expect(servers?.find((server) => server.name === 'docs')?.status).toBe('connected');
+    });
+
+    it('acks turning on what is already on, with no engine call and no second event — S-92', async () => {
+      handle.servers = [{ name: 'docs', status: 'connected', source: 'ours', toolCount: 1 }];
+
+      const servers = await new ToggleMcpServerUseCase(registry).execute(
+        SESSION_ID,
+        'docs',
+        true,
+        owner,
+      );
+
+      expect(servers).toBeNull();
+      expect(handle.mcpToggles).toEqual([]);
+    });
+
+    it('acks turning off what is already off, the same way — S-92', async () => {
+      handle.servers = [{ name: 'docs', status: 'disabled', source: 'ours', toolCount: 0 }];
+
+      const servers = await new ToggleMcpServerUseCase(registry).execute(
+        SESSION_ID,
+        'docs',
+        false,
+        owner,
+      );
+
+      expect(servers).toBeNull();
+      expect(handle.mcpToggles).toEqual([]);
+    });
+
+    it('refuses a server this session does not have — S-90', async () => {
+      handle.servers = [{ name: 'docs', status: 'connected', source: 'ours', toolCount: 1 }];
+
+      await expect(
+        new ToggleMcpServerUseCase(registry).execute(SESSION_ID, 'ghost', true, owner),
+      ).rejects.toThrow(McpServerNotFoundError);
+      expect(handle.mcpToggles).toEqual([]);
+    });
+
+    it('refuses an engine without the mcp capability', async () => {
+      handle.capabilities = { ...handle.capabilities, mcp: false };
+
+      await expect(
+        new ToggleMcpServerUseCase(registry).execute(SESSION_ID, 'docs', true, owner),
+      ).rejects.toMatchObject({
+        code: 'ENGINE_CAPABILITY_UNAVAILABLE',
+        params: { capability: 'mcp' },
+      });
+    });
+
+    it('lets the engine’s own failure through — S-91', async () => {
+      handle.servers = [{ name: 'docs', status: 'disabled', source: 'ours', toolCount: 0 }];
+      handle.failWith = new Error('cli gone');
+
+      await expect(
+        new ToggleMcpServerUseCase(registry).execute(SESSION_ID, 'docs', true, owner),
+      ).rejects.toThrow('cli gone');
+    });
+
+    it("refuses somebody else's session, and a session that is not running — S-89", async () => {
+      await expect(
+        new ToggleMcpServerUseCase(registry).execute(SESSION_ID, 'docs', true, stranger),
+      ).rejects.toThrow(SessionForbiddenError);
+      await expect(
+        new ToggleMcpServerUseCase(aRegistry([]).registry).execute(SESSION_ID, 'docs', true, owner),
+      ).rejects.toThrow(SessionNotFoundError);
+    });
+  });
+
+  describe('reconnectMcpServer — plan 13, B-22', () => {
+    it('asks the engine to reconnect, and reads the fresh status back — S-88', async () => {
+      handle.servers = [{ name: 'docs', status: 'failed', source: 'ours', toolCount: 0 }];
+
+      const servers = await new ReconnectMcpServerUseCase(registry).execute(
+        SESSION_ID,
+        'docs',
+        owner,
+      );
+
+      expect(handle.mcpReconnects).toEqual(['docs']);
+      expect(servers.find((server) => server.name === 'docs')?.status).toBe('connected');
+    });
+
+    it('asks again even when the server is already connected — never a no-op like the toggle', async () => {
+      handle.servers = [{ name: 'docs', status: 'connected', source: 'ours', toolCount: 1 }];
+
+      await new ReconnectMcpServerUseCase(registry).execute(SESSION_ID, 'docs', owner);
+
+      expect(handle.mcpReconnects).toEqual(['docs']);
+    });
+
+    it('refuses a server this session does not have — S-90', async () => {
+      await expect(
+        new ReconnectMcpServerUseCase(registry).execute(SESSION_ID, 'ghost', owner),
+      ).rejects.toThrow(McpServerNotFoundError);
+    });
+
+    it('refuses an engine without the mcp capability', async () => {
+      handle.capabilities = { ...handle.capabilities, mcp: false };
+
+      await expect(
+        new ReconnectMcpServerUseCase(registry).execute(SESSION_ID, 'docs', owner),
+      ).rejects.toMatchObject({
+        code: 'ENGINE_CAPABILITY_UNAVAILABLE',
+        params: { capability: 'mcp' },
+      });
+    });
+
+    it('lets the engine’s own failure through — S-91', async () => {
+      handle.servers = [{ name: 'docs', status: 'failed', source: 'ours', toolCount: 0 }];
+      handle.failWith = new Error('cli gone');
+
+      await expect(
+        new ReconnectMcpServerUseCase(registry).execute(SESSION_ID, 'docs', owner),
+      ).rejects.toThrow('cli gone');
+    });
+
+    it("refuses somebody else's session, and a session that is not running — S-89", async () => {
+      handle.servers = [{ name: 'docs', status: 'failed', source: 'ours', toolCount: 0 }];
+
+      await expect(
+        new ReconnectMcpServerUseCase(registry).execute(SESSION_ID, 'docs', stranger),
+      ).rejects.toThrow(SessionForbiddenError);
+      await expect(
+        new ReconnectMcpServerUseCase(aRegistry([]).registry).execute(SESSION_ID, 'docs', owner),
+      ).rejects.toThrow(SessionNotFoundError);
     });
   });
 

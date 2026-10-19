@@ -2134,7 +2134,10 @@
       "failed": "Failed",
       "needsAuth": "Needs sign-in",
       "pending": "Connecting",
-      "disabled": "Turned off"
+      "disabled": "Turned off",
+      "turnOn": "Turn {{name}} on",
+      "turnOff": "Turn {{name}} off",
+      "reconnect": "Reconnect {{name}}"
     },
     "mode": {
       "acceptEditsWarning": "{{agent}} will edit and write files without asking you — and without the preview of the change.",

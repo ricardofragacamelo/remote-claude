@@ -28,6 +28,7 @@ import {
   AttachmentStore,
   PromptContextResolver,
   ReadCatalogUseCase,
+  ReconnectMcpServerUseCase,
   REFERENCE_INSPECTOR,
   UploadAttachmentUseCase,
   ReapIdleSessionsUseCase,
@@ -43,6 +44,7 @@ import {
   SetSessionModelUseCase,
   SetSessionPermissionModeUseCase,
   StartSessionUseCase,
+  ToggleMcpServerUseCase,
   TOOL_INVOCATION_RECORDER,
   WORKSPACE_RESOLVER,
   SESSION_CONFIGURATION_SOURCE,
@@ -495,6 +497,16 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
       useFactory: (registry: SessionRegistry, ender: SessionEnder) =>
         new CloseSessionUseCase(registry, ender),
     },
+    {
+      provide: ToggleMcpServerUseCase,
+      inject: [SessionRegistry],
+      useFactory: (registry: SessionRegistry) => new ToggleMcpServerUseCase(registry),
+    },
+    {
+      provide: ReconnectMcpServerUseCase,
+      inject: [SessionRegistry],
+      useFactory: (registry: SessionRegistry) => new ReconnectMcpServerUseCase(registry),
+    },
     { provide: SESSION_HANDLERS.start, useClass: SessionStartHandler },
     { provide: SESSION_HANDLERS.rewind, useClass: SessionRewindHandler },
     {
@@ -625,6 +637,47 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
       useFactory: (close: CloseSessionUseCase) =>
         new ContractCommandHandler('session.close', sessionSchemas.session, (command, context) =>
           close.execute(command.sessionId, context.userId),
+        ),
+    },
+    {
+      provide: SESSION_HANDLERS.toggleMcpServer,
+      inject: [ToggleMcpServerUseCase],
+      useFactory: (toggle: ToggleMcpServerUseCase) =>
+        new ContractCommandHandler(
+          'session.toggleMcpServer',
+          sessionSchemas.toggleMcpServer,
+          async (command, context) => {
+            const servers = await toggle.execute(
+              command.sessionId,
+              command.name,
+              command.enabled,
+              context.userId,
+            );
+            // Already in the state asked for: the ack above is the whole answer — S-92.
+            return servers === null
+              ? undefined
+              : {
+                  sessionId: command.sessionId,
+                  type: 'session.mcpStatusChanged',
+                  payload: { servers },
+                };
+          },
+        ),
+    },
+    {
+      provide: SESSION_HANDLERS.reconnectMcpServer,
+      inject: [ReconnectMcpServerUseCase],
+      useFactory: (reconnect: ReconnectMcpServerUseCase) =>
+        new ContractCommandHandler(
+          'session.reconnectMcpServer',
+          sessionSchemas.reconnectMcpServer,
+          async (command, context) => ({
+            sessionId: command.sessionId,
+            type: 'session.mcpStatusChanged',
+            payload: {
+              servers: await reconnect.execute(command.sessionId, command.name, context.userId),
+            },
+          }),
         ),
     },
     {

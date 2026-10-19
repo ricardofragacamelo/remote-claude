@@ -6,10 +6,12 @@ import type {
 } from '@anthropic-ai/claude-agent-sdk';
 
 import {
+  redactMcpServerError,
   toContextUse,
   toInstallationModel,
   toMcpServer,
 } from '@adapter/outbound/engines/claude/installation-mapping';
+import { SESSION_MCP_STATUS_CHANGED_PAYLOAD_SERVERS_ITEM_LIMITS as MCP_ERROR_LIMITS } from '@remote-claude/contracts';
 
 /** What the SDK says of the installation → what the panel is told — plan 08, B-36…B-38. */
 describe('the installation, as the panel reads it', () => {
@@ -100,21 +102,90 @@ describe('the installation, as the panel reads it', () => {
     expect(use.percentage).toBe(12.6);
   });
 
-  it('keeps name, status and the count of tools of a server — never its config nor its error — S-177', () => {
+  it('keeps name, status and the count of tools of a server — never its config — S-177', () => {
     const server = toMcpServer({
       name: 'docs',
       status: 'exploded',
-      error: 'token=secret',
+      source: 'dynamic',
       config: { url: 'https://x?token=secret' },
     } as unknown as McpServerStatus);
 
-    expect(server).toEqual({ name: 'docs', status: 'failed', toolCount: 0 });
+    expect(server).toEqual({ name: 'docs', status: 'failed', source: 'ours', toolCount: 0 });
     expect(
       toMcpServer({
         name: 'jira',
         status: 'needs-auth',
+        source: 'plugin',
         tools: [{ name: 'search' }, { name: 'create' }],
       } as unknown as McpServerStatus),
-    ).toEqual({ name: 'jira', status: 'needs-auth', toolCount: 2 });
+    ).toEqual({ name: 'jira', status: 'needs-auth', source: 'plugin', toolCount: 2 });
+  });
+
+  it('an unrecognised source is never promoted to ours — B-22, S-93', () => {
+    expect(
+      toMcpServer({
+        name: 'docs',
+        status: 'connected',
+        source: 'sdk',
+      } as unknown as McpServerStatus).source,
+    ).toBe('other');
+    expect(
+      toMcpServer({
+        name: 'docs',
+        status: 'connected',
+        source: 'user',
+      } as unknown as McpServerStatus).source,
+    ).toBe('other');
+    expect(
+      toMcpServer({ name: 'docs', status: 'connected' } as unknown as McpServerStatus).source,
+    ).toBe('other');
+  });
+
+  it('carries a failed server’s error, redacted — never when it is not failed — B-22, S-96', () => {
+    const failed = toMcpServer({
+      name: 'docs',
+      status: 'failed',
+      source: 'dynamic',
+      error: 'fetch https://x.example/hook?token=abc123 failed',
+    } as unknown as McpServerStatus);
+    expect(failed.error).toBe('fetch https://x.example/hook failed');
+
+    const connected = toMcpServer({
+      name: 'docs',
+      status: 'connected',
+      source: 'dynamic',
+      error: 'this should never be reachable, but if it is, never surfaced',
+    } as unknown as McpServerStatus);
+    expect(connected).not.toHaveProperty('error');
+  });
+});
+
+describe('redactMcpServerError — plan 13, B-22, S-96', () => {
+  it('strips the query string and fragment of a URL, keeping the base', () => {
+    expect(redactMcpServerError('GET https://mcp.example.com/webhook?token=abc123 → 401')).toBe(
+      'GET https://mcp.example.com/webhook → 401',
+    );
+    expect(redactMcpServerError('see https://mcp.example.com/docs#section-token')).toBe(
+      'see https://mcp.example.com/docs',
+    );
+  });
+
+  it('redacts a bearer or authorization token, keeping the scheme word', () => {
+    expect(redactMcpServerError('rejected: Bearer sk-abc123')).toBe('rejected: Bearer [REDACTED]');
+    expect(redactMcpServerError('Authorization: sk-abc123 was invalid')).toBe(
+      'Authorization: [REDACTED] was invalid',
+    );
+  });
+
+  it('leaves a plain message exactly as it is — nothing to redact', () => {
+    expect(redactMcpServerError('spawn ENOENT')).toBe('spawn ENOENT');
+  });
+
+  it('truncates to the contract’s own bound, after redaction', () => {
+    const long = `https://mcp.example.com/${'a'.repeat(600)}?token=abc123`;
+    const redacted = redactMcpServerError(long);
+
+    expect(redacted.length).toBe(MCP_ERROR_LIMITS.error.maxLength);
+    expect(redacted.endsWith('…')).toBe(true);
   });
 });

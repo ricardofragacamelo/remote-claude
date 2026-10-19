@@ -128,7 +128,7 @@ o adapter do Claude o entrega pela via que a B-01 escolheu ([D-02](decisions.md#
 ([D-25](decisions.md#d-25--a-expansão-de-var-é-nossa)). Log em `debug` com os nomes, nunca os valores.
 Cenários S-83…S-87.
 
-### B-22 — Status vivo e comandos da sessão 🔲
+### B-22 — Status vivo e comandos da sessão ✅
 
 `GET /engines/:engine/mcp-servers?folder=` junta ao store o status das sessões vivas do chamador na pasta,
 naquele motor: `connected`, `failed` (com o erro redigido), `needs-auth`, `pending`, `disabled`, e as tools de

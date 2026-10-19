@@ -141,15 +141,15 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-85 | servidor de outro usuário nunca entra na sessão de alguém | err | unit | — | B-21 | ✅ |
 | S-86 | o segredo chega ao servidor sem passar pelo argv do CLI, pela via que o spike escolheu | err | integração | — | B-21 | ✅ |
 | S-87 | nome nosso igual ao de um servidor do `.mcp.json` → o nosso vale, e o do projeto aparece sombreado | fron | unit | — | B-21 | ⬜ |
-| S-88 | `session.toggleMcpServer` e `session.reconnectMcpServer` chamam o motor pela porta, respondem `ack`, e o resultado chega em `session.mcpStatusChanged` com o `seq` da sessão | eq | integração | — | B-22 | ⬜ |
-| S-89 | comando de MCP em sessão de outra pessoa ou inexistente | err | integração | `FORBIDDEN`, `SESSION_NOT_FOUND` | B-22 | ⬜ |
-| S-90 | servidor que aquela sessão não tem | err | integração | `MCP_SERVER_NOT_FOUND` | B-22 | ⬜ |
-| S-91 | falha do motor ao ligar ou reconectar | err | integração | `AGENT_UNAVAILABLE` | B-22 | ⬜ |
-| S-92 | ligar o que já está ligado → `ack`, sem segundo evento | idem | unit | — | B-22 | ⬜ |
-| S-93 | o adapter lê o status pelo `source` do SDK, não pelo nome: servidor `sdk` ou `plugin` de mesmo nome não se passa pelo nosso | err | unit | — | B-22 | ⬜ |
-| S-94 | `needs-auth` aparece com explicação; nenhuma URL de OAuth trafega pelo produto | fron | integração | — | B-22 | ⬜ |
-| S-95 | depois de um `gap`, o cliente relê o status por HTTP e o indicador do painel volta coerente | est | integração | — | B-22 | ⬜ |
-| S-96 | a mensagem de erro que o servidor devolve é redigida antes de ir ao cliente (URL com token) | err | unit | — | B-22 | ⬜ |
+| S-88 | `session.toggleMcpServer` e `session.reconnectMcpServer` chamam o motor pela porta, respondem `ack`, e o resultado chega em `session.mcpStatusChanged` com o `seq` da sessão | eq | integração | — | B-22 | ✅ |
+| S-89 | comando de MCP em sessão de outra pessoa ou inexistente | err | integração | `FORBIDDEN`, `SESSION_NOT_FOUND` | B-22 | ✅ |
+| S-90 | servidor que aquela sessão não tem | err | integração | `MCP_SERVER_NOT_FOUND` | B-22 | ✅ |
+| S-91 | falha do motor ao ligar ou reconectar | err | integração | `AGENT_UNAVAILABLE` | B-22 | ✅ |
+| S-92 | ligar o que já está ligado → `ack`, sem segundo evento | idem | unit | — | B-22 | ✅ |
+| S-93 | o adapter lê o status pelo `source` do SDK, não pelo nome: servidor `sdk` ou `plugin` de mesmo nome não se passa pelo nosso | err | unit | — | B-22 | ✅ |
+| S-94 | `needs-auth` aparece com explicação; nenhuma URL de OAuth trafega pelo produto | fron | integração | — | B-22 | ✅ |
+| S-95 | depois de um `gap`, o cliente relê o status por HTTP e o indicador do painel volta coerente | est | integração | — | B-22 | ✅ |
+| S-96 | a mensagem de erro que o servidor devolve é redigida antes de ir ao cliente (URL com token) | err | unit | — | B-22 | ✅ |
 | S-97 | remover ou desligar no store com sessão viva do usuário → desligado já nela, com `session.mcpStatusChanged` | est | integração | — | B-23 | ⬜ |
 | S-98 | adicionar ou ligar com sessão viva → vale na próxima sessão, e a resposta diz isso | est | integração | — | B-23 | ⬜ |
 | S-99 | remover durante um turno que usa a tool do servidor → a próxima invocação falha, e o turno não trava | conc | integração | — | B-23 | ⬜ |
@@ -308,7 +308,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-198 | `smoke-live`: subagent de projeto com `permissionMode: acceptEdits` não escreve sem o `canUseTool` — ou o resultado medido vira aviso na tela e risco aberto | est | e2e | — | B-46 | ⬜ |
 | S-199 | `pnpm test:e2e:mobile` verde com os tipos Dart regenerados | eq | e2e | — | B-46 | ⬜ |
 | S-214 | as fixtures deste plano (tool MCP composta, skill de usuário, slash command e subagent de projeto, output style padrão) dão o mesmo conteúdo no web e no app pela paridade do plano 26, e o `render:check` sai verde sem `pending` (D-31) | eq | unit | — | B-46 | ⬜ |
-| S-215 | app: com a capacidade `mcp` no `session.started`, `session.mcpStatusChanged` vira o chip da sessão (sem ela, nenhum chip) com o status agregado; ao tocar, a lista com status e erro redigido de cada servidor; nenhuma ação de ligar, desligar ou reconectar no app; a lista inteira substitui a anterior a cada evento (D-32) | eq | widget | — | B-22 | ⬜ |
+| S-215 | app: com a capacidade `mcp` no `session.started`, `session.mcpStatusChanged` vira o chip da sessão (sem ela, nenhum chip) com o status agregado; ao tocar, a lista com status e erro redigido de cada servidor; nenhuma ação de ligar, desligar ou reconectar no app; a lista inteira substitui a anterior a cada evento (D-32) | eq | widget | — | B-22 | ✅ |
 
 ---
 

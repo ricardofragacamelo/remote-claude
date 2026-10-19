@@ -158,10 +158,22 @@ export function categoryIdOf(name: string): string {
 /** How an MCP server of the session stands — never its configuration nor its raw error (B-38). */
 export type McpStatus = 'connected' | 'failed' | 'needs-auth' | 'pending' | 'disabled';
 
+/**
+ * Where a server's definition came from, read off the engine's own `source` field and never off its
+ * name (plan 13, B-22, S-93): `ours` is a server composed from the store, `project` an approved entry
+ * of the engine's own project file (both reach the engine the same way), `plugin` one a plugin
+ * brought, `other` anything else — never trusted as ours, whatever it is named.
+ */
+export type McpSource = 'ours' | 'project' | 'plugin' | 'other';
+
 export interface McpServer {
   readonly name: string;
   readonly status: McpStatus;
+  readonly source: McpSource;
   readonly toolCount: number;
+
+  /** Why it failed, redacted — absent unless `status` is `failed` (plan 13, B-22, S-96). */
+  readonly error?: string;
 }
 
 /** A message of a conversation, as much as choosing a fork point needs (plan 08, D-19). */

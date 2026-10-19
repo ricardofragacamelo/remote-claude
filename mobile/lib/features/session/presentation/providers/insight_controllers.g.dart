@@ -322,3 +322,134 @@ abstract class _$SessionContextController extends $AsyncNotifier<ContextUse> {
     return element.handleCreate(ref, () => build(_$args));
   }
 }
+
+/// The MCP servers of a live session, and how each stands (plan 13, B-22; D-32).
+///
+/// Unlike the controllers above, this one reads nothing over HTTP: `session.mcpStatusChanged`
+/// always carries the whole list, so there is nothing a second read would add. `null` until the
+/// first one arrives — the chip that draws this has nothing to say before then either (S-215).
+
+@ProviderFor(McpServersController)
+final mcpServersControllerProvider = McpServersControllerFamily._();
+
+/// The MCP servers of a live session, and how each stands (plan 13, B-22; D-32).
+///
+/// Unlike the controllers above, this one reads nothing over HTTP: `session.mcpStatusChanged`
+/// always carries the whole list, so there is nothing a second read would add. `null` until the
+/// first one arrives — the chip that draws this has nothing to say before then either (S-215).
+final class McpServersControllerProvider
+    extends $NotifierProvider<McpServersController, List<McpServer>?> {
+  /// The MCP servers of a live session, and how each stands (plan 13, B-22; D-32).
+  ///
+  /// Unlike the controllers above, this one reads nothing over HTTP: `session.mcpStatusChanged`
+  /// always carries the whole list, so there is nothing a second read would add. `null` until the
+  /// first one arrives — the chip that draws this has nothing to say before then either (S-215).
+  McpServersControllerProvider._({
+    required McpServersControllerFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'mcpServersControllerProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$mcpServersControllerHash();
+
+  @override
+  String toString() {
+    return r'mcpServersControllerProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  McpServersController create() => McpServersController();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<McpServer>? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<McpServer>?>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is McpServersControllerProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$mcpServersControllerHash() => r'f129187450be3177f5b2ed0e4684f7d17e0bfe4c';
+
+/// The MCP servers of a live session, and how each stands (plan 13, B-22; D-32).
+///
+/// Unlike the controllers above, this one reads nothing over HTTP: `session.mcpStatusChanged`
+/// always carries the whole list, so there is nothing a second read would add. `null` until the
+/// first one arrives — the chip that draws this has nothing to say before then either (S-215).
+
+final class McpServersControllerFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          McpServersController,
+          List<McpServer>?,
+          List<McpServer>?,
+          List<McpServer>?,
+          String
+        > {
+  McpServersControllerFamily._()
+    : super(
+        retry: null,
+        name: r'mcpServersControllerProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The MCP servers of a live session, and how each stands (plan 13, B-22; D-32).
+  ///
+  /// Unlike the controllers above, this one reads nothing over HTTP: `session.mcpStatusChanged`
+  /// always carries the whole list, so there is nothing a second read would add. `null` until the
+  /// first one arrives — the chip that draws this has nothing to say before then either (S-215).
+
+  McpServersControllerProvider call(String sessionId) =>
+      McpServersControllerProvider._(argument: sessionId, from: this);
+
+  @override
+  String toString() => r'mcpServersControllerProvider';
+}
+
+/// The MCP servers of a live session, and how each stands (plan 13, B-22; D-32).
+///
+/// Unlike the controllers above, this one reads nothing over HTTP: `session.mcpStatusChanged`
+/// always carries the whole list, so there is nothing a second read would add. `null` until the
+/// first one arrives — the chip that draws this has nothing to say before then either (S-215).
+
+abstract class _$McpServersController extends $Notifier<List<McpServer>?> {
+  late final _$args = ref.$arg as String;
+  String get sessionId => _$args;
+
+  List<McpServer>? build(String sessionId);
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<List<McpServer>?, List<McpServer>?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<List<McpServer>?, List<McpServer>?>,
+              List<McpServer>?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, () => build(_$args));
+  }
+}

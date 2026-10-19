@@ -16,6 +16,7 @@ import 'package:remote_claude/core/conversation/tool_call.dart';
 import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/engine.dart';
+import 'package:remote_claude/features/session/domain/entities/insight.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 
 /// One event of a session's stream.
@@ -376,6 +377,17 @@ final class FilesRewound extends SessionEvent {
 
   @override
   List<Object?> get props => <Object?>[seq, outcome];
+}
+
+/// The MCP servers of a session and where each one stands — the whole list, every time (plan 13,
+/// B-22). Never a patch: a fresh one replaces whatever this build held of it before.
+final class McpStatusChanged extends SessionEvent {
+  const McpStatusChanged(super.seq, this.servers);
+
+  final List<McpServer> servers;
+
+  @override
+  List<Object?> get props => <Object?>[seq, servers];
 }
 
 /// A round trip of the walking skeleton came back.

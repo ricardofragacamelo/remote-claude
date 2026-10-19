@@ -135,20 +135,65 @@ describe('the use of the context window — B-37, S-173', () => {
   });
 });
 
-describe('the MCP servers — B-38, S-176, S-177', () => {
-  it('keeps the name, the status and the count of tools — nothing else', async () => {
+describe('the MCP servers — B-38, S-176, S-177; plan 13, B-22', () => {
+  it('keeps the name, the status, the source and the count of tools — never the configuration', async () => {
     answering({
       servers: [
-        { name: 'docs', status: 'connected', toolCount: 4, config: { token: 'x' }, error: 'raw' },
-        { name: 'jira', status: 'needs-auth' },
+        { name: 'docs', status: 'connected', source: 'ours', toolCount: 4, config: { token: 'x' } },
+        { name: 'jira', status: 'needs-auth', source: 'plugin' },
         { name: 'weird', status: 'exploded', toolCount: 1 },
         { status: 'failed' },
       ],
     });
 
     expect(await fetchMcpServers(SESSION)).toEqual([
-      { name: 'docs', status: 'connected', toolCount: 4 },
-      { name: 'jira', status: 'needs-auth', toolCount: 0 },
+      { name: 'docs', status: 'connected', source: 'ours', toolCount: 4 },
+      { name: 'jira', status: 'needs-auth', source: 'plugin', toolCount: 0 },
+    ]);
+  });
+
+  it('answers a redacted error only for a server that is failed — plan 13, B-22, S-96', async () => {
+    answering({
+      servers: [
+        {
+          name: 'docs',
+          status: 'failed',
+          source: 'ours',
+          error: 'fetch https://x.example/hook failed',
+        },
+        // A status this build does not recognise is dropped before `error` is even read.
+        {
+          name: 'connected-with-stray-error',
+          status: 'connected',
+          source: 'ours',
+          error: 'never shown',
+        },
+      ],
+    });
+
+    expect(await fetchMcpServers(SESSION)).toEqual([
+      {
+        name: 'docs',
+        status: 'failed',
+        source: 'ours',
+        toolCount: 0,
+        error: 'fetch https://x.example/hook failed',
+      },
+      { name: 'connected-with-stray-error', status: 'connected', source: 'ours', toolCount: 0 },
+    ]);
+  });
+
+  it('falls back to a source of "other" for one this build does not recognise, or none at all', async () => {
+    answering({
+      servers: [
+        { name: 'sdk-impostor', status: 'connected', source: 'sdk', toolCount: 1 },
+        { name: 'no-source-said', status: 'connected', toolCount: 1 },
+      ],
+    });
+
+    expect((await fetchMcpServers(SESSION)).map((server) => server.source)).toEqual([
+      'other',
+      'other',
     ]);
   });
 

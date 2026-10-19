@@ -41,6 +41,7 @@ import 'package:remote_claude/features/session/presentation/providers/resume_con
 import 'package:remote_claude/features/session/presentation/widgets/chat_composer.dart';
 import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
 import 'package:remote_claude/features/session/presentation/widgets/folder_sessions_panel.dart';
+import 'package:remote_claude/features/session/presentation/widgets/mcp_chip.dart';
 import 'package:remote_claude/features/session/presentation/widgets/message_actions.dart';
 import 'package:remote_claude/features/session/presentation/widgets/pending_pill.dart';
 import 'package:remote_claude/features/session/presentation/widgets/rewind_sheet.dart';
@@ -145,6 +146,11 @@ class _SessionPageState extends ConsumerState<SessionPage>
     final ConnectionStatus connection = connectionOf(ref.watch(connectionStatusProvider));
     final PermissionQueue questions = ref.watch(permissionQueueControllerProvider(_sessionId));
     final String? folder = session.conversation.facts.workspacePath;
+    // Only with the capability, and only once a server was named: with neither, the title row has
+    // exactly the one child it always had, not an empty widget beside it (D-32, S-215).
+    final bool showMcpChip =
+        sessionCapabilities(ref, session.conversation.facts)?.mcp == true &&
+        (watchMcpServers(ref, _sessionId)?.isNotEmpty ?? false);
 
     _listen(session.conversation.facts);
     _goToFocusRequest(questions);
@@ -154,7 +160,19 @@ class _SessionPageState extends ConsumerState<SessionPage>
 
     return AppScreen(
       title: l10n.sessionTitle,
-      titleEnd: StatusChip(sessionId: _sessionId, waiting: questions.pending.length),
+      titleEnd: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (showMcpChip) McpChip(sessionId: _sessionId),
+          // `Flexible`: a plain child of `Row` is laid out with an unbounded main-axis
+          // constraint, which is exactly what `StatusChip`'s own ellipsis cannot work against —
+          // this is what bounds it to whatever this row has left (found by the 360-wide and
+          // 200%-font layout tests, which overflowed without it).
+          Flexible(
+            child: StatusChip(sessionId: _sessionId, waiting: questions.pending.length),
+          ),
+        ],
+      ),
       drawer: folder == null ? null : FolderSessionsPanel(folder: folder, current: _sessionId),
       endDrawer: folder == null ? null : FilesPanel(folder: folder, sessionId: _sessionId),
       actions: <Widget>[

@@ -111,6 +111,12 @@ export const sessionSchemas = {
   }),
   restoreChange: z.object({ sessionId: z.string().min(1), path }),
   cancelQueued: z.object({ sessionId: z.string().min(1), queueId: z.string().min(1).max(128) }),
+  toggleMcpServer: z.object({
+    sessionId: z.string().min(1),
+    name: z.string().min(1).max(64),
+    enabled: z.boolean(),
+  }),
+  reconnectMcpServer: z.object({ sessionId: z.string().min(1), name: z.string().min(1).max(64) }),
 };
 
 /** DI tokens of the session commands, one per `type` of the contract. */
@@ -128,4 +134,6 @@ export const SESSION_HANDLERS = {
   rejectChange: Symbol('session.rejectChange handler'),
   restoreChange: Symbol('session.restoreChange handler'),
   cancelQueuedPrompt: Symbol('session.cancelQueuedPrompt handler'),
+  toggleMcpServer: Symbol('session.toggleMcpServer handler'),
+  reconnectMcpServer: Symbol('session.reconnectMcpServer handler'),
 };

@@ -91,11 +91,11 @@ describe('what the panel asks about a live session — plan 08, F4', () => {
   });
 
   it('answers the use of the context, and the MCP servers — S-173, S-176', async () => {
-    handle().servers = [{ name: 'docs', status: 'connected', toolCount: 3 }];
+    handle().servers = [{ name: 'docs', status: 'connected', source: 'ours', toolCount: 3 }];
 
     expect((await inspect.contextOf(SESSION_ID, owner)).maxTokens).toBe(200_000);
     expect(await inspect.mcpServersOf(SESSION_ID, owner)).toEqual([
-      { name: 'docs', status: 'connected', toolCount: 3 },
+      { name: 'docs', status: 'connected', source: 'ours', toolCount: 3 },
     ]);
   });
 

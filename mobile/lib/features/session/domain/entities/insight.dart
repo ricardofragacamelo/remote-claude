@@ -108,3 +108,36 @@ class ContextUse extends Equatable {
   @override
   List<Object?> get props => <Object?>[totalTokens, maxTokens, percentage, categories];
 }
+
+/// How an MCP server of a session stands (plan 13, B-22).
+enum McpStatus { connected, failed, needsAuth, pending, disabled }
+
+/// Where a server's definition came from, read off the engine's own word for it and never off its
+/// name (plan 13, B-22, S-93): `ours` is a server of the store, `project` an approved entry of the
+/// engine's own project file, `plugin` one a plugin brought, `other` anything else — never trusted
+/// as ours, whatever it is named.
+enum McpSource { ours, project, plugin, other }
+
+/// An MCP server of a live session, and how it stands (plan 08, B-38; plan 13, B-22). The app's chip
+/// is read-only (D-32): it draws this, and offers no way to change it.
+class McpServer extends Equatable {
+  const McpServer({
+    required this.name,
+    required this.status,
+    required this.source,
+    this.toolCount = 0,
+    this.error,
+  });
+
+  /// As configured — text a person wrote, to be escaped before display.
+  final String name;
+  final McpStatus status;
+  final McpSource source;
+  final int toolCount;
+
+  /// Why it failed, redacted — `null` unless [status] is [McpStatus.failed].
+  final String? error;
+
+  @override
+  List<Object?> get props => <Object?>[name, status, source, toolCount, error];
+}

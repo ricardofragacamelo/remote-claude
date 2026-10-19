@@ -2134,7 +2134,10 @@
       "failed": "Falhou",
       "needsAuth": "Precisa de login",
       "pending": "Conectando",
-      "disabled": "Desligado"
+      "disabled": "Desligado",
+      "turnOn": "Ligar {{name}}",
+      "turnOff": "Desligar {{name}}",
+      "reconnect": "Reconectar {{name}}"
     },
     "mode": {
       "acceptEditsWarning": "O {{agent}} vai editar e gravar arquivos sem perguntar — e sem a prévia da alteração.",

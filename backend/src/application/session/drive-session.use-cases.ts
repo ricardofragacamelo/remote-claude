@@ -1,6 +1,7 @@
 import type { UserId } from '@domain/auth';
 import type { IdGenerator } from '@domain/shared';
 import { EngineCapabilityUnavailableError, requireCapability } from '@domain/engine';
+import { McpServerNotFoundError } from '@domain/mcp';
 import {
   commandIn,
   menuOf,
@@ -9,7 +10,13 @@ import {
   SessionId,
   UnknownCommandError,
 } from '@domain/session';
-import type { MenuCommand, PermissionMode, SessionClient, SlashCommand } from '@domain/session';
+import type {
+  MenuCommand,
+  McpServer,
+  PermissionMode,
+  SessionClient,
+  SlashCommand,
+} from '@domain/session';
 import type { SessionPermissionGate } from './ports/permission-gate.port';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 import type { CommandCatalog } from './command-catalog';
@@ -40,6 +47,22 @@ abstract class SessionCommandUseCase {
    */
   protected require(rawSessionId: string, userId: UserId) {
     return this.registry.require(SessionId.create(rawSessionId), userId);
+  }
+
+  /**
+   * The live session, its `mcp` capability confirmed, and its current servers (plan 13, B-22) — the
+   * preamble the toggle and the reconnect share, the only two commands that need both.
+   *
+   * @throws {import('@domain/engine').EngineCapabilityUnavailableError} the engine has no `mcp`
+   */
+  protected async requireMcpServers(
+    rawSessionId: string,
+    userId: UserId,
+  ): Promise<{ readonly live: LiveSession; readonly servers: readonly McpServer[] }> {
+    const live = this.require(rawSessionId, userId);
+    requireCapability(live.conversation.ref.engine.value, live.handle.capabilities, 'mcp');
+
+    return { live, servers: await liveControl(live, 'mcpServers')() };
   }
 }
 
@@ -352,5 +375,60 @@ export class CloseSessionUseCase extends SessionCommandUseCase {
 
   async execute(rawSessionId: string, userId: UserId): Promise<void> {
     await this.ender.end(this.require(rawSessionId, userId), 'closedByUser');
+  }
+}
+
+/**
+ * Switches one MCP server of a running session on or off (plan 13, B-22).
+ *
+ * Idempotent: turning on what is already on, or off what is already off, changes nothing and
+ * publishes nothing — the command still acks, same as every command here (S-92). The status is
+ * always read back from the engine itself after toggling, never assumed.
+ *
+ * @throws {import('@domain/engine').EngineCapabilityUnavailableError} the engine has no `mcp`
+ * @throws {import('@domain/mcp').McpServerNotFoundError} this session has no server of that name
+ * @throws {import('@domain/engine').AgentUnavailableError} the engine failed to answer
+ */
+export class ToggleMcpServerUseCase extends SessionCommandUseCase {
+  async execute(
+    rawSessionId: string,
+    name: string,
+    enabled: boolean,
+    userId: UserId,
+  ): Promise<readonly McpServer[] | null> {
+    const { live, servers: before } = await this.requireMcpServers(rawSessionId, userId);
+    const server = before.find((candidate) => candidate.name === name);
+    if (server === undefined) {
+      throw new McpServerNotFoundError(name);
+    }
+
+    const alreadyThere = enabled ? server.status !== 'disabled' : server.status === 'disabled';
+    if (alreadyThere) {
+      return null;
+    }
+
+    await liveControl(live, 'toggleMcpServer')(name, enabled);
+    return liveControl(live, 'mcpServers')();
+  }
+}
+
+/**
+ * Reconnects one MCP server of a running session — the way back from `failed` (plan 13, B-22).
+ *
+ * Always re-reads the status after asking and always publishes it: unlike the toggle, a reconnect the
+ * caller already knows failed is not a no-op just because it fails again — the attempt itself, and
+ * whatever it changed, is what the caller asked to see.
+ *
+ * @throws as {@link ToggleMcpServerUseCase.execute}
+ */
+export class ReconnectMcpServerUseCase extends SessionCommandUseCase {
+  async execute(rawSessionId: string, name: string, userId: UserId): Promise<readonly McpServer[]> {
+    const { live, servers: before } = await this.requireMcpServers(rawSessionId, userId);
+    if (!before.some((candidate) => candidate.name === name)) {
+      throw new McpServerNotFoundError(name);
+    }
+
+    await liveControl(live, 'reconnectMcpServer')(name);
+    return liveControl(live, 'mcpServers')();
   }
 }

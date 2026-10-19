@@ -19,6 +19,7 @@ import 'package:remote_claude/features/session/domain/entities/session_update.da
 import 'package:remote_claude/features/session/domain/repositories/history_repository.dart';
 import 'package:remote_claude/features/session/domain/repositories/insight_repository.dart';
 import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
+import 'package:remote_claude/features/session/presentation/widgets/mcp_chip.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
@@ -941,6 +942,144 @@ void main() {
 
       expect(find.text(l10n.transcriptErrorAgentTimeout(anEngine)), findsOneWidget);
       expect(find.text(l10n.sessionEmptyTitle), findsNothing);
+    });
+  });
+
+  group('the MCP chip — plan 13, B-22, S-215', () {
+    testWidgets('nothing without the mcp capability, even after an event', (
+      WidgetTester tester,
+    ) async {
+      await pumpSession(tester);
+      await emit(
+        tester,
+        sessionStarted(
+          sessionId: 'session-1',
+          capabilities: capabilitiesJson(<String, Object?>{'mcp': false}),
+        ),
+      );
+      sessions.emit(
+        arrivalOf(
+          mcpStatusChanged(
+            seq: 2,
+            servers: <Map<String, Object?>>[mcpServerJson(name: 'docs', status: 'connected')],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.power), findsNothing);
+    });
+
+    testWidgets(
+      'nothing with the capability before the first event, and nothing once it says none',
+      (WidgetTester tester) async {
+        await pumpSession(tester);
+        await emit(
+          tester,
+          sessionStarted(sessionId: 'session-1', capabilities: capabilitiesJson()),
+        );
+        expect(find.byIcon(Icons.power), findsNothing);
+
+        await emit(tester, mcpStatusChanged(seq: 2, servers: const <Map<String, Object?>>[]));
+        expect(find.byIcon(Icons.power), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'the aggregate status, and the sheet with each server, its status and its redacted error',
+      (WidgetTester tester) async {
+        final SemanticsHandle semantics = tester.ensureSemantics();
+        await pumpSession(tester);
+        await emit(
+          tester,
+          sessionStarted(sessionId: 'session-1', capabilities: capabilitiesJson()),
+        );
+        await emit(
+          tester,
+          mcpStatusChanged(
+            seq: 2,
+            servers: <Map<String, Object?>>[
+              mcpServerJson(name: 'docs', status: 'connected', toolCount: 2),
+              mcpServerJson(
+                name: 'jira',
+                status: 'failed',
+                error: 'fetch https://jira.example/hook failed',
+              ),
+            ],
+          ),
+        );
+
+        expect(find.bySemanticsLabel(l10n.sessionMcpSummary(1, 2)), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.power));
+        await tester.pumpAndSettle();
+
+        final Finder sheet = find.byType(McpSheet);
+        expect(find.descendant(of: sheet, matching: find.text('docs')), findsOneWidget);
+        expect(find.descendant(of: sheet, matching: find.text('jira')), findsOneWidget);
+        expect(
+          find.descendant(of: sheet, matching: find.text(l10n.sessionMcpConnected)),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: sheet, matching: find.text(l10n.sessionMcpFailed)),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: sheet, matching: find.text('fetch https://jira.example/hook failed')),
+          findsOneWidget,
+        );
+        semantics.dispose();
+      },
+    );
+
+    testWidgets('a fresh event replaces the whole list — never a patch', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await pumpSession(tester);
+      await emit(tester, sessionStarted(sessionId: 'session-1', capabilities: capabilitiesJson()));
+      await emit(
+        tester,
+        mcpStatusChanged(
+          seq: 2,
+          servers: <Map<String, Object?>>[
+            mcpServerJson(name: 'docs', status: 'connected'),
+            mcpServerJson(name: 'jira', status: 'failed'),
+          ],
+        ),
+      );
+      expect(find.bySemanticsLabel(l10n.sessionMcpSummary(1, 2)), findsOneWidget);
+
+      await emit(
+        tester,
+        mcpStatusChanged(
+          seq: 3,
+          servers: <Map<String, Object?>>[mcpServerJson(name: 'docs', status: 'connected')],
+        ),
+      );
+
+      expect(find.bySemanticsLabel(l10n.sessionMcpSummary(1, 1)), findsOneWidget);
+      semantics.dispose();
+    });
+
+    testWidgets('no action to turn a server on or off, or to reconnect it — D-32', (
+      WidgetTester tester,
+    ) async {
+      await pumpSession(tester);
+      await emit(tester, sessionStarted(sessionId: 'session-1', capabilities: capabilitiesJson()));
+      await emit(
+        tester,
+        mcpStatusChanged(
+          seq: 2,
+          servers: <Map<String, Object?>>[mcpServerJson(name: 'jira', status: 'failed')],
+        ),
+      );
+      await tester.tap(find.byIcon(Icons.power));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Switch), findsNothing);
+      expect(find.byIcon(Icons.refresh), findsNothing);
     });
   });
 

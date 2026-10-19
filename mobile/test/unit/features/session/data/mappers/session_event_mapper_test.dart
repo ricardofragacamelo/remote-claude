@@ -9,6 +9,7 @@ import 'package:remote_claude/core/conversation/tool_call.dart';
 import 'package:remote_claude/core/network/contracts/frame_codec.dart';
 import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
+import 'package:remote_claude/features/session/domain/entities/insight.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
 import '../../../../../support/builders/conversations.dart';
@@ -685,29 +686,6 @@ void main() {
       },
     );
 
-    test('13 · S-11 · the MCP status of a session is unread, and still moves the resume point', () {
-      final SessionEvent? event = read(
-        frame(
-          kind: 'event',
-          type: 'session.mcpStatusChanged',
-          seq: 12,
-          payload: <String, Object?>{
-            'servers': <Object?>[
-              <String, Object?>{
-                'name': 'github',
-                'status': 'connected',
-                'source': 'ours',
-                'toolCount': 3,
-              },
-            ],
-          },
-        ),
-      );
-
-      expect(event, isA<UnreadEvent>());
-      expect(event!.seq, 12);
-    });
-
     test('13 · S-11 · a session opening with the fields of plan 13 still reads as an opening', () {
       final SessionEvent? event = read(
         frame(
@@ -772,6 +750,104 @@ void main() {
           ),
         ),
         isNull,
+      );
+    });
+  });
+
+  group('plan 13, B-22 · the MCP servers of a session, in an event of its own', () {
+    test('S-88 · the whole list, with where each definition came from', () {
+      expect(
+        read(
+          mcpStatusChanged(
+            seq: 12,
+            servers: <Map<String, Object?>>[
+              mcpServerJson(name: 'github', status: 'connected', source: 'ours', toolCount: 3),
+              mcpServerJson(name: 'figma', status: 'needs-auth', source: 'plugin'),
+            ],
+          ),
+        ),
+        const McpStatusChanged(12, <McpServer>[
+          McpServer(
+            name: 'github',
+            status: McpStatus.connected,
+            source: McpSource.ours,
+            toolCount: 3,
+          ),
+          McpServer(name: 'figma', status: McpStatus.needsAuth, source: McpSource.plugin),
+        ]),
+      );
+    });
+
+    test('a failed server carries its redacted error; any other status never does — S-96', () {
+      expect(
+        read(
+          mcpStatusChanged(
+            seq: 1,
+            servers: <Map<String, Object?>>[
+              mcpServerJson(
+                name: 'jira',
+                status: 'failed',
+                error: 'fetch https://jira.example/hook failed',
+              ),
+              mcpServerJson(name: 'docs', status: 'connected'),
+            ],
+          ),
+        ),
+        const McpStatusChanged(1, <McpServer>[
+          McpServer(
+            name: 'jira',
+            status: McpStatus.failed,
+            source: McpSource.ours,
+            error: 'fetch https://jira.example/hook failed',
+          ),
+          McpServer(name: 'docs', status: McpStatus.connected, source: McpSource.ours),
+        ]),
+      );
+    });
+
+    test('a source this build does not know is never promoted to ours — S-93', () {
+      final SessionEvent? event = read(
+        mcpStatusChanged(
+          seq: 1,
+          servers: <Map<String, Object?>>[
+            mcpServerJson(name: 'impostor', status: 'connected', source: 'sdk'),
+          ],
+        ),
+      );
+
+      expect((event! as McpStatusChanged).servers.single.source, McpSource.other);
+    });
+
+    test('a server missing a required field is left out; a payload with no list is unread', () {
+      expect(
+        read(
+          frame(
+            kind: 'event',
+            type: 'session.mcpStatusChanged',
+            seq: 2,
+            payload: <String, Object?>{
+              'servers': <Object?>[
+                <String, Object?>{'name': 'kept', 'status': 'connected', 'source': 'ours'},
+                <String, Object?>{'status': 'connected'},
+                <String, Object?>{'name': 'bad-status', 'status': 'exploded'},
+              ],
+            },
+          ),
+        ),
+        const McpStatusChanged(2, <McpServer>[
+          McpServer(name: 'kept', status: McpStatus.connected, source: McpSource.ours),
+        ]),
+      );
+      expect(
+        read(
+          frame(
+            kind: 'event',
+            type: 'session.mcpStatusChanged',
+            seq: 3,
+            payload: <String, Object?>{},
+          ),
+        ),
+        const UnreadEvent(3),
       );
     });
   });

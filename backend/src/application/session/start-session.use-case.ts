@@ -424,7 +424,7 @@ export class StartSessionUseCase {
       // transition, be dropped by `observe`, and leave the status frozen for the life of the
       // session.
       session.observe('idle');
-      await this.composeMcpServers(command.userId, engine, workspace, handle);
+      await this.composeMcpServers(command.userId, engine, workspace, handle, session.id);
       this.registry.add({ session, handle, conversation });
 
       return {
@@ -449,12 +449,27 @@ export class StartSessionUseCase {
    * all (`this.mcpServers === null`, the same optionality `SessionConfigurationSource` already
    * has). A failure here fails the whole start — the same "nothing is spawned on a half-read state"
    * rule the configuration and the provenance already follow.
+   *
+   * Publishes the first `session.mcpStatusChanged` once the servers are handed over, but only when
+   * there is at least one (plan 13, B-22): a session with none configured has nothing to say, and
+   * publishing an empty list anyway would consume a `seq` announcing silence — every session, the
+   * overwhelming majority of which compose none, would carry one more event than it does today. A
+   * session that composes at least one is never left to guess the initial status from nothing, the
+   * way a live session is never left to guess the status of a toggle or a reconnect either.
+   *
+   * Only the handover is fail-closed (D-02's own guarantee: a session never runs with servers that
+   * were not actually composed). Reading the status back for this first publish is not — a session
+   * whose engine cannot answer that one extra, informational question still opens; the client
+   * recovers the same way a missed event always recovers, by reading `GET
+   * /sessions/:id/mcp-servers` itself (S-95). The failure is not swallowed quietly: the engine's own
+   * adapter already logs it, the same way it logs every failed control request.
    */
   private async composeMcpServers(
     userId: StartSessionCommand['userId'],
     engine: AgentEnginePort,
     workspace: WorkspacePath,
     handle: AgentSessionHandle,
+    sessionId: SessionId,
   ): Promise<void> {
     if (this.mcpServers === null || !hasCapability(handle.capabilities, 'mcp')) {
       return;
@@ -466,6 +481,21 @@ export class StartSessionUseCase {
       workspace,
     });
     await controlOf(engine.engine, handle, 'setMcpServers')(composed);
+
+    if (composed.length === 0) {
+      return;
+    }
+
+    try {
+      const servers = await controlOf(engine.engine, handle, 'mcpServers')();
+      this.broadcaster.publish(sessionId, {
+        type: 'session.mcpStatusChanged',
+        payload: { servers },
+      });
+    } catch {
+      // Already logged by the engine's own adapter (`askControl`) — nothing more to do here than
+      // leave the indicator to the client's own fallback read.
+    }
   }
 
   /** What the session opens with: the owner's configuration, or the client's choice alone. */

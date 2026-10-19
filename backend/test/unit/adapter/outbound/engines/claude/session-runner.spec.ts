@@ -1013,9 +1013,15 @@ describe('SessionRunner', () => {
       const servers = await withServers.runner.mcpServers();
 
       expect(servers).toEqual([
-        { name: 'docs', status: 'connected', toolCount: 2 },
-        { name: 'broken', status: 'failed', toolCount: 0 },
-        { name: 'odd', status: 'failed', toolCount: 0 },
+        { name: 'docs', status: 'connected', source: 'other', toolCount: 2 },
+        {
+          name: 'broken',
+          status: 'failed',
+          source: 'other',
+          toolCount: 0,
+          error: 'ENOENT /home/someone/.mcp',
+        },
+        { name: 'odd', status: 'failed', source: 'other', toolCount: 0 },
       ]);
       expect(JSON.stringify(withServers.log.lines)).not.toContain('secret');
     });

@@ -10,7 +10,10 @@
 /// client ask for it again after every reconnection, for ever.
 library;
 
-import 'package:remote_claude/core/network/contracts/protocol.g.dart';
+// `McpServer` here is the store's own config shape (plan 13, B-19) — a different thing from this
+// file's `McpServer`, the session's live status (plan 13, B-22; plan 08, B-38). Hidden rather than
+// imported under a prefix, since nothing in this mapper ever reads the store's.
+import 'package:remote_claude/core/network/contracts/protocol.g.dart' hide McpServer;
 import 'package:remote_claude/core/conversation/tool_call.dart';
 import 'package:remote_claude/core/network/conversation_wire.dart';
 import 'package:remote_claude/core/network/tool_wire.dart';
@@ -20,6 +23,7 @@ import 'package:remote_claude/features/session/data/mappers/rewind_mapper.dart';
 import 'package:remote_claude/features/session/domain/entities/checkpoint.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/engine.dart';
+import 'package:remote_claude/features/session/domain/entities/insight.dart';
 import 'package:remote_claude/features/session/domain/entities/pong.dart';
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 
@@ -130,6 +134,7 @@ const Map<String, SessionEvent Function(_Frame frame)> _readers =
       'session.compacted': _compacted,
       'session.closed': _closed,
       'session.rewound': _rewound,
+      'session.mcpStatusChanged': _mcpStatusChanged,
     };
 
 SessionEvent _eventOf(
@@ -466,6 +471,57 @@ SessionEvent _rewound(_Frame frame) {
   final RewindOutcome? outcome = rewindOutcomeFrom(frame.payload);
 
   return outcome == null ? UnreadEvent(frame.seq) : FilesRewound(frame.seq, outcome);
+}
+
+/// The statuses an MCP server carries, as the contract words them (plan 13, B-22).
+const Map<String, McpStatus> _mcpStatuses = <String, McpStatus>{
+  'connected': McpStatus.connected,
+  'failed': McpStatus.failed,
+  'needs-auth': McpStatus.needsAuth,
+  'pending': McpStatus.pending,
+  'disabled': McpStatus.disabled,
+};
+
+/// Where an MCP server's definition came from, as the contract words it — an id this build does not
+/// know is `other`, on purpose: an unrecognised source is never promoted to `ours` (S-93).
+const Map<String, McpSource> _mcpSources = <String, McpSource>{
+  'ours': McpSource.ours,
+  'project': McpSource.project,
+  'plugin': McpSource.plugin,
+};
+
+/// The MCP servers of a session, every time, whole (plan 13, B-22). A server missing a required
+/// field, or carrying a status this build does not know, is left out rather than shown wrong — the
+/// rest of the list still answers for the session.
+SessionEvent _mcpStatusChanged(_Frame frame) {
+  final Object? servers = frame.payload['servers'];
+
+  return servers is! List<Object?>
+      ? UnreadEvent(frame.seq)
+      : McpStatusChanged(frame.seq, <McpServer>[
+          for (final Object? entry in servers) ?_mcpServerOf(entry),
+        ]);
+}
+
+McpServer? _mcpServerOf(Object? entry) {
+  if (entry is! Map<String, Object?>) {
+    return null;
+  }
+
+  final String? name = _text(entry, 'name');
+  final McpStatus? status = _mcpStatuses[entry['status']];
+
+  if (name == null || status == null) {
+    return null;
+  }
+
+  return McpServer(
+    name: name,
+    status: status,
+    source: _mcpSources[entry['source']] ?? McpSource.other,
+    toolCount: entry['toolCount'] is int ? entry['toolCount']! as int : 0,
+    error: status == McpStatus.failed ? _text(entry, 'error') : null,
+  );
 }
 
 /// The object at [key], or `null` when it is absent or not one.

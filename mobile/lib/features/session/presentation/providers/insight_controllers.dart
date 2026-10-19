@@ -1,8 +1,11 @@
 /// What the composer reads about an installation and a session: the catalogue of a draft, the
-/// models of a session, and how full its context window is.
+/// models of a session, how full its context window is, and the MCP servers of a session (plan 13,
+/// B-22).
 ///
-/// Each is a question with an answer, read over HTTP, and none of them stands between the person and
-/// the prompt box: one that fails says why in its sheet, and sending goes on (S-21, S-45).
+/// Most of these are a question with an answer, read over HTTP, and none of them stands between the
+/// person and the prompt box: one that fails says why in its sheet, and sending goes on (S-21, S-45).
+/// The MCP servers are the exception — the event carries the whole answer, so there is nothing left
+/// to read.
 library;
 
 import 'package:remote_claude/features/session/domain/entities/insight.dart';
@@ -61,6 +64,29 @@ class SessionContextController extends _$SessionContextController {
   void _apply(SessionUpdate update) {
     if (update case EventReceived(event: TurnFinished() || ContextCompacted())) {
       reload();
+    }
+  }
+}
+
+/// The MCP servers of a live session, and how each stands (plan 13, B-22; D-32).
+///
+/// Unlike the controllers above, this one reads nothing over HTTP: `session.mcpStatusChanged`
+/// always carries the whole list, so there is nothing a second read would add. `null` until the
+/// first one arrives — the chip that draws this has nothing to say before then either (S-215).
+@Riverpod(keepAlive: false)
+class McpServersController extends _$McpServersController {
+  @override
+  List<McpServer>? build(String sessionId) {
+    listenToUpdates(ref, _apply);
+    return null;
+  }
+
+  void _apply(SessionUpdate update) {
+    if (update case EventReceived(
+      sessionId: final String? owner,
+      event: McpStatusChanged(:final List<McpServer> servers),
+    ) when owner == sessionId) {
+      state = servers;
     }
   }
 }

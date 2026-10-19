@@ -1,7 +1,10 @@
+import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { wsClient } from '@/shared/api/ws';
 import type { AppError } from '@/shared/api/errors';
-import { fetchContext, fetchMcpServers } from '../services/insight.service';
+import { fetchContext, fetchMcpServers, mcpServerListOf } from '../services/insight.service';
+import { reconnectMcpServer, toggleMcpServer } from '../services/live-session.service';
 import type { ContextUse, McpServer } from '../types/insight';
 import { loadedOf } from './loaded';
 import type { Loaded } from './loaded';
@@ -32,8 +35,29 @@ export function useContextUse(sessionId: string): Loaded<ContextUse> {
   );
 }
 
-/** The MCP servers of the session and how each stands (B-38) — read once, and again on demand. */
+/**
+ * The MCP servers of the session and how each stands (B-38; plan 13, B-22) — read once over HTTP,
+ * and kept live after: `session.mcpStatusChanged` always carries the whole list, so a fresh one
+ * replaces the cache outright, never a second read.
+ */
 export function useMcpServers(sessionId: string): Loaded<readonly McpServer[]> {
+  const queryClient = useQueryClient();
+
+  useEffect(
+    () =>
+      // `onSessionFrame`, not `observe`: this session is watched right here, which is exactly the
+      // case `observe` excludes (it exists for sessions nobody here is attached to).
+      wsClient.onSessionFrame((frame) => {
+        if (frame.type === 'session.mcpStatusChanged' && frame.sessionId === sessionId) {
+          queryClient.setQueryData(
+            ['sessions', 'mcp', sessionId],
+            mcpServerListOf(frame.payload?.['servers']),
+          );
+        }
+      }),
+    [sessionId, queryClient],
+  );
+
   return loadedOf(
     useQuery<readonly McpServer[], AppError>({
       queryKey: ['sessions', 'mcp', sessionId],
@@ -41,5 +65,35 @@ export function useMcpServers(sessionId: string): Loaded<readonly McpServer[]> {
       staleTime: 60_000,
       retry: false,
     }),
+  );
+}
+
+/**
+ * Switches one MCP server of the session on or off (plan 13, B-22) — nothing when there is no
+ * session. The result is never assumed here: it arrives as `session.mcpStatusChanged`, which
+ * {@link useMcpServers} already listens for.
+ */
+export function useToggleMcpServer(
+  sessionId: string | null,
+): (name: string, enabled: boolean) => void {
+  return useCallback(
+    (name: string, enabled: boolean) => {
+      if (sessionId !== null) {
+        toggleMcpServer(wsClient, sessionId, name, enabled);
+      }
+    },
+    [sessionId],
+  );
+}
+
+/** Reconnects one MCP server of the session — the way back from `failed` (plan 13, B-22). */
+export function useReconnectMcpServer(sessionId: string | null): (name: string) => void {
+  return useCallback(
+    (name: string) => {
+      if (sessionId !== null) {
+        reconnectMcpServer(wsClient, sessionId, name);
+      }
+    },
+    [sessionId],
   );
 }

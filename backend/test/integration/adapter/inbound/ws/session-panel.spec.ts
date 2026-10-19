@@ -400,20 +400,28 @@ describe('the panel of Claude', () => {
       });
     });
 
-    it('lists the MCP servers with their status, never their configuration — S-176, S-177', async () => {
+    it('lists the MCP servers with their status and source, never their configuration — S-176, S-177', async () => {
       script = {
         fixture: 'text-turn',
         mcpServers: [
           {
             name: 'docs',
             status: 'connected',
+            source: 'dynamic',
             config: { type: 'http', url: 'https://x/?token=s3cret' },
             tools: [{ name: 't' }],
           },
-          { name: 'auth', status: 'needs-auth' },
-          { name: 'later', status: 'pending' },
-          { name: 'off', status: 'disabled' },
-          { name: 'broken', status: 'failed', error: 'spawn /home/me/bin ENOENT' },
+          { name: 'auth', status: 'needs-auth', source: 'dynamic' },
+          { name: 'later', status: 'pending', source: 'dynamic' },
+          { name: 'off', status: 'disabled', source: 'dynamic' },
+          {
+            name: 'broken',
+            status: 'failed',
+            source: 'dynamic',
+            // The engine's own error, a URL with a token in it — redacted before it reaches this
+            // response, never the whole message withheld (plan 13, B-22, S-96).
+            error: 'fetch https://x.example/hook?token=s3cret failed',
+          },
         ],
       };
       const sessionId = sessionOf(await started(await connect()));
@@ -422,15 +430,20 @@ describe('the panel of Claude', () => {
 
       expect(servers.body).toEqual({
         servers: [
-          { name: 'docs', status: 'connected', toolCount: 1 },
-          { name: 'auth', status: 'needs-auth', toolCount: 0 },
-          { name: 'later', status: 'pending', toolCount: 0 },
-          { name: 'off', status: 'disabled', toolCount: 0 },
-          { name: 'broken', status: 'failed', toolCount: 0 },
+          { name: 'docs', status: 'connected', source: 'ours', toolCount: 1 },
+          { name: 'auth', status: 'needs-auth', source: 'ours', toolCount: 0 },
+          { name: 'later', status: 'pending', source: 'ours', toolCount: 0 },
+          { name: 'off', status: 'disabled', source: 'ours', toolCount: 0 },
+          {
+            name: 'broken',
+            status: 'failed',
+            source: 'ours',
+            toolCount: 0,
+            error: 'fetch https://x.example/hook failed',
+          },
         ],
       });
       expect(JSON.stringify(servers.body)).not.toContain('s3cret');
-      expect(JSON.stringify(servers.body)).not.toContain('ENOENT');
     });
 
     it("refuses somebody else's session", async () => {

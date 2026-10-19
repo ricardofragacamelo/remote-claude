@@ -26,8 +26,10 @@ export {
   InterruptSessionUseCase,
   ListSessionCommandsUseCase,
   PromptSessionUseCase,
+  ReconnectMcpServerUseCase,
   SetSessionModelUseCase,
   SetSessionPermissionModeUseCase,
+  ToggleMcpServerUseCase,
 } from './drive-session.use-cases';
 export type { PromptQueueing, SessionCommandMenu } from './drive-session.use-cases';
 export {

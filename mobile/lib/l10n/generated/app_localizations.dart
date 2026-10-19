@@ -2961,6 +2961,48 @@ abstract class AppLocalizations {
   /// **'{agent} does not report what its turns cost.'**
   String sessionStatusCostNotReported(String agent);
 
+  /// The chip of a session's MCP servers (plan 13, B-22)
+  ///
+  /// In en, this message translates to:
+  /// **'{fine} of {count} MCP server(s) connected'**
+  String sessionMcpSummary(int fine, int count);
+
+  /// Title of the sheet the MCP chip opens
+  ///
+  /// In en, this message translates to:
+  /// **'MCP servers'**
+  String get sessionMcpTitle;
+
+  /// How an MCP server of the session stands
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get sessionMcpConnected;
+
+  /// How an MCP server of the session stands
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get sessionMcpFailed;
+
+  /// How an MCP server of the session stands
+  ///
+  /// In en, this message translates to:
+  /// **'Needs sign-in'**
+  String get sessionMcpNeedsAuth;
+
+  /// How an MCP server of the session stands
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting'**
+  String get sessionMcpPending;
+
+  /// How an MCP server of the session stands
+  ///
+  /// In en, this message translates to:
+  /// **'Turned off'**
+  String get sessionMcpDisabled;
+
   /// Tooltip of the ⋯ of the bar
   ///
   /// In en, this message translates to:

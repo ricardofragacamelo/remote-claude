@@ -10,6 +10,7 @@ import type {
 
 const KINDS = new Set<string>(['used', 'free', 'buffer', 'deferred']);
 const STATUSES = new Set<string>(['connected', 'failed', 'needs-auth', 'pending', 'disabled']);
+const SOURCES = new Set<string>(['ours', 'project', 'plugin', 'other']);
 
 const sessionPath = (sessionId: string): string => `/sessions/${encodeURIComponent(sessionId)}`;
 const listOf = (value: unknown): Readonly<Record<string, unknown>>[] =>
@@ -57,12 +58,35 @@ export async function fetchMcpServers(sessionId: string): Promise<readonly McpSe
   const body = await api.get<unknown>(`${sessionPath(sessionId)}/mcp-servers`);
   const record = isRecord(body) ? body : {};
 
-  return listOf(record['servers']).flatMap((server): McpServer[] => {
+  return mcpServerListOf(record['servers']);
+}
+
+/**
+ * The servers of a `{ servers: [...] }` shape, read the same way whether it came from the HTTP
+ * route above or from a `session.mcpStatusChanged` event (plan 13, B-22) — one parser, so the two
+ * never drift. A server missing a required field, or carrying a status or source this build does not
+ * know, is left out rather than shown wrong.
+ */
+export function mcpServerListOf(value: unknown): readonly McpServer[] {
+  return listOf(value).flatMap((server): McpServer[] => {
     const name = readText(server, 'name');
     const status = readText(server, 'status');
-    return name === null || status === null || !STATUSES.has(status)
-      ? []
-      : [{ name, status: status as McpServer['status'], toolCount: numberOf(server['toolCount']) }];
+    const source = readText(server, 'source');
+    const error = readText(server, 'error');
+
+    if (name === null || status === null || !STATUSES.has(status)) {
+      return [];
+    }
+
+    return [
+      {
+        name,
+        status: status as McpServer['status'],
+        source: source !== null && SOURCES.has(source) ? (source as McpServer['source']) : 'other',
+        toolCount: numberOf(server['toolCount']),
+        ...(status === 'failed' && error !== null ? { error } : {}),
+      },
+    ];
   });
 }
 

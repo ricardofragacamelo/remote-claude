@@ -153,6 +153,7 @@ export type {
   InstallationAgent,
   InstallationModel,
   McpServer,
+  McpSource,
   McpStatus,
   SessionInitialization,
 } from './services/installation';

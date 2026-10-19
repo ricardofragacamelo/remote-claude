@@ -429,6 +429,9 @@ class Conversation extends Equatable {
     // an unreadable event is only here to move the resume point.
     PongArrived() => this,
     UnreadEvent() => this,
+    // The MCP servers are the chip's own state (plan 13, B-22; `McpServersController`), never part
+    // of the conversation itself.
+    McpStatusChanged() => this,
   };
 
   SessionFacts _factsOf(SessionOpened opened) => SessionFacts(

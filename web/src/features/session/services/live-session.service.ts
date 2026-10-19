@@ -22,6 +22,8 @@ export const SESSION_COMMANDS = {
   close: 'session.close',
   compact: 'session.compact',
   rewindFiles: 'session.rewindFiles',
+  toggleMcpServer: 'session.toggleMcpServer',
+  reconnectMcpServer: 'session.reconnectMcpServer',
 } as const;
 
 /**
@@ -159,6 +161,24 @@ export function setSessionPermissionMode(
 /** Ends a session and releases its subprocess. Only its owner may. */
 export function closeSession(client: WsClient, sessionId: string): boolean {
   return client.command(SESSION_COMMANDS.close, { sessionId });
+}
+
+/**
+ * Switches one MCP server of a running session on or off (plan 13, B-22). The ack precedes the
+ * effect — the result, and whether anything actually changed, arrives as `session.mcpStatusChanged`.
+ */
+export function toggleMcpServer(
+  client: WsClient,
+  sessionId: string,
+  name: string,
+  enabled: boolean,
+): boolean {
+  return client.command(SESSION_COMMANDS.toggleMcpServer, { sessionId, name, enabled });
+}
+
+/** Reconnects one MCP server of a running session — the way back from `failed` (plan 13, B-22). */
+export function reconnectMcpServer(client: WsClient, sessionId: string, name: string): boolean {
+  return client.command(SESSION_COMMANDS.reconnectMcpServer, { sessionId, name });
 }
 
 /**

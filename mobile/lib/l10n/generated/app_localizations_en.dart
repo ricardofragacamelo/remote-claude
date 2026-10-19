@@ -1742,6 +1742,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String sessionMcpSummary(int fine, int count) {
+    return '$fine of $count MCP server(s) connected';
+  }
+
+  @override
+  String get sessionMcpTitle => 'MCP servers';
+
+  @override
+  String get sessionMcpConnected => 'Connected';
+
+  @override
+  String get sessionMcpFailed => 'Failed';
+
+  @override
+  String get sessionMcpNeedsAuth => 'Needs sign-in';
+
+  @override
+  String get sessionMcpPending => 'Connecting';
+
+  @override
+  String get sessionMcpDisabled => 'Turned off';
+
+  @override
   String get sessionMenuOpen => 'More actions of the session';
 
   @override
