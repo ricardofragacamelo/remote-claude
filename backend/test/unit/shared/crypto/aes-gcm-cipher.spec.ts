@@ -53,6 +53,15 @@ describe('aes-gcm-cipher — plan 13, D-02', () => {
     expect(() => decryptValue(KEY, tampered)).toThrow(CiphertextTamperedError);
   });
 
+  it.each([[8], [15], [17], [0]])(
+    'refuses a tag that is not the full 16 bytes (%i) — never a shortened one',
+    (length) => {
+      const encrypted = encryptValue(KEY, 'super-secret-token');
+      const shortened = { ...encrypted, tag: randomBytes(length) };
+      expect(() => decryptValue(KEY, shortened)).toThrow(CiphertextTamperedError);
+    },
+  );
+
   it.each([[16], [24], [31], [33], [0]])('refuses a key that is not 32 bytes (%i)', (length) => {
     const badKey = randomBytes(length);
     expect(() => encryptValue(badKey, 'x')).toThrow(InvalidEncryptionKeyError);

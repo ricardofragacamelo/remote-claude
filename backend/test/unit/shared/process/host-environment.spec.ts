@@ -3,10 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  claudeEnvironment,
-  isBackendVariable,
-} from '@adapter/outbound/engines/claude/claude-environment';
+import { hostEnvironment, isBackendVariable } from '@shared/process/host-environment';
 import { processEnvironment } from '@infra/config/process-environment';
 
 /** The one variable `.env.example` declares that the CLI needs: where its login lives. */
@@ -14,7 +11,7 @@ const NEEDED_BY_THE_CLI = new Set(['CLAUDE_CONFIG_DIR']);
 
 /** Every name `.env.example` declares — the file `pnpm dev` loads into the backend's process. */
 function declaredInEnvExample(): string[] {
-  const file = fileURLToPath(new URL('../../../../../../../.env.example', import.meta.url));
+  const file = fileURLToPath(new URL('../../../../../.env.example', import.meta.url));
 
   return readFileSync(file, 'utf8')
     .split('\n')
@@ -23,7 +20,7 @@ function declaredInEnvExample(): string[] {
     .filter((name): name is string => name !== undefined);
 }
 
-describe('claudeEnvironment — 12 · B-13, D-10', () => {
+describe('hostEnvironment — plan 13, B-20; plan 12, D-10', () => {
   it('takes out every key of the configuration schema — S-108', () => {
     // Held against the schema itself and not a list typed here, so a configuration key added
     // tomorrow without one of the prefixes fails this gate instead of reaching Claude.
@@ -42,7 +39,7 @@ describe('claudeEnvironment — 12 · B-13, D-10', () => {
   });
 
   it('removes the passwords and the connection string from what the CLI is given', () => {
-    const child = claudeEnvironment({
+    const child = hostEnvironment({
       DATABASE_URL: 'postgres://user:secret@localhost/db',
       RC_POSTGRES_PASSWORD: 'secret',
       RC_KEYCLOAK_ADMIN_PASSWORD: 'secret',
@@ -70,7 +67,7 @@ describe('claudeEnvironment — 12 · B-13, D-10', () => {
       LANG: 'pt_BR.UTF-8',
     };
 
-    expect(claudeEnvironment(machine)).toEqual(machine);
+    expect(hostEnvironment(machine)).toEqual(machine);
   });
 
   it('matches by prefix at the start of the name, not anywhere in it', () => {
@@ -83,12 +80,12 @@ describe('claudeEnvironment — 12 · B-13, D-10', () => {
   it('never touches the environment it was given', () => {
     const backend = { DATABASE_URL: 'postgres://x', PATH: '/usr/bin' };
 
-    claudeEnvironment(backend);
+    hostEnvironment(backend);
 
     expect(backend).toEqual({ DATABASE_URL: 'postgres://x', PATH: '/usr/bin' });
   });
 
   it('keeps a variable the machine left undefined as it was', () => {
-    expect(claudeEnvironment({ TERM: undefined })).toEqual({ TERM: undefined });
+    expect(hostEnvironment({ TERM: undefined })).toEqual({ TERM: undefined });
   });
 });

@@ -125,7 +125,8 @@ tarefas.
   `enableFileCheckpointing`, `includePartialMessages`, `maxTurns` e a variável
   `CLAUDE_CODE_ENABLE_TODO_TOOLS`.
 - Instalação e versão: [cli-version.ts](../../backend/src/adapter/outbound/engines/claude/cli-version.ts),
-  [claude-environment.ts](../../backend/src/adapter/outbound/engines/claude/claude-environment.ts),
+  [host-environment.ts](../../backend/src/shared/process/host-environment.ts) (neutro desde o plano 13 · B-20;
+  antes vivia em `adapter/outbound/engines/claude/`),
   [installation-mapping.ts](../../backend/src/adapter/outbound/engines/claude/installation-mapping.ts), e a
   credencial em `~/.claude/.credentials.json`, que o
   [plano 19](../plans/19-distribution/README.md) (R-02) precisa herdar.

@@ -5,9 +5,9 @@ import { CLAUDE_ENGINE } from './claude-engine';
  * The variable the Claude CLI reads to find its own configuration directory — reserved from an MCP
  * server's own `env` (plan 13, B-18, S-66): a server that could set it would point the CLI's whole
  * session configuration, login included, somewhere the user never chose. Unrelated to
- * `claude-environment.ts`'s deny list, which filters the **backend's** variables out of the
- * subprocess the CLI itself runs in — this one is about what a configured server may ask the CLI
- * to hand to *it*.
+ * `shared/process/host-environment.ts`'s deny list, which filters the **backend's** variables out
+ * of the subprocess the CLI itself runs in — this one is about what a configured server may ask
+ * the CLI to hand to *it*.
  */
 const CLAUDE_CONFIG_DIR_VAR = 'CLAUDE_CONFIG_DIR';
 

@@ -13,15 +13,17 @@ export interface McpEngineDialect {
    * Why this engine refuses [name] as a server name, or `null` when the engine has no objection —
    * the universal pattern (`^[A-Za-z0-9_-]{1,64}$`) is checked before this is ever asked.
    *
-   * The Claude dialect refuses `__`: the tool a server exposes arrives as `mcp__<server>__<tool>`,
-   * and a server name with `__` makes the split ambiguous for the adapter's own classifier.
+   * An engine whose own tool-naming convention embeds a separator in the server and tool names
+   * refuses a server name containing that separator — it would make the split ambiguous for the
+   * adapter's own classifier, which is the one place that still speaks the engine's native names.
    */
   rejectsServerName(name: string): string | null;
 
   /**
    * Env var names this engine reserves for itself, on top of the ones every engine shares
-   * (`LD_PRELOAD`, `NODE_OPTIONS`, …). The Claude dialect reserves `CLAUDE_CONFIG_DIR`: a server
-   * that could set it would point the CLI's own configuration somewhere the user never chose.
+   * (`LD_PRELOAD`, `NODE_OPTIONS`, …). An engine that reads its own configuration directory from an
+   * env var reserves that name: a server that could set it would point the engine's whole
+   * configuration somewhere the user never chose.
    */
   readonly reservedEnvNames: readonly string[];
 }

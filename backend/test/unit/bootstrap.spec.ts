@@ -2,8 +2,19 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { loadDotEnv, repositoryDotEnv, SHUTDOWN_SIGNALS } from '../../src/bootstrap';
+
+/**
+ * The repository root, computed independently of `repositoryDotEnv()` — from this file's own
+ * location (`test/unit/`, three levels below the root) rather than from a folder name. A checkout
+ * and a worktree never share a directory name, and a test that assumed one would be the only place
+ * that cared what the checkout was called.
+ */
+function repositoryRootFromThisFile(): string {
+  return path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+}
 
 /**
  * The `.env` the product loads when nobody exported it.
@@ -54,7 +65,9 @@ describe('loadDotEnv', () => {
   it('points at the repository root by default', () => {
     // From `src/`, two levels up: a path computed from `import.meta.url` rather than from the
     // working directory, because the process is started from the package and from the repository.
-    expect(repositoryDotEnv().endsWith(path.join('remote-claude', '.env'))).toBe(true);
+    // Compared against this file's own, independently computed root rather than a literal folder
+    // name — a worktree is never called `remote-claude` (S-11, mirrored from `main`).
+    expect(repositoryDotEnv()).toBe(path.join(repositoryRootFromThisFile(), '.env'));
   });
 });
 

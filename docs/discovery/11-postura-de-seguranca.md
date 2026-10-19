@@ -450,7 +450,7 @@ Dado o tamanho, a recomendação é **não** criar um plano monolítico. Em vez 
 [query.factory.ts](../../backend/src/adapter/outbound/engines/claude/query.factory.ts) ·
 [trusted-directory.ts](../../backend/src/adapter/outbound/engines/claude/trusted-directory.ts) ·
 [folder-fence.ts](../../backend/src/adapter/outbound/filesystem/folder-fence.ts) ·
-[claude-environment.ts](../../backend/src/adapter/outbound/engines/claude/claude-environment.ts) ·
+[host-environment.ts](../../backend/src/shared/process/host-environment.ts) (neutro desde o plano 13 · B-20) ·
 [04a-claude.md](../architecture/backend/04a-claude.md).
 
 **Rede e operação:**

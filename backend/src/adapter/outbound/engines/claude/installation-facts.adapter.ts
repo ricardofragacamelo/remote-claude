@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { InstallationFacts, ReadVersion } from '@application/engines/claude';
 import type { Logger } from '@shared/logging/logger';
 import { CLAUDE_ENGINE } from './claude-engine';
-import { claudeEnvironment } from './claude-environment';
+import { hostEnvironment } from '@shared/process/host-environment';
 import { readAgentSdkVersion, readBundledCliVersion } from './cli-version';
 import type { BundledVersion } from './cli-version';
 
@@ -29,7 +29,7 @@ export const runPathCli: VersionCommand = () =>
     execFile(
       'claude',
       ['--version'],
-      { timeout: PATH_CLI_TIMEOUT_MS, env: claudeEnvironment(process.env) },
+      { timeout: PATH_CLI_TIMEOUT_MS, env: hostEnvironment(process.env) },
       (error, stdout) => {
         if (error === null) resolve(String(stdout));
         else reject(error);

@@ -135,6 +135,7 @@ export const E2E_POSTGRES = {
  * @property {string} RC_PUSH_ENDPOINT
  * @property {string} RC_PUSH_CREDENTIALS_FILE
  * @property {string} RC_PUSH_SCOPE
+ * @property {string} RC_MCP_SECRET_KEY_FILE
  * @property {string} RC_CHECKPOINT_DIR
  * @property {string} RC_CHECKPOINT_MAX_FILE_BYTES
  * @property {string} RC_CHECKPOINT_MAX_STORE_BYTES
@@ -292,6 +293,13 @@ export function ephemeralEnvironment(ports, options = {}) {
       `remote-claude-push-${String(ports.backend)}.json`,
     ),
     RC_PUSH_SCOPE: 'https://push.invalid/auth',
+
+    // The key MCP server secrets are encrypted with (plan 13, D-02) — absent, same as the push
+    // credential above: a server with a secret would not be stored, and nothing here stores one.
+    RC_MCP_SECRET_KEY_FILE: path.join(
+      os.tmpdir(),
+      `remote-claude-mcp-key-${String(ports.backend)}`,
+    ),
 
     RC_CHECKPOINT_DIR: path.join(os.tmpdir(), `remote-claude-checkpoints-${String(ports.backend)}`),
     RC_CHECKPOINT_MAX_FILE_BYTES: '5242880',

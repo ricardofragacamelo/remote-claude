@@ -51,7 +51,8 @@ import type { McpServerFieldsBody, SetEnabledBody } from './mcp-servers.dto';
  *
  * | Status | When |
  * |---|---|
- * | `200` / `201` | the answer |
+ * | `200` | `GET`, `preview`, `PUT`, `PATCH` |
+ * | `201` | `POST` — a server created |
  * | `204` | `DELETE`, always — the row is gone, with nothing left to return |
  * | `400` | a malformed body — every field in `details[]` |
  * | `401` | no bearer, or an invalid one |
@@ -82,6 +83,7 @@ export class McpServersController {
   }
 
   @Post('preview')
+  @HttpCode(200)
   @OmitFromLog('env', 'headers')
   previewOf(
     @Param('engine', new ZodPipe(engineParamSchema)) engine: string,

@@ -5206,7 +5206,7 @@ export type ModelCheckOutcomePayload = ModelCheckOutcome;
 /** Whether `value` is a {@link ModelCheckOutcomePayload}. */
 export const isModelCheckOutcomePayload = isModelCheckOutcome;
 
-/** `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH`/`DELETE /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` answers the server as it was, the moment before it was removed. */
+/** `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`. */
 export type McpServerDetailPayload = McpServer;
 
 /** Whether `value` is a {@link McpServerDetailPayload}. */

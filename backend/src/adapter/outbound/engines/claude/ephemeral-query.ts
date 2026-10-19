@@ -1,7 +1,7 @@
 import type { Options, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 
-import { claudeEnvironment } from './claude-environment';
 import { flagSettings } from './flag-settings';
+import { hostEnvironment } from '@shared/process/host-environment';
 import { markedEnvironment } from '@shared/process/process-marker';
 import type { QueryFactory } from './query.factory';
 import { clearTrustMark } from './trusted-directory';
@@ -58,7 +58,7 @@ export function openEphemeralQuery(
       mcpServers: {},
       settings: flagSettings(),
       persistSession: false,
-      env: markedEnvironment(claudeEnvironment(process.env), process.pid),
+      env: markedEnvironment(hostEnvironment(process.env), process.pid),
       abortController: abort,
       ...(input.model == null ? {} : { model: input.model }),
       ...(input.maxTurns === undefined ? {} : { maxTurns: input.maxTurns }),

@@ -328,8 +328,8 @@
       "reason": "the Dart package of the app, its bundle ids and its platform channels (discovery 10 §5.4)"
     },
     {
-      "pattern": "REMOTE_CLAUDE_[A-Z_]+",
-      "reason": "the variables that mark a subprocess as the product's — the product's name, not the engine's (discovery 10 §5.4)"
+      "pattern": "REMOTE_CLAUDE_[A-Z_]*",
+      "reason": "the variables that mark a subprocess as the product's, and the bare prefix a reserved-name list matches against — the product's name, not the engine's (discovery 10 §5.4)"
     },
     {
       "pattern": "RemoteClaude[A-Za-z]*",

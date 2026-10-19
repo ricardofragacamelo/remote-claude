@@ -1,7 +1,7 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { CanUseTool, Options, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 
-import { isBackendVariable } from './claude-environment';
+import { isBackendVariable } from '@shared/process/host-environment';
 import { assertAllowed, UnsafeFlagSettingsError } from './flag-settings';
 
 /**

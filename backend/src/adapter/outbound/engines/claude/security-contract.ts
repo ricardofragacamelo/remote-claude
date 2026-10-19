@@ -8,7 +8,7 @@ import type {
 } from '@application/session';
 import { PERMISSION_MODES } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
-import { claudeEnvironment } from './claude-environment';
+import { hostEnvironment } from '@shared/process/host-environment';
 import { assertSafeSdkOptions } from './query.factory';
 import { buildSdkOptions } from './sdk-options.factory';
 import type { SdkOptionsInput } from './sdk-options.factory';
@@ -50,7 +50,7 @@ function sessionOptions(overrides: Partial<SdkOptionsInput> = {}): Options {
       conversation: { claudeSessionId: 'probe', resumedFrom: null },
       limits: { maxBudgetUsd: 1, maxTurns: 1 },
       abortController: new AbortController(),
-      environment: claudeEnvironment({ PATH: '/usr/bin', [BACKEND_VARIABLE]: 'postgres://probe' }),
+      environment: hostEnvironment({ PATH: '/usr/bin', [BACKEND_VARIABLE]: 'postgres://probe' }),
       onStderr: () => undefined,
       ...overrides,
     }),

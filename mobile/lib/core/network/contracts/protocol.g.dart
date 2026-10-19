@@ -8370,7 +8370,7 @@ typedef DevicePayload = Device;
 /// `POST /engines/claude/diagnostics/model-check`: one turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). The same shape `GET /engines/claude/installation`'s `lastModelCheck` carries, named again rather than declared twice (plan 28, B-48).
 typedef ModelCheckOutcomePayload = ModelCheckOutcome;
 
-/// `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH`/`DELETE /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` answers the server as it was, the moment before it was removed.
+/// `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.
 typedef McpServerDetailPayload = McpServer;
 
 /// `POST /notifications`: keeps a notification — `201` when new, `200` with the one already kept under the same client id. The same shape as one entry of `NotificationPage.items`, named again rather than declared twice (plan 28, B-48).

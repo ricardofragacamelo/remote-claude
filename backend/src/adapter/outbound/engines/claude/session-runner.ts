@@ -40,7 +40,7 @@ import { withinDeadline } from './deadline';
 import { classifyTool } from './tool-classifier';
 import { SessionInputQueue } from './input-queue';
 import type { QueryFactory } from './query.factory';
-import { claudeEnvironment } from './claude-environment';
+import { hostEnvironment } from '@shared/process/host-environment';
 import { markedEnvironment } from '@shared/process/process-marker';
 import { toContextUse, toInstallationModel, toMcpServer } from './installation-mapping';
 import { toSessionInitialization } from './initialization-mapping';
@@ -201,7 +201,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       limits: this.deps.limits,
       abortController: this.abort,
       // The machine's environment without the backend's configuration, and the mark on top.
-      environment: markedEnvironment(claudeEnvironment(process.env), process.pid),
+      environment: markedEnvironment(hostEnvironment(process.env), process.pid),
       onStderr: (data) => {
         this.onStderr(sessionId, data);
       },
