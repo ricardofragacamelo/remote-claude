@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/mcp-project-variable.json",
+  "title": "McpProjectVariable",
+  "description": "One env var or header of a project's own MCP file (plan 13, B-24): literal, as the file has it — `${VAR}` included; never resolved, never a secret of ours (D-11).",
+  "type": "object",
+  "required": ["name", "value"],
+  "properties": {
+    "name": { "type": "string" },
+    "value": { "type": "string" }
+  }
+}

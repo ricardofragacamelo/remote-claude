@@ -158,12 +158,12 @@ Cenários S-88…S-96, S-215.
 [D-10](decisions.md#d-10--mudança-de-mcp-e-sessões-vivas): **apertar vale já, afrouxar vale na próxima
 sessão** — a mesma assimetria que a revogação de regra tem no plano 03, mas não o mesmo mecanismo de
 código: a regra lá não empurra nada (lida de novo a cada request); B-23 varre `SessionRegistry.all()`
-e empurra, o mesmo formato de `ReapIdleSessionsUseCase`/`ShutdownSessionsUseCase` ([D-47](decisions.md#d-47--b-23-usa-o-formato-de-varredura-não-o-de-revogação-de-regra)). Remover ou desligar um servidor
+e empurra, o mesmo formato de `ReapIdleSessionsUseCase`/`ShutdownSessionsUseCase` (D-47). Remover ou desligar um servidor
 no store desliga-o, pela porta do motor (no Claude, o adapter chama `toggleMcpServer(name, false)`), em toda
 sessão viva do usuário que o tem naquele motor, com `session.mcpStatusChanged`; um servidor descoberto malicioso não pode continuar rodando até a sessão
 fechar. Adicionar ou ligar vale na próxima sessão, e a resposta e a tela dizem isso. Cenários S-97…S-99.
 
-### B-24 — O `.mcp.json` do projeto e a aprovação 🔲
+### B-24 — O `.mcp.json` do projeto e a aprovação ✅
 
 O arquivo de MCP do projeto é **do motor**: o do Claude é o `.mcp.json`. O adapter do Claude
 (`adapter/outbound/engines/claude/`) o lê e o entrega ao núcleo pela porta de fonte de MCP do projeto que o

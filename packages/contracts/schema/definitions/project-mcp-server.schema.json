@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/project-mcp-server.json",
+  "title": "ProjectMcpServer",
+  "description": "One server a project's own MCP file declares, with where it stands with this user (plan 13, B-24). Unlike a server of the store, `env` and `headers` carry their value literal — a project file is plain text already in the repository, never a secret of ours (D-11).",
+  "type": "object",
+  "required": [
+    "folderPath",
+    "name",
+    "state",
+    "digest",
+    "transport",
+    "command",
+    "args",
+    "url",
+    "env",
+    "headers"
+  ],
+  "properties": {
+    "folderPath": {
+      "type": "string",
+      "description": "The folder whose own MCP file declares this entry — not necessarily the folder a session opens in; an ancestor of it."
+    },
+    "name": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected", "changed"],
+      "description": "pending: never decided. approved: our decision matches the entry's current digest. rejected: our decision, holding regardless of the digest. changed: approved once, at a digest the entry no longer has."
+    },
+    "digest": {
+      "type": "string",
+      "description": "The entry's current digest — what a PUT of the approval route must carry back."
+    },
+    "transport": {
+      "type": "string",
+      "enum": ["stdio", "http", "sse"]
+    },
+    "command": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Set for `stdio`; `null` for `http`/`sse`."
+    },
+    "args": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string" }
+    },
+    "url": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Set for `http`/`sse`; `null` for `stdio`."
+    },
+    "env": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "./mcp-project-variable.schema.json" }
+    },
+    "headers": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "./mcp-project-variable.schema.json" }
+    }
+  }
+}

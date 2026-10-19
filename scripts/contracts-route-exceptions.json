@@ -98,6 +98,11 @@
       "reason": "void-returning handler (McpServersController#remove) — 204, no body"
     },
     {
+      "method": "DELETE",
+      "path": "/engines/:engine/project-mcp-approvals",
+      "reason": "void-returning handler (ProjectMcpApprovalsController#reject) — 204, no body"
+    },
+    {
       "method": "GET",
       "path": "/transcripts/:engine/:id/images/:blockId",
       "reason": "void-returning handler (TranscriptController#readImage) — streams image bytes straight to the response, no JSON body to schema"

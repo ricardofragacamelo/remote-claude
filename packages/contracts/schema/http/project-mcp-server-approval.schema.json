@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/project-mcp-server-approval.json",
+  "title": "ProjectMcpServerApproval",
+  "description": "`PUT /engines/:engine/project-mcp-approvals`: the entry just approved, at the digest the body carried (plan 13, B-24; D-11). `DELETE` of the same resource rejects an entry and answers `204` with no body — see `scripts/contracts-route-exceptions.json`.",
+  "x-kind": "http",
+  "x-type": "mcp.projectServerApproval",
+  "x-route": [{ "method": "PUT", "path": "/engines/:engine/project-mcp-approvals" }],
+  "$ref": "../definitions/project-mcp-server.schema.json"
+}

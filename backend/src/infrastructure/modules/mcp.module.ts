@@ -1,27 +1,38 @@
 import { Module } from '@nestjs/common';
 
 import { McpServersController } from '@adapter/inbound/http/engines/mcp-servers.controller';
+import { ProjectMcpApprovalsController } from '@adapter/inbound/http/engines/project-mcp-approvals.controller';
 import { DrizzleMcpServerRepository } from '@adapter/outbound/persistence/mcp/mcp-server.repository';
 import { MCP_SECRET_KEY_FILE } from '@adapter/outbound/persistence/mcp/mcp-server.repository';
+import { DrizzleMcpProjectApprovalRepository } from '@adapter/outbound/persistence/mcp/drizzle-mcp-project-approval.repository';
 import { SessionRegistryLiveMcpRevocation } from '@adapter/outbound/mcp/session-registry.live-mcp-revocation';
 import {
+  ApproveProjectMcpServerUseCase,
   ComposeSessionMcpServersUseCase,
   CreateMcpServerUseCase,
   DeleteMcpServerUseCase,
   LIVE_SESSION_MCP_REVOCATION,
   ListMcpServersUseCase,
+  ListProjectMcpServersUseCase,
+  MCP_PROJECT_APPROVAL_REPOSITORY,
   MCP_SERVER_REPOSITORY,
   McpEngineCapabilities,
   McpEngineDialects,
   PreviewMcpServerUseCase,
+  ProjectMcpServersSources,
+  RejectProjectMcpServerUseCase,
   SetMcpServerEnabledUseCase,
   UpdateMcpServerUseCase,
 } from '@application/mcp';
 import type {
   LiveSessionMcpRevocation,
+  McpProjectApprovalDependencies,
+  McpProjectApprovalRepository,
   McpServerDependencies,
   McpServerRepository,
 } from '@application/mcp';
+import { FOLDER_ACCESS } from '@application/agent-settings';
+import type { FolderAccess } from '@application/agent-settings';
 import {
   DisableMcpServerEverywhereUseCase,
   SESSION_BROADCASTER,
@@ -34,12 +45,16 @@ import type { Clock, IdGenerator } from '@domain/shared';
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { engineMcpProviders } from './engines';
+import { AgentSettingsModule } from './agent-settings.module';
 import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
 import { SessionRegistryModule } from './session-registry.module';
 
 /** What every MCP server use case is built with. */
 const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
+
+/** What every project MCP approval use case is built with (plan 13, B-24). */
+const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies');
 
 /**
  * The `mcp` module: the store of MCP servers, a capability of the core kept by engine (plan 13,
@@ -56,11 +71,12 @@ const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
  * See docs/architecture/backend/03-modules.md#mcp.
  */
 @Module({
-  imports: [AuditModule, AuthModule, SessionRegistryModule],
-  controllers: [McpServersController],
+  imports: [AgentSettingsModule, AuditModule, AuthModule, SessionRegistryModule],
+  controllers: [McpServersController, ProjectMcpApprovalsController],
   providers: [
     ...engineMcpProviders,
     { provide: MCP_SERVER_REPOSITORY, useClass: DrizzleMcpServerRepository },
+    { provide: MCP_PROJECT_APPROVAL_REPOSITORY, useClass: DrizzleMcpProjectApprovalRepository },
     {
       provide: MCP_SECRET_KEY_FILE,
       inject: [APP_CONFIG],
@@ -134,9 +150,60 @@ const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
     },
     {
       provide: ComposeSessionMcpServersUseCase,
-      inject: [MCP_SERVER_REPOSITORY, McpEngineCapabilities],
-      useFactory: (servers: McpServerRepository, capabilities: McpEngineCapabilities) =>
-        new ComposeSessionMcpServersUseCase(servers, capabilities),
+      inject: [
+        MCP_SERVER_REPOSITORY,
+        McpEngineCapabilities,
+        ProjectMcpServersSources,
+        MCP_PROJECT_APPROVAL_REPOSITORY,
+      ],
+      useFactory: (
+        servers: McpServerRepository,
+        capabilities: McpEngineCapabilities,
+        projectSources: ProjectMcpServersSources,
+        approvals: McpProjectApprovalRepository,
+      ) => new ComposeSessionMcpServersUseCase(servers, capabilities, projectSources, approvals),
+    },
+    {
+      provide: MCP_PROJECT_APPROVAL_DEPENDENCIES,
+      inject: [
+        McpEngineCapabilities,
+        FOLDER_ACCESS,
+        ProjectMcpServersSources,
+        MCP_PROJECT_APPROVAL_REPOSITORY,
+        RecordAuditEventUseCase,
+        CLOCK,
+      ],
+      useFactory: (
+        capabilities: McpEngineCapabilities,
+        folders: FolderAccess,
+        sources: ProjectMcpServersSources,
+        approvals: McpProjectApprovalRepository,
+        trail: RecordAuditEventUseCase,
+        clock: Clock,
+      ): McpProjectApprovalDependencies => ({
+        capabilities,
+        folders,
+        sources,
+        approvals,
+        trail,
+        clock,
+      }),
+    },
+    {
+      provide: ListProjectMcpServersUseCase,
+      inject: [MCP_PROJECT_APPROVAL_DEPENDENCIES],
+      useFactory: (deps: McpProjectApprovalDependencies) => new ListProjectMcpServersUseCase(deps),
+    },
+    {
+      provide: ApproveProjectMcpServerUseCase,
+      inject: [MCP_PROJECT_APPROVAL_DEPENDENCIES],
+      useFactory: (deps: McpProjectApprovalDependencies) =>
+        new ApproveProjectMcpServerUseCase(deps),
+    },
+    {
+      provide: RejectProjectMcpServerUseCase,
+      inject: [MCP_PROJECT_APPROVAL_DEPENDENCIES],
+      useFactory: (deps: McpProjectApprovalDependencies) => new RejectProjectMcpServerUseCase(deps),
     },
   ],
   exports: [
@@ -150,6 +217,9 @@ const MCP_SERVER_DEPENDENCIES = Symbol('McpServerDependencies');
     SetMcpServerEnabledUseCase,
     DeleteMcpServerUseCase,
     ComposeSessionMcpServersUseCase,
+    ListProjectMcpServersUseCase,
+    ApproveProjectMcpServerUseCase,
+    RejectProjectMcpServerUseCase,
   ],
 })
 export class McpModule {}

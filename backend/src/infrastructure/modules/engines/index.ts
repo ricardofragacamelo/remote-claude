@@ -2,7 +2,12 @@ import type { Provider } from '@nestjs/common';
 
 import { ToolClassifiers } from '@application/engine';
 import type { EngineToolClassifier } from '@application/engine';
-import { McpEngineCapabilities, McpEngineDialects } from '@application/mcp';
+import {
+  McpEngineCapabilities,
+  McpEngineDialects,
+  ProjectMcpServersSources,
+} from '@application/mcp';
+import type { ProjectMcpServersSource } from '@application/mcp';
 import { RuleDialects } from '@application/permission';
 import type { RuleDialect } from '@application/permission';
 import { EngineRegistry } from '@application/session';
@@ -22,12 +27,14 @@ import { ClaudeSettingsModule } from './claude-settings.module';
 import { enabledEngines } from './engine-selection';
 import {
   CLAUDE_MCP_DIALECT,
+  CLAUDE_PROJECT_MCP_SOURCE,
   CLAUDE_RULE_DIALECT,
   CLAUDE_SECURITY_CONTRACT,
   CLAUDE_SESSION_ENGINE,
   CLAUDE_TOOL_CLASSIFIER,
   CLAUDE_TRANSCRIPT_STORE,
   claudeMcpDialectProviders,
+  claudeProjectMcpSourceProviders,
   claudeRuleDialectProviders,
   claudeSessionProviders,
   claudeToolClassifierProviders,
@@ -188,6 +195,7 @@ const MCP_CAPABLE_ENGINES: readonly { readonly engine: EngineId; readonly capabl
  */
 export const engineMcpProviders: readonly Provider[] = [
   ...claudeMcpDialectProviders,
+  ...claudeProjectMcpSourceProviders,
   {
     provide: McpEngineCapabilities,
     inject: [APP_CONFIG],
@@ -207,6 +215,19 @@ export const engineMcpProviders: readonly Provider[] = [
         config.engines,
       );
       return new McpEngineDialects(enabled.map(({ dialect }) => dialect));
+    },
+  },
+  {
+    provide: ProjectMcpServersSources,
+    inject: [APP_CONFIG, CLAUDE_PROJECT_MCP_SOURCE],
+    useFactory: (config: AppConfig, claudeSource: ProjectMcpServersSource) => {
+      const { enabled } = enabledEngines(
+        [{ engine: EngineId.create('claude'), source: claudeSource }],
+        config.engines,
+      );
+      return new ProjectMcpServersSources(
+        enabled.map(({ engine, source }) => ({ engine: engine.value, source })),
+      );
     },
   },
 ];

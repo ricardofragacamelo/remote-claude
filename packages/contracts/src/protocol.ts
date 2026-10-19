@@ -269,6 +269,12 @@ export interface ListedTranscript {
   readonly writtenAgoSeconds: number;
 }
 
+/** One env var or header of a project's own MCP file (plan 13, B-24): literal, as the file has it — `${VAR}` included; never resolved, never a secret of ours (D-11). */
+export interface McpProjectVariable {
+  readonly name: string;
+  readonly value: string;
+}
+
 /** One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02). */
 export interface McpServer {
   readonly id: string;
@@ -355,6 +361,25 @@ export interface PermissionRule {
   readonly status: 'active' | 'expired' | 'revoked' | 'disabled';
   readonly revokedAt: string | null;
   readonly disabled: PermissionRuleDisabled | null;
+}
+
+/** One server a project's own MCP file declares, with where it stands with this user (plan 13, B-24). Unlike a server of the store, `env` and `headers` carry their value literal — a project file is plain text already in the repository, never a secret of ours (D-11). */
+export interface ProjectMcpServer {
+  /** The folder whose own MCP file declares this entry — not necessarily the folder a session opens in; an ancestor of it. */
+  readonly folderPath: string;
+  readonly name: string;
+  /** pending: never decided. approved: our decision matches the entry's current digest. rejected: our decision, holding regardless of the digest. changed: approved once, at a digest the entry no longer has. */
+  readonly state: 'pending' | 'approved' | 'rejected' | 'changed';
+  /** The entry's current digest — what a PUT of the approval route must carry back. */
+  readonly digest: string;
+  readonly transport: 'stdio' | 'http' | 'sse';
+  /** Set for `stdio`; `null` for `http`/`sse`. */
+  readonly command: string | null;
+  readonly args: readonly string[];
+  /** Set for `http`/`sse`; `null` for `stdio`. */
+  readonly url: string | null;
+  readonly env: readonly McpProjectVariable[];
+  readonly headers: readonly McpProjectVariable[];
 }
 
 /** The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the engine's own joined string. */
@@ -1604,6 +1629,17 @@ export interface PermissionStatePayload {
   readonly interaction?: Interaction;
 }
 
+export interface ProjectMcpServerListPayloadErrorsItem {
+  readonly folderPath: string;
+  readonly reason: 'malformed' | 'tooLarge' | 'linkEscapesRoot';
+}
+
+/** `GET /engines/:engine/project-mcp-approvals`: every entry the engine's reader found climbing from the folder asked, and any file site along the way it could not read (plan 13, B-24; D-11). */
+export interface ProjectMcpServerListPayload {
+  readonly servers: readonly ProjectMcpServer[];
+  readonly errors: readonly ProjectMcpServerListPayloadErrorsItem[];
+}
+
 export interface RecentFoldersPayloadFoldersItem {
   readonly path: string;
   /** The label of the root it lives under now, or `null` once it lives under none. */
@@ -1877,6 +1913,13 @@ export const MCP_SERVER_LIMITS = {
   headerNames: { maxItems: 64 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link ProjectMcpServer}. */
+export const PROJECT_MCP_SERVER_LIMITS = {
+  args: { maxItems: 64 },
+  env: { maxItems: 64 },
+  headers: { maxItems: 64 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link QuestionAnswer}. */
 export const QUESTION_ANSWER_LIMITS = {
   questionId: { maxLength: 8 },
@@ -2079,6 +2122,12 @@ export const PERMISSION_STATE_PAYLOAD_ANSWERS_ITEM_LIMITS = {
 /** The bounds the schema gives the fields of {@link PermissionStatePayload}. */
 export const PERMISSION_STATE_PAYLOAD_LIMITS = {
   answers: { maxItems: 4 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ProjectMcpServerListPayload}. */
+export const PROJECT_MCP_SERVER_LIST_PAYLOAD_LIMITS = {
+  servers: { maxItems: 10000 },
+  errors: { maxItems: 10000 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link RecentFoldersPayload}. */
@@ -2456,6 +2505,22 @@ export function isListedTranscript(value: unknown): value is ListedTranscript {
 }
 
 /**
+ * Whether `value` carries every required field of {@link McpProjectVariable}. Unknown fields are accepted.
+ */
+export function isMcpProjectVariable(value: unknown): value is McpProjectVariable {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    typeof record['value'] === 'string',
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link McpServer}. Unknown fields are accepted.
  */
 export function isMcpServer(value: unknown): value is McpServer {
@@ -2583,6 +2648,33 @@ export function isPermissionRule(value: unknown): value is PermissionRule {
     typeof record['status'] === 'string',
     nullOr(record['revokedAt'], typeof record['revokedAt'] === 'string'),
     nullOr(record['disabled'], isPermissionRuleDisabled(record['disabled'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectMcpServer}. Unknown fields are accepted.
+ */
+export function isProjectMcpServer(value: unknown): value is ProjectMcpServer {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['folderPath'] === 'string',
+    typeof record['name'] === 'string',
+    typeof record['state'] === 'string',
+    typeof record['digest'] === 'string',
+    typeof record['transport'] === 'string',
+    nullOr(record['command'], typeof record['command'] === 'string'),
+    Array.isArray(record['args']),
+    nullOr(record['url'], typeof record['url'] === 'string'),
+    Array.isArray(record['env']),
+    Array.isArray(record['headers']),
+    withinMaxItems(record['args'], 64),
+    withinMaxItems(record['env'], 64),
+    withinMaxItems(record['headers'], 64),
   ].every(Boolean);
 }
 
@@ -4781,6 +4873,40 @@ export function isPermissionStatePayload(value: unknown): value is PermissionSta
 }
 
 /**
+ * Whether `value` carries every required field of {@link ProjectMcpServerListPayloadErrorsItem}. Unknown fields are accepted.
+ */
+export function isProjectMcpServerListPayloadErrorsItem(value: unknown): value is ProjectMcpServerListPayloadErrorsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['folderPath'] === 'string',
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectMcpServerListPayload}. Unknown fields are accepted.
+ */
+export function isProjectMcpServerListPayload(value: unknown): value is ProjectMcpServerListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['servers']),
+    Array.isArray(record['errors']),
+    withinMaxItems(record['servers'], 10000),
+    withinMaxItems(record['errors'], 10000),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link RecentFoldersPayloadFoldersItem}. Unknown fields are accepted.
  */
 export function isRecentFoldersPayloadFoldersItem(value: unknown): value is RecentFoldersPayloadFoldersItem {
@@ -5229,6 +5355,12 @@ export type PermissionRulePayload = PermissionRule;
 
 /** Whether `value` is a {@link PermissionRulePayload}. */
 export const isPermissionRulePayload = isPermissionRule;
+
+/** `PUT /engines/:engine/project-mcp-approvals`: the entry just approved, at the digest the body carried (plan 13, B-24; D-11). `DELETE` of the same resource rejects an entry and answers `204` with no body — see `scripts/contracts-route-exceptions.json`. */
+export type ProjectMcpServerApprovalPayload = ProjectMcpServer;
+
+/** Whether `value` is a {@link ProjectMcpServerApprovalPayload}. */
+export const isProjectMcpServerApprovalPayload = isProjectMcpServer;
 
 /** A command was accepted — not that it finished. The outcome arrives as an event; waiting on this ack for a result reintroduces request/response where the protocol chose a stream. */
 export interface CommandAcceptedFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {

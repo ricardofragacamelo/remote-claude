@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/project-mcp-server-list.json",
+  "title": "ProjectMcpServerList",
+  "description": "`GET /engines/:engine/project-mcp-approvals`: every entry the engine's reader found climbing from the folder asked, and any file site along the way it could not read (plan 13, B-24; D-11).",
+  "x-kind": "http",
+  "x-type": "mcp.projectServerList",
+  "x-route": [{ "method": "GET", "path": "/engines/:engine/project-mcp-approvals" }],
+  "type": "object",
+  "required": ["servers", "errors"],
+  "properties": {
+    "servers": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": { "$ref": "../definitions/project-mcp-server.schema.json" }
+    },
+    "errors": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["folderPath", "reason"],
+        "properties": {
+          "folderPath": { "type": "string" },
+          "reason": {
+            "type": "string",
+            "enum": ["malformed", "tooLarge", "linkEscapesRoot"]
+          }
+        }
+      }
+    }
+  }
+}

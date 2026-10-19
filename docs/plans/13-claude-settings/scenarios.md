@@ -158,17 +158,17 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-100 | os servidores do `.mcp.json` aparecem com estado pendente, aprovado, rejeitado ou alterado | eq | integração | — | B-24 | ⬜ |
-| S-101 | aprovar grava (pasta, nome, digest), e a próxima sessão tem o servidor | est | integração | — | B-24 | ⬜ |
-| S-102 | o `.mcp.json` mudou entre mostrar e aprovar | conc | integração | `MCP_APPROVAL_STALE` | B-24 | ⬜ |
-| S-103 | entrada alterada depois de aprovada volta a "alterado" e não entra em sessão até nova aprovação | est | integração | — | B-24 | ⬜ |
-| S-104 | a aprovação do próprio motor (no Claude, `enabledMcpjsonServers`, `enableAllProjectMcpServers`, ignoradas pelo adapter) não conta | err | unit | — | B-24 | ⬜ |
-| S-105 | `${VAR}` aparece literal na aprovação, marcado; a expansão acontece no ambiente já sem os segredos do backend | err | integração | — | B-24 | ⬜ |
-| S-106 | `.mcp.json` malformado, acima do teto, ou symlink que sai da raiz → estado explicado, nada aprovável | err | integração | — | B-24 | ⬜ |
-| S-107 | aprovar de novo o mesmo digest não grava segundo evento | idem | integração | — | B-24 | ⬜ |
-| S-108 | aprovar e rejeitar entram na trilha, com o comando por extenso | eq | integração | — | B-24 | ⬜ |
-| S-109 | a aprovação de um usuário não vale para outro | err | unit | — | B-24 | ⬜ |
-| S-110 | pasta fora da allowlist ou de outra pessoa | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | B-24 | ⬜ |
+| S-100 | os servidores do `.mcp.json` aparecem com estado pendente, aprovado, rejeitado ou alterado | eq | integração | — | B-24 | ✅ |
+| S-101 | aprovar grava (pasta, nome, digest), e a próxima sessão tem o servidor | est | integração | — | B-24 | ✅ |
+| S-102 | o `.mcp.json` mudou entre mostrar e aprovar | conc | integração | `MCP_APPROVAL_STALE` | B-24 | ✅ |
+| S-103 | entrada alterada depois de aprovada volta a "alterado" e não entra em sessão até nova aprovação | est | integração | — | B-24 | ✅ |
+| S-104 | a aprovação do próprio motor (no Claude, `enabledMcpjsonServers`, `enableAllProjectMcpServers`, ignoradas pelo adapter) não conta | err | unit | — | B-24 | ✅ |
+| S-105 | `${VAR}` aparece literal na aprovação, marcado; a expansão acontece no ambiente já sem os segredos do backend | err | integração | — | B-24 | ✅ |
+| S-106 | `.mcp.json` malformado, acima do teto, ou symlink que sai da raiz → estado explicado, nada aprovável | err | integração | — | B-24 | ✅ |
+| S-107 | aprovar de novo o mesmo digest não grava segundo evento | idem | integração | — | B-24 | ✅ |
+| S-108 | aprovar e rejeitar entram na trilha, com o comando por extenso | eq | integração | — | B-24 | ✅ |
+| S-109 | a aprovação de um usuário não vale para outro | err | unit | — | B-24 | ✅ |
+| S-110 | pasta fora da allowlist ou de outra pessoa | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | B-24 | ✅ |
 
 ## Testar conexão de servidor — B-25
 

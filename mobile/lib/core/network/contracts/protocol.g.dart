@@ -1328,6 +1328,34 @@ class ListedTranscript {
   }
 }
 
+/// One env var or header of a project's own MCP file (plan 13, B-24): literal, as the file has it — `${VAR}` included; never resolved, never a secret of ours (D-11).
+class McpProjectVariable {
+  const McpProjectVariable({
+    required this.name,
+    required this.value,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory McpProjectVariable.fromJson(Map<String, Object?> json) => McpProjectVariable(
+        name: json['name']! as String,
+        value: json['value']! as String,
+      );
+
+  final String name;
+
+  final String value;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'value': value,
+    };
+
+    return json;
+  }
+}
+
 /// One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02).
 class McpServer {
   const McpServer({
@@ -1691,6 +1719,96 @@ class PermissionRule {
 
     return json;
   }
+}
+
+/// One server a project's own MCP file declares, with where it stands with this user (plan 13, B-24). Unlike a server of the store, `env` and `headers` carry their value literal — a project file is plain text already in the repository, never a secret of ours (D-11).
+class ProjectMcpServer {
+  const ProjectMcpServer({
+    required this.folderPath,
+    required this.name,
+    required this.state,
+    required this.digest,
+    required this.transport,
+    required this.command,
+    required this.args,
+    required this.url,
+    required this.env,
+    required this.headers,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectMcpServer.fromJson(Map<String, Object?> json) => ProjectMcpServer(
+        folderPath: json['folderPath']! as String,
+        name: json['name']! as String,
+        state: json['state']! as String,
+        digest: json['digest']! as String,
+        transport: json['transport']! as String,
+        command: json['command'] as String?,
+        args: (json['args']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        url: json['url'] as String?,
+        env: (json['env']! as List<Object?>).map((item) => McpProjectVariable.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        headers: (json['headers']! as List<Object?>).map((item) => McpProjectVariable.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// The folder whose own MCP file declares this entry — not necessarily the folder a session opens in; an ancestor of it.
+  final String folderPath;
+
+  final String name;
+
+  /// pending: never decided. approved: our decision matches the entry's current digest. rejected: our decision, holding regardless of the digest. changed: approved once, at a digest the entry no longer has.
+  final String state;
+
+  /// The entry's current digest — what a PUT of the approval route must carry back.
+  final String digest;
+
+  final String transport;
+
+  /// Set for `stdio`; `null` for `http`/`sse`.
+  final String? command;
+
+  final List<String> args;
+
+  /// Set for `http`/`sse`; `null` for `stdio`.
+  final String? url;
+
+  final List<McpProjectVariable> env;
+
+  final List<McpProjectVariable> headers;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'folderPath': folderPath,
+      'name': name,
+      'state': state,
+      'digest': digest,
+      'transport': transport,
+      'command': command,
+      'args': args,
+      'url': url,
+      'env': env.map((item) => item.toJson()).toList(growable: false),
+      'headers': headers.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ProjectMcpServer].
+bool projectMcpServerLimitsHold(Map<String, Object?> json) {
+  if (json['args'] is List<Object?> && (json['args']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  if (json['env'] is List<Object?> && (json['env']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  if (json['headers'] is List<Object?> && (json['headers']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  return true;
 }
 
 /// The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the engine's own joined string.
@@ -7362,6 +7480,74 @@ bool permissionStatePayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+class ProjectMcpServerListPayloadErrorsItem {
+  const ProjectMcpServerListPayloadErrorsItem({
+    required this.folderPath,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectMcpServerListPayloadErrorsItem.fromJson(Map<String, Object?> json) => ProjectMcpServerListPayloadErrorsItem(
+        folderPath: json['folderPath']! as String,
+        reason: json['reason']! as String,
+      );
+
+  final String folderPath;
+
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'folderPath': folderPath,
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /engines/:engine/project-mcp-approvals`: every entry the engine's reader found climbing from the folder asked, and any file site along the way it could not read (plan 13, B-24; D-11).
+class ProjectMcpServerListPayload {
+  const ProjectMcpServerListPayload({
+    required this.servers,
+    required this.errors,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectMcpServerListPayload.fromJson(Map<String, Object?> json) => ProjectMcpServerListPayload(
+        servers: (json['servers']! as List<Object?>).map((item) => ProjectMcpServer.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        errors: (json['errors']! as List<Object?>).map((item) => ProjectMcpServerListPayloadErrorsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<ProjectMcpServer> servers;
+
+  final List<ProjectMcpServerListPayloadErrorsItem> errors;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'servers': servers.map((item) => item.toJson()).toList(growable: false),
+      'errors': errors.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ProjectMcpServerListPayload].
+bool projectMcpServerListPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['servers'] is List<Object?> && (json['servers']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['errors'] is List<Object?> && (json['errors']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
 class RecentFoldersPayloadFoldersItem {
   const RecentFoldersPayloadFoldersItem({
     required this.path,
@@ -8381,3 +8567,6 @@ typedef OpenFolderEntryPayload = OpenFolderEntry;
 
 /// `GET /permission-rules/:ruleId`, `POST /permission-rules` and `DELETE /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48).
 typedef PermissionRulePayload = PermissionRule;
+
+/// `PUT /engines/:engine/project-mcp-approvals`: the entry just approved, at the digest the body carried (plan 13, B-24; D-11). `DELETE` of the same resource rejects an entry and answers `204` with no body — see `scripts/contracts-route-exceptions.json`.
+typedef ProjectMcpServerApprovalPayload = ProjectMcpServer;

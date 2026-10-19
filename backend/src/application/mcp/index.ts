@@ -37,3 +37,32 @@ export type {
 
 export { LIVE_SESSION_MCP_REVOCATION } from './ports/live-session-mcp-revocation.port';
 export type { LiveSessionMcpRevocation } from './ports/live-session-mcp-revocation.port';
+
+export type {
+  ProjectMcpClimbRequest,
+  ProjectMcpFileError,
+  ProjectMcpFileRead,
+  ProjectMcpServersSource,
+} from './ports/project-mcp-servers.source';
+
+export { ProjectMcpServersSources } from './project-mcp-servers-sources';
+export type { EngineProjectMcpServersSource } from './project-mcp-servers-sources';
+
+export { MCP_PROJECT_APPROVAL_REPOSITORY } from './ports/mcp-project-approval-repository.port';
+export type {
+  McpProjectApprovalRepository,
+  McpProjectApprovalWrite,
+  StoredMcpProjectApproval,
+} from './ports/mcp-project-approval-repository.port';
+
+export {
+  ApproveProjectMcpServerUseCase,
+  ListProjectMcpServersUseCase,
+  RejectProjectMcpServerUseCase,
+} from './project-mcp-approval.use-cases';
+export type {
+  McpProjectApprovalDependencies,
+  ProjectMcpFileIssue,
+  ProjectMcpListResult,
+  ProjectMcpServerView,
+} from './project-mcp-approval.use-cases';

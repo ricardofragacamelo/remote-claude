@@ -18,6 +18,7 @@ import { CLAUDE_ENGINE } from '@adapter/outbound/engines/claude/claude-engine';
 import { PermissionBridge } from '@adapter/outbound/engines/claude/permission-bridge';
 import { SESSION_LIMITS } from '@adapter/outbound/engines/claude/session-limits';
 import { claudeMcpEngineDialect } from '@adapter/outbound/engines/claude/mcp-engine-dialect';
+import { ClaudeProjectMcpFileReader } from '@adapter/outbound/engines/claude/project-mcp-file.reader';
 import { claudeRuleDialect } from '@adapter/outbound/engines/claude/rule-dialect';
 import { classifyTool } from '@adapter/outbound/engines/claude/tool-classifier';
 import { AgentSdkTranscriptAdapter } from '@adapter/outbound/engines/claude/transcript.adapter';
@@ -113,4 +114,12 @@ export const CLAUDE_MCP_DIALECT = Symbol('ClaudeMcpDialect');
 /** What the engine `claude` refuses of an MCP server name, and reserves of an env var — pure. */
 export const claudeMcpDialectProviders: readonly Provider[] = [
   { provide: CLAUDE_MCP_DIALECT, useValue: claudeMcpEngineDialect },
+];
+
+/** The token of the project MCP reader of the engine `claude` (`.mcp.json`), for its registry (B-24). */
+export const CLAUDE_PROJECT_MCP_SOURCE = Symbol('ClaudeProjectMcpSource');
+
+/** How the engine `claude` reads its own project MCP file — stateless, so one instance is enough. */
+export const claudeProjectMcpSourceProviders: readonly Provider[] = [
+  { provide: CLAUDE_PROJECT_MCP_SOURCE, useClass: ClaudeProjectMcpFileReader },
 ];
