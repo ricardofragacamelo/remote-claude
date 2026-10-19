@@ -10,14 +10,14 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F2 — parada em 2026-10-09 antes da primeira task, à espera do [plano 28](../28-agent-neutral-core/README.md) e do [plano 26](../26-mobile-conversation-parity/README.md) (F0 e F1 concluídas)
-**Última atualização:** 2026-10-10
-**Bloqueios:** a F2 só começa com o [plano 26 — Paridade da conversa no app](../26-mobile-conversation-parity/README.md) concluído ([D-31](decisions.md#decididas-durante-a-execução-b-01-2026-10-09)) **e** com o [plano 28 — Núcleo neutro de agente](../28-agent-neutral-core/README.md) concluído ([D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28)), decisões do usuário. A ordem é 26 · F1 → 28 → 26 · F2…F7 → 13 · F2…F4; a F0 e a F1 daqui são movidas pela [28 · F6](../28-agent-neutral-core/F6-engine-extensions.md). Antes: nenhum. A B-01 mediu o que as decisões condicionais esperavam ([descoberta §11](../../discovery/01-descoberta-claude-agent-sdk.md#11--quinta-rodada-de-spikes-2026-10-09)), e a ADR-018 registra o resultado
+**Fase corrente:** F2 — em andamento: B-18 (domínio) e B-19 (store e segredos) concluídas e com `pnpm verify` dos portões 1-5 verde; B-20…B-30 e B-47 (12 das 14 tasks) ainda não começadas
+**Última atualização:** 2026-10-19
+**Bloqueios:** nenhum — o [plano 26](../26-mobile-conversation-parity/README.md) e o [plano 28](../28-agent-neutral-core/README.md) já estão concluídos (D-31, D-33)
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
-F2 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F2 ███░░░░░░░░░░░░░░░░░  14%   🔄 em andamento
 F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
@@ -32,10 +32,10 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 |---|---|---|---|
 | [F0](F0-contract.md) | B-01…B-09 | 9/9 | ✅ |
 | [F1](F1-models-and-modes.md) | B-10…B-17 | 8/8 | ✅ |
-| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 0/14 | 🔲 |
+| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 2/14 | 🔄 |
 | [F3](F3-project-config.md) | B-31…B-40 | 0/10 | 🔲 |
 | [F4](F4-e2e.md) | B-41…B-46 | 0/6 | 🔲 |
-| **Total** | **B-01…B-47** | **17/47** | 🔄 |
+| **Total** | **B-01…B-47** | **19/47** | 🔄 |
 
 ---
 
@@ -43,7 +43,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 215 | 152 | 0 | 63 | 0 |
+| [Matriz](scenarios.md) | 215 | 135 | 0 | 80 | 0 |
 
 ---
 
@@ -73,6 +73,13 @@ Um registro por **ciclo**, conforme o
 | 6 | 2026-10-09 | F0 | 7 · cobertura | funções de `claude-config.schema.ts` em 88,9 % (as callbacks do schema não rodam sem migração pelo Drizzle) | teste unitário do schema que as exerce (bytea, FK em cascata, `NULLS NOT DISTINCT`) — 100 % | reinício do portão 1 |
 | 7 | 2026-10-09 | F0 | — | — | — | ✅ `pnpm verify` saiu com 0 — F0 concluída |
 | 8 | 2026-10-09 | F1 | 7 · cobertura | o `initialization.json` gravado levava o diretório da máquina (`user_output_styles_dir`), e a S-89 dos fixtures recusa; e, medido à parte, arquivos novos abaixo de 90 % por arquivo (controller sem `GET /claude/models` sem pasta, `FolderAccess` sem usuário sem raiz, a consulta efêmera sem o hook que nega, o repositório com um `?? ''` inalcançável, e no web o retry, o refresh, salvar e limpar a pasta, o esforço recusado) | o gravador passa o `initialization` pelo `anonymised()` (e `--normalise` no gravado); testes de integração e unitários para cada caminho; o ramo inalcançável sai do código | reinício do portão 1 |
+| 9 | 2026-10-19 | F2 (B-18, B-19) | 1 · formatação | nove arquivos novos fora do Prettier | `prettier --write` nos nove | reinício do portão 1 |
+| 10 | 2026-10-19 | F2 (B-18, B-19) | 1 · formatação | `mobile.mjs format:check` reportou 617 arquivos Dart "a formatar" | causa real: `mobile/` nunca teve `flutter pub get` rodado neste worktree (`.dart_tool/` ausente), e sem ele o `analysis_options.yaml` não resolve `flutter_lints`; `--output=none --set-exit-if-changed` não escreveu nada no disco (confirmado por `git status`). `flutter pub get` resolveu; `dart format --set-exit-if-changed` confirmou 0 arquivos a mudar depois | reinício do portão 1 |
+| 11 | 2026-10-19 | F2 (B-18, B-19) | 6 · unit | `backend/test/unit/bootstrap.spec.ts` ("points at the repository root by default") falha porque este worktree vive em `remote-claude/.claude/worktrees/agent-…/`, não em `remote-claude/` diretamente — o cálculo de dois níveis acima de `src/` não bate com `remote-claude/.env`. **Confirmado pré-existente**: falha idêntica numa árvore limpa (`git stash` do trabalho desta sessão, teste rodado, `git stash apply` de volta) | nenhuma — é do ambiente (profundidade do worktree), não do código desta entrega; não alterado | gate 6 seguiu vermelho só por esta causa, isolada e documentada — ver D-39 |
+| 12 | 2026-10-19 | F2 (B-18, B-19) | 6 · unit (em cascata) | ~63 arquivos de teste de integração falhavam ao subir o `AppModule` inteiro: `test-app.ts` (o fixture de ambiente que toda suíte de integração usa) não tinha `RC_MCP_SECRET_KEY_FILE`, exigida pelo `McpModule` novo — `environmentSchema.parse()` rejeitava a configuração inteira no boot | `RC_MCP_SECRET_KEY_FILE` acrescentada a `testEnvironment()` no mesmo padrão de `RC_PUSH_CREDENTIALS_FILE` (D-39) | de 63 arquivos falhos para 1 (teste de carga já conhecido, `push.flow.spec.ts` S-47, confirmado passando isolado) |
+| 13 | 2026-10-19 | F2 (B-18, B-19) | 5 · duplicação | jscpd (limiar 0 %) achou 7 blocos repetidos: os campos de identidade entre `McpServerConfig`/`StoredMcpServer`/os dois tipos de input, e a forma do par cifra/decifra e da transação de escrita no repositório | `McpServerIdentity` extraído e compartilhado (D-37); `encryptedRowOf`/`decryptedFieldOf` e `writeTransaction` extraídos (D-38) | reinício do portão 1 — 0 clones |
+| 14 | 2026-10-19 | F2 (B-18, B-19) | 7 · cobertura (medida por arquivo, fora do `pnpm verify` de ponta a ponta) | `mcp-server.repository.ts` em 0 % (sem teste de integração); `mcp-server-config.entity.ts` em 89,4 % de branch; `mcp-server-description.ts` em 71,4 % de branch; `mcp-server.use-cases.ts` em 70 % de branch — todos abaixo de 90 % | suíte de integração do repositório contra PostgreSQL real (14 cenários); casos de borda do domínio (transporte/escopo inválidos, tetos, URL/comando sem valor); as duas ramificações defensivas do repositório viraram funções puras testáveis sem banco (D-38); cenários de ramo não exercido no caso de uso (servidor remoto, erro que não é conflito de nome, `reveal()` perdendo a corrida) | 100 % de branch nos arquivos de `domain/mcp` e `application/mcp`; `mcp-server.repository.ts` acima de 90 % nas quatro dimensões |
+| 15 | 2026-10-19 | F2 (B-18, B-19) | — | — | — | ✅ portões 1-5 do `pnpm verify` saem com 0; o portão 6 pára só no S-11 pré-existente (histórico #11), confirmado alheio a esta entrega |
 
 ---
 
@@ -82,6 +89,13 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-10-19 | [D-34](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): adicionar/ligar gravam o efeito primeiro e revertem se a trilha falhar; remover/desligar gravam o efeito e ficam, mesmo que a trilha falhe | a mesma assimetria apertar-já/afrouxar-depois da D-10 aplicada à trilha — o que amplia reverte, o que restringe fica | `mcp-server.use-cases.ts`; S-79 |
+| 2026-10-19 | [D-35](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): `DELETE /engines/:engine/mcp-servers/:id` responde `204` sem corpo | não há nada coerente para devolver depois de uma remoção de verdade, ao contrário de uma regra revogada | contrato `mcp-server.schema.json`, `scripts/contracts-route-exceptions.json` |
+| 2026-10-19 | [D-36](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): B-20 não implementada — o `claudeEnvironment` existente (plano 12) já cobre o requisito de segurança de S-81 por construção, mas mover para `shared/` sem um segundo consumidor pronto é risco desproporcional nesta entrega | tempo e risco de um refactor sem o segundo consumidor (plano 12) para provar a extração | B-20 continua 🔲 |
+| 2026-10-19 | [D-37](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): `McpServerIdentity` extraído como tipo compartilhado entre domínio e aplicação | o portão de duplicação (0 %) achou os mesmos campos repetidos entre quatro interfaces | `domain/mcp`, `application/mcp/ports`, `application/mcp/commands` |
+| 2026-10-19 | [D-38](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): `encryptedRowOf`/`decryptedFieldOf` viraram funções puras exportadas; `insert`/`update` usam `RETURNING` do Drizzle em vez de uma segunda leitura | duas ramificações defensivas eram inalcançáveis por construção nos testes de integração — o mesmo precedente do ciclo 8 ("o ramo inalcançável sai do código") | `mcp-server.repository.ts`; cobertura de branch de 77 % para 100 % |
+| 2026-10-19 | [D-39](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): `RC_MCP_SECRET_KEY_FILE` acrescentada ao fixture `testEnvironment()` da suíte de integração | ausente, toda suíte que sobe o `AppModule` falhava no boot — não um problema do código novo, mas do fixture não estendido junto | `test-app.ts`; de 63 arquivos de integração falhos para 1 |
+| 2026-10-19 | [D-40](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): S-75 (argumento com forma de segredo redigido, tela avisando) não implementada nesta entrega | a parte de UI pertence à B-28, que não nasceu ainda; a heurística de forma de valor não existe no `redact.ts` atual | S-75 continua ⬜, para quando a B-28 for construída |
 | 2026-10-10 | [D-33](decisions.md#d-33--ajuste-às-diretivas-do-plano-28): a F2…F4 esperam o [plano 28](../28-agent-neutral-core/README.md) e nascem na estrutura dele — MCP no núcleo, por motor (capacidade `mcp`, `/engines/:engine/mcp-servers…`, kinds `mcp.*`), plugins e configuração de projeto na extensão `engines/claude/` (`/engines/claude/*`, `claude.plugin*`, `engines.claude.*`), a gramática `mcp__srv__tool` no `RuleDialect`, a tool MCP pelo `kind`, `AGENT_*` no lugar de `CLAUDE_*`; a D-03 fica revista em parte pela D-06 do 28 | pedido do usuário: ajustar os planos não executados às diretivas de isolamento, de regras e de canonicidade do plano 28, na ordem que ele decidiu em 2026-10-10 | README (objetivo, Depende de, escopo, Não entra, árvore), F2 (Depende de; B-18…B-30, B-47), F3 (Depende de; B-31, B-34, B-35, B-37, B-39, B-40), F4 (Depende de; B-41…B-43, B-45, B-46), os critérios da F2, F3 e F4 com o `neutral:check`; S-64, S-66, S-79, S-88, S-91, S-93, S-104, S-114, S-116, S-117, S-119, S-122, S-141, S-195, S-215. 2026-10-10 (revisão dos gaps do 28): kinds da extensão `engine.plugin*` e `engine.skillSourceToggled` com o motor no payload (28 · D-10); regra MCP canônica `mcp(srv:tool)` casada no núcleo, a revogação da D-12 sem o dialeto (28 · D-11, D-18); rotas novas com tipo em `packages/contracts/schema/http/` (28 · D-09) — README (Depende de, escopo, árvore, R-07), D-33, F2 (cabeçalho, B-18, B-26, B-27, B-47), F3 (cabeçalho, B-34), S-64, S-117, S-119, S-127, S-164, S-209 |
 | 2026-10-09 | [D-23](decisions.md#d-23--modo-próprio-de-subagent-volta-a-perguntar): o hook `PreToolUse` da trilha responde `ask` quando a chamada roda num modo mais largo que o da sessão | a B-01 mediu o subagent de projeto com `permissionMode: acceptEdits` escrevendo sem o `canUseTool`; com o `ask`, a escrita volta a perguntar | `session-runner.ts`, `domain/session/services/mode-widening.ts`, ADR-018, backend/04; S-198 deixa de ser risco aberto |
 | 2026-10-09 | [D-24](decisions.md#d-24--shell-inline-desligado-pela-camada-de-flag): o shell inline é desligado pela camada de flag (`settings`), não por `managedSettings` | medido: `managedSettings` não segura o bloco `!`; a flag segura as três origens | B-08 (a allowlist do montador ganha `disableSkillShellExecution`, `managedSettings` vira proibido), B-35, ADR-011 (emenda) |
@@ -104,6 +118,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 
 | Data | O que saiu | Por quê | Para onde foi |
 |---|---|---|---|
+| 2026-10-19 | Desta execução da F2: B-20…B-30 e B-47 (12 das 14 tasks) — ambiente do subprocesso extraído para `shared/`, composição por sessão com `setMcpServers()`, status vivo e os dois comandos de sessão, a assimetria de sessões vivas, a aprovação do `.mcp.json`, testar conexão, a prova de que a tool MCP passa pelo `canUseTool` existente, plugins locais e de marketplace, as duas telas web, e ajuda/i18n/acessibilidade | o tamanho de uma fase inteira (14 tasks, ~150 cenários, backend+web+SDK+contrato WS) excede o que uma sessão consegue entregar com o rigor que o protocolo exige (matriz de cenários, três níveis de teste, 90 % por arquivo); B-18 e B-19 são a base de segurança mais crítica (R-01, R-02) e saem completas e testadas em vez de 14 tasks pela metade | ficam no `F2-mcp-servers.md`, com as tasks ainda 🔲; a próxima sessão continua de B-20 |
 | 2026-10-09 | Da B-46 (e do S-214), conferir na paridade do plano 26 a mensagem que o CLI acrescenta à skill de usuário e a imagem no resultado da tool MCP. As fixtures continuam aqui | são perdas do backend, que só o plano da [discovery 09](../../discovery/09-perdas-do-backend-na-conversa.md) corrige, e a ordem é 26 → 13 → esse plano: a paridade daqui gravaria o erro de hoje como esperado | o plano da [discovery 09](../../discovery/09-perdas-do-backend-na-conversa.md) (D-11 de lá) |
 
 ---

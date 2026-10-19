@@ -269,6 +269,29 @@ export interface ListedTranscript {
   readonly writtenAgoSeconds: number;
 }
 
+/** One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02). */
+export interface McpServer {
+  readonly id: string;
+  readonly name: string;
+  /** Every session of the user (`user`), or only below one folder (`folder`). */
+  readonly scope: 'user' | 'folder';
+  /** Set when `scope` is `folder`; `null` for `user`. */
+  readonly folderPath: string | null;
+  readonly transport: 'stdio' | 'http' | 'sse';
+  /** Set for `stdio`; `null` for `http`/`sse`. */
+  readonly command: string | null;
+  readonly args: readonly string[];
+  /** The names of the env vars this server carries — never their values. */
+  readonly envNames: readonly string[];
+  /** Set for `http`/`sse`; `null` for `stdio`. */
+  readonly url: string | null;
+  /** The names of the headers this server carries — never their values. */
+  readonly headerNames: readonly string[];
+  readonly enabled: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
 /** One turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). Shared by an engine's own diagnostics route and by its installation view's `lastModelCheck` (plan 28, B-48). */
 export interface ModelCheckOutcome {
   /** What the test of the connection found — data of the answer, never an error. */
@@ -1519,6 +1542,18 @@ export interface KeptDeletePayload {
   readonly kept: KeptDeletePayloadKept;
 }
 
+/** `GET /engines/:engine/mcp-servers`: every server of the caller, in that engine (plan 13, B-19). */
+export interface McpServerListPayload {
+  readonly servers: readonly McpServer[];
+}
+
+/** `POST /engines/:engine/mcp-servers/preview`: the description a save of this configuration would show and record — word for word (plan 13, B-18, S-68). `params` is a map of strings: the generator has no number type here, so a numeric field (such as a count) travels as its decimal text, the way `costUsd` already does elsewhere. */
+export interface McpServerPreviewPayload {
+  readonly messageKey: string;
+  /** Every value a string — a numeric field (a count) travels as its decimal text, the way `costUsd` already does elsewhere. Open: shaped by the server's transport. */
+  readonly params: Readonly<Record<string, unknown>>;
+}
+
 /** `GET /notifications`: a page of the centre, newest first, with how many are unread (plan 06, B-40). */
 export interface NotificationPagePayload {
   readonly items: readonly Notification[];
@@ -1835,6 +1870,13 @@ export const INTERACTION_LIMITS = {
   path: { maxLength: 4096 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link McpServer}. */
+export const MCP_SERVER_LIMITS = {
+  args: { maxItems: 64 },
+  envNames: { maxItems: 64 },
+  headerNames: { maxItems: 64 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link QuestionAnswer}. */
 export const QUESTION_ANSWER_LIMITS = {
   questionId: { maxLength: 8 },
@@ -2007,6 +2049,11 @@ export const HISTORY_PAGE_PAYLOAD_LIMITS = {
 /** The bounds the schema gives the fields of {@link KeptDeletePayloadKept}. */
 export const KEPT_DELETE_PAYLOAD_KEPT_LIMITS = {
   entries: { maxItems: 100000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link McpServerListPayload}. */
+export const MCP_SERVER_LIST_PAYLOAD_LIMITS = {
+  servers: { maxItems: 10000 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link NotificationPagePayload}. */
@@ -2405,6 +2452,36 @@ export function isListedTranscript(value: unknown): value is ListedTranscript {
     typeof record['activity'] === 'string',
     nullOr(record['liveSessionId'], typeof record['liveSessionId'] === 'string'),
     typeof record['writtenAgoSeconds'] === 'number',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link McpServer}. Unknown fields are accepted.
+ */
+export function isMcpServer(value: unknown): value is McpServer {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['name'] === 'string',
+    typeof record['scope'] === 'string',
+    nullOr(record['folderPath'], typeof record['folderPath'] === 'string'),
+    typeof record['transport'] === 'string',
+    nullOr(record['command'], typeof record['command'] === 'string'),
+    Array.isArray(record['args']),
+    Array.isArray(record['envNames']),
+    nullOr(record['url'], typeof record['url'] === 'string'),
+    Array.isArray(record['headerNames']),
+    typeof record['enabled'] === 'boolean',
+    typeof record['createdAt'] === 'string',
+    typeof record['updatedAt'] === 'string',
+    withinMaxItems(record['args'], 64),
+    withinMaxItems(record['envNames'], 64),
+    withinMaxItems(record['headerNames'], 64),
   ].every(Boolean);
 }
 
@@ -4589,6 +4666,38 @@ export function isKeptDeletePayload(value: unknown): value is KeptDeletePayload 
 }
 
 /**
+ * Whether `value` carries every required field of {@link McpServerListPayload}. Unknown fields are accepted.
+ */
+export function isMcpServerListPayload(value: unknown): value is McpServerListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['servers']),
+    withinMaxItems(record['servers'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link McpServerPreviewPayload}. Unknown fields are accepted.
+ */
+export function isMcpServerPreviewPayload(value: unknown): value is McpServerPreviewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['messageKey'] === 'string',
+    isNonNullObject(record['params']),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link NotificationPagePayload}. Unknown fields are accepted.
  */
 export function isNotificationPagePayload(value: unknown): value is NotificationPagePayload {
@@ -5096,6 +5205,12 @@ export type ModelCheckOutcomePayload = ModelCheckOutcome;
 
 /** Whether `value` is a {@link ModelCheckOutcomePayload}. */
 export const isModelCheckOutcomePayload = isModelCheckOutcome;
+
+/** `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH`/`DELETE /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` answers the server as it was, the moment before it was removed. */
+export type McpServerDetailPayload = McpServer;
+
+/** Whether `value` is a {@link McpServerDetailPayload}. */
+export const isMcpServerDetailPayload = isMcpServer;
 
 /** `POST /notifications`: keeps a notification — `201` when new, `200` with the one already kept under the same client id. The same shape as one entry of `NotificationPage.items`, named again rather than declared twice (plan 28, B-48). */
 export type NotificationPayload = Notification;

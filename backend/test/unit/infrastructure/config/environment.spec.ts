@@ -52,6 +52,7 @@ const complete: RawEnvironment = {
   RC_PUSH_ENDPOINT: 'https://push.example.test/v1/messages:send',
   RC_PUSH_CREDENTIALS_FILE: '/etc/remote-claude/push.json',
   RC_PUSH_SCOPE: 'https://push.example.test/auth/messaging',
+  RC_MCP_SECRET_KEY_FILE: '/etc/remote-claude/mcp-secret.key',
   RC_CHECKPOINT_DIR: '/var/lib/remote-claude/checkpoints',
   RC_CHECKPOINT_MAX_FILE_BYTES: '5242880',
   RC_CHECKPOINT_MAX_STORE_BYTES: '524288000',
@@ -131,6 +132,9 @@ describe('loadConfig', () => {
         endpoint: 'https://push.example.test/v1/messages:send',
         credentialsFile: '/etc/remote-claude/push.json',
         scope: 'https://push.example.test/auth/messaging',
+      },
+      mcp: {
+        secretKeyFile: '/etc/remote-claude/mcp-secret.key',
       },
       audit: { retentionDays: 90, purgeIntervalMs: 86_400_000 },
       checkpoints: {

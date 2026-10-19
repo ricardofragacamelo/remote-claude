@@ -47,6 +47,7 @@ export function processEnvironment(): RawEnvironment {
     RC_PUSH_ENDPOINT: process.env['RC_PUSH_ENDPOINT'],
     RC_PUSH_CREDENTIALS_FILE: process.env['RC_PUSH_CREDENTIALS_FILE'],
     RC_PUSH_SCOPE: process.env['RC_PUSH_SCOPE'],
+    RC_MCP_SECRET_KEY_FILE: process.env['RC_MCP_SECRET_KEY_FILE'],
     RC_CHECKPOINT_DIR: process.env['RC_CHECKPOINT_DIR'],
     RC_CHECKPOINT_MAX_FILE_BYTES: process.env['RC_CHECKPOINT_MAX_FILE_BYTES'],
     RC_CHECKPOINT_MAX_STORE_BYTES: process.env['RC_CHECKPOINT_MAX_STORE_BYTES'],

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/mcp-server-list.json",
+  "title": "McpServerList",
+  "description": "`GET /engines/:engine/mcp-servers`: every server of the caller, in that engine (plan 13, B-19).",
+  "x-kind": "http",
+  "x-type": "mcp.serverList",
+  "x-route": [{ "method": "GET", "path": "/engines/:engine/mcp-servers" }],
+  "type": "object",
+  "required": ["servers"],
+  "properties": {
+    "servers": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": { "$ref": "../definitions/mcp-server.schema.json" }
+    }
+  }
+}

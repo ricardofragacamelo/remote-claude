@@ -1328,6 +1328,112 @@ class ListedTranscript {
   }
 }
 
+/// One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02).
+class McpServer {
+  const McpServer({
+    required this.id,
+    required this.name,
+    required this.scope,
+    required this.folderPath,
+    required this.transport,
+    required this.command,
+    required this.args,
+    required this.envNames,
+    required this.url,
+    required this.headerNames,
+    required this.enabled,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory McpServer.fromJson(Map<String, Object?> json) => McpServer(
+        id: json['id']! as String,
+        name: json['name']! as String,
+        scope: json['scope']! as String,
+        folderPath: json['folderPath'] as String?,
+        transport: json['transport']! as String,
+        command: json['command'] as String?,
+        args: (json['args']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        envNames: (json['envNames']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        url: json['url'] as String?,
+        headerNames: (json['headerNames']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        enabled: json['enabled']! as bool,
+        createdAt: json['createdAt']! as String,
+        updatedAt: json['updatedAt']! as String,
+      );
+
+  final String id;
+
+  final String name;
+
+  /// Every session of the user (`user`), or only below one folder (`folder`).
+  final String scope;
+
+  /// Set when `scope` is `folder`; `null` for `user`.
+  final String? folderPath;
+
+  final String transport;
+
+  /// Set for `stdio`; `null` for `http`/`sse`.
+  final String? command;
+
+  final List<String> args;
+
+  /// The names of the env vars this server carries — never their values.
+  final List<String> envNames;
+
+  /// Set for `http`/`sse`; `null` for `stdio`.
+  final String? url;
+
+  /// The names of the headers this server carries — never their values.
+  final List<String> headerNames;
+
+  final bool enabled;
+
+  final String createdAt;
+
+  final String updatedAt;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'name': name,
+      'scope': scope,
+      'folderPath': folderPath,
+      'transport': transport,
+      'command': command,
+      'args': args,
+      'envNames': envNames,
+      'url': url,
+      'headerNames': headerNames,
+      'enabled': enabled,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [McpServer].
+bool mcpServerLimitsHold(Map<String, Object?> json) {
+  if (json['args'] is List<Object?> && (json['args']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  if (json['envNames'] is List<Object?> && (json['envNames']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  if (json['headerNames'] is List<Object?> && (json['headerNames']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  return true;
+}
+
 /// One turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). Shared by an engine's own diagnostics route and by its installation view's `lastModelCheck` (plan 28, B-48).
 class ModelCheckOutcome {
   const ModelCheckOutcome({
@@ -6914,6 +7020,67 @@ class KeptDeletePayload {
   }
 }
 
+/// `GET /engines/:engine/mcp-servers`: every server of the caller, in that engine (plan 13, B-19).
+class McpServerListPayload {
+  const McpServerListPayload({
+    required this.servers,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory McpServerListPayload.fromJson(Map<String, Object?> json) => McpServerListPayload(
+        servers: (json['servers']! as List<Object?>).map((item) => McpServer.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<McpServer> servers;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'servers': servers.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [McpServerListPayload].
+bool mcpServerListPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['servers'] is List<Object?> && (json['servers']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `POST /engines/:engine/mcp-servers/preview`: the description a save of this configuration would show and record — word for word (plan 13, B-18, S-68). `params` is a map of strings: the generator has no number type here, so a numeric field (such as a count) travels as its decimal text, the way `costUsd` already does elsewhere.
+class McpServerPreviewPayload {
+  const McpServerPreviewPayload({
+    required this.messageKey,
+    required this.params,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory McpServerPreviewPayload.fromJson(Map<String, Object?> json) => McpServerPreviewPayload(
+        messageKey: json['messageKey']! as String,
+        params: json['params']! as Map<String, Object?>,
+      );
+
+  final String messageKey;
+
+  /// Every value a string — a numeric field (a count) travels as its decimal text, the way `costUsd` already does elsewhere. Open: shaped by the server's transport.
+  final Map<String, Object?> params;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'messageKey': messageKey,
+      'params': params,
+    };
+
+    return json;
+  }
+}
+
 /// `GET /notifications`: a page of the centre, newest first, with how many are unread (plan 06, B-40).
 class NotificationPagePayload {
   const NotificationPagePayload({
@@ -8202,6 +8369,9 @@ typedef DevicePayload = Device;
 
 /// `POST /engines/claude/diagnostics/model-check`: one turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). The same shape `GET /engines/claude/installation`'s `lastModelCheck` carries, named again rather than declared twice (plan 28, B-48).
 typedef ModelCheckOutcomePayload = ModelCheckOutcome;
+
+/// `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH`/`DELETE /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` answers the server as it was, the moment before it was removed.
+typedef McpServerDetailPayload = McpServer;
 
 /// `POST /notifications`: keeps a notification — `201` when new, `200` with the one already kept under the same client id. The same shape as one entry of `NotificationPage.items`, named again rather than declared twice (plan 28, B-48).
 typedef NotificationPayload = Notification;

@@ -2572,7 +2572,14 @@
       "serverNameTaken": "You already have an MCP server named {{name}} here. Pick another name.",
       "serverConfigInvalid": "That MCP server configuration cannot be used: check the {{field}} field and try again.",
       "approvalStale": "The .mcp.json of this folder changed since it was shown. Look at the entry {{name}} again before approving it.",
-      "secretStoreUnavailable": "This machine has no key file for MCP secrets, so a server with a secret cannot be saved. Servers without secrets still work."
+      "secretStoreUnavailable": "This machine has no key file for MCP secrets, so a server with a secret cannot be saved. Servers without secrets still work.",
+      "forbidden": "That server belongs to somebody else."
+    },
+    "description": {
+      "stdioFolder": "Runs {{command}} {{args}} on your machine, with your credentials, whenever a session opens in {{folder}}, with the variables {{envNames}}.",
+      "stdioAnyFolder": "Runs {{command}} {{args}} on your machine, with your credentials, whenever a session opens, with the variables {{envNames}}.",
+      "remoteFolder": "Connects to {{url}} ({{transport}}) whenever a session opens in {{folder}}, with your credentials, with the headers {{headerNames}}.",
+      "remoteAnyFolder": "Connects to {{url}} ({{transport}}) whenever a session opens, with your credentials, with the headers {{headerNames}}."
     }
   }
 }

@@ -17,6 +17,7 @@ import { AgentSdkClaudeSessionAdapter } from '@adapter/outbound/engines/claude/a
 import { CLAUDE_ENGINE } from '@adapter/outbound/engines/claude/claude-engine';
 import { PermissionBridge } from '@adapter/outbound/engines/claude/permission-bridge';
 import { SESSION_LIMITS } from '@adapter/outbound/engines/claude/session-limits';
+import { claudeMcpEngineDialect } from '@adapter/outbound/engines/claude/mcp-engine-dialect';
 import { claudeRuleDialect } from '@adapter/outbound/engines/claude/rule-dialect';
 import { classifyTool } from '@adapter/outbound/engines/claude/tool-classifier';
 import { AgentSdkTranscriptAdapter } from '@adapter/outbound/engines/claude/transcript.adapter';
@@ -105,3 +106,11 @@ export const claudeRuleDialectProviders: readonly Provider[] = [
  * without building the adapter, so the files are sensitive whether the engine is enabled or not.
  */
 export { CLAUDE_SECURITY_CONTRACT } from '@adapter/outbound/engines/claude/security-contract';
+
+/** The token of the MCP dialect of the engine `claude`, for the registry of dialects (plan 13, B-18). */
+export const CLAUDE_MCP_DIALECT = Symbol('ClaudeMcpDialect');
+
+/** What the engine `claude` refuses of an MCP server name, and reserves of an env var — pure. */
+export const claudeMcpDialectProviders: readonly Provider[] = [
+  { provide: CLAUDE_MCP_DIALECT, useValue: claudeMcpEngineDialect },
+];

@@ -2,7 +2,31 @@
 // Protocol a session of any engine is given — an open protocol, so a capability of the core (`mcp`),
 // kept by engine. Other modules reach it through this barrel only.
 export { McpApprovalStaleError } from './errors/mcp-approval-stale.error';
+export { McpEngineNotSupportedError } from './errors/mcp-engine-not-supported.error';
 export { McpServerConfigInvalidError } from './errors/mcp-server-config-invalid.error';
+export { McpServerForbiddenError } from './errors/mcp-server-forbidden.error';
 export { McpServerNameTakenError } from './errors/mcp-server-name-taken.error';
 export { McpServerNotFoundError } from './errors/mcp-server-not-found.error';
 export { SecretStoreUnavailableError } from './errors/secret-store-unavailable.error';
+
+export type { McpEngineDialect } from './ports/mcp-engine-dialect.port';
+
+export {
+  MCP_SCOPES,
+  MCP_TRANSPORTS,
+  MCP_SERVER_NAME_PATTERN,
+  MCP_LIMITS,
+  createMcpServerConfig,
+} from './entities/mcp-server-config.entity';
+export type {
+  McpServerScope,
+  McpTransport,
+  McpEnvVar,
+  McpHeader,
+  McpServerIdentity,
+  McpServerInput,
+  McpServerConfig,
+} from './entities/mcp-server-config.entity';
+
+export { describeMcpServer } from './services/mcp-server-description';
+export type { McpServerDescription } from './services/mcp-server-description';

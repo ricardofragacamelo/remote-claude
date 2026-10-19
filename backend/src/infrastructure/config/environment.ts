@@ -136,6 +136,7 @@ export const environmentSchema = z.object({
   RC_PUSH_ENDPOINT: z.url(),
   RC_PUSH_CREDENTIALS_FILE: z.string().min(1),
   RC_PUSH_SCOPE: z.string().min(1),
+  RC_MCP_SECRET_KEY_FILE: z.string().min(1),
   RC_CHECKPOINT_DIR: z.string().min(1),
   RC_CHECKPOINT_MAX_FILE_BYTES: z.coerce.number().int().positive(),
   RC_CHECKPOINT_MAX_STORE_BYTES: z.coerce.number().int().positive(),
@@ -371,6 +372,16 @@ export interface AppConfig {
   };
 
   /**
+   * Where the key that encrypts an MCP server's env and header values lives (plan 13, D-02) — a
+   * **file**, the same discipline as {@link push}'s credential and for the same reason. Read
+   * lazily: a missing or unusable key file does not stop the boot, and only a server **with** a
+   * secret is refused until there is one ({@link import('@domain/mcp').SecretStoreUnavailableError}).
+   */
+  readonly mcp: {
+    readonly secretKeyFile: string;
+  };
+
+  /**
    * How long the trail is kept, and how often it is cut back to that.
    *
    * `purgeIntervalMs` is `null` when the job is switched off — on purpose, and said out loud at
@@ -536,6 +547,9 @@ export function loadConfig(
       endpoint: env.RC_PUSH_ENDPOINT,
       credentialsFile: resolve(env.RC_PUSH_CREDENTIALS_FILE),
       scope: env.RC_PUSH_SCOPE,
+    },
+    mcp: {
+      secretKeyFile: resolve(env.RC_MCP_SECRET_KEY_FILE),
     },
     audit: {
       retentionDays: env.RC_AUDIT_RETENTION_DAYS,

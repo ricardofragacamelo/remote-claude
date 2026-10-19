@@ -47,7 +47,7 @@ plugin cai no fluxo de aprovação desta fase em vez de subir sozinho.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-18 — Domínio do servidor MCP 🔲
+### B-18 — Domínio do servidor MCP ✅
 
 Entidade `McpServer` (com `engine`) e regra pura, sem I/O, no domínio de MCP do **núcleo** (o
 `domain/mcp/` que a [28 · F6](../28-agent-neutral-core/F6-engine-extensions.md) separa do `claude-config`; o nome
@@ -71,7 +71,7 @@ sempre que uma sessão abrir em `<pasta>`, com as variáveis `GITHUB_TOKEN`" —
 como o `riskHint` do plano 03: a prévia e a gravação mostram o mesmo texto, e as pontas não divergem.
 Cenários S-63…S-68.
 
-### B-19 — Store e segredos 🔲
+### B-19 — Store e segredos ✅
 
 Tabelas da B-07 (`mcp_servers` e `mcp_project_approvals`, com a coluna `engine` que a
 [28 · F6](../28-agent-neutral-core/F6-engine-extensions.md) acrescenta), repositório, casos de uso do núcleo e as

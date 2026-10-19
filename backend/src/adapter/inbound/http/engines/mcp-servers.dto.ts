@@ -1,0 +1,117 @@
+import { z } from 'zod';
+
+import type {
+  McpServer,
+  McpServerPreviewPayload,
+  McpServerListPayload,
+} from '@remote-claude/contracts';
+import type { McpServerDescription } from '@domain/mcp';
+import type { McpServerFieldsInput, McpSecretFieldInput } from '@application/mcp';
+import type { StoredMcpServer } from '@application/mcp';
+import { MCP_LIMITS } from '@domain/mcp';
+
+/** `:engine`, in the form of an engine's name — whether it is enabled is the use case's to say. */
+export const engineParamSchema = z.string().regex(/^[a-z][a-z0-9-]{0,31}$/);
+
+const secretFieldSchema = z
+  .object({
+    name: z.string().min(1).max(256),
+    value: z.string().max(MCP_LIMITS.maxEnvValueLength).nullable().optional(),
+  })
+  .strict();
+
+const commonFields = {
+  name: z.string().min(1).max(64),
+  scope: z.enum(['user', 'folder']),
+  folderPath: z.string().min(1).max(4096).nullable().optional(),
+};
+
+const stdioFieldsSchema = z
+  .object({
+    ...commonFields,
+    transport: z.literal('stdio'),
+    command: z.string().min(1).max(MCP_LIMITS.maxCommandLength),
+    args: z.array(z.string().max(MCP_LIMITS.maxArgLength)).max(MCP_LIMITS.maxArgs).optional(),
+    env: z.array(secretFieldSchema).max(MCP_LIMITS.maxEnvVars).optional(),
+  })
+  .strict();
+
+const remoteFieldsSchema = z
+  .object({
+    ...commonFields,
+    transport: z.enum(['http', 'sse']),
+    url: z.string().min(1).max(MCP_LIMITS.maxUrlLength),
+    headers: z.array(secretFieldSchema).max(MCP_LIMITS.maxHeaders).optional(),
+  })
+  .strict();
+
+/** The body of `POST`, `PUT` and the preview — a server is one transport or the other, never both. */
+export const mcpServerFieldsSchema = z.union([stdioFieldsSchema, remoteFieldsSchema]);
+export type McpServerFieldsBody = z.infer<typeof mcpServerFieldsSchema>;
+
+/** The body of `PATCH /engines/:engine/mcp-servers/:id`. */
+export const setEnabledSchema = z.object({ enabled: z.boolean() }).strict();
+export type SetEnabledBody = z.infer<typeof setEnabledSchema>;
+
+function secretFieldsOf(
+  entries:
+    readonly { readonly name: string; readonly value?: string | null | undefined }[] | undefined,
+): readonly McpSecretFieldInput[] | undefined {
+  return entries?.map((entry) => ({ name: entry.name, value: entry.value }));
+}
+
+/** [body] in the shape the use cases take — the union collapsed, nothing renamed. */
+export function fieldsOf(body: McpServerFieldsBody): McpServerFieldsInput {
+  if (body.transport === 'stdio') {
+    return {
+      name: body.name,
+      scope: body.scope,
+      folderPath: body.folderPath ?? null,
+      transport: 'stdio',
+      command: body.command,
+      args: body.args,
+      env: secretFieldsOf(body.env),
+    };
+  }
+  return {
+    name: body.name,
+    scope: body.scope,
+    folderPath: body.folderPath ?? null,
+    transport: body.transport,
+    url: body.url,
+    headers: secretFieldsOf(body.headers),
+  };
+}
+
+/** [server] on the wire — structural fields only, never a secret value (S-70). */
+export function toMcpServerDto(server: StoredMcpServer): McpServer {
+  return {
+    id: server.id,
+    name: server.name,
+    scope: server.scope,
+    folderPath: server.folderPath,
+    transport: server.transport,
+    command: server.command,
+    args: [...server.args],
+    envNames: [...server.envNames],
+    url: server.url,
+    headerNames: [...server.headerNames],
+    enabled: server.enabled,
+    createdAt: server.createdAt.toISOString(),
+    updatedAt: server.updatedAt.toISOString(),
+  };
+}
+
+export function toMcpServerListDto(servers: readonly StoredMcpServer[]): McpServerListPayload {
+  return { servers: servers.map(toMcpServerDto) };
+}
+
+/** [description] on the wire — every param stringified: the contract has no number type here. */
+export function toPreviewDto(description: McpServerDescription): McpServerPreviewPayload {
+  return {
+    messageKey: description.messageKey,
+    params: Object.fromEntries(
+      Object.entries(description.params).map(([key, value]) => [key, String(value)]),
+    ),
+  };
+}

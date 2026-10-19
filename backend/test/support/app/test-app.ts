@@ -145,6 +145,10 @@ export function testEnvironment(
     'credentials.json',
   );
   process.env['RC_PUSH_SCOPE'] = 'https://push.invalid/auth';
+  process.env['RC_MCP_SECRET_KEY_FILE'] = path.join(
+    mkdtempSync(path.join(tmpdir(), 'rc-mcp-key-')),
+    'key',
+  );
   process.env['RC_CHECKPOINT_DIR'] = mkdtempSync(path.join(tmpdir(), 'rc-checkpoints-'));
   process.env['RC_CHECKPOINT_MAX_FILE_BYTES'] = '5242880';
   process.env['RC_CHECKPOINT_MAX_STORE_BYTES'] = '524288000';

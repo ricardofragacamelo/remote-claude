@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/mcp-server.json",
+  "title": "McpServerDetail",
+  "description": "`POST /engines/:engine/mcp-servers`, `PUT`/`PATCH /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.",
+  "x-kind": "http",
+  "x-type": "mcp.server",
+  "x-route": [
+    { "method": "POST", "path": "/engines/:engine/mcp-servers" },
+    { "method": "PUT", "path": "/engines/:engine/mcp-servers/:id" },
+    { "method": "PATCH", "path": "/engines/:engine/mcp-servers/:id" }
+  ],
+  "$ref": "../definitions/mcp-server.schema.json"
+}

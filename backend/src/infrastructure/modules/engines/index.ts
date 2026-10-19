@@ -2,6 +2,7 @@ import type { Provider } from '@nestjs/common';
 
 import { ToolClassifiers } from '@application/engine';
 import type { EngineToolClassifier } from '@application/engine';
+import { McpEngineCapabilities, McpEngineDialects } from '@application/mcp';
 import { RuleDialects } from '@application/permission';
 import type { RuleDialect } from '@application/permission';
 import { EngineRegistry } from '@application/session';
@@ -9,7 +10,10 @@ import type { AgentEnginePort, EngineSecurityContract } from '@application/sessi
 import { TRANSCRIPT_STORE, TranscriptStoreRegistry } from '@application/transcript';
 import type { EngineTranscriptStore } from '@application/transcript';
 import { EngineId } from '@domain/engine';
+import type { McpEngineDialect } from '@domain/mcp';
 import { SensitiveFiles } from '@domain/files';
+import { CLAUDE_CAPABILITIES } from '@adapter/outbound/engines/claude/claude-capabilities';
+import { CLAUDE_ENGINE } from '@adapter/outbound/engines/claude/claude-engine';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { APP_CONFIG } from '../../config/environment';
 import type { AppConfig, EngineEnvironment } from '../../config/environment';
@@ -17,11 +21,13 @@ import { claudeEnvironment, forgetEmptyClaudeConfigDir } from './claude.environm
 import { ClaudeSettingsModule } from './claude-settings.module';
 import { enabledEngines } from './engine-selection';
 import {
+  CLAUDE_MCP_DIALECT,
   CLAUDE_RULE_DIALECT,
   CLAUDE_SECURITY_CONTRACT,
   CLAUDE_SESSION_ENGINE,
   CLAUDE_TOOL_CLASSIFIER,
   CLAUDE_TRANSCRIPT_STORE,
+  claudeMcpDialectProviders,
   claudeRuleDialectProviders,
   claudeSessionProviders,
   claudeToolClassifierProviders,
@@ -166,6 +172,41 @@ export const engineRuleDialectProviders: readonly Provider[] = [
         enabled.map(({ dialect }) => dialect),
         defaultEngine,
       );
+    },
+  },
+];
+
+/** Which enabled engines carry the `mcp` capability — a static fact of each, read with none built. */
+const MCP_CAPABLE_ENGINES: readonly { readonly engine: EngineId; readonly capable: boolean }[] = [
+  { engine: EngineId.create(CLAUDE_ENGINE), capable: CLAUDE_CAPABILITIES.mcp },
+];
+
+/**
+ * What the `mcp` module wires of the engines (plan 13, B-18, B-19): which enabled engines carry the
+ * capability, and each one's dialect — the engine's own refusal of a server name and the env vars
+ * it reserves. Neither reaches `application/mcp` except through these two registries.
+ */
+export const engineMcpProviders: readonly Provider[] = [
+  ...claudeMcpDialectProviders,
+  {
+    provide: McpEngineCapabilities,
+    inject: [APP_CONFIG],
+    useFactory: (config: AppConfig) => {
+      const { enabled } = enabledEngines(MCP_CAPABLE_ENGINES, config.engines);
+      return new McpEngineCapabilities(
+        enabled.filter(({ capable }) => capable).map(({ engine }) => engine.value),
+      );
+    },
+  },
+  {
+    provide: McpEngineDialects,
+    inject: [APP_CONFIG, CLAUDE_MCP_DIALECT],
+    useFactory: (config: AppConfig, ...dialects: McpEngineDialect[]) => {
+      const { enabled } = enabledEngines(
+        dialects.map((dialect) => ({ dialect, engine: EngineId.create(dialect.engine) })),
+        config.engines,
+      );
+      return new McpEngineDialects(enabled.map(({ dialect }) => dialect));
     },
   },
 ];

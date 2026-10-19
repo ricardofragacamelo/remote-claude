@@ -10,6 +10,7 @@ import { AuthModule } from '@infra/modules/auth.module';
 import { AuditModule } from '@infra/modules/audit.module';
 import { AuditQueryModule } from '@infra/modules/audit-query.module';
 import { AgentSettingsModule } from '@infra/modules/agent-settings.module';
+import { McpModule } from '@infra/modules/mcp.module';
 import { ENGINE_MODULES } from '@infra/modules/engines';
 import { DatabaseModule } from '@infra/modules/database.module';
 import { GatewayModule } from '@infra/modules/gateway.module';
@@ -48,6 +49,7 @@ import { WorkspaceModule } from '@infra/modules/workspace.module';
     PermissionModule,
     NotificationModule,
     AgentSettingsModule,
+    McpModule,
     // What only one engine has: each extension's module, registered by the composition.
     ...ENGINE_MODULES,
     SessionModule,

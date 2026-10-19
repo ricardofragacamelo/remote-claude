@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/mcp-server-preview.json",
+  "title": "McpServerPreview",
+  "description": "`POST /engines/:engine/mcp-servers/preview`: the description a save of this configuration would show and record — word for word (plan 13, B-18, S-68). `params` is a map of strings: the generator has no number type here, so a numeric field (such as a count) travels as its decimal text, the way `costUsd` already does elsewhere.",
+  "x-kind": "http",
+  "x-type": "mcp.serverPreview",
+  "x-route": [{ "method": "POST", "path": "/engines/:engine/mcp-servers/preview" }],
+  "type": "object",
+  "required": ["messageKey", "params"],
+  "properties": {
+    "messageKey": { "type": "string" },
+    "params": {
+      "type": "object",
+      "description": "Every value a string — a numeric field (a count) travels as its decimal text, the way `costUsd` already does elsewhere. Open: shaped by the server's transport."
+    }
+  }
+}

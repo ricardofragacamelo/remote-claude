@@ -2572,7 +2572,14 @@
       "serverNameTaken": "Você já tem um servidor MCP chamado {{name}} aqui. Escolha outro nome.",
       "serverConfigInvalid": "Essa configuração de servidor MCP não pode ser usada: confira o campo {{field}} e tente de novo.",
       "approvalStale": "O .mcp.json desta pasta mudou desde que foi mostrado. Veja a entrada {{name}} de novo antes de aprovar.",
-      "secretStoreUnavailable": "Esta máquina não tem o arquivo de chave dos segredos de MCP, então um servidor com segredo não pode ser gravado. Os servidores sem segredo continuam funcionando."
+      "secretStoreUnavailable": "Esta máquina não tem o arquivo de chave dos segredos de MCP, então um servidor com segredo não pode ser gravado. Os servidores sem segredo continuam funcionando.",
+      "forbidden": "Esse servidor pertence a outra pessoa."
+    },
+    "description": {
+      "stdioFolder": "Roda {{command}} {{args}} na sua máquina, com as suas credenciais, sempre que uma sessão abrir em {{folder}}, com as variáveis {{envNames}}.",
+      "stdioAnyFolder": "Roda {{command}} {{args}} na sua máquina, com as suas credenciais, sempre que uma sessão abrir, com as variáveis {{envNames}}.",
+      "remoteFolder": "Conecta a {{url}} ({{transport}}) sempre que uma sessão abrir em {{folder}}, com as suas credenciais, com os cabeçalhos {{headerNames}}.",
+      "remoteAnyFolder": "Conecta a {{url}} ({{transport}}) sempre que uma sessão abrir, com as suas credenciais, com os cabeçalhos {{headerNames}}."
     }
   }
 }

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/mcp-server.json",
+  "title": "McpServer",
+  "description": "One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02).",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "scope",
+    "folderPath",
+    "transport",
+    "command",
+    "args",
+    "envNames",
+    "url",
+    "headerNames",
+    "enabled",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "scope": {
+      "type": "string",
+      "enum": ["user", "folder"],
+      "description": "Every session of the user (`user`), or only below one folder (`folder`)."
+    },
+    "folderPath": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Set when `scope` is `folder`; `null` for `user`."
+    },
+    "transport": {
+      "type": "string",
+      "enum": ["stdio", "http", "sse"]
+    },
+    "command": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Set for `stdio`; `null` for `http`/`sse`."
+    },
+    "args": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string" }
+    },
+    "envNames": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string" },
+      "description": "The names of the env vars this server carries — never their values."
+    },
+    "url": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Set for `http`/`sse`; `null` for `stdio`."
+    },
+    "headerNames": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string" },
+      "description": "The names of the headers this server carries — never their values."
+    },
+    "enabled": { "type": "boolean" },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" }
+  }
+}

@@ -111,24 +111,24 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-63 | stdio com comando, args e env; http e sse com URL e headers — os três aceitos | eq | unit | — | B-18 | ⬜ |
-| S-64 | nome fora de `[A-Za-z0-9_-]`, vazio, com mais de 64 caracteres, ou que o motor recusa (no Claude, com `__`, que torna ambíguo o nome nativo da tool) | fron | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
-| S-65 | URL fora de `http(s)` (`file:`, `javascript:`), stdio sem comando, campos de um transporte no outro | err | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
-| S-66 | env que sobrepõe variável sensível (`LD_PRELOAD`, `NODE_OPTIONS`, `REMOTE_CLAUDE_*`) ou reservada pelo motor (no Claude, `CLAUDE_CONFIG_DIR`, declarada pelo adapter) | err | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
-| S-67 | tetos de args, env e headers: no teto passa, um acima recusa | fron | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ⬜ |
-| S-68 | a descrição por extenso (o que roda, com quais args, onde vale, nomes das variáveis) sai do domínio e é igual na prévia e na gravação | idem | unit | — | B-18 | ⬜ |
-| S-69 | nome repetido no mesmo escopo | err | integração | `MCP_SERVER_NAME_TAKEN` | B-19 | ⬜ |
-| S-70 | o `GET` nunca devolve valor de segredo — só `{ name, set: true }` | eq | integração | — | B-19 | ⬜ |
-| S-71 | no `PUT`, segredo omitido fica, `null` remove, texto substitui | est | integração | — | B-19 | ⬜ |
-| S-72 | o segredo está cifrado em repouso: a linha do banco não contém o valor, e a chave vem de arquivo | eq | integração | — | B-19 | ⬜ |
-| S-73 | arquivo de chave ausente → servidor **com** segredo não é gravado; sem segredo continua funcionando | err | integração | `SERVICE_UNAVAILABLE` | B-19 | ⬜ |
-| S-74 | nenhum valor de segredo no log (inclusive `debug`), na trilha ou em mensagem de erro — varredura do log da suíte | err | integração | — | B-19 | ⬜ |
+| S-63 | stdio com comando, args e env; http e sse com URL e headers — os três aceitos | eq | unit | — | B-18 | ✅ |
+| S-64 | nome fora de `[A-Za-z0-9_-]`, vazio, com mais de 64 caracteres, ou que o motor recusa (no Claude, com `__`, que torna ambíguo o nome nativo da tool) | fron | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ✅ |
+| S-65 | URL fora de `http(s)` (`file:`, `javascript:`), stdio sem comando, campos de um transporte no outro | err | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ✅ |
+| S-66 | env que sobrepõe variável sensível (`LD_PRELOAD`, `NODE_OPTIONS`, `REMOTE_CLAUDE_*`) ou reservada pelo motor (no Claude, `CLAUDE_CONFIG_DIR`, declarada pelo adapter) | err | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ✅ |
+| S-67 | tetos de args, env e headers: no teto passa, um acima recusa | fron | unit | `MCP_SERVER_CONFIG_INVALID` | B-18 | ✅ |
+| S-68 | a descrição por extenso (o que roda, com quais args, onde vale, nomes das variáveis) sai do domínio e é igual na prévia e na gravação | idem | unit | — | B-18 | ✅ |
+| S-69 | nome repetido no mesmo escopo | err | integração | `MCP_SERVER_NAME_TAKEN` | B-19 | ✅ |
+| S-70 | o `GET` nunca devolve valor de segredo — só `{ name, set: true }` | eq | integração | — | B-19 | ✅ |
+| S-71 | no `PUT`, segredo omitido fica, `null` remove, texto substitui | est | integração | — | B-19 | ✅ |
+| S-72 | o segredo está cifrado em repouso: a linha do banco não contém o valor, e a chave vem de arquivo | eq | integração | — | B-19 | ✅ |
+| S-73 | arquivo de chave ausente → servidor **com** segredo não é gravado; sem segredo continua funcionando | err | integração | `SERVICE_UNAVAILABLE` | B-19 | ✅ |
+| S-74 | nenhum valor de segredo no log (inclusive `debug`), na trilha ou em mensagem de erro — varredura do log da suíte | err | integração | — | B-19 | ✅ |
 | S-75 | argumento com forma de segredo (`--token=…`, `Bearer …`) é redigido no log e na trilha, e a tela avisa para usar env | fron | unit | — | B-19 | ⬜ |
-| S-76 | servidor de outra pessoa: ler, alterar, ligar ou remover | err | integração | `FORBIDDEN` | B-19 | ⬜ |
-| S-77 | id inexistente | err | integração | `MCP_SERVER_NOT_FOUND` | B-19 | ⬜ |
-| S-78 | remover de novo responde `404` e não grava segundo evento | idem | integração | `MCP_SERVER_NOT_FOUND` | B-19 | ⬜ |
-| S-79 | adicionar, alterar, remover e ligar gravam `mcp.server*`, com o `engine`, **antes** do efeito, com o comando/URL por extenso e só os nomes das variáveis; trilha indisponível não grava nada | err | integração | `INTERNAL_ERROR` | B-19 | ⬜ |
-| S-80 | duas alterações simultâneas do mesmo servidor → uma vence por inteiro, e a trilha registra as duas na ordem do banco | conc | integração | — | B-19 | ⬜ |
+| S-76 | servidor de outra pessoa: ler, alterar, ligar ou remover | err | integração | `FORBIDDEN` | B-19 | ✅ |
+| S-77 | id inexistente | err | integração | `MCP_SERVER_NOT_FOUND` | B-19 | ✅ |
+| S-78 | remover de novo responde `404` e não grava segundo evento | idem | integração | `MCP_SERVER_NOT_FOUND` | B-19 | ✅ |
+| S-79 | adicionar, alterar, remover e ligar gravam `mcp.server*`, com o `engine`, **antes** do efeito, com o comando/URL por extenso e só os nomes das variáveis; trilha indisponível não grava nada | err | integração | `INTERNAL_ERROR` | B-19 | ✅ |
+| S-80 | duas alterações simultâneas do mesmo servidor → uma vence por inteiro, e a trilha registra as duas na ordem do banco | conc | integração | — | B-19 | ✅ |
 | S-81 | o subprocesso do CLI — e portanto todo servidor stdio — não recebe as variáveis de configuração do backend (banco, OIDC, push, chave de segredo) | err | integração | — | B-20 | ⬜ |
 | S-82 | chave nova no schema de configuração do backend entra na lista de remoção sem lista à mão — o teste falha se o schema ganhar chave não coberta | fron | unit | — | B-20 | ⬜ |
 

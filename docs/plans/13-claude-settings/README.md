@@ -122,7 +122,7 @@ verde.
 |---|---|---|---|---|
 | F0 | [Contrato](F0-contract.md) | medições, ADR, módulo, contrato nas três pontas, erros, tabelas, regras de máquina | B-01…B-09 | ✅ |
 | F1 | [Conta, modelos, padrões e diagnóstico](F1-models-and-modes.md) | catálogo da instalação, diagnóstico, padrões aplicados na sessão, a tela | B-10…B-17 | ✅ |
-| F2 | [Servidores MCP e plugins](F2-mcp-servers.md) | MCP e plugins (locais e de marketplace) com segundo passo, trilha e segredo que não volta; `.mcp.json` aprovado por conteúdo | B-18…B-30, B-47 | 🔲 |
+| F2 | [Servidores MCP e plugins](F2-mcp-servers.md) | MCP e plugins (locais e de marketplace) com segundo passo, trilha e segredo que não volta; `.mcp.json` aprovado por conteúdo | B-18…B-30, B-47 | 🔄 |
 | F3 | [Configuração de projeto](F3-project-config.md) | tudo o que o `.claude/` injeta, visível e criável; skills das três origens | B-31…B-40 | 🔲 |
 | F4 | [E2E e smoke-live](F4-e2e.md) | o plano pela porta do usuário e contra o Claude real | B-41…B-46 | 🔲 |
 

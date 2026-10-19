@@ -48,7 +48,16 @@ export const mcpServers = pgTable(
       .on(table.userId, table.engine, table.scope, table.folderPath, table.name)
       .nullsNotDistinct(),
     check('mcp_servers_scope_known', sql`${table.scope} IN ('user', 'folder')`),
+    check(
+      'mcp_servers_folder_matches_scope',
+      sql`(${table.scope} = 'folder') = (${table.folderPath} IS NOT NULL)`,
+    ),
     check('mcp_servers_transport_known', sql`${table.transport} IN ('stdio', 'http', 'sse')`),
+    check(
+      'mcp_servers_transport_fields',
+      sql`(${table.transport} = 'stdio' AND ${table.command} IS NOT NULL AND ${table.url} IS NULL)
+        OR (${table.transport} IN ('http', 'sse') AND ${table.url} IS NOT NULL AND ${table.command} IS NULL)`,
+    ),
     check('mcp_servers_engine_form', sql`${table.engine} ~ '^[a-z][a-z0-9-]{0,31}$'`),
   ],
 );
