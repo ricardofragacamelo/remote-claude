@@ -16,6 +16,7 @@ import type {
   McpServerDependencies,
   McpServerFieldsInput,
   McpServerRepository,
+  McpServerRuleRevocation,
   StoredMcpServer,
 } from '@application/mcp';
 import {
@@ -101,6 +102,17 @@ class RecordingLiveSessionMcpRevocation implements LiveSessionMcpRevocation {
   }
 }
 
+/** Records every call, so a test can tell whether a changed or removed server reached it — B-26. */
+class RecordingRuleRevocation implements McpServerRuleRevocation {
+  readonly calls: { readonly userId: UserId; readonly engine: string; readonly name: string }[] =
+    [];
+
+  execute(userId: UserId, engine: string, name: string): Promise<unknown> {
+    this.calls.push({ userId, engine, name });
+    return Promise.resolve([]);
+  }
+}
+
 function harness(
   wrap: (base: InMemoryMcpServerRepository) => McpServerRepository = (base) => base,
 ) {
@@ -109,6 +121,7 @@ function harness(
   const repository = wrap(base);
   const clock = new FixedClock(new Date('2026-10-19T12:00:00Z'));
   const liveSessions = new RecordingLiveSessionMcpRevocation();
+  const ruleRevocation = new RecordingRuleRevocation();
   const deps: McpServerDependencies = {
     servers: repository,
     capabilities: new McpEngineCapabilities([ENGINE]),
@@ -117,12 +130,14 @@ function harness(
     ids: new SequentialIds('server-'),
     clock,
     liveSessions,
+    ruleRevocation,
   };
   return {
     events,
     repository,
     clock,
     liveSessions,
+    ruleRevocation,
     create: new CreateMcpServerUseCase(deps),
     update: new UpdateMcpServerUseCase(deps),
     setEnabled: new SetMcpServerEnabledUseCase(deps),
@@ -223,6 +238,7 @@ describe('MCP server use cases — plan 13, B-19', () => {
         ids: new SequentialIds('server-'),
         clock: new FixedClock(new Date('2026-10-19T12:00:00Z')),
         liveSessions: new RecordingLiveSessionMcpRevocation(),
+        ruleRevocation: new RecordingRuleRevocation(),
       });
 
       await expect(create.execute(USER, ENGINE, STDIO_FIELDS)).rejects.toThrow('disk full');
@@ -337,6 +353,7 @@ describe('MCP server use cases — plan 13, B-19', () => {
         ids: new SequentialIds('server-'),
         clock: new FixedClock(new Date('2026-10-19T12:00:00Z')),
         liveSessions: new RecordingLiveSessionMcpRevocation(),
+        ruleRevocation: new RecordingRuleRevocation(),
       });
 
       await expect(update.execute(USER, ENGINE, created.id, STDIO_FIELDS)).rejects.toThrow(
@@ -356,6 +373,7 @@ describe('MCP server use cases — plan 13, B-19', () => {
         ids: new SequentialIds('server-'),
         clock: new FixedClock(new Date('2026-10-19T12:00:00Z')),
         liveSessions: new RecordingLiveSessionMcpRevocation(),
+        ruleRevocation: new RecordingRuleRevocation(),
       });
 
       await expect(

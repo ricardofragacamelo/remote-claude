@@ -184,10 +184,10 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-116 | a tool MCP chega canônica (`kind: 'mcp'`, `subject.server`, `subject.tool`, `origin.native` opaco) e, no Claude, `mcp__srv__tool` pede permissão pelo `canUseTool` e é registrada pelo `PreToolUse`, como qualquer tool | eq | integração | — | B-26 | ⬜ |
-| S-117 | no domínio de `permission` do núcleo, a regra canônica `mcp(srv:tool)` e `mcp(srv:*)` casam a tool `tool` do servidor `srv`; `mcp(srv2:*)` não; `mcp(srv:*)` não cobre o servidor `srvx` | fron | unit | — | B-26 | ⬜ |
-| S-118 | annotation `readOnly` não baixa o `riskHint`; `destructive` sobe; sem annotation → destrutiva | err | unit | — | B-26 | ⬜ |
-| S-119 | trocar comando, args, URL ou transporte, ou remover um servidor, revoga as `allow` do usuário que alcançam o servidor — as canônicas `mcp(<nome>:…)`, casadas no núcleo, sem o dialeto — o segundo passo as lista; `deny` fica | est | integração | — | B-26 | ⬜ |
+| S-116 | a tool MCP chega canônica (`kind: 'mcp'`, `subject.server`, `subject.tool`, `origin.native` opaco) e, no Claude, `mcp__srv__tool` pede permissão pelo `canUseTool` e é registrada pelo `PreToolUse`, como qualquer tool | eq | integração | — | B-26 | ✅ |
+| S-117 | no domínio de `permission` do núcleo, a regra canônica `mcp(srv:tool)` e `mcp(srv:*)` casam a tool `tool` do servidor `srv`; `mcp(srv2:*)` não; `mcp(srv:*)` não cobre o servidor `srvx` | fron | unit | — | B-26 | ✅ |
+| S-118 | annotation `readOnly` não baixa o `riskHint`; `destructive` sobe; sem annotation → destrutiva | err | unit | — | B-26 | ✅ |
+| S-119 | trocar comando, args, URL ou transporte, ou remover um servidor, revoga as `allow` do usuário que alcançam o servidor — as canônicas `mcp(<nome>:…)`, casadas no núcleo, sem o dialeto — o segundo passo as lista (✅ só a revogação; "o segundo passo as lista" fica para a B-28, ver D-62); `deny` fica | est | integração | — | B-26 | ✅ |
 | S-120 | servidor novo com o nome de um removido não herda `allow` | err | integração | — | B-26 | ⬜ |
 | S-121 | a alteração e a revogação acontecem juntas: falha em uma não grava a outra | err | integração | `INTERNAL_ERROR` | B-26 | ⬜ |
 | S-122 | em `readOnly` (o modo canônico), nenhuma `allow` auto-aprova tool MCP — a precedência do plano 03 vale | eq | unit | — | B-26 | ⬜ |

@@ -22,6 +22,7 @@ export { answersPayload } from './permission-payloads';
 export type { AnswerPayload } from './permission-payloads';
 export { GrantPermissionRuleUseCase } from './grant-permission-rule.use-case';
 export { RevokePermissionRuleUseCase } from './revoke-permission-rule.use-case';
+export { RevokeMcpServerRulesUseCase } from './revoke-mcp-server-rules.use-case';
 export { ListPermissionRulesUseCase } from './list-permission-rules.use-case';
 export { DescribePermissionRuleUseCase } from './describe-permission-rule.use-case';
 export type { ListedPermissionRule } from './list-permission-rules.use-case';

@@ -34,9 +34,11 @@ import type {
   McpProjectApprovalRepository,
   McpServerDependencies,
   McpServerRepository,
+  McpServerRuleRevocation,
 } from '@application/mcp';
 import { FOLDER_ACCESS } from '@application/agent-settings';
 import type { FolderAccess } from '@application/agent-settings';
+import { RevokeMcpServerRulesUseCase } from '@application/permission';
 import {
   DisableMcpServerEverywhereUseCase,
   SESSION_BROADCASTER,
@@ -52,6 +54,7 @@ import { EngineProbeModule, engineMcpProviders } from './engines';
 import { AgentSettingsModule } from './agent-settings.module';
 import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
+import { PermissionModule } from './permission.module';
 import { SessionRegistryModule } from './session-registry.module';
 
 /** What every MCP server use case is built with. */
@@ -75,7 +78,14 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
  * See docs/architecture/backend/03-modules.md#mcp.
  */
 @Module({
-  imports: [AgentSettingsModule, AuditModule, AuthModule, EngineProbeModule, SessionRegistryModule],
+  imports: [
+    AgentSettingsModule,
+    AuditModule,
+    AuthModule,
+    EngineProbeModule,
+    PermissionModule,
+    SessionRegistryModule,
+  ],
   controllers: [McpServersController, ProjectMcpApprovalsController],
   providers: [
     ...engineMcpProviders,
@@ -103,6 +113,7 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
         ID_GENERATOR,
         CLOCK,
         LIVE_SESSION_MCP_REVOCATION,
+        RevokeMcpServerRulesUseCase,
       ],
       useFactory: (
         servers: McpServerRepository,
@@ -112,6 +123,7 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
         ids: IdGenerator,
         clock: Clock,
         liveSessions: LiveSessionMcpRevocation,
+        ruleRevocation: McpServerRuleRevocation,
       ): McpServerDependencies => ({
         servers,
         capabilities,
@@ -120,6 +132,7 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
         ids,
         clock,
         liveSessions,
+        ruleRevocation,
       }),
     },
     {

@@ -192,7 +192,7 @@ Testar **executa** o comando — grava `mcp.serverTested` (ex-`claude.mcpServerT
 já gravado, que já passou pelo segundo passo. Um
 teste em voo por servidor; ocupa lugar na capacidade como a sonda da B-10. Cenários S-111…S-115.
 
-### B-26 — Tool MCP e permissão 🔲
+### B-26 — Tool MCP e permissão ✅
 
 Não há ponte nova: a prova é que **não precisa haver**. No Claude, `mcp__srv__tool` chega ao `canUseTool` e
 ao `PreToolUse` como qualquer tool ([ADR-011](../../architecture/shared/00-decisions.md#adr-011--settingsources-project-obrigatório-e-auditoria-ancorada-no-hook-pretooluse),

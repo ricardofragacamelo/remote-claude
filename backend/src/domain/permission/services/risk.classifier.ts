@@ -114,12 +114,29 @@ export function classifyRisk(tool: Pick<CanonicalTool, 'kind' | 'subject'>): Ris
     return 'write';
   }
 
+  if (tool.kind === 'mcp') {
+    return classifyMcp();
+  }
+
   if (tool.kind !== 'shell') {
     return 'destructive';
   }
 
   const command = tool.subject.command;
   return command === undefined ? 'destructive' : classifyCommand(command);
+}
+
+/**
+ * The risk of an MCP tool call (plan 13, B-26; D-13) — always `destructive`, and deliberately not a
+ * function of the server's own `readOnly`/`destructive`/`openWorld` annotations, which are the
+ * server's own text, about itself, and this already fails closed for a kind that has no read or
+ * write list of its own to begin with. An annotation can say `destructive: true` — it adds nothing
+ * `classifyRisk` did not already decide — and `readOnly: true` is not trusted to lower it: a server
+ * that lies about being read-only is exactly the case fail-closed exists for. There is no annotation
+ * this function reads, because there is no annotation that could change the answer.
+ */
+function classifyMcp(): RiskHint {
+  return 'destructive';
 }
 
 /**

@@ -59,6 +59,27 @@ describe('classifyRisk', () => {
     expect(classifyRisk({ kind, subject: {} })).toBe('destructive');
   });
 
+  it('grades an MCP call destructive with no annotation — S-118', () => {
+    expect(risk('mcp__github__create_issue', {})).toBe('destructive');
+    expect(classifyRisk({ kind: 'mcp', subject: { server: 'github', tool: 'create_issue' } })).toBe(
+      'destructive',
+    );
+  });
+
+  it('grades an MCP call destructive whatever the server itself claims about its tool — S-118', () => {
+    // There is no annotation field on `ToolSubject` by design (D-13): a server's own claim about
+    // itself — `readOnly: true` included — is never read here, because there is nothing it could
+    // lower this kind's risk from, and `destructive: true` adds nothing already-destructive needs.
+    // Two different servers, two different tools, no input at all — the grade never moves.
+    expect(classifyRisk({ kind: 'mcp', subject: { server: 'figma', tool: 'read_file' } })).toBe(
+      'destructive',
+    );
+    expect(classifyRisk({ kind: 'mcp', subject: { server: 'github', tool: 'delete_repo' } })).toBe(
+      'destructive',
+    );
+    expect(classifyRisk({ kind: 'mcp', subject: {} })).toBe('destructive');
+  });
+
   it('grades a shell call by its command, whichever engine named it', () => {
     // Neutral: the command is parsed from the subject, never from an engine's input.
     expect(classifyRisk({ kind: 'shell', subject: { command: 'git status' } })).toBe('read');

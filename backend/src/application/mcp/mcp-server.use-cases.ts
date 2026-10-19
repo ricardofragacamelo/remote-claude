@@ -10,6 +10,7 @@ import type { McpEngineCapabilities } from './mcp-engine-capabilities';
 import type { McpEngineDialects } from './mcp-engine-dialects';
 import { ownedServer } from './owned-server';
 import type { LiveSessionMcpRevocation } from './ports/live-session-mcp-revocation.port';
+import type { McpServerRuleRevocation } from './ports/mcp-server-rule-revocation.port';
 import {
   DuplicateMcpServerNameError,
   type McpSecretField,
@@ -29,6 +30,20 @@ export interface McpServerDependencies {
 
   /** Reaches every live session when a server is disabled or removed (plan 13, B-23). */
   readonly liveSessions: LiveSessionMcpRevocation;
+
+  /** Revokes a user's `allow` rules reaching a server whose program changed, or that left (B-26, D-12). */
+  readonly ruleRevocation: McpServerRuleRevocation;
+}
+
+/** Whether the program a server runs changed — never a rename alone, which still runs the same thing. */
+function programChanged(before: StoredMcpServer, config: McpServerConfig): boolean {
+  return (
+    before.transport !== config.transport ||
+    before.command !== config.command ||
+    before.url !== config.url ||
+    before.args.length !== config.args.length ||
+    before.args.some((arg, index) => arg !== config.args[index])
+  );
 }
 
 const NO_SECRETS: readonly McpSecretField[] = [];
@@ -169,6 +184,12 @@ export class CreateMcpServerUseCase {
  * `PUT /engines/:engine/mcp-servers/:id` — changing a server (plan 13, B-19): the same
  * audit-then-keep-or-revert shape as {@link CreateMcpServerUseCase}, since a change can point the
  * server at a different program just as a creation can.
+ *
+ * When the program itself changes — command, args, URL or transport, never a rename alone — every
+ * `allow` rule of this user that reaches the server by name is revoked, right away, independent of
+ * whether the audit of the change itself succeeds (plan 13, B-26, D-12): a rule granted to a
+ * program is a rule about *that* program, and letting it answer for a different one just because
+ * the trail happened to fail would be the same mistake D-10 already refuses for a live session.
  */
 export class UpdateMcpServerUseCase {
   constructor(private readonly deps: McpServerDependencies) {}
@@ -194,6 +215,10 @@ export class UpdateMcpServerUseCase {
     const stored = await savingServer(config.name, () =>
       this.deps.servers.update(serverId, { userId, engine, config }, at),
     );
+
+    if (programChanged(before, config)) {
+      await this.deps.ruleRevocation.execute(userId, engine, before.name);
+    }
 
     try {
       await this.deps.trail.execute(
@@ -292,7 +317,9 @@ export class SetMcpServerEnabledUseCase {
  * Narrowing, so it is safe by default — the row is gone whether or not the trail could keep up, the
  * same choice {@link import('@application/permission').RevokePermissionRuleUseCase} makes for a
  * revocation. Reaches every live session that has the server too, the same as disabling it does
- * (plan 13, B-23, D-10).
+ * (plan 13, B-23, D-10) — and every `allow` rule of this user reaching it by name, the same as a
+ * changed program does (B-26, D-12): a server gone is as much a different program as one that now
+ * runs something else, and a name freed today can be claimed by someone else's server tomorrow.
  */
 export class DeleteMcpServerUseCase {
   constructor(private readonly deps: McpServerDependencies) {}
@@ -310,6 +337,7 @@ export class DeleteMcpServerUseCase {
 
     await this.deps.servers.delete(serverId);
     await this.deps.liveSessions.disableEverywhere(userId, engine, server.name);
+    await this.deps.ruleRevocation.execute(userId, engine, server.name);
     await this.deps.trail.execute(
       serverEvent('mcp.serverRemoved', userId, engine, serverId, server, null, at),
     );

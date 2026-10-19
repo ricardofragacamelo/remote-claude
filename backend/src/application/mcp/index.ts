@@ -38,6 +38,8 @@ export type {
 export { LIVE_SESSION_MCP_REVOCATION } from './ports/live-session-mcp-revocation.port';
 export type { LiveSessionMcpRevocation } from './ports/live-session-mcp-revocation.port';
 
+export type { McpServerRuleRevocation } from './ports/mcp-server-rule-revocation.port';
+
 export type {
   ProjectMcpClimbRequest,
   ProjectMcpFileError,

@@ -21,6 +21,7 @@ import {
   RULE_MIGRATION_STORE,
   RequestPermissionUseCase,
   ResolvePermissionUseCase,
+  RevokeMcpServerRulesUseCase,
   RevokePermissionRuleUseCase,
   RuleDialects,
   TOOL_KIND_BACKFILL_STORE,
@@ -198,6 +199,12 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
         new RevokePermissionRuleUseCase(rules, trail, clock),
     },
     {
+      provide: RevokeMcpServerRulesUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, RecordAuditEventUseCase, CLOCK],
+      useFactory: (rules: PermissionRuleRepository, trail: RecordAuditEventUseCase, clock: Clock) =>
+        new RevokeMcpServerRulesUseCase(rules, trail, clock),
+    },
+    {
       provide: ListPermissionRulesUseCase,
       inject: [PERMISSION_RULE_REPOSITORY, CLOCK],
       useFactory: (rules: PermissionRuleRepository, clock: Clock) =>
@@ -367,6 +374,7 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
     ResolvePermissionUseCase,
     ExtendPermissionUseCase,
     EndSessionPermissionsUseCase,
+    RevokeMcpServerRulesUseCase,
   ],
 })
 export class PermissionModule {}
