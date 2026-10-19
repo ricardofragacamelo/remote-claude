@@ -307,11 +307,15 @@ function emitGuard(declaration) {
     '    return false;',
     '  }',
     '',
-    '  const record = value as Readonly<Record<string, unknown>>;',
-    '',
     ...(checks.length === 0
       ? ['  return true;']
-      : ['  return [', ...checks.map((check) => `    ${check},`), '  ].every(Boolean);']),
+      : [
+          '  const record = value as Readonly<Record<string, unknown>>;',
+          '',
+          '  return [',
+          ...checks.map((check) => `    ${check},`),
+          '  ].every(Boolean);',
+        ]),
     '}',
   ];
 

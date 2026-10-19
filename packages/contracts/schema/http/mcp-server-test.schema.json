@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/mcp-server-test.json",
+  "title": "McpServerTestOutcome",
+  "description": "`POST /engines/:engine/mcp-servers/:id/test`: testing an already-saved server's connection, for real (plan 13, B-25). `timeout` is data of the answer, not an error — the server itself did not connect in time; a dead or unresponsive engine is `502`/`504` instead.",
+  "x-kind": "http",
+  "x-type": "mcp.serverTestOutcome",
+  "x-route": [{ "method": "POST", "path": "/engines/:engine/mcp-servers/:id/test" }],
+  "type": "object",
+  "required": ["status", "tools", "error"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["connected", "failed", "needs-auth", "timeout"]
+    },
+    "tools": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": { "$ref": "../definitions/mcp-server-tool.schema.json" }
+    },
+    "error": { "type": "string", "x-nullable": true }
+  }
+}

@@ -4,8 +4,9 @@ import type {
   McpServer,
   McpServerPreviewPayload,
   McpServerListPayload,
+  McpServerTestOutcomePayload,
 } from '@remote-claude/contracts';
-import type { McpServerDescription } from '@domain/mcp';
+import type { McpServerDescription, McpServerTestOutcome } from '@domain/mcp';
 import type { McpServerFieldsInput, McpSecretFieldInput } from '@application/mcp';
 import type { StoredMcpServer } from '@application/mcp';
 import { MCP_LIMITS } from '@domain/mcp';
@@ -104,6 +105,19 @@ export function toMcpServerDto(server: StoredMcpServer): McpServer {
 
 export function toMcpServerListDto(servers: readonly StoredMcpServer[]): McpServerListPayload {
   return { servers: servers.map(toMcpServerDto) };
+}
+
+/** [outcome] on the wire — every tool's annotations only where the server itself said something. */
+export function toMcpServerTestDto(outcome: McpServerTestOutcome): McpServerTestOutcomePayload {
+  return {
+    status: outcome.status,
+    error: outcome.error,
+    tools: outcome.tools.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      annotations: { ...tool.annotations },
+    })),
+  };
 }
 
 /** [description] on the wire — every param stringified: the contract has no number type here. */

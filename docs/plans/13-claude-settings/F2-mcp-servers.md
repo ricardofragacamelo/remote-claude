@@ -183,7 +183,7 @@ auto-aprovaria, e quem as ignora é o adapter: é a mesma lógica de "a regra no
 existem. Aprovar e rejeitar gravam na trilha (`mcp.projectServerApproved`, `mcp.projectServerRejected`).
 Cenários S-100…S-110.
 
-### B-25 — Testar conexão de servidor 🔲
+### B-25 — Testar conexão de servidor ✅
 
 `POST /engines/:engine/mcp-servers/:id/test`: sonda efêmera **do motor**, pela porta, com **só** aquele
 servidor (no Claude, strict), espera o status canônico chegar a `connected`, `failed` ou `needs-auth` dentro do

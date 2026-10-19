@@ -44,3 +44,6 @@ export type {
   ProjectMcpApprovalState,
   ProjectMcpDecision,
 } from './services/project-mcp-approval-state';
+
+export type { McpServerTool, McpServerToolAnnotations } from './entities/mcp-server-tool.entity';
+export type { McpServerTestOutcome, McpServerTestStatus } from './services/mcp-server-test-outcome';

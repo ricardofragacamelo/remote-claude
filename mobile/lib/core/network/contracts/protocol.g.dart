@@ -1356,6 +1356,80 @@ class McpProjectVariable {
   }
 }
 
+class McpServerToolAnnotations {
+  const McpServerToolAnnotations({
+    this.readOnly,
+    this.destructive,
+    this.openWorld,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory McpServerToolAnnotations.fromJson(Map<String, Object?> json) => McpServerToolAnnotations(
+        readOnly: json['readOnly'] as bool?,
+        destructive: json['destructive'] as bool?,
+        openWorld: json['openWorld'] as bool?,
+      );
+
+  final bool? readOnly;
+
+  final bool? destructive;
+
+  final bool? openWorld;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+    };
+
+    if (readOnly != null) {
+      json['readOnly'] = readOnly;
+    }
+
+    if (destructive != null) {
+      json['destructive'] = destructive;
+    }
+
+    if (openWorld != null) {
+      json['openWorld'] = openWorld;
+    }
+
+    return json;
+  }
+}
+
+/// One tool a server offered while a test connected to it (plan 13, B-25). `annotations` is what the server itself said of the tool — third-party text; absent fields mean the server said nothing of that trait.
+class McpServerTool {
+  const McpServerTool({
+    required this.name,
+    required this.description,
+    required this.annotations,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory McpServerTool.fromJson(Map<String, Object?> json) => McpServerTool(
+        name: json['name']! as String,
+        description: json['description'] as String?,
+        annotations: McpServerToolAnnotations.fromJson(json['annotations']! as Map<String, Object?>),
+      );
+
+  final String name;
+
+  final String? description;
+
+  final McpServerToolAnnotations annotations;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'description': description,
+      'annotations': annotations.toJson(),
+    };
+
+    return json;
+  }
+}
+
 /// One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02).
 class McpServer {
   const McpServer({
@@ -7197,6 +7271,48 @@ class McpServerPreviewPayload {
 
     return json;
   }
+}
+
+/// `POST /engines/:engine/mcp-servers/:id/test`: testing an already-saved server's connection, for real (plan 13, B-25). `timeout` is data of the answer, not an error — the server itself did not connect in time; a dead or unresponsive engine is `502`/`504` instead.
+class McpServerTestOutcomePayload {
+  const McpServerTestOutcomePayload({
+    required this.status,
+    required this.tools,
+    required this.error,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory McpServerTestOutcomePayload.fromJson(Map<String, Object?> json) => McpServerTestOutcomePayload(
+        status: json['status']! as String,
+        tools: (json['tools']! as List<Object?>).map((item) => McpServerTool.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        error: json['error'] as String?,
+      );
+
+  final String status;
+
+  final List<McpServerTool> tools;
+
+  final String? error;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'status': status,
+      'tools': tools.map((item) => item.toJson()).toList(growable: false),
+      'error': error,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [McpServerTestOutcomePayload].
+bool mcpServerTestOutcomePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['tools'] is List<Object?> && (json['tools']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
 }
 
 /// `GET /notifications`: a page of the centre, newest first, with how many are unread (plan 06, B-40).

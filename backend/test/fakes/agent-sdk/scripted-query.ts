@@ -176,6 +176,14 @@ export interface ScriptOptions {
   /** Thrown by `setMcpServers`, `toggleMcpServer` and `reconnectMcpServer`. */
   readonly mcpFails?: Error;
 
+  /**
+   * What `setMcpServers()` brings a server up as, instead of the fixture's own `connected` — a
+   * server that never leaves `pending` (a test of a connection timing out, plan 13, B-25) or that
+   * comes up `needs-auth`/`failed` right away (`mcpConnectError` names the error text for `failed`).
+   */
+  readonly mcpConnectStatus?: 'connected' | 'pending' | 'needs-auth' | 'failed';
+  readonly mcpConnectError?: string;
+
   /** A failure for the three questions about the installation — or a CLI that never answers them. */
   readonly installationFails?: Error | 'hang';
 
@@ -1038,10 +1046,17 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
   setMcpServers(servers: Record<string, McpServerConfig>): Promise<McpSetServersResult> {
     if (this.script.mcpFails !== undefined) return Promise.reject(this.script.mcpFails);
     this.record.mcpSets.push(servers);
+    const status = this.script.mcpConnectStatus ?? 'connected';
     this.dynamic = new Map(
       Object.keys(servers).map((name) => [
         name,
-        { name, status: 'connected', source: 'dynamic', tools: FIXTURE_TOOLS },
+        {
+          name,
+          status,
+          source: 'dynamic',
+          ...(status === 'connected' ? { tools: FIXTURE_TOOLS } : {}),
+          ...(status === 'failed' ? { error: this.script.mcpConnectError ?? 'failed' } : {}),
+        },
       ]),
     );
     return Promise.resolve({ added: Object.keys(servers), removed: [], errors: {} });

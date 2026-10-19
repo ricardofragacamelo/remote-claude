@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/mcp-server-tool.json",
+  "title": "McpServerTool",
+  "description": "One tool a server offered while a test connected to it (plan 13, B-25). `annotations` is what the server itself said of the tool — third-party text; absent fields mean the server said nothing of that trait.",
+  "type": "object",
+  "required": ["name", "description", "annotations"],
+  "properties": {
+    "name": { "type": "string" },
+    "description": { "type": "string", "x-nullable": true },
+    "annotations": {
+      "type": "object",
+      "properties": {
+        "readOnly": { "type": "boolean" },
+        "destructive": { "type": "boolean" },
+        "openWorld": { "type": "boolean" }
+      }
+    }
+  }
+}

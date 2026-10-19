@@ -592,19 +592,49 @@ describe('the TypeScript guards, however many fields they check', () => {
     expect(typescript).not.toContain('function requiredWhen(');
   });
 
-  it('answers true for a guard with nothing to check', () => {
+  it('answers true for a guard with nothing to check, and declares no unused variable for it', () => {
     expect(wide).toContain('export function isEnvelope(');
-    expect(
-      emitTypeScript(
-        buildModel(
-          {
-            source: 'envelope.schema.json',
-            schema: { title: 'Envelope', 'x-protocol-version': 1, type: 'object', properties: {} },
-          },
-          [],
-        ),
+    const noProperties = emitTypeScript(
+      buildModel(
+        {
+          source: 'envelope.schema.json',
+          schema: { title: 'Envelope', 'x-protocol-version': 1, type: 'object', properties: {} },
+        },
+        [],
       ),
-    ).toContain('  return true;\n}');
+    );
+
+    expect(noProperties).toContain('  return true;\n}');
+    // `record` would otherwise sit unused above `return true;` — a lint error in every
+    // consumer of the generated file (plan 13, B-25, found running `tsc` over it for real).
+    expect(noProperties).not.toContain('const record');
+  });
+
+  it('answers true, and declares no unused variable, for an object whose own fields are every one optional', () => {
+    // Different from "no properties at all" above: this object has fields, but none of them is
+    // required and none carries a limit or a conditional — `checks` is still empty.
+    const allOptional = emitTypeScript(
+      buildModel(envelope, [
+        {
+          source: 'events/all-optional.schema.json',
+          schema: {
+            title: 'AllOptional',
+            'x-kind': 'event',
+            'x-type': 'allOptional.happened',
+            type: 'object',
+            properties: {
+              readOnly: { type: 'boolean' },
+              destructive: { type: 'boolean' },
+            },
+          },
+        },
+      ]),
+    );
+
+    expect(allOptional).toContain('export function isAllOptionalPayload(');
+    const guard = /export function isAllOptionalPayload\(.*?\n}/s.exec(allOptional)?.[0] ?? '';
+    expect(guard).toContain('  return true;\n}');
+    expect(guard).not.toContain('const record');
   });
 });
 

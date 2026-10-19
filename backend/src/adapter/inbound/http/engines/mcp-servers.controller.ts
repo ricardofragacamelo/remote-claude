@@ -16,6 +16,7 @@ import type {
   McpServer,
   McpServerListPayload,
   McpServerPreviewPayload,
+  McpServerTestOutcomePayload,
 } from '@remote-claude/contracts';
 import {
   CreateMcpServerUseCase,
@@ -23,6 +24,7 @@ import {
   ListMcpServersUseCase,
   PreviewMcpServerUseCase,
   SetMcpServerEnabledUseCase,
+  TestMcpServerConnectionUseCase,
   UpdateMcpServerUseCase,
 } from '@application/mcp';
 import type { UserId } from '@domain/auth';
@@ -36,6 +38,7 @@ import {
   setEnabledSchema,
   toMcpServerDto,
   toMcpServerListDto,
+  toMcpServerTestDto,
   toPreviewDto,
 } from './mcp-servers.dto';
 import type { McpServerFieldsBody, SetEnabledBody } from './mcp-servers.dto';
@@ -51,7 +54,7 @@ import type { McpServerFieldsBody, SetEnabledBody } from './mcp-servers.dto';
  *
  * | Status | When |
  * |---|---|
- * | `200` | `GET`, `preview`, `PUT`, `PATCH` |
+ * | `200` | `GET`, `preview`, `PUT`, `PATCH`, `test` |
  * | `201` | `POST` — a server created |
  * | `204` | `DELETE`, always — the row is gone, with nothing left to return |
  * | `400` | a malformed body — every field in `details[]` |
@@ -60,6 +63,8 @@ import type { McpServerFieldsBody, SetEnabledBody } from './mcp-servers.dto';
  * | `404` | an engine without the capability, or a server that does not exist |
  * | `409` | the name is already taken in that scope |
  * | `422` | the configuration breaks a rule of B-18 |
+ * | `429` | `test` — the installation is already at its capacity (B-25, S-115) |
+ * | `502` / `504` | `test` — the engine itself died, or did not answer at all |
  * | `503` | the config carries a secret and the key file is unusable — nothing is written |
  */
 @Controller('engines/:engine/mcp-servers')
@@ -72,6 +77,7 @@ export class McpServersController {
     @Inject(UpdateMcpServerUseCase) private readonly update: UpdateMcpServerUseCase,
     @Inject(SetMcpServerEnabledUseCase) private readonly setEnabled: SetMcpServerEnabledUseCase,
     @Inject(DeleteMcpServerUseCase) private readonly deleteServer: DeleteMcpServerUseCase,
+    @Inject(TestMcpServerConnectionUseCase) private readonly test: TestMcpServerConnectionUseCase,
   ) {}
 
   @Get()
@@ -132,5 +138,15 @@ export class McpServersController {
     @CurrentUser() userId: UserId,
   ): Promise<void> {
     await this.deleteServer.execute(userId, engine, id);
+  }
+
+  @Post(':id/test')
+  @HttpCode(200)
+  async testConnection(
+    @Param('engine', new ZodPipe(engineParamSchema)) engine: string,
+    @Param('id') id: string,
+    @CurrentUser() userId: UserId,
+  ): Promise<McpServerTestOutcomePayload> {
+    return toMcpServerTestDto(await this.test.execute(userId, engine, id));
   }
 }

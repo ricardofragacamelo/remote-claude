@@ -66,3 +66,13 @@ export type {
   ProjectMcpListResult,
   ProjectMcpServerView,
 } from './project-mcp-approval.use-cases';
+
+export type { McpServerConnectionTester } from './ports/mcp-server-connection-tester.port';
+export { McpServerConnectionTesters } from './mcp-server-connection-testers';
+export type { EngineMcpServerConnectionTester } from './mcp-server-connection-testers';
+export {
+  MCP_SERVER_TEST_TIMEOUT,
+  MCP_SERVER_TEST_TIMEOUT_MS,
+  TestMcpServerConnectionUseCase,
+} from './test-mcp-server-connection.use-case';
+export type { TestMcpServerConnectionDependencies } from './test-mcp-server-connection.use-case';

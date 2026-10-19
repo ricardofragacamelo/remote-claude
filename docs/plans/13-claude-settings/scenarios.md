@@ -174,11 +174,11 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-111 | testar sobe só aquele servidor, devolve status e tools (com as annotations), e encerra a sonda | eq | integração | — | B-25 | ⬜ |
-| S-112 | servidor que não conecta no prazo → resultado `timeout` descrito, sonda encerrada | fron | integração | — | B-25 | ⬜ |
-| S-113 | dois testes do mesmo servidor ao mesmo tempo → um em voo | conc | unit | — | B-25 | ⬜ |
-| S-114 | testar grava `mcp.serverTested` — testar **executa** o comando | eq | integração | — | B-25 | ⬜ |
-| S-115 | capacidade cheia → teste recusado sem subprocesso | err | integração | `SESSION_LIMIT_REACHED` | B-25 | ⬜ |
+| S-111 | testar sobe só aquele servidor, devolve status e tools (com as annotations), e encerra a sonda | eq | integração | — | B-25 | ✅ |
+| S-112 | servidor que não conecta no prazo → resultado `timeout` descrito, sonda encerrada | fron | integração | — | B-25 | ✅ |
+| S-113 | dois testes do mesmo servidor ao mesmo tempo → um em voo | conc | unit | — | B-25 | ✅ |
+| S-114 | testar grava `mcp.serverTested` — testar **executa** o comando | eq | integração | — | B-25 | ✅ |
+| S-115 | capacidade cheia → teste recusado sem subprocesso | err | integração | `SESSION_LIMIT_REACHED` | B-25 | ✅ |
 
 ## Tool MCP e permissão — B-26
 

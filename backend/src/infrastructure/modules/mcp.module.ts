@@ -16,12 +16,16 @@ import {
   ListProjectMcpServersUseCase,
   MCP_PROJECT_APPROVAL_REPOSITORY,
   MCP_SERVER_REPOSITORY,
+  MCP_SERVER_TEST_TIMEOUT,
+  MCP_SERVER_TEST_TIMEOUT_MS,
   McpEngineCapabilities,
   McpEngineDialects,
+  McpServerConnectionTesters,
   PreviewMcpServerUseCase,
   ProjectMcpServersSources,
   RejectProjectMcpServerUseCase,
   SetMcpServerEnabledUseCase,
+  TestMcpServerConnectionUseCase,
   UpdateMcpServerUseCase,
 } from '@application/mcp';
 import type {
@@ -44,7 +48,7 @@ import { CLOCK, ID_GENERATOR } from '@application/shared';
 import type { Clock, IdGenerator } from '@domain/shared';
 import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
-import { engineMcpProviders } from './engines';
+import { EngineProbeModule, engineMcpProviders } from './engines';
 import { AgentSettingsModule } from './agent-settings.module';
 import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
@@ -71,7 +75,7 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
  * See docs/architecture/backend/03-modules.md#mcp.
  */
 @Module({
-  imports: [AgentSettingsModule, AuditModule, AuthModule, SessionRegistryModule],
+  imports: [AgentSettingsModule, AuditModule, AuthModule, EngineProbeModule, SessionRegistryModule],
   controllers: [McpServersController, ProjectMcpApprovalsController],
   providers: [
     ...engineMcpProviders,
@@ -205,6 +209,34 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
       inject: [MCP_PROJECT_APPROVAL_DEPENDENCIES],
       useFactory: (deps: McpProjectApprovalDependencies) => new RejectProjectMcpServerUseCase(deps),
     },
+    { provide: MCP_SERVER_TEST_TIMEOUT, useValue: MCP_SERVER_TEST_TIMEOUT_MS },
+    {
+      provide: TestMcpServerConnectionUseCase,
+      inject: [
+        MCP_SERVER_REPOSITORY,
+        McpEngineCapabilities,
+        McpServerConnectionTesters,
+        RecordAuditEventUseCase,
+        CLOCK,
+        MCP_SERVER_TEST_TIMEOUT,
+      ],
+      useFactory: (
+        servers: McpServerRepository,
+        capabilities: McpEngineCapabilities,
+        testers: McpServerConnectionTesters,
+        trail: RecordAuditEventUseCase,
+        clock: Clock,
+        timeoutMs: number,
+      ) =>
+        new TestMcpServerConnectionUseCase({
+          servers,
+          capabilities,
+          testers,
+          trail,
+          clock,
+          timeoutMs,
+        }),
+    },
   ],
   exports: [
     MCP_SERVER_REPOSITORY,
@@ -220,6 +252,7 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
     ListProjectMcpServersUseCase,
     ApproveProjectMcpServerUseCase,
     RejectProjectMcpServerUseCase,
+    TestMcpServerConnectionUseCase,
   ],
 })
 export class McpModule {}

@@ -18,6 +18,7 @@ import { CLAUDE_ENGINE } from '@adapter/outbound/engines/claude/claude-engine';
 import { PermissionBridge } from '@adapter/outbound/engines/claude/permission-bridge';
 import { SESSION_LIMITS } from '@adapter/outbound/engines/claude/session-limits';
 import { claudeMcpEngineDialect } from '@adapter/outbound/engines/claude/mcp-engine-dialect';
+import { AgentSdkMcpServerConnectionTest } from '@adapter/outbound/engines/claude/mcp-server-connection-test.adapter';
 import { ClaudeProjectMcpFileReader } from '@adapter/outbound/engines/claude/project-mcp-file.reader';
 import { claudeRuleDialect } from '@adapter/outbound/engines/claude/rule-dialect';
 import { classifyTool } from '@adapter/outbound/engines/claude/tool-classifier';
@@ -122,4 +123,12 @@ export const CLAUDE_PROJECT_MCP_SOURCE = Symbol('ClaudeProjectMcpSource');
 /** How the engine `claude` reads its own project MCP file — stateless, so one instance is enough. */
 export const claudeProjectMcpSourceProviders: readonly Provider[] = [
   { provide: CLAUDE_PROJECT_MCP_SOURCE, useClass: ClaudeProjectMcpFileReader },
+];
+
+/** The token of the connection tester of the engine `claude`, for its registry (plan 13, B-25). */
+export const CLAUDE_MCP_SERVER_CONNECTION_TESTER = Symbol('ClaudeMcpServerConnectionTester');
+
+/** How the engine `claude` tests one server's connection — a throwaway probe, through `EphemeralClaude`. */
+export const claudeMcpServerConnectionTesterProviders: readonly Provider[] = [
+  { provide: CLAUDE_MCP_SERVER_CONNECTION_TESTER, useClass: AgentSdkMcpServerConnectionTest },
 ];

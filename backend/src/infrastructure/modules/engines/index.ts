@@ -5,9 +5,10 @@ import type { EngineToolClassifier } from '@application/engine';
 import {
   McpEngineCapabilities,
   McpEngineDialects,
+  McpServerConnectionTesters,
   ProjectMcpServersSources,
 } from '@application/mcp';
-import type { ProjectMcpServersSource } from '@application/mcp';
+import type { McpServerConnectionTester, ProjectMcpServersSource } from '@application/mcp';
 import { RuleDialects } from '@application/permission';
 import type { RuleDialect } from '@application/permission';
 import { EngineRegistry } from '@application/session';
@@ -27,6 +28,7 @@ import { ClaudeSettingsModule } from './claude-settings.module';
 import { enabledEngines } from './engine-selection';
 import {
   CLAUDE_MCP_DIALECT,
+  CLAUDE_MCP_SERVER_CONNECTION_TESTER,
   CLAUDE_PROJECT_MCP_SOURCE,
   CLAUDE_RULE_DIALECT,
   CLAUDE_SECURITY_CONTRACT,
@@ -34,6 +36,7 @@ import {
   CLAUDE_TOOL_CLASSIFIER,
   CLAUDE_TRANSCRIPT_STORE,
   claudeMcpDialectProviders,
+  claudeMcpServerConnectionTesterProviders,
   claudeProjectMcpSourceProviders,
   claudeRuleDialectProviders,
   claudeSessionProviders,
@@ -48,6 +51,14 @@ import {
  */
 /** The one enabled today, under the neutral name the core asks the composition by. */
 export { ClaudeEngineModule as EngineModule } from './claude.module';
+
+/**
+ * What a throwaway probe of the engine needs — `EphemeralClaude` and everything it is built from —
+ * under the same neutral name (plan 13, B-25): `mcp` asks for this to test a server's connection,
+ * never for `ClaudeInstallationModule` by name.
+ */
+export { ClaudeInstallationModule as EngineProbeModule } from './claude-installation.module';
+
 export { enabledEngines } from './engine-selection';
 
 /**
@@ -195,6 +206,7 @@ const MCP_CAPABLE_ENGINES: readonly { readonly engine: EngineId; readonly capabl
  */
 export const engineMcpProviders: readonly Provider[] = [
   ...claudeMcpDialectProviders,
+  ...claudeMcpServerConnectionTesterProviders,
   ...claudeProjectMcpSourceProviders,
   {
     provide: McpEngineCapabilities,
@@ -227,6 +239,19 @@ export const engineMcpProviders: readonly Provider[] = [
       );
       return new ProjectMcpServersSources(
         enabled.map(({ engine, source }) => ({ engine: engine.value, source })),
+      );
+    },
+  },
+  {
+    provide: McpServerConnectionTesters,
+    inject: [APP_CONFIG, CLAUDE_MCP_SERVER_CONNECTION_TESTER],
+    useFactory: (config: AppConfig, claudeTester: McpServerConnectionTester) => {
+      const { enabled } = enabledEngines(
+        [{ engine: EngineId.create('claude'), tester: claudeTester }],
+        config.engines,
+      );
+      return new McpServerConnectionTesters(
+        enabled.map(({ engine, tester }) => ({ engine: engine.value, tester })),
       );
     },
   },

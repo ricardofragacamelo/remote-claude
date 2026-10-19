@@ -16,7 +16,6 @@ import type {
   McpServerDependencies,
   McpServerFieldsInput,
   McpServerRepository,
-  RevealedMcpServer,
   StoredMcpServer,
 } from '@application/mcp';
 import {
@@ -30,6 +29,7 @@ import { UserId } from '@domain/auth';
 import { FixedClock } from '../../../support/fakes/fixed-clock';
 import { InMemoryMcpServerRepository } from '../../../support/fakes/in-memory-mcp-server.repository';
 import { RecordingAuditEvents } from '../../../support/fakes/recording-audit-events';
+import { RevealRacingMcpServerRepository } from '../../../support/fakes/reveal-racing-mcp-server.repository';
 import { SequentialIds } from '../../../support/fakes/sequential-ids';
 
 const USER = UserId.create('auth|42');
@@ -79,42 +79,6 @@ class FailingMcpServerRepository implements McpServerRepository {
 
   update(): Promise<StoredMcpServer> {
     return Promise.reject(this.error);
-  }
-
-  setEnabled(...args: Parameters<McpServerRepository['setEnabled']>) {
-    return this.delegate.setEnabled(...args);
-  }
-
-  delete(...args: Parameters<McpServerRepository['delete']>) {
-    return this.delegate.delete(...args);
-  }
-}
-
-/** A repository whose `reveal()` loses a race and answers `null` for one id that still exists. */
-class RevealRacingMcpServerRepository implements McpServerRepository {
-  constructor(
-    private readonly delegate: McpServerRepository,
-    private readonly racingId: string,
-  ) {}
-
-  listFor(...args: Parameters<McpServerRepository['listFor']>) {
-    return this.delegate.listFor(...args);
-  }
-
-  findById(...args: Parameters<McpServerRepository['findById']>) {
-    return this.delegate.findById(...args);
-  }
-
-  reveal(id: string): Promise<RevealedMcpServer | null> {
-    return id === this.racingId ? Promise.resolve(null) : this.delegate.reveal(id);
-  }
-
-  insert(...args: Parameters<McpServerRepository['insert']>) {
-    return this.delegate.insert(...args);
-  }
-
-  update(...args: Parameters<McpServerRepository['update']>) {
-    return this.delegate.update(...args);
   }
 
   setEnabled(...args: Parameters<McpServerRepository['setEnabled']>) {

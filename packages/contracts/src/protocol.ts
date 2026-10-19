@@ -275,6 +275,19 @@ export interface McpProjectVariable {
   readonly value: string;
 }
 
+export interface McpServerToolAnnotations {
+  readonly readOnly?: boolean;
+  readonly destructive?: boolean;
+  readonly openWorld?: boolean;
+}
+
+/** One tool a server offered while a test connected to it (plan 13, B-25). `annotations` is what the server itself said of the tool — third-party text; absent fields mean the server said nothing of that trait. */
+export interface McpServerTool {
+  readonly name: string;
+  readonly description: string | null;
+  readonly annotations: McpServerToolAnnotations;
+}
+
 /** One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02). */
 export interface McpServer {
   readonly id: string;
@@ -1579,6 +1592,13 @@ export interface McpServerPreviewPayload {
   readonly params: Readonly<Record<string, unknown>>;
 }
 
+/** `POST /engines/:engine/mcp-servers/:id/test`: testing an already-saved server's connection, for real (plan 13, B-25). `timeout` is data of the answer, not an error — the server itself did not connect in time; a dead or unresponsive engine is `502`/`504` instead. */
+export interface McpServerTestOutcomePayload {
+  readonly status: 'connected' | 'failed' | 'needs-auth' | 'timeout';
+  readonly tools: readonly McpServerTool[];
+  readonly error: string | null;
+}
+
 /** `GET /notifications`: a page of the centre, newest first, with how many are unread (plan 06, B-40). */
 export interface NotificationPagePayload {
   readonly items: readonly Notification[];
@@ -2099,6 +2119,11 @@ export const MCP_SERVER_LIST_PAYLOAD_LIMITS = {
   servers: { maxItems: 10000 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link McpServerTestOutcomePayload}. */
+export const MCP_SERVER_TEST_OUTCOME_PAYLOAD_LIMITS = {
+  tools: { maxItems: 10000 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link NotificationPagePayload}. */
 export const NOTIFICATION_PAGE_PAYLOAD_LIMITS = {
   items: { maxItems: 10000 },
@@ -2517,6 +2542,34 @@ export function isMcpProjectVariable(value: unknown): value is McpProjectVariabl
   return [
     typeof record['name'] === 'string',
     typeof record['value'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link McpServerToolAnnotations}. Unknown fields are accepted.
+ */
+export function isMcpServerToolAnnotations(value: unknown): value is McpServerToolAnnotations {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Whether `value` carries every required field of {@link McpServerTool}. Unknown fields are accepted.
+ */
+export function isMcpServerTool(value: unknown): value is McpServerTool {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    nullOr(record['description'], typeof record['description'] === 'string'),
+    isMcpServerToolAnnotations(record['annotations']),
   ].every(Boolean);
 }
 
@@ -4786,6 +4839,24 @@ export function isMcpServerPreviewPayload(value: unknown): value is McpServerPre
   return [
     typeof record['messageKey'] === 'string',
     isNonNullObject(record['params']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link McpServerTestOutcomePayload}. Unknown fields are accepted.
+ */
+export function isMcpServerTestOutcomePayload(value: unknown): value is McpServerTestOutcomePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['status'] === 'string',
+    Array.isArray(record['tools']),
+    nullOr(record['error'], typeof record['error'] === 'string'),
+    withinMaxItems(record['tools'], 10000),
   ].every(Boolean);
 }
 
