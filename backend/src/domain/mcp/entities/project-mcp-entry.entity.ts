@@ -18,6 +18,26 @@ export interface ProjectMcpEntry {
   readonly headers: readonly McpHeader[];
 }
 
+/**
+ * What an approval keeps of the entry it approved — everything but its name, which is the lookup
+ * key the approval is already stored under (plan 13, B-28, D-80). Kept so a `changed` entry (D-11)
+ * can be shown against what was actually approved, not only told that it differs: nothing secret,
+ * the same reasoning {@link ProjectMcpEntry} itself already documents.
+ */
+export type ProjectMcpEntrySnapshot = Omit<ProjectMcpEntry, 'name'>;
+
+/** [entry], without its name — what an approval keeps of it (D-80). */
+export function snapshotOfProjectMcpEntry(entry: ProjectMcpEntry): ProjectMcpEntrySnapshot {
+  return {
+    transport: entry.transport,
+    command: entry.command,
+    args: entry.args,
+    url: entry.url,
+    env: entry.env,
+    headers: entry.headers,
+  };
+}
+
 /** By name, for a stable comparison regardless of how a file happened to list them. */
 function sortedByName<T extends { readonly name: string }>(fields: readonly T[]): readonly T[] {
   return [...fields].sort((a, b) => a.name.localeCompare(b.name));

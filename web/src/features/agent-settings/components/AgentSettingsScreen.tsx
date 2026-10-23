@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next';
 
+import { useEngineCapabilities } from '@/features/session';
 import { SectionTabs } from '@/shared/components/SectionTabs';
 import { useRegistry } from '@/shared/hooks/useRegistry';
 import {
   agentSettingsSections,
   sectionFor,
+  sectionsForCapabilities,
   sectionsForEngine,
 } from '../store/agent-settings-sections';
 import type { AgentSettingsLocation } from '../types/location';
@@ -32,7 +34,11 @@ export function AgentSettingsScreen({
   onLocation,
 }: AgentSettingsScreenProps): React.JSX.Element {
   const { t } = useTranslation();
-  const entries = sectionsForEngine(useRegistry(agentSettingsSections), engine);
+  const capabilities = useEngineCapabilities(engine);
+  const entries = sectionsForCapabilities(
+    sectionsForEngine(useRegistry(agentSettingsSections), engine),
+    capabilities,
+  );
   const active = sectionFor(entries, location.section);
 
   const go = (section: string): void => {

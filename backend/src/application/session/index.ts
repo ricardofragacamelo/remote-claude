@@ -86,7 +86,7 @@ export { ReapIdleSessionsUseCase } from './reap-idle-sessions.use-case';
 export { ShutdownSessionsUseCase } from './shutdown-sessions.use-case';
 export { observedStatus } from './session-status';
 export type { LiveSession } from './session-registry';
-export { liveControl } from './session-registry';
+export { liveControl, liveSessionsWithCapability } from './session-registry';
 export type {
   AgentEnginePort,
   AgentSessionHandle,

@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 
 import type { HelpExtra } from '@/shared/components/HelpPanel';
+import type { CapabilityFlag } from '@/features/session';
 import type { RegistryEntry } from '@/shared/lib/registry';
 import type { AgentSettingsLocation } from './location';
 
@@ -31,6 +32,14 @@ export interface AgentSettingsSection extends RegistryEntry {
   readonly titleKey: string;
   readonly purposeKey: string;
   readonly Body: ComponentType<SectionBodyProps>;
+
+  /**
+   * The capability an engine must say it has before this section's tab even shows (plan 13, B-28):
+   * `undefined` for a section every capable-or-not engine shows regardless (its models). Checked
+   * against `GET /engines`' own answer for the engine on screen — before it is known, the section
+   * stays (the same "innocent until told otherwise" `canDo` already applies everywhere else).
+   */
+  readonly capability?: CapabilityFlag;
 
   /**
    * The parts of the screen's help this section adds, beyond the three every screen has — written

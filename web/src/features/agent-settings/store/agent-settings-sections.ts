@@ -1,9 +1,11 @@
 import { Server, Sparkles } from 'lucide-react';
 
+import { McpSection } from '@/features/mcp';
+import { canDo } from '@/features/session';
+import type { EngineCapabilities } from '@/features/session';
 import { createRegistry } from '@/shared/lib/registry';
 import type { Registry } from '@/shared/lib/registry';
 import { ModelsSection } from '../components/ModelsSection';
-import { Nothing } from '../components/Nothing';
 import { modelsSectionHelp } from '../lib/agent-settings-help';
 import type { AgentSettingsSection } from '../types/section';
 
@@ -23,13 +25,15 @@ const DECLARED: readonly AgentSettingsSection[] = [
     help: modelsSectionHelp,
   },
   {
-    // The body arrives with plan 13, F2: the backend has no MCP CRUD yet either.
+    // Shown only for an engine with the `mcp` capability — `AgentSettingsScreen` filters by it
+    // before this is ever reached (plan 13, B-28, D-82).
     id: 'mcp',
     position: 400,
     icon: Server,
     titleKey: 'agentSettings.mcp.title',
     purposeKey: 'agentSettings.mcp.purpose',
-    Body: Nothing,
+    Body: McpSection,
+    capability: 'mcp',
   },
 ];
 
@@ -52,6 +56,23 @@ export function sectionsForEngine(
   engine: string,
 ): readonly AgentSettingsSection[] {
   return entries.filter((entry) => entry.engine === undefined || entry.engine === engine);
+}
+
+/**
+ * [entries], further narrowed to the ones the engine can actually do (plan 13, B-28, D-82): a
+ * section with no `capability` applies regardless (its models) — one that names a capability shows
+ * only while the engine has not explicitly said it cannot (`canDo`'s own "innocent until told
+ * otherwise", the same rule a control inside a session already follows). The tab itself disappears,
+ * not just its body: `AgentSettingsScreen` builds its tabs from this, never from `sectionsForEngine`
+ * alone.
+ */
+export function sectionsForCapabilities(
+  entries: readonly AgentSettingsSection[],
+  capabilities: EngineCapabilities | null,
+): readonly AgentSettingsSection[] {
+  return entries.filter(
+    (entry) => entry.capability === undefined || canDo(capabilities, entry.capability),
+  );
 }
 
 /**

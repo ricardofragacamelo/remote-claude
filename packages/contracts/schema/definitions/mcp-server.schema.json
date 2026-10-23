@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/definitions/mcp-server.json",
   "title": "McpServer",
-  "description": "One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02).",
+  "description": "One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02). `status` merges the store's own `enabled` with what a live session currently shows for it (plan 13, B-28, D-45).",
   "type": "object",
   "required": [
     "id",
@@ -16,6 +16,7 @@
     "url",
     "headerNames",
     "enabled",
+    "status",
     "createdAt",
     "updatedAt"
   ],
@@ -64,6 +65,11 @@
       "description": "The names of the headers this server carries — never their values."
     },
     "enabled": { "type": "boolean" },
+    "status": {
+      "type": "string",
+      "enum": ["connected", "failed", "needs-auth", "pending", "disabled"],
+      "description": "`disabled` whenever `enabled` is `false`. Otherwise what a live session of the caller currently shows for this name, or `pending` with no live session showing it yet (plan 13, B-28, D-45; the per-session equivalent is `session.mcpStatusChanged`)."
+    },
     "createdAt": { "type": "string" },
     "updatedAt": { "type": "string" }
   }

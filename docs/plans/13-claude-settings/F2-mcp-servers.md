@@ -253,7 +253,7 @@ que há versão nova, a prévia mostra a **diferença** do que o plugin traz, e 
 commit. Marketplace que sai do arquivo (recarga por `SIGHUP`) tira os plugins dele das sessões novas,
 com a razão na tela. Cenários S-200…S-211, S-213.
 
-### B-28 — Tela: servidores MCP 🔲
+### B-28 — Tela: servidores MCP ✅
 
 Seção "Servidores MCP", do **núcleo**: uma feature neutra do web (proposta: `web/src/features/mcp/`, confirmada
 pela [28 · F6](../28-agent-neutral-core/F6-engine-extensions.md)), registrada no registro de seções da tela de

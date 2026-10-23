@@ -56,6 +56,7 @@ describe('DrizzleMcpProjectApprovalRepository', () => {
         name: 'docs',
         digest: 'd1',
         decision: 'approved',
+        snapshot: null,
       },
       NOW,
     );
@@ -74,6 +75,7 @@ describe('DrizzleMcpProjectApprovalRepository', () => {
         name: 'docs',
         digest: 'd1',
         decision: 'approved',
+        snapshot: null,
       },
       NOW,
     );
@@ -85,6 +87,7 @@ describe('DrizzleMcpProjectApprovalRepository', () => {
         name: 'docs',
         digest: 'd2',
         decision: 'rejected',
+        snapshot: null,
       },
       LATER,
     );
@@ -103,6 +106,7 @@ describe('DrizzleMcpProjectApprovalRepository', () => {
         name: 'docs',
         digest: 'd1',
         decision: 'approved',
+        snapshot: null,
       },
       NOW,
     );
@@ -114,6 +118,7 @@ describe('DrizzleMcpProjectApprovalRepository', () => {
         name: 'metrics',
         digest: 'd2',
         decision: 'rejected',
+        snapshot: null,
       },
       NOW,
     );
@@ -125,6 +130,7 @@ describe('DrizzleMcpProjectApprovalRepository', () => {
         name: 'docs',
         digest: 'd3',
         decision: 'approved',
+        snapshot: null,
       },
       NOW,
     );
@@ -142,6 +148,7 @@ describe('DrizzleMcpProjectApprovalRepository', () => {
         name: 'docs',
         digest: 'd1',
         decision: 'approved',
+        snapshot: null,
       },
       NOW,
     );
@@ -153,11 +160,63 @@ describe('DrizzleMcpProjectApprovalRepository', () => {
         name: 'docs',
         digest: 'd2',
         decision: 'rejected',
+        snapshot: null,
       },
       NOW,
     );
 
     expect((await repository.findOne(USER, ENGINE, '/srv/a', 'docs'))?.decision).toBe('approved');
     expect((await repository.findOne(USER, ENGINE, '/srv/b', 'docs'))?.decision).toBe('rejected');
+  });
+
+  describe('snapshot — plan 13, B-28, D-80', () => {
+    it('round-trips a jsonb snapshot through a real column', async () => {
+      await repository.upsert(
+        {
+          userId: USER,
+          engine: ENGINE,
+          folderPath: FOLDER,
+          name: 'docs',
+          digest: 'd1',
+          decision: 'approved',
+          snapshot: {
+            transport: 'stdio',
+            command: 'npx',
+            args: ['-y', 'server'],
+            url: null,
+            env: [{ name: 'TOKEN', value: '${TOKEN}' }],
+            headers: [],
+          },
+        },
+        NOW,
+      );
+
+      const found = await repository.findOne(USER, ENGINE, FOLDER, 'docs');
+      expect(found?.snapshot).toEqual({
+        transport: 'stdio',
+        command: 'npx',
+        args: ['-y', 'server'],
+        url: null,
+        env: [{ name: 'TOKEN', value: '${TOKEN}' }],
+        headers: [],
+      });
+    });
+
+    it('keeps no snapshot for a rejection', async () => {
+      await repository.upsert(
+        {
+          userId: USER,
+          engine: ENGINE,
+          folderPath: FOLDER,
+          name: 'docs',
+          digest: 'd1',
+          decision: 'rejected',
+          snapshot: null,
+        },
+        NOW,
+      );
+
+      expect((await repository.findOne(USER, ENGINE, FOLDER, 'docs'))?.snapshot).toBeNull();
+    });
   });
 });

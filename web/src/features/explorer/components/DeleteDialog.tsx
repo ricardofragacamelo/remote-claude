@@ -2,10 +2,10 @@ import { useEffect, useRef } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/shared/components/ui/button';
+import { DestructiveConfirmFooter } from '@/shared/components/DestructiveConfirmFooter';
+import { DialogFrame } from '@/shared/components/DialogFrame';
 import type { NotKept } from '../hooks/kept-delete';
 import type { CountedFolder, DeleteFlow, DeleteStep } from '../hooks/useDeleteFlow';
-import { DialogFrame } from '@/shared/components/DialogFrame';
 
 export interface DeleteDialogProps {
   readonly flow: DeleteFlow;
@@ -53,20 +53,15 @@ export function DeleteDialog({ flow }: DeleteDialogProps): React.JSX.Element {
       title={titleOf(current, t)}
       description={t('explorer.delete.forGood')}
       footer={
-        <>
-          <Button ref={keep} variant="outline" disabled={flow.pending} onClick={flow.cancel}>
-            {t('explorer.delete.keep')}
-          </Button>
-          <Button
-            variant="destructive"
-            disabled={flow.pending}
-            onClick={() => {
-              void flow.confirm();
-            }}
-          >
-            {flow.pending ? t('explorer.delete.pending') : t('explorer.delete.confirm')}
-          </Button>
-        </>
+        <DestructiveConfirmFooter
+          keepRef={keep}
+          pending={flow.pending}
+          keepLabel={t('explorer.delete.keep')}
+          confirmLabel={t('explorer.delete.confirm')}
+          pendingLabel={t('explorer.delete.pending')}
+          onCancel={flow.cancel}
+          onConfirm={flow.confirm}
+        />
       }
     >
       {current?.step === 'confirm' && <NotKeptList notKept={current.notKept} />}

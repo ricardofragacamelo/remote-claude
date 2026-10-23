@@ -18,6 +18,7 @@ export {
   createAgentSettingsSections,
   firstAgentSectionId,
   sectionFor,
+  sectionsForCapabilities,
   sectionsForEngine,
 } from './store/agent-settings-sections';
 export { defaultsExtraFields } from './store/defaults-extra-fields';

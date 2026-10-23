@@ -6,9 +6,13 @@ import type {
   McpServerListPayload,
   McpServerTestOutcomePayload,
 } from '@remote-claude/contracts';
-import type { McpServerDescription, McpServerTestOutcome } from '@domain/mcp';
-import type { McpServerFieldsInput, McpSecretFieldInput } from '@application/mcp';
-import type { StoredMcpServer } from '@application/mcp';
+import type { McpServerTestOutcome } from '@domain/mcp';
+import type {
+  McpServerFieldsInput,
+  McpSecretFieldInput,
+  McpServerPreviewResult,
+  McpServerView,
+} from '@application/mcp';
 import { MCP_LIMITS } from '@domain/mcp';
 
 /** `:engine`, in the form of an engine's name — whether it is enabled is the use case's to say. */
@@ -25,6 +29,13 @@ const commonFields = {
   name: z.string().min(1).max(64),
   scope: z.enum(['user', 'folder']),
   folderPath: z.string().min(1).max(4096).nullable().optional(),
+
+  /**
+   * Set only on a call to `preview`, to name the server being **edited** — never on a create or on
+   * the store-writing routes, which already carry it in the path (plan 13, B-28, D-62, D-79). Its
+   * presence is what tells the preview to compute `revokedRules`.
+   */
+  id: z.string().min(1).max(64).optional(),
 };
 
 const stdioFieldsSchema = z
@@ -84,8 +95,11 @@ export function fieldsOf(body: McpServerFieldsBody): McpServerFieldsInput {
   };
 }
 
-/** [server] on the wire — structural fields only, never a secret value (S-70). */
-export function toMcpServerDto(server: StoredMcpServer): McpServer {
+/**
+ * [server] on the wire — structural fields only, never a secret value (S-70). `status` is the
+ * store's own `disabled`, or what a live session shows for it, `pending` with none (B-28, D-45).
+ */
+export function toMcpServerDto(server: McpServerView): McpServer {
   return {
     id: server.id,
     name: server.name,
@@ -98,12 +112,13 @@ export function toMcpServerDto(server: StoredMcpServer): McpServer {
     url: server.url,
     headerNames: [...server.headerNames],
     enabled: server.enabled,
+    status: server.status,
     createdAt: server.createdAt.toISOString(),
     updatedAt: server.updatedAt.toISOString(),
   };
 }
 
-export function toMcpServerListDto(servers: readonly StoredMcpServer[]): McpServerListPayload {
+export function toMcpServerListDto(servers: readonly McpServerView[]): McpServerListPayload {
   return { servers: servers.map(toMcpServerDto) };
 }
 
@@ -120,10 +135,14 @@ export function toMcpServerTestDto(outcome: McpServerTestOutcome): McpServerTest
   };
 }
 
-/** [description] on the wire — every param stringified: the contract has no number type here. */
-export function toPreviewDto(description: McpServerDescription): McpServerPreviewPayload {
+/**
+ * [description] on the wire — every param stringified: the contract has no number type here.
+ * `revokedRules` is empty for a create, or an edit that keeps the server's program (D-62, D-79).
+ */
+export function toPreviewDto(description: McpServerPreviewResult): McpServerPreviewPayload {
   return {
     messageKey: description.messageKey,
+    revokedRules: [...description.revokedRules],
     params: Object.fromEntries(
       Object.entries(description.params).map(([key, value]) => [key, String(value)]),
     ),

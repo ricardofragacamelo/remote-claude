@@ -26,7 +26,7 @@ export interface Credentials {
 
 /** Everything a caller may vary about one request. */
 export interface RequestOptions {
-  readonly method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   readonly body?: unknown;
   readonly locale?: string;
   readonly signal?: AbortSignal;
@@ -129,6 +129,11 @@ export class ApiClient {
 
   put<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
     return this.request<T>(path, { ...options, method: 'PUT', body });
+  }
+
+  /** A partial change — the one write this feature's toggle needs that `put` would overstate. */
+  patch<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(path, { ...options, method: 'PATCH', body });
   }
 
   delete<T>(path: string, options: RequestOptions = {}): Promise<T> {

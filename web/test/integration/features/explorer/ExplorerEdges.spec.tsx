@@ -159,6 +159,28 @@ describe('deleting, where it does not all go', () => {
     await user.click(within(outcome).getByRole('button', { name: t('explorer.outcome.close') }));
     expect(disk.entries.has('big/a.ts')).toBe(true);
   });
+
+  it('lists a file needing the second step, then deletes it once confirmed — 07 · D-15', async () => {
+    const user = userEvent.setup();
+    const { disk } = renderExplorer({ 'a.ts': 'a' });
+    disk.refuseNext(
+      (call) => call.method === 'DELETE' && call.query.get('keepInHistory') === null,
+      filesRefusal('PRECONDITION_REQUIRED', 'files.error.preconditionRequired', {
+        path: 'a.ts',
+        reason: 'sensitiveFile',
+      }),
+    );
+    await onRow('a.ts');
+    await user.keyboard('{Delete}');
+    await user.click(await screen.findByRole('button', { name: t('explorer.delete.confirm') }));
+
+    expect(await screen.findByText(t('explorer.delete.sensitive', { path: 'a.ts' }))).toBeVisible();
+    await user.click(screen.getByRole('button', { name: t('explorer.delete.confirm') }));
+
+    await waitFor(() => {
+      expect(disk.entries.has('a.ts')).toBe(false);
+    });
+  });
 });
 
 describe('two presses, one operation', () => {

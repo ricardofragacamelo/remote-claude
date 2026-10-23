@@ -228,6 +228,51 @@ describe("the approval of a project's own MCP file — plan 13, B-24", () => {
     expect(nowChanged.body.servers[0].state).toBe('changed');
   });
 
+  it('a changed entry carries what was actually approved beside the current content — plan 13, B-28, D-80, S-136', async () => {
+    const folder = newCase();
+    writeMcpJson(folder, {
+      mcpServers: { docs: { command: 'npx', env: { TOKEN: '${TOKEN}' } } },
+    });
+    const shown = (
+      await get(`/engines/claude/project-mcp-approvals?folder=${encodeURIComponent(folder)}`)
+    ).body.servers[0];
+    await put('/engines/claude/project-mcp-approvals', {
+      folder,
+      name: 'docs',
+      digest: shown.digest,
+    });
+
+    writeMcpJson(folder, { mcpServers: { docs: { command: 'node' } } });
+    const changed = await get(
+      `/engines/claude/project-mcp-approvals?folder=${encodeURIComponent(folder)}`,
+    );
+
+    expect(changed.body.servers[0].state).toBe('changed');
+    expect(changed.body.servers[0].command).toBe('node');
+    expect(changed.body.servers[0].approvedSnapshot).toMatchObject({
+      command: 'npx',
+      env: [{ name: 'TOKEN', value: '${TOKEN}' }],
+    });
+  });
+
+  it('a pending entry, and a rejected one, carry no approved snapshot', async () => {
+    const folder = newCase();
+    writeMcpJson(folder, { mcpServers: { docs: { command: 'npx' } } });
+
+    const pending = await get(
+      `/engines/claude/project-mcp-approvals?folder=${encodeURIComponent(folder)}`,
+    );
+    expect(pending.body.servers[0].approvedSnapshot).toBeNull();
+
+    await del(
+      `/engines/claude/project-mcp-approvals?folder=${encodeURIComponent(folder)}&name=docs`,
+    );
+    const rejected = await get(
+      `/engines/claude/project-mcp-approvals?folder=${encodeURIComponent(folder)}`,
+    );
+    expect(rejected.body.servers[0].approvedSnapshot).toBeNull();
+  });
+
   it("answers everything asked of it on its own, never reading the CLI's own approval files — S-104", async () => {
     const folder = newCase();
     writeMcpJson(folder, { mcpServers: { docs: { command: 'npx' } } });

@@ -332,7 +332,7 @@ export interface McpServerTool {
   readonly annotations: McpServerToolAnnotations;
 }
 
-/** One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02). */
+/** One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02). `status` merges the store's own `enabled` with what a live session currently shows for it (plan 13, B-28, D-45). */
 export interface McpServer {
   readonly id: string;
   readonly name: string;
@@ -351,6 +351,8 @@ export interface McpServer {
   /** The names of the headers this server carries — never their values. */
   readonly headerNames: readonly string[];
   readonly enabled: boolean;
+  /** `disabled` whenever `enabled` is `false`. Otherwise what a live session of the caller currently shows for this name, or `pending` with no live session showing it yet (plan 13, B-28, D-45; the per-session equivalent is `session.mcpStatusChanged`). */
+  readonly status: 'connected' | 'failed' | 'needs-auth' | 'pending' | 'disabled';
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -420,6 +422,16 @@ export interface PermissionRule {
   readonly disabled: PermissionRuleDisabled | null;
 }
 
+/** What was approved, for `state` `approved` or `changed` — `null` for `pending`/`rejected`, and for a decision recorded before this field existed (plan 13, B-28, D-80). The screen diffs this against the fields above, the current content, for a `changed` entry. */
+export interface ProjectMcpServerApprovedSnapshot {
+  readonly transport: 'stdio' | 'http' | 'sse';
+  readonly command: string | null;
+  readonly args: readonly string[];
+  readonly url: string | null;
+  readonly env: readonly McpProjectVariable[];
+  readonly headers: readonly McpProjectVariable[];
+}
+
 /** One server a project's own MCP file declares, with where it stands with this user (plan 13, B-24). Unlike a server of the store, `env` and `headers` carry their value literal — a project file is plain text already in the repository, never a secret of ours (D-11). */
 export interface ProjectMcpServer {
   /** The folder whose own MCP file declares this entry — not necessarily the folder a session opens in; an ancestor of it. */
@@ -437,6 +449,8 @@ export interface ProjectMcpServer {
   readonly url: string | null;
   readonly env: readonly McpProjectVariable[];
   readonly headers: readonly McpProjectVariable[];
+  /** What was approved, for `state` `approved` or `changed` — `null` for `pending`/`rejected`, and for a decision recorded before this field existed (plan 13, B-28, D-80). The screen diffs this against the fields above, the current content, for a `changed` entry. */
+  readonly approvedSnapshot: ProjectMcpServerApprovedSnapshot | null;
 }
 
 /** The answer to one question of an `interaction`, by its id: the labels chosen and the free answer, never the engine's own joined string. */
@@ -1670,11 +1684,13 @@ export interface McpServerListPayload {
   readonly servers: readonly McpServer[];
 }
 
-/** `POST /engines/:engine/mcp-servers/preview`: the description a save of this configuration would show and record — word for word (plan 13, B-18, S-68). `params` is a map of strings: the generator has no number type here, so a numeric field (such as a count) travels as its decimal text, the way `costUsd` already does elsewhere. */
+/** `POST /engines/:engine/mcp-servers/preview`: the description a save of this configuration would show and record — word for word (plan 13, B-18, S-68). `params` is a map of strings: the generator has no number type here, so a numeric field (such as a count) travels as its decimal text, the way `costUsd` already does elsewhere. Carrying `id` in the request body names the server being edited, and the response then lists which of the caller's own `allow` rules the save would revoke (plan 13, B-28, D-62, D-79). */
 export interface McpServerPreviewPayload {
   readonly messageKey: string;
   /** Every value a string — a numeric field (a count) travels as its decimal text, the way `costUsd` already does elsewhere. Open: shaped by the server's transport. */
   readonly params: Readonly<Record<string, unknown>>;
+  /** The content of every `allow` rule of the caller that this edit would revoke, were it saved — the server's program (command, args, URL or transport) changed from what the rule was granted against (plan 13, B-26, D-12; B-28, D-62, D-79). Empty for a create, or an edit that keeps the program the same. */
+  readonly revokedRules: readonly string[];
 }
 
 /** `POST /engines/:engine/mcp-servers/:id/test`: testing an already-saved server's connection, for real (plan 13, B-25). `timeout` is data of the answer, not an error — the server itself did not connect in time; a dead or unresponsive engine is `502`/`504` instead. */
@@ -2038,6 +2054,13 @@ export const MCP_SERVER_LIMITS = {
   headerNames: { maxItems: 64 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link ProjectMcpServerApprovedSnapshot}. */
+export const PROJECT_MCP_SERVER_APPROVED_SNAPSHOT_LIMITS = {
+  args: { maxItems: 64 },
+  env: { maxItems: 64 },
+  headers: { maxItems: 64 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link ProjectMcpServer}. */
 export const PROJECT_MCP_SERVER_LIMITS = {
   args: { maxItems: 64 },
@@ -2237,6 +2260,11 @@ export const KEPT_DELETE_PAYLOAD_KEPT_LIMITS = {
 /** The bounds the schema gives the fields of {@link McpServerListPayload}. */
 export const MCP_SERVER_LIST_PAYLOAD_LIMITS = {
   servers: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link McpServerPreviewPayload}. */
+export const MCP_SERVER_PREVIEW_PAYLOAD_LIMITS = {
+  revokedRules: { maxItems: 1000 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link McpServerTestOutcomePayload}. */
@@ -2798,6 +2826,7 @@ export function isMcpServer(value: unknown): value is McpServer {
     nullOr(record['url'], typeof record['url'] === 'string'),
     Array.isArray(record['headerNames']),
     typeof record['enabled'] === 'boolean',
+    typeof record['status'] === 'string',
     typeof record['createdAt'] === 'string',
     typeof record['updatedAt'] === 'string',
     withinMaxItems(record['args'], 64),
@@ -2908,6 +2937,29 @@ export function isPermissionRule(value: unknown): value is PermissionRule {
 }
 
 /**
+ * Whether `value` carries every required field of {@link ProjectMcpServerApprovedSnapshot}. Unknown fields are accepted.
+ */
+export function isProjectMcpServerApprovedSnapshot(value: unknown): value is ProjectMcpServerApprovedSnapshot {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['transport'] === 'string',
+    nullOr(record['command'], typeof record['command'] === 'string'),
+    Array.isArray(record['args']),
+    nullOr(record['url'], typeof record['url'] === 'string'),
+    Array.isArray(record['env']),
+    Array.isArray(record['headers']),
+    withinMaxItems(record['args'], 64),
+    withinMaxItems(record['env'], 64),
+    withinMaxItems(record['headers'], 64),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link ProjectMcpServer}. Unknown fields are accepted.
  */
 export function isProjectMcpServer(value: unknown): value is ProjectMcpServer {
@@ -2928,6 +2980,7 @@ export function isProjectMcpServer(value: unknown): value is ProjectMcpServer {
     nullOr(record['url'], typeof record['url'] === 'string'),
     Array.isArray(record['env']),
     Array.isArray(record['headers']),
+    nullOr(record['approvedSnapshot'], isProjectMcpServerApprovedSnapshot(record['approvedSnapshot'])),
     withinMaxItems(record['args'], 64),
     withinMaxItems(record['env'], 64),
     withinMaxItems(record['headers'], 64),
@@ -5157,6 +5210,8 @@ export function isMcpServerPreviewPayload(value: unknown): value is McpServerPre
   return [
     typeof record['messageKey'] === 'string',
     isNonNullObject(record['params']),
+    Array.isArray(record['revokedRules']),
+    withinMaxItems(record['revokedRules'], 1000),
   ].every(Boolean);
 }
 

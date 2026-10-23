@@ -13,7 +13,11 @@ export {
   SetMcpServerEnabledUseCase,
   UpdateMcpServerUseCase,
 } from './mcp-server.use-cases';
-export type { McpServerDependencies } from './mcp-server.use-cases';
+export type {
+  McpServerDependencies,
+  McpServerPreviewResult,
+  McpServerView,
+} from './mcp-server.use-cases';
 
 export { ComposeSessionMcpServersUseCase } from './compose-session-mcp-servers.use-case';
 export type { ComposeSessionMcpServersQuery } from './compose-session-mcp-servers.use-case';
@@ -39,6 +43,9 @@ export { LIVE_SESSION_MCP_REVOCATION } from './ports/live-session-mcp-revocation
 export type { LiveSessionMcpRevocation } from './ports/live-session-mcp-revocation.port';
 
 export type { McpServerRuleRevocation } from './ports/mcp-server-rule-revocation.port';
+
+export { MCP_SERVER_LIVE_STATUS_SOURCE } from './ports/mcp-server-live-status.port';
+export type { McpServerLiveStatusSource } from './ports/mcp-server-live-status.port';
 
 export type {
   ProjectMcpClimbRequest,

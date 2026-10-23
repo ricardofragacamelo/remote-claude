@@ -7,7 +7,8 @@ import {
   SessionNotFoundError,
 } from '@domain/session';
 import type { SessionId } from '@domain/session';
-import type { ConversationRef } from '@domain/engine';
+import type { ConversationRef, EngineCapability } from '@domain/engine';
+import { hasCapability } from '@domain/engine';
 import type { SessionConversations } from './attach-session.use-case';
 import { controlOf } from './ports/agent-engine.port';
 import type {
@@ -219,4 +220,27 @@ export function liveControl<K extends ControlMethod>(
   name: K,
 ): NonNullable<EngineControl[K]> {
   return controlOf(live.conversation.ref.engine, live.handle, name);
+}
+
+/**
+ * The live sessions of [userId], on [engine], that carry [capability] — the same selection every
+ * sweep over a user's own live sessions needs, whether it narrows what they run
+ * ({@link import('./disable-mcp-server-everywhere.use-case').DisableMcpServerEverywhereUseCase},
+ * B-23) or only reads what they currently show (`SessionRegistryLiveMcpStatus`, B-28, D-81) — one
+ * definition of "which sessions this reaches" for both.
+ */
+export function liveSessionsWithCapability(
+  registry: SessionRegistry,
+  userId: UserId,
+  engine: string,
+  capability: EngineCapability,
+): readonly LiveSession[] {
+  return registry
+    .all()
+    .filter(
+      (live) =>
+        live.session.isOwnedBy(userId) &&
+        live.conversation.ref.engine.value === engine &&
+        hasCapability(live.handle.capabilities, capability),
+    );
 }

@@ -2,6 +2,7 @@ import type { RecordAuditEventUseCase } from '@application/audit';
 import { createMcpServerConfig, describeMcpServer, McpServerNameTakenError } from '@domain/mcp';
 import type { McpEngineDialect, McpServerConfig, McpServerDescription } from '@domain/mcp';
 import type { UserId } from '@domain/auth';
+import type { McpStatus } from '@domain/session';
 import type { Clock, IdGenerator } from '@domain/shared';
 import type { McpServerFieldsInput } from './commands/mcp-server-fields.command';
 import { configFromRevealed } from './config-from-revealed';
@@ -10,6 +11,7 @@ import type { McpEngineCapabilities } from './mcp-engine-capabilities';
 import type { McpEngineDialects } from './mcp-engine-dialects';
 import { ownedServer } from './owned-server';
 import type { LiveSessionMcpRevocation } from './ports/live-session-mcp-revocation.port';
+import type { McpServerLiveStatusSource } from './ports/mcp-server-live-status.port';
 import type { McpServerRuleRevocation } from './ports/mcp-server-rule-revocation.port';
 import {
   DuplicateMcpServerNameError,
@@ -33,6 +35,37 @@ export interface McpServerDependencies {
 
   /** Revokes a user's `allow` rules reaching a server whose program changed, or that left (B-26, D-12). */
   readonly ruleRevocation: McpServerRuleRevocation;
+
+  /** Reads what a live session currently shows for a server of the store (plan 13, B-28, D-45). */
+  readonly liveStatus: McpServerLiveStatusSource;
+}
+
+/** [StoredMcpServer], with the status a live session shows for it, or the store's own (D-45). */
+export interface McpServerView extends StoredMcpServer {
+  readonly status: McpStatus;
+}
+
+/** A disabled server is `disabled`, full stop — no live session overrides the store's own word. */
+async function statusOf(
+  deps: Pick<McpServerDependencies, 'liveStatus'>,
+  userId: UserId,
+  engine: string,
+  server: Pick<StoredMcpServer, 'name' | 'enabled'>,
+): Promise<McpStatus> {
+  if (!server.enabled) {
+    return 'disabled';
+  }
+  const live = await deps.liveStatus.statusFor(userId, engine);
+  return live.get(server.name) ?? 'pending';
+}
+
+async function viewOf(
+  deps: McpServerDependencies,
+  userId: UserId,
+  engine: string,
+  server: StoredMcpServer,
+): Promise<McpServerView> {
+  return { ...server, status: await statusOf(deps, userId, engine, server) };
 }
 
 /** Whether the program a server runs changed — never a rename alone, which still runs the same thing. */
@@ -72,6 +105,34 @@ function configOf(
 }
 
 /**
+ * The owned server a write is about, and the config its fields would become — the S-71 merge
+ * against what is already stored (D-62, D-79): shared by {@link UpdateMcpServerUseCase} and the
+ * edit path of {@link PreviewMcpServerUseCase}, which validates the very same merge before anyone
+ * confirms it.
+ */
+async function existingServerConfig(
+  deps: McpServerDependencies,
+  userId: UserId,
+  engine: string,
+  serverId: string,
+  fields: McpServerFieldsInput,
+): Promise<{
+  readonly before: StoredMcpServer;
+  readonly revealedBefore: RevealedMcpServer | null;
+  readonly config: McpServerConfig;
+}> {
+  const before = await ownedServer(deps.servers, userId, serverId);
+  const revealedBefore = await deps.servers.reveal(serverId);
+  const config = configOf(
+    fields,
+    deps.dialects.for(engine),
+    revealedBefore?.env ?? NO_SECRETS,
+    revealedBefore?.headers ?? NO_SECRETS,
+  );
+  return { before, revealedBefore, config };
+}
+
+/**
  * Runs [write] and turns the repository's name-conflict signal into the domain's own error — shared
  * by create and update, the only two writes a name can conflict on.
  */
@@ -106,20 +167,40 @@ function serverEvent(
   };
 }
 
-/** `GET /engines/:engine/mcp-servers` — every server of this user, in this engine (B-19). */
+/**
+ * `GET /engines/:engine/mcp-servers` — every server of this user, in this engine, each with its
+ * status — the store's own `disabled`, or what a live session shows for it right now, `pending`
+ * with none (B-19; B-28, D-45).
+ */
 export class ListMcpServersUseCase {
   constructor(private readonly deps: McpServerDependencies) {}
 
   /** @throws {import('@domain/mcp').McpEngineNotSupportedError} */
-  async execute(userId: UserId, engine: string): Promise<readonly StoredMcpServer[]> {
+  async execute(userId: UserId, engine: string): Promise<readonly McpServerView[]> {
     this.deps.capabilities.assertSupports(engine);
-    return this.deps.servers.listFor(userId, engine);
+    const servers = await this.deps.servers.listFor(userId, engine);
+    const live = await this.deps.liveStatus.statusFor(userId, engine);
+
+    return servers.map((server) => ({
+      ...server,
+      status: server.enabled ? (live.get(server.name) ?? 'pending') : 'disabled',
+    }));
   }
+}
+
+/** [description], with which of the caller's own `allow` rules an edit would revoke (D-62, D-79). */
+export interface McpServerPreviewResult extends McpServerDescription {
+  readonly revokedRules: readonly string[];
 }
 
 /**
  * `POST /engines/:engine/mcp-servers/preview` — the exact description a save would record (plan 13,
  * B-18, S-68): the second step shows this, word for word, before anything is written.
+ *
+ * Editing (`serverId` given) also says which of the caller's own `allow` rules the save would
+ * revoke, were the program (command, args, URL or transport) to actually change — the part of D-12
+ * `UpdateMcpServerUseCase` already enforces but this preview used to leave unlisted (D-62, D-79). A
+ * rename alone, or a create, revokes nothing to preview: `revokedRules` is empty.
  */
 export class PreviewMcpServerUseCase {
   constructor(private readonly deps: McpServerDependencies) {}
@@ -127,10 +208,39 @@ export class PreviewMcpServerUseCase {
   /**
    * @throws {import('@domain/mcp').McpEngineNotSupportedError}
    * @throws {import('@domain/mcp').McpServerConfigInvalidError}
+   * @throws the same as {@link ownedServer} when `serverId` names a server that is not the
+   *   caller's, or does not exist
    */
-  execute(engine: string, fields: McpServerFieldsInput): McpServerDescription {
+  async execute(
+    userId: UserId,
+    engine: string,
+    fields: McpServerFieldsInput,
+    serverId?: string,
+  ): Promise<McpServerPreviewResult> {
     this.deps.capabilities.assertSupports(engine);
-    return describeMcpServer(configOf(fields, this.deps.dialects.for(engine), [], []));
+
+    if (serverId === undefined) {
+      const description = describeMcpServer(
+        configOf(fields, this.deps.dialects.for(engine), NO_SECRETS, NO_SECRETS),
+      );
+      return { ...description, revokedRules: [] };
+    }
+
+    const { before, config } = await existingServerConfig(
+      this.deps,
+      userId,
+      engine,
+      serverId,
+      fields,
+    );
+    const description = describeMcpServer(config);
+
+    if (!programChanged(before, config)) {
+      return { ...description, revokedRules: [] };
+    }
+
+    const revokedRules = await this.deps.ruleRevocation.preview(userId, engine, before.name);
+    return { ...description, revokedRules };
   }
 }
 
@@ -157,7 +267,7 @@ export class CreateMcpServerUseCase {
     userId: UserId,
     engine: string,
     fields: McpServerFieldsInput,
-  ): Promise<StoredMcpServer> {
+  ): Promise<McpServerView> {
     this.deps.capabilities.assertSupports(engine);
     const config = configOf(fields, this.deps.dialects.for(engine), NO_SECRETS, NO_SECRETS);
     const id = this.deps.ids.next();
@@ -176,7 +286,7 @@ export class CreateMcpServerUseCase {
       throw error;
     }
 
-    return stored;
+    return viewOf(this.deps, userId, engine, stored);
   }
 }
 
@@ -200,15 +310,14 @@ export class UpdateMcpServerUseCase {
     engine: string,
     serverId: string,
     fields: McpServerFieldsInput,
-  ): Promise<StoredMcpServer> {
+  ): Promise<McpServerView> {
     this.deps.capabilities.assertSupports(engine);
-    const before = await ownedServer(this.deps.servers, userId, serverId);
-    const revealedBefore = await this.deps.servers.reveal(serverId);
-    const config = configOf(
+    const { before, revealedBefore, config } = await existingServerConfig(
+      this.deps,
+      userId,
+      engine,
+      serverId,
       fields,
-      this.deps.dialects.for(engine),
-      revealedBefore?.env ?? NO_SECRETS,
-      revealedBefore?.headers ?? NO_SECRETS,
     );
     const at = this.deps.clock.now();
 
@@ -237,7 +346,7 @@ export class UpdateMcpServerUseCase {
       throw error;
     }
 
-    return stored;
+    return viewOf(this.deps, userId, engine, stored);
   }
 
   private async revert(
@@ -279,13 +388,13 @@ export class SetMcpServerEnabledUseCase {
     engine: string,
     serverId: string,
     enabled: boolean,
-  ): Promise<StoredMcpServer> {
+  ): Promise<McpServerView> {
     this.deps.capabilities.assertSupports(engine);
     const before = await ownedServer(this.deps.servers, userId, serverId);
     const at = this.deps.clock.now();
 
     if (before.enabled === enabled) {
-      return before;
+      return viewOf(this.deps, userId, engine, before);
     }
 
     const stored = await this.deps.servers.setEnabled(serverId, enabled, at);
@@ -307,7 +416,7 @@ export class SetMcpServerEnabledUseCase {
       await this.deps.trail.execute(event);
     }
 
-    return stored;
+    return viewOf(this.deps, userId, engine, stored);
   }
 }
 

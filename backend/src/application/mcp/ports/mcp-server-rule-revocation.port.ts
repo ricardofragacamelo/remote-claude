@@ -10,4 +10,11 @@ import type { UserId } from '@domain/auth';
  */
 export interface McpServerRuleRevocation {
   execute(userId: UserId, engine: string, serverName: string): Promise<unknown>;
+
+  /**
+   * The content of every `allow` rule {@link execute} would revoke right now, were it called —
+   * never mutates anything (plan 13, B-28, D-62, D-79). What the edit preview's second step lists
+   * before a save that changes the server's program.
+   */
+  preview(userId: UserId, engine: string, serverName: string): Promise<readonly string[]>;
 }

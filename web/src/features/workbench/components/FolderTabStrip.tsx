@@ -3,11 +3,11 @@ import type { KeyboardEvent } from 'react';
 import { AlertTriangle, Folder, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { ContextMenuActionItems } from '@/shared/components/ContextMenuActionItems';
 import { IconButton } from '@/shared/components/IconButton';
 import {
   ContextMenu,
   ContextMenuContent,
-  ContextMenuItem,
   ContextMenuTrigger,
 } from '@/shared/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
@@ -149,12 +149,7 @@ function FolderTabItem({
           </TooltipContent>
         </Tooltip>
         <ContextMenuContent>
-          {tabActionsOf(tab, control, copyPath).map((action) => (
-            <ContextMenuItem key={action.id} disabled={action.disabled} onSelect={action.run}>
-              <action.icon className="size-4" aria-hidden />
-              {t(action.labelKey)}
-            </ContextMenuItem>
-          ))}
+          <ContextMenuActionItems actions={tabActionsOf(tab, control, copyPath)} />
         </ContextMenuContent>
       </ContextMenu>
       <IconButton

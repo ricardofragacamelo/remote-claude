@@ -73,6 +73,23 @@ export class RevokeMcpServerRulesUseCase {
     return revoked;
   }
 
+  /**
+   * The content of every rule {@link execute} would revoke right now, were it called — read-only,
+   * never touches the database (plan 13, B-28, D-62, D-79): the second step of editing a server
+   * shows this before anything is saved, the part of D-12 that `PreviewMcpServerUseCase` left
+   * unbuilt until a screen actually needed the list (D-62). The exact same match as {@link
+   * execute}, minus the write — a rule this lists and a rule `execute` would then actually revoke
+   * can only ever disagree if something else revoked or expired it in between the two calls, the
+   * same race any preview-then-confirm flow already lives with (S-68).
+   */
+  async preview(userId: UserId, engine: string, serverName: string): Promise<readonly string[]> {
+    const at = this.clock.now();
+    const all = await this.rules.listFor(userId);
+    return all
+      .filter((rule) => this.reaches(rule, engine, serverName, at))
+      .map((rule) => rule.ruleContent);
+  }
+
   private reaches(rule: PermissionRule, engine: string, serverName: string, at: Date): boolean {
     return (
       rule.decision === 'allow' &&

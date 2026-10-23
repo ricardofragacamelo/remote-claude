@@ -91,11 +91,12 @@ export class McpServersController {
   @Post('preview')
   @HttpCode(200)
   @OmitFromLog('env', 'headers')
-  previewOf(
+  async previewOf(
     @Param('engine', new ZodPipe(engineParamSchema)) engine: string,
     @Body(new ZodPipe(mcpServerFieldsSchema)) body: McpServerFieldsBody,
-  ): McpServerPreviewPayload {
-    return toPreviewDto(this.preview.execute(engine, fieldsOf(body)));
+    @CurrentUser() userId: UserId,
+  ): Promise<McpServerPreviewPayload> {
+    return toPreviewDto(await this.preview.execute(userId, engine, fieldsOf(body), body.id));
   }
 
   @Post()

@@ -98,6 +98,11 @@ export const mcpProjectApprovals = pgTable(
     digest: text('digest').notNull(),
     decision: text('decision').notNull(),
     decidedAt: timestamp('decided_at', { withTimezone: true }).notNull(),
+
+    // `null` for a `rejected` decision, or for a row written before this column existed
+    // (plan 13, B-28, D-80) — the diff of a `changed` entry falls back to saying it changed, with
+    // nothing of what was approved left to show beside it.
+    snapshot: jsonb('snapshot'),
   },
   (table) => [
     primaryKey({

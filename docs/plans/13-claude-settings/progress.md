@@ -10,14 +10,14 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F2 — em andamento: B-18…B-27 e B-47 concluídas (domínio, store e segredos, ambiente do subprocesso, composição por sessão, status vivo, mudança de configuração e sessões vivas, `.mcp.json` do projeto, testar conexão, tool MCP e permissão, plugins locais, plugins de marketplace); B-28…B-30 (3 das 14 tasks, as duas telas web e a ajuda) ainda não começadas
+**Fase corrente:** F2 — em andamento: B-18…B-28 e B-47 concluídas (domínio, store e segredos, ambiente do subprocesso, composição por sessão, status vivo, mudança de configuração e sessões vivas, `.mcp.json` do projeto, testar conexão, tool MCP e permissão, plugins locais, a tela de servidores MCP, plugins de marketplace); B-29…B-30 (2 das 14 tasks, a tela de plugins e a ajuda/paleta) ainda não começadas
 **Última atualização:** 2026-10-23
 **Bloqueios:** nenhum — o [plano 26](../26-mobile-conversation-parity/README.md) e o [plano 28](../28-agent-neutral-core/README.md) já estão concluídos (D-31, D-33)
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
-F2 ████████████████░░░░  79%   🔄 em andamento
+F2 █████████████████░░░  86%   🔄 em andamento
 F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
@@ -32,10 +32,10 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 |---|---|---|---|
 | [F0](F0-contract.md) | B-01…B-09 | 9/9 | ✅ |
 | [F1](F1-models-and-modes.md) | B-10…B-17 | 8/8 | ✅ |
-| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 11/14 | 🔄 |
+| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 12/14 | 🔄 |
 | [F3](F3-project-config.md) | B-31…B-40 | 0/10 | 🔲 |
 | [F4](F4-e2e.md) | B-41…B-46 | 0/6 | 🔲 |
-| **Total** | **B-01…B-47** | **28/47** | 🔄 |
+| **Total** | **B-01…B-47** | **29/47** | 🔄 |
 
 ---
 
@@ -43,7 +43,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 215 | 75 | 0 | 140 | 0 |
+| [Matriz](scenarios.md) | 215 | 69 | 0 | 146 | 0 |
 
 ---
 
@@ -95,6 +95,17 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-10-23 | [D-79](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): fechando a D-62 — `PreviewMcpServerUseCase` ganha `serverId` opcional e `revokedRules` na resposta, lendo (nunca gravando) o casamento que `RevokeMcpServerRulesUseCase` já tinha | a tarefa pedia nomeadamente fechar esta lacuna, e reusar o casamento existente evita duas regras de match divergirem | `application/mcp`, `application/permission/revoke-mcp-server-rules.use-case.ts`, `adapter/inbound/http/engines/mcp-servers.*`, `packages/contracts`; S-132 |
+| 2026-10-23 | [D-80](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): `mcp_project_approvals` ganha `snapshot` (migração `0027`) — o que foi aprovado, para a S-136 ter o que comparar contra o atual | sem isso, "a diferença entre o aprovado e o atual" (S-136) não tinha dado algum para comparar; só o `digest` (um hash) era guardado | `domain/mcp`, `application/mcp`, `adapter/outbound/persistence/mcp`, `infrastructure/database/{schema,migrations}`, `packages/contracts`; S-136 |
+| 2026-10-23 | [D-81](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): fechando a outra metade da D-45 — `GET .../mcp-servers` mescla o status ao vivo ao `enabled` do estoque, por um port novo (`McpServerLiveStatusSource`); mais de uma sessão discordando, o mais urgente vence (`failed` > `needs-auth` > `pending` > `connected` > `disabled`) | a S-131 pede a lista mostrar status; a D-45 já apontava que isto ficaria para quem construísse a tela | `application/mcp`, `adapter/outbound/mcp/session-registry.live-mcp-status.ts`, `packages/contracts`; S-131 |
+| 2026-10-23 | [D-82](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): o registro de seções do núcleo ganha `capability?`, filtrado por `sectionsForCapabilities` antes de montar as abas — a aba de MCP só aparece com a capacidade `mcp` | nada no registro filtrava por capacidade até agora, só por motor; a tarefa pedia este mecanismo nomeadamente | `features/agent-settings/{types/section.ts,store/agent-settings-sections.ts,components/AgentSettingsScreen.tsx}`, `features/session/index.ts`; S-131 |
+| 2026-10-23 | [D-83](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): `mcp` ganha sua própria cópia pequena de `useFolderChoices`/`FolderPicker`, em vez de importar de `agent-settings` | `agent-settings` registra `McpSection` (D-82); importar o barril de volta fecharia um ciclo de módulo real entre os dois | `features/mcp/{hooks/useFolderChoices.ts,components/McpFolderPicker.tsx}` (novos) |
+| 2026-10-23 | [D-84](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): prefixo `agentSettings.mcp.*` para tudo que a tela desenha (como `agentSettings.models.*` já faz); `envName`/`headerName` deixam de ser "Nome" sozinho — achado de acessibilidade, um rótulo duplicado não identifica nada para leitor de tela | o teto de três segmentos da regra de i18n já fixa isso; a ambiguidade de rótulo foi achada rodando o teste, não suposta | `shared/i18n/locales/{en,pt-BR}.json` |
+| 2026-10-23 | [D-85](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): a diferença de uma entrada `changed` (S-136) é uma diff de linha de uma renderização determinística campo a campo, não da descrição por extenso; implementação própria de LCS (sem biblioteca de diff no `web`) | a por-extenso rearranja a cada campo que muda, o que quebraria uma diff de linha; nenhuma biblioteca de diff existia para reusar | `features/mcp/lib/project-entry-diff.ts` (novo) |
+| 2026-10-23 | [D-86](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): `SecretField`, novo, segue o contrato de três estados da B-19 (`undefined`/`null`/string); uma linha existente mostra "Set", nunca o valor, com "Trocar"/"Remover"/"Desfazer" | nenhum componente parecido existia; separar do `ServerForm` manteve o formulário pequeno o bastante para passar na checagem de complexidade | `features/mcp/components/SecretField.tsx` (novo) |
+| 2026-10-23 | [D-87](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): `ApiClient` ganha `patch<T>()` — primeira tela do `web` a precisar de `PATCH` | `PATCH /engines/:engine/mcp-servers/:id` (o liga/desliga da B-19) não tinha verbo correspondente no cliente HTTP | `shared/api/api.ts` |
+| 2026-10-23 | [D-88](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): uma lista só de ações (`mcpServerActions`) alimenta a barra de seleção, o menu de contexto e (`asCommands`) a paleta — só "adicionar"/"testar servidores" viram comando, os dois que o texto do plano nomeia para a B-30 | o mesmo padrão de `explorer-actions.ts`: uma lista por ação evita um rótulo ou atalho divergir entre as três superfícies | `features/mcp/lib/mcp-server-actions.ts` (novo); S-140 (parcial) |
+| 2026-10-23 | [D-89](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23): **cortes de escopo** — a coluna "tools" só mostra algo depois de um teste manual (nenhum cenário pede mesclar `toolCount` ao vivo); a coluna "origem" sempre mostra "ours" hoje (nenhum servidor de plugin alcança o estoque, D-64), mas existe de verdade | estender a mesclagem da D-81 para mais um campo que nenhum cenário pede seria especulativo | `features/mcp/components/McpServerTable.tsx` |
 | 2026-10-23 | [D-68](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): forma de uma entrada de marketplace no arquivo da allowlist — `{ name, source: { type: 'git', url } }`, `marketplaces` opcional (ausente é desligado) | só `git` é de fato clonado; aceitar outra forma mentiria sobre o que a entrada faz | `packages/config`, `backend/src/infrastructure/config/{workspace-allowlist,reloadable-workspace-allowlist}.ts`; S-202 |
 | 2026-10-23 | [D-69](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): **corte de escopo** — só `source` em formato de caminho relativo (string) é instalável; marketplace privado/autenticado não é suportado | implementar um segundo repositório por plugin ou credencial de marketplace seria especulativo sem cenário que o peça | `domain`/`adapter` de `engines/claude`; S-204 |
 | 2026-10-23 | [D-70](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): **corte de escopo** — nenhuma leitura de `marketplace.json` é cacheada; toda chamada clona ou pergunta ao remoto de novo | simplicidade (nunca desatualizado) venceu performance para a primeira entrega; a porta não impede um cache depois | `git-marketplace-plugin-source.ts` |
@@ -135,6 +146,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 
 | Data | O que saiu | Por quê | Para onde foi |
 |---|---|---|---|
+| 2026-10-23 | Da B-28: a coluna "tools" da tabela de servidores só mostra algo depois de um teste manual (nenhuma mesclagem ao vivo de `toolCount`); a ajuda da tela (`help()` da entrada do registro) fica sem conteúdo, de propósito | nenhum cenário S-131…S-136 pede `toolCount` ao vivo; a ajuda é explicitamente da B-30, que ainda não começou | documentado em [D-89](decisions.md#decididas-durante-a-execução-de-b-28-2026-10-23); a ajuda reabre quando a B-30 começar |
 | 2026-10-23 | Da B-47: marketplace privado/autenticado (credencial embutida na URL), um plugin cujo `source` aponta para um segundo repositório git, e cache de leitura de `marketplace.json` | nenhum cenário de S-200…S-213 exige as três coisas; implementá-las seria especulativo sem um marketplace real que peça | documentado em [D-69](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23) e [D-70](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23); reabre se um cenário novo pedir |
 | 2026-10-19 | Desta execução da F2: B-20…B-30 e B-47 (12 das 14 tasks) — ambiente do subprocesso extraído para `shared/`, composição por sessão com `setMcpServers()`, status vivo e os dois comandos de sessão, a assimetria de sessões vivas, a aprovação do `.mcp.json`, testar conexão, a prova de que a tool MCP passa pelo `canUseTool` existente, plugins locais e de marketplace, as duas telas web, e ajuda/i18n/acessibilidade | o tamanho de uma fase inteira (14 tasks, ~150 cenários, backend+web+SDK+contrato WS) excede o que uma sessão consegue entregar com o rigor que o protocolo exige (matriz de cenários, três níveis de teste, 90 % por arquivo); B-18 e B-19 são a base de segurança mais crítica (R-01, R-02) e saem completas e testadas em vez de 14 tasks pela metade | ficam no `F2-mcp-servers.md`, com as tasks ainda 🔲; a próxima sessão continua de B-20 |
 | 2026-10-09 | Da B-46 (e do S-214), conferir na paridade do plano 26 a mensagem que o CLI acrescenta à skill de usuário e a imagem no resultado da tool MCP. As fixtures continuam aqui | são perdas do backend, que só o plano da [discovery 09](../../discovery/09-perdas-do-backend-na-conversa.md) corrige, e a ordem é 26 → 13 → esse plano: a paridade daqui gravaria o erro de hoje como esperado | o plano da [discovery 09](../../discovery/09-perdas-do-backend-na-conversa.md) (D-11 de lá) |
@@ -147,8 +159,8 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 
 | # | Risco | Estado | Observação |
 |---|---|---|---|
-| R-01 | Servidor MCP e plugin são código arbitrário, subindo com a sessão | 🔄 em mitigação | B-47 entrega a parte do plugin de marketplace: baixar nunca executa nada (S-211), sempre `skipMcpDiscovery: true`; falta B-28…B-30 (a tela) |
-| R-02 | Segredo de MCP vazando pelo argv, log, trilha, resposta ou erro do servidor | 🔲 aberto | confirmado no `/proc` pela B-01; a entrega passa a ser `setMcpServers()`, e o `realQueryFactory` recusa `mcpServers` não vazio |
+| R-01 | Servidor MCP e plugin são código arbitrário, subindo com a sessão | 🔄 em mitigação | B-47 entrega a parte do plugin de marketplace: baixar nunca executa nada (S-211), sempre `skipMcpDiscovery: true`; a B-28 entrega a tela que aprova cada servidor, com o segundo passo dizendo o que vai rodar antes de gravar (S-132); falta B-29…B-30 (a tela de plugins, a ajuda) |
+| R-02 | Segredo de MCP vazando pelo argv, log, trilha, resposta ou erro do servidor | 🔄 em mitigação | confirmado no `/proc` pela B-01; a entrega passa a ser `setMcpServers()`, e o `realQueryFactory` recusa `mcpServers` não vazio; a B-28 entrega o campo só-escrita (`SecretField`, S-133) — o valor nunca volta do backend, nem aparece em snapshot de teste |
 | R-03 | Hooks de projeto e `permissionMode` de subagent de projeto agindo sem aprovação | 🔲 aberto | medido na B-01: o hook de projeto **roda** sem aprovação (aberto, a tela dirá); o subagent foi fechado pela D-23 |
 | R-04 | Shell inline (`!`) de skill e slash command fora da aprovação | ✅ mitigado | medido: roda fora da aprovação com `allowed-tools`; desligado em toda sessão pela flag (D-24) |
 | R-05 | Superfície do SDK `0.3.x` mudando sem aviso | 🔲 aberto | `smoke-live` na B-46 |

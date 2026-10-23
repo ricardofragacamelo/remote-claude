@@ -99,6 +99,7 @@ describe('ListProjectMcpServersUseCase — plan 13, B-24, S-100', () => {
         name: 'docs',
         digest: 'stale-digest',
         decision: 'approved',
+        snapshot: null,
       },
       NOW,
     );
@@ -115,6 +116,7 @@ describe('ListProjectMcpServersUseCase — plan 13, B-24, S-100', () => {
         name: 'docs',
         digest: realDigest,
         decision: 'approved',
+        snapshot: null,
       },
       NOW,
     );
@@ -133,6 +135,7 @@ describe('ListProjectMcpServersUseCase — plan 13, B-24, S-100', () => {
         name: 'docs',
         digest: 'whatever',
         decision: 'rejected',
+        snapshot: null,
       },
       NOW,
     );
@@ -230,6 +233,56 @@ describe('ApproveProjectMcpServerUseCase — plan 13, B-24', () => {
     await expect(approve.execute(USER, 'codex', FOLDER, 'docs', 'x')).rejects.toBeInstanceOf(
       McpEngineNotSupportedError,
     );
+  });
+
+  describe('keeping what was approved — plan 13, B-28, D-80, S-136', () => {
+    it('keeps the entry it approved, without its name', async () => {
+      const { list, approve } = harnessWith(STDIO_ENTRY);
+      const shown = (await list.execute(USER, ENGINE, FOLDER)).servers[0] as { digest: string };
+
+      const approved = await approve.execute(USER, ENGINE, FOLDER, 'docs', shown.digest);
+
+      expect(approved.approvedSnapshot).toEqual({
+        transport: 'stdio',
+        command: 'npx',
+        args: ['-y', 'server'],
+        url: null,
+        env: [{ name: 'TOKEN', value: '${TOKEN}' }],
+        headers: [],
+      });
+    });
+
+    it('a changed entry still carries what was actually approved, not the new content', async () => {
+      const { list, approve, source } = harnessWith(STDIO_ENTRY);
+      const shown = (await list.execute(USER, ENGINE, FOLDER)).servers[0] as { digest: string };
+      await approve.execute(USER, ENGINE, FOLDER, 'docs', shown.digest);
+
+      source.set(FOLDER, { entries: [{ ...STDIO_ENTRY, command: 'node' }], error: null });
+      const changed = (await list.execute(USER, ENGINE, FOLDER)).servers[0];
+
+      expect(changed?.state).toBe('changed');
+      expect(changed?.command).toBe('node');
+      expect(changed?.approvedSnapshot?.command).toBe('npx');
+    });
+
+    it('approving the same digest twice still answers the kept snapshot — S-107', async () => {
+      const { list, approve } = harnessWith(STDIO_ENTRY);
+      const shown = (await list.execute(USER, ENGINE, FOLDER)).servers[0] as { digest: string };
+
+      await approve.execute(USER, ENGINE, FOLDER, 'docs', shown.digest);
+      const second = await approve.execute(USER, ENGINE, FOLDER, 'docs', shown.digest);
+
+      expect(second.approvedSnapshot?.command).toBe('npx');
+    });
+
+    it('a rejection keeps no snapshot, and a pending entry has none either', async () => {
+      const { list, reject } = harnessWith(STDIO_ENTRY);
+
+      expect((await list.execute(USER, ENGINE, FOLDER)).servers[0]?.approvedSnapshot).toBeNull();
+
+      await reject.execute(USER, ENGINE, FOLDER, 'docs');
+      expect((await list.execute(USER, ENGINE, FOLDER)).servers[0]?.approvedSnapshot).toBeNull();
+    });
   });
 });
 

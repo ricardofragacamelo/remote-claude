@@ -15,10 +15,12 @@ import type {
   LiveSessionMcpRevocation,
   McpServerDependencies,
   McpServerFieldsInput,
+  McpServerLiveStatusSource,
   McpServerRepository,
   McpServerRuleRevocation,
   StoredMcpServer,
 } from '@application/mcp';
+import type { McpStatus } from '@domain/session';
 import {
   McpEngineNotSupportedError,
   McpServerConfigInvalidError,
@@ -107,9 +109,25 @@ class RecordingRuleRevocation implements McpServerRuleRevocation {
   readonly calls: { readonly userId: UserId; readonly engine: string; readonly name: string }[] =
     [];
 
+  /** What {@link preview} answers next — set by a test that wants to see it through (D-62, D-79). */
+  toPreview: readonly string[] = [];
+
   execute(userId: UserId, engine: string, name: string): Promise<unknown> {
     this.calls.push({ userId, engine, name });
     return Promise.resolve([]);
+  }
+
+  preview(): Promise<readonly string[]> {
+    return Promise.resolve(this.toPreview);
+  }
+}
+
+/** A live status with nothing live by default — a test sets [byName] to show a server as live. */
+class StubMcpServerLiveStatus implements McpServerLiveStatusSource {
+  byName = new Map<string, McpStatus>();
+
+  statusFor(): Promise<ReadonlyMap<string, McpStatus>> {
+    return Promise.resolve(this.byName);
   }
 }
 
@@ -122,6 +140,7 @@ function harness(
   const clock = new FixedClock(new Date('2026-10-19T12:00:00Z'));
   const liveSessions = new RecordingLiveSessionMcpRevocation();
   const ruleRevocation = new RecordingRuleRevocation();
+  const liveStatus = new StubMcpServerLiveStatus();
   const deps: McpServerDependencies = {
     servers: repository,
     capabilities: new McpEngineCapabilities([ENGINE]),
@@ -131,6 +150,7 @@ function harness(
     clock,
     liveSessions,
     ruleRevocation,
+    liveStatus,
   };
   return {
     events,
@@ -138,6 +158,7 @@ function harness(
     clock,
     liveSessions,
     ruleRevocation,
+    liveStatus,
     create: new CreateMcpServerUseCase(deps),
     update: new UpdateMcpServerUseCase(deps),
     setEnabled: new SetMcpServerEnabledUseCase(deps),
@@ -155,23 +176,77 @@ describe('MCP server use cases — plan 13, B-19', () => {
         McpEngineNotSupportedError,
       );
       await expect(list.execute(USER, 'codex')).rejects.toThrow(McpEngineNotSupportedError);
-      expect(() => preview.execute('codex', STDIO_FIELDS)).toThrow(McpEngineNotSupportedError);
+      await expect(preview.execute(USER, 'codex', STDIO_FIELDS)).rejects.toThrow(
+        McpEngineNotSupportedError,
+      );
     });
   });
 
-  describe('PreviewMcpServerUseCase — S-68', () => {
-    it('describes a config without storing anything', () => {
+  describe('PreviewMcpServerUseCase — S-68, S-132', () => {
+    it('describes a config without storing anything', async () => {
       const { preview, repository } = harness();
-      const description = preview.execute(ENGINE, STDIO_FIELDS);
+      const description = await preview.execute(USER, ENGINE, STDIO_FIELDS);
       expect(description.messageKey).toBe('mcp.description.stdioAnyFolder');
-      expect(repository.listFor(USER, ENGINE)).resolves.toEqual([]);
+      expect(await repository.listFor(USER, ENGINE)).toEqual([]);
     });
 
-    it('rejects an invalid config the same way a save would', () => {
+    it('rejects an invalid config the same way a save would', async () => {
       const { preview } = harness();
-      expect(() => preview.execute(ENGINE, { ...STDIO_FIELDS, name: 'bad name' })).toThrow(
-        McpServerConfigInvalidError,
+      await expect(
+        preview.execute(USER, ENGINE, { ...STDIO_FIELDS, name: 'bad name' }),
+      ).rejects.toThrow(McpServerConfigInvalidError);
+    });
+
+    it('lists no revoked rule for a create — there is nothing yet to change the program of', async () => {
+      const { preview } = harness();
+      const description = await preview.execute(USER, ENGINE, STDIO_FIELDS);
+      expect(description.revokedRules).toEqual([]);
+    });
+
+    it('lists no revoked rule editing a server whose program stays the same (a rename alone)', async () => {
+      const { create, preview, ruleRevocation } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+      ruleRevocation.toPreview = ['mcp(github:*)'];
+
+      const description = await preview.execute(
+        USER,
+        ENGINE,
+        { ...STDIO_FIELDS, name: 'renamed' },
+        created.id,
       );
+
+      expect(description.revokedRules).toEqual([]);
+    });
+
+    it('lists what editing a server would revoke when its program changes — D-62, D-79', async () => {
+      const { create, preview, ruleRevocation } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+      ruleRevocation.toPreview = ['mcp(github:*)'];
+
+      const description = await preview.execute(
+        USER,
+        ENGINE,
+        { ...STDIO_FIELDS, command: 'docker' },
+        created.id,
+      );
+
+      expect(description.revokedRules).toEqual(['mcp(github:*)']);
+    });
+
+    it('rejects previewing an edit of somebody else’s server', async () => {
+      const { create, preview } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+
+      await expect(
+        preview.execute(OTHER_USER, ENGINE, { ...STDIO_FIELDS, command: 'docker' }, created.id),
+      ).rejects.toThrow(McpServerForbiddenError);
+    });
+
+    it('rejects previewing an edit of a server that does not exist', async () => {
+      const { preview } = harness();
+      await expect(
+        preview.execute(USER, ENGINE, { ...STDIO_FIELDS, command: 'docker' }, 'nope'),
+      ).rejects.toThrow(McpServerNotFoundError);
     });
   });
 
@@ -239,6 +314,7 @@ describe('MCP server use cases — plan 13, B-19', () => {
         clock: new FixedClock(new Date('2026-10-19T12:00:00Z')),
         liveSessions: new RecordingLiveSessionMcpRevocation(),
         ruleRevocation: new RecordingRuleRevocation(),
+        liveStatus: new StubMcpServerLiveStatus(),
       });
 
       await expect(create.execute(USER, ENGINE, STDIO_FIELDS)).rejects.toThrow('disk full');
@@ -354,6 +430,7 @@ describe('MCP server use cases — plan 13, B-19', () => {
         clock: new FixedClock(new Date('2026-10-19T12:00:00Z')),
         liveSessions: new RecordingLiveSessionMcpRevocation(),
         ruleRevocation: new RecordingRuleRevocation(),
+        liveStatus: new StubMcpServerLiveStatus(),
       });
 
       await expect(update.execute(USER, ENGINE, created.id, STDIO_FIELDS)).rejects.toThrow(
@@ -374,6 +451,7 @@ describe('MCP server use cases — plan 13, B-19', () => {
         clock: new FixedClock(new Date('2026-10-19T12:00:00Z')),
         liveSessions: new RecordingLiveSessionMcpRevocation(),
         ruleRevocation: new RecordingRuleRevocation(),
+        liveStatus: new StubMcpServerLiveStatus(),
       });
 
       await expect(
@@ -519,6 +597,44 @@ describe('MCP server use cases — plan 13, B-19', () => {
       const mine = await list.execute(USER, ENGINE);
       expect(mine).toHaveLength(1);
       expect(mine[0]?.name).toBe('github');
+    });
+  });
+
+  describe('status — plan 13, B-28, D-45, S-131', () => {
+    it('a freshly created, enabled server is pending — no live session shows it yet', async () => {
+      const { create } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+      expect(created.status).toBe('pending');
+    });
+
+    it('a disabled server is disabled, whatever a live session might say', async () => {
+      const { create, setEnabled, liveStatus } = harness();
+      const created = await create.execute(USER, ENGINE, STDIO_FIELDS);
+      liveStatus.byName.set('github', 'connected');
+
+      const toggled = await setEnabled.execute(USER, ENGINE, created.id, false);
+      expect(toggled.status).toBe('disabled');
+    });
+
+    it('an enabled server carries what a live session shows for its name', async () => {
+      const { create, list, liveStatus } = harness();
+      await create.execute(USER, ENGINE, STDIO_FIELDS);
+      liveStatus.byName.set('github', 'failed');
+
+      const listed = await list.execute(USER, ENGINE);
+      expect(listed[0]?.status).toBe('failed');
+    });
+
+    it('listing merges the live status by name into every server of the list', async () => {
+      const { create, list, liveStatus } = harness();
+      await create.execute(USER, ENGINE, STDIO_FIELDS);
+      await create.execute(USER, ENGINE, { ...REMOTE_FIELDS, name: 'metrics-2' });
+      liveStatus.byName.set('github', 'connected');
+
+      const listed = await list.execute(USER, ENGINE);
+      const byName = new Map(listed.map((server) => [server.name, server.status]));
+      expect(byName.get('github')).toBe('connected');
+      expect(byName.get('metrics-2')).toBe('pending');
     });
   });
 });

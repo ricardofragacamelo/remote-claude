@@ -29,6 +29,8 @@ export const rejectProjectMcpServerQuerySchema = z.object({
 export type RejectProjectMcpServerQuery = z.infer<typeof rejectProjectMcpServerQuerySchema>;
 
 function toDto(server: ProjectMcpServerView): ProjectMcpServerApprovalPayload {
+  const snapshot = server.approvedSnapshot;
+
   return {
     folderPath: server.folderPath,
     name: server.name,
@@ -40,6 +42,17 @@ function toDto(server: ProjectMcpServerView): ProjectMcpServerApprovalPayload {
     url: server.url,
     env: server.env.map((entry) => ({ name: entry.name, value: entry.value })),
     headers: server.headers.map((header) => ({ name: header.name, value: header.value })),
+    approvedSnapshot:
+      snapshot === null
+        ? null
+        : {
+            transport: snapshot.transport,
+            command: snapshot.command,
+            args: [...snapshot.args],
+            url: snapshot.url,
+            env: snapshot.env.map((entry) => ({ name: entry.name, value: entry.value })),
+            headers: snapshot.headers.map((header) => ({ name: header.name, value: header.value })),
+          },
   };
 }
 

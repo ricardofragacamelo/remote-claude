@@ -198,10 +198,21 @@ describe('the MCP server store over HTTP — plan 13, B-19', () => {
     const off = await patch(`/engines/claude/mcp-servers/${id}`, { enabled: false });
     expect(off.status).toBe(200);
     expect(off.body.enabled).toBe(false);
+    expect(off.body.status).toBe('disabled');
 
     const on = await patch(`/engines/claude/mcp-servers/${id}`, { enabled: true });
     expect(on.status).toBe(200);
     expect(on.body.enabled).toBe(true);
+    expect(on.body.status).toBe('pending');
+  });
+
+  it('a server with no live session shows pending; a disabled one shows disabled — S-131, D-45', async () => {
+    const created = await post('/engines/claude/mcp-servers', STDIO_BODY);
+    expect(created.body.status).toBe('pending');
+
+    await patch(`/engines/claude/mcp-servers/${String(created.body.id)}`, { enabled: false });
+    const listed = await get('/engines/claude/mcp-servers');
+    expect(listed.body.servers[0]?.status).toBe('disabled');
   });
 
   it('removes a server for good — 204, then gone from the list — S-78', async () => {

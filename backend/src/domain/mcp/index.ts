@@ -33,8 +33,11 @@ export type { McpServerDescription } from './services/mcp-server-description';
 
 export type { McpServerSetOutcome } from './services/mcp-server-set-outcome';
 
-export { digestOfProjectMcpEntry } from './entities/project-mcp-entry.entity';
-export type { ProjectMcpEntry } from './entities/project-mcp-entry.entity';
+export {
+  digestOfProjectMcpEntry,
+  snapshotOfProjectMcpEntry,
+} from './entities/project-mcp-entry.entity';
+export type { ProjectMcpEntry, ProjectMcpEntrySnapshot } from './entities/project-mcp-entry.entity';
 
 export {
   PROJECT_MCP_APPROVAL_STATES,

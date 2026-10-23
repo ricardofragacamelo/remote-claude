@@ -1690,7 +1690,7 @@ class McpServerTool {
   }
 }
 
-/// One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02).
+/// One server of the store, as the client sees it (plan 13, B-19). Never a secret value: `envNames` and `headerNames` carry only the names a session would see as environment variables or headers — the API that writes them is write-only (D-02). `status` merges the store's own `enabled` with what a live session currently shows for it (plan 13, B-28, D-45).
 class McpServer {
   const McpServer({
     required this.id,
@@ -1704,6 +1704,7 @@ class McpServer {
     required this.url,
     required this.headerNames,
     required this.enabled,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -1721,6 +1722,7 @@ class McpServer {
         url: json['url'] as String?,
         headerNames: (json['headerNames']! as List<Object?>).map((item) => item! as String).toList(growable: false),
         enabled: json['enabled']! as bool,
+        status: json['status']! as String,
         createdAt: json['createdAt']! as String,
         updatedAt: json['updatedAt']! as String,
       );
@@ -1753,6 +1755,9 @@ class McpServer {
 
   final bool enabled;
 
+  /// `disabled` whenever `enabled` is `false`. Otherwise what a live session of the caller currently shows for this name, or `pending` with no live session showing it yet (plan 13, B-28, D-45; the per-session equivalent is `session.mcpStatusChanged`).
+  final String status;
+
   final String createdAt;
 
   final String updatedAt;
@@ -1771,6 +1776,7 @@ class McpServer {
       'url': url,
       'headerNames': headerNames,
       'enabled': enabled,
+      'status': status,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };
@@ -2055,6 +2061,71 @@ class PermissionRule {
   }
 }
 
+/// What was approved, for `state` `approved` or `changed` — `null` for `pending`/`rejected`, and for a decision recorded before this field existed (plan 13, B-28, D-80). The screen diffs this against the fields above, the current content, for a `changed` entry.
+class ProjectMcpServerApprovedSnapshot {
+  const ProjectMcpServerApprovedSnapshot({
+    required this.transport,
+    required this.command,
+    required this.args,
+    required this.url,
+    required this.env,
+    required this.headers,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectMcpServerApprovedSnapshot.fromJson(Map<String, Object?> json) => ProjectMcpServerApprovedSnapshot(
+        transport: json['transport']! as String,
+        command: json['command'] as String?,
+        args: (json['args']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        url: json['url'] as String?,
+        env: (json['env']! as List<Object?>).map((item) => McpProjectVariable.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        headers: (json['headers']! as List<Object?>).map((item) => McpProjectVariable.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final String transport;
+
+  final String? command;
+
+  final List<String> args;
+
+  final String? url;
+
+  final List<McpProjectVariable> env;
+
+  final List<McpProjectVariable> headers;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'transport': transport,
+      'command': command,
+      'args': args,
+      'url': url,
+      'env': env.map((item) => item.toJson()).toList(growable: false),
+      'headers': headers.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ProjectMcpServerApprovedSnapshot].
+bool projectMcpServerApprovedSnapshotLimitsHold(Map<String, Object?> json) {
+  if (json['args'] is List<Object?> && (json['args']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  if (json['env'] is List<Object?> && (json['env']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  if (json['headers'] is List<Object?> && (json['headers']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  return true;
+}
+
 /// One server a project's own MCP file declares, with where it stands with this user (plan 13, B-24). Unlike a server of the store, `env` and `headers` carry their value literal — a project file is plain text already in the repository, never a secret of ours (D-11).
 class ProjectMcpServer {
   const ProjectMcpServer({
@@ -2068,6 +2139,7 @@ class ProjectMcpServer {
     required this.url,
     required this.env,
     required this.headers,
+    required this.approvedSnapshot,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -2082,6 +2154,7 @@ class ProjectMcpServer {
         url: json['url'] as String?,
         env: (json['env']! as List<Object?>).map((item) => McpProjectVariable.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         headers: (json['headers']! as List<Object?>).map((item) => McpProjectVariable.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        approvedSnapshot: json['approvedSnapshot'] == null ? null : ProjectMcpServerApprovedSnapshot.fromJson(json['approvedSnapshot']! as Map<String, Object?>),
       );
 
   /// The folder whose own MCP file declares this entry — not necessarily the folder a session opens in; an ancestor of it.
@@ -2109,6 +2182,9 @@ class ProjectMcpServer {
 
   final List<McpProjectVariable> headers;
 
+  /// What was approved, for `state` `approved` or `changed` — `null` for `pending`/`rejected`, and for a decision recorded before this field existed (plan 13, B-28, D-80). The screen diffs this against the fields above, the current content, for a `changed` entry.
+  final ProjectMcpServerApprovedSnapshot? approvedSnapshot;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
@@ -2122,6 +2198,7 @@ class ProjectMcpServer {
       'url': url,
       'env': env.map((item) => item.toJson()).toList(growable: false),
       'headers': headers.map((item) => item.toJson()).toList(growable: false),
+      'approvedSnapshot': approvedSnapshot?.toJson(),
     };
 
     return json;
@@ -7726,17 +7803,19 @@ bool mcpServerListPayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
-/// `POST /engines/:engine/mcp-servers/preview`: the description a save of this configuration would show and record — word for word (plan 13, B-18, S-68). `params` is a map of strings: the generator has no number type here, so a numeric field (such as a count) travels as its decimal text, the way `costUsd` already does elsewhere.
+/// `POST /engines/:engine/mcp-servers/preview`: the description a save of this configuration would show and record — word for word (plan 13, B-18, S-68). `params` is a map of strings: the generator has no number type here, so a numeric field (such as a count) travels as its decimal text, the way `costUsd` already does elsewhere. Carrying `id` in the request body names the server being edited, and the response then lists which of the caller's own `allow` rules the save would revoke (plan 13, B-28, D-62, D-79).
 class McpServerPreviewPayload {
   const McpServerPreviewPayload({
     required this.messageKey,
     required this.params,
+    required this.revokedRules,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory McpServerPreviewPayload.fromJson(Map<String, Object?> json) => McpServerPreviewPayload(
         messageKey: json['messageKey']! as String,
         params: json['params']! as Map<String, Object?>,
+        revokedRules: (json['revokedRules']! as List<Object?>).map((item) => item! as String).toList(growable: false),
       );
 
   final String messageKey;
@@ -7744,15 +7823,28 @@ class McpServerPreviewPayload {
   /// Every value a string — a numeric field (a count) travels as its decimal text, the way `costUsd` already does elsewhere. Open: shaped by the server's transport.
   final Map<String, Object?> params;
 
+  /// The content of every `allow` rule of the caller that this edit would revoke, were it saved — the server's program (command, args, URL or transport) changed from what the rule was granted against (plan 13, B-26, D-12; B-28, D-62, D-79). Empty for a create, or an edit that keeps the program the same.
+  final List<String> revokedRules;
+
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'messageKey': messageKey,
       'params': params,
+      'revokedRules': revokedRules,
     };
 
     return json;
   }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [McpServerPreviewPayload].
+bool mcpServerPreviewPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['revokedRules'] is List<Object?> && (json['revokedRules']! as List<Object?>).length > 1000) {
+    return false;
+  }
+
+  return true;
 }
 
 /// `POST /engines/:engine/mcp-servers/:id/test`: testing an already-saved server's connection, for real (plan 13, B-25). `timeout` is data of the answer, not an error — the server itself did not connect in time; a dead or unresponsive engine is `502`/`504` instead.

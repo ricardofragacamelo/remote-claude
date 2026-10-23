@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 
 import { UserId } from '@domain/auth';
+import type { ProjectMcpEntrySnapshot } from '@domain/mcp';
 import type {
   McpProjectApprovalRepository,
   McpProjectApprovalWrite,
@@ -14,6 +15,11 @@ import { runLogged } from '../query-logging';
 
 type Row = typeof mcpProjectApprovals.$inferSelect;
 
+/** The column is untyped `jsonb` (schema files never import `@domain`) — narrowed only here. */
+function snapshotOf(value: unknown): ProjectMcpEntrySnapshot | null {
+  return (value as ProjectMcpEntrySnapshot | null) ?? null;
+}
+
 function storedOf(row: Row): StoredMcpProjectApproval {
   return {
     userId: UserId.create(row.userId),
@@ -23,6 +29,7 @@ function storedOf(row: Row): StoredMcpProjectApproval {
     digest: row.digest,
     decision: row.decision as StoredMcpProjectApproval['decision'],
     decidedAt: row.decidedAt,
+    snapshot: snapshotOf(row.snapshot),
   };
 }
 
@@ -84,6 +91,7 @@ export class DrizzleMcpProjectApprovalRepository implements McpProjectApprovalRe
       digest: write.digest,
       decision: write.decision,
       decidedAt: now,
+      snapshot: write.snapshot,
     };
 
     const [stored] = await runLogged(
@@ -99,7 +107,12 @@ export class DrizzleMcpProjectApprovalRepository implements McpProjectApprovalRe
             mcpProjectApprovals.folderPath,
             mcpProjectApprovals.name,
           ],
-          set: { digest: row.digest, decision: row.decision, decidedAt: row.decidedAt },
+          set: {
+            digest: row.digest,
+            decision: row.decision,
+            decidedAt: row.decidedAt,
+            snapshot: row.snapshot,
+          },
         })
         .returning(),
     );

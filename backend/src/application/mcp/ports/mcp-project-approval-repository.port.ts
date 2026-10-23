@@ -1,4 +1,5 @@
 import type { UserId } from '@domain/auth';
+import type { ProjectMcpEntrySnapshot } from '@domain/mcp';
 
 /** What a decision writes. */
 export interface McpProjectApprovalWrite {
@@ -8,6 +9,14 @@ export interface McpProjectApprovalWrite {
   readonly name: string;
   readonly digest: string;
   readonly decision: 'approved' | 'rejected';
+
+  /**
+   * What the entry looked like at the moment of an `approved` decision — `null` for a `rejected`
+   * one, which has nothing worth remembering the content of (plan 13, B-28, D-80). Kept so a
+   * `changed` entry (D-11) can be shown against what was actually approved, not only told that it
+   * differs.
+   */
+  readonly snapshot: ProjectMcpEntrySnapshot | null;
 }
 
 /** One decision we recorded on one entry of one folder's project MCP file (plan 13, B-24; D-11). */

@@ -2,17 +2,23 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/http/mcp-server-preview.json",
   "title": "McpServerPreview",
-  "description": "`POST /engines/:engine/mcp-servers/preview`: the description a save of this configuration would show and record — word for word (plan 13, B-18, S-68). `params` is a map of strings: the generator has no number type here, so a numeric field (such as a count) travels as its decimal text, the way `costUsd` already does elsewhere.",
+  "description": "`POST /engines/:engine/mcp-servers/preview`: the description a save of this configuration would show and record — word for word (plan 13, B-18, S-68). `params` is a map of strings: the generator has no number type here, so a numeric field (such as a count) travels as its decimal text, the way `costUsd` already does elsewhere. Carrying `id` in the request body names the server being edited, and the response then lists which of the caller's own `allow` rules the save would revoke (plan 13, B-28, D-62, D-79).",
   "x-kind": "http",
   "x-type": "mcp.serverPreview",
   "x-route": [{ "method": "POST", "path": "/engines/:engine/mcp-servers/preview" }],
   "type": "object",
-  "required": ["messageKey", "params"],
+  "required": ["messageKey", "params", "revokedRules"],
   "properties": {
     "messageKey": { "type": "string" },
     "params": {
       "type": "object",
       "description": "Every value a string — a numeric field (a count) travels as its decimal text, the way `costUsd` already does elsewhere. Open: shaped by the server's transport."
+    },
+    "revokedRules": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": { "type": "string" },
+      "description": "The content of every `allow` rule of the caller that this edit would revoke, were it saved — the server's program (command, args, URL or transport) changed from what the rule was granted against (plan 13, B-26, D-12; B-28, D-62, D-79). Empty for a create, or an edit that keeps the program the same."
     }
   }
 }

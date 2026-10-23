@@ -14,7 +14,8 @@
     "args",
     "url",
     "env",
-    "headers"
+    "headers",
+    "approvedSnapshot"
   ],
   "properties": {
     "folderPath": {
@@ -59,6 +60,41 @@
       "type": "array",
       "maxItems": 64,
       "items": { "$ref": "./mcp-project-variable.schema.json" }
+    },
+    "approvedSnapshot": {
+      "x-nullable": true,
+      "description": "What was approved, for `state` `approved` or `changed` — `null` for `pending`/`rejected`, and for a decision recorded before this field existed (plan 13, B-28, D-80). The screen diffs this against the fields above, the current content, for a `changed` entry.",
+      "type": "object",
+      "required": ["transport", "command", "args", "url", "env", "headers"],
+      "properties": {
+        "transport": {
+          "type": "string",
+          "enum": ["stdio", "http", "sse"]
+        },
+        "command": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "args": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "type": "string" }
+        },
+        "url": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "env": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "./mcp-project-variable.schema.json" }
+        },
+        "headers": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "./mcp-project-variable.schema.json" }
+        }
+      }
     }
   }
 }

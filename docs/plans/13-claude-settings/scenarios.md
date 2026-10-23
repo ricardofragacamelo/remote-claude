@@ -228,12 +228,12 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-131 | a lista mostra status (conectado, falhou, precisa autenticar, pendente, desligado), origem e escopo, com busca, filtro e ordenação | eq | integração | — | B-28 | ⬜ |
-| S-132 | o segundo passo diz o comando/URL por extenso, onde vale e quais regras serão revogadas; sem confirmar, nada é gravado | est | integração | — | B-28 | ⬜ |
-| S-133 | campo de segredo é só escrita: mostra "definido", nunca o valor; salvar sem tocar mantém | eq | integração | — | B-28 | ⬜ |
-| S-134 | ligar/desligar em lote: um item recusado não impede os outros, e a tela diz qual falhou e por quê | err | integração | `FORBIDDEN` | B-28 | ⬜ |
-| S-135 | remover pede confirmação (destrutivo), sem foco inicial no botão de remover | est | integração | — | B-28 | ⬜ |
-| S-136 | servidor do `.mcp.json` alterado mostra a diferença entre o aprovado e o atual | eq | integração | — | B-28 | ⬜ |
+| S-131 | a lista mostra status (conectado, falhou, precisa autenticar, pendente, desligado), origem e escopo, com busca, filtro e ordenação | eq | integração | — | B-28 | ✅ |
+| S-132 | o segundo passo diz o comando/URL por extenso, onde vale e quais regras serão revogadas; sem confirmar, nada é gravado | est | integração | — | B-28 | ✅ |
+| S-133 | campo de segredo é só escrita: mostra "definido", nunca o valor; salvar sem tocar mantém | eq | integração | — | B-28 | ✅ |
+| S-134 | ligar/desligar em lote: um item recusado não impede os outros, e a tela diz qual falhou e por quê | err | integração | `FORBIDDEN` | B-28 | ✅ |
+| S-135 | remover pede confirmação (destrutivo), sem foco inicial no botão de remover | est | integração | — | B-28 | ✅ |
+| S-136 | servidor do `.mcp.json` alterado mostra a diferença entre o aprovado e o atual | eq | integração | — | B-28 | ✅ |
 | S-137 | a seção de plugins mostra o que cada plugin traz e o estado, e a prévia antes de adicionar | eq | integração | — | B-29 | ⬜ |
 | S-138 | a ajuda está presente e traduzida: o que é MCP, por que acrescentar um é tão sensível quanto uma regra `always`, o que `needs-auth` significa, o que não é registrado (valores de segredo) | eq | integração | — | B-30 | ⬜ |
 | S-139 | estado vazio ensina o próximo passo: adicionar um servidor, ou aprovar os do projeto | fron | integração | — | B-30 | ⬜ |

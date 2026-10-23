@@ -194,6 +194,17 @@ describe('ApiClient', () => {
     expect(headersOf(http)['content-type']).toBe('application/json');
   });
 
+  it('changes with PATCH, sending the body as JSON', async () => {
+    await new ApiClient(BASE, anonymous, http as unknown as typeof fetch).patch(
+      '/engines/claude/mcp-servers/s1',
+      { enabled: false },
+    );
+
+    expect(requestOf(http).method).toBe('PATCH');
+    expect(requestOf(http).body).toBe('{"enabled":false}');
+    expect(headersOf(http)['content-type']).toBe('application/json');
+  });
+
   it('removes with DELETE, and sends no body at all', async () => {
     await new ApiClient(BASE, anonymous, http as unknown as typeof fetch).delete('/workspaces/x');
 

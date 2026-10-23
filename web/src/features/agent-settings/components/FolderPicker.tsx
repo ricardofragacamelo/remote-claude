@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { FolderSelect } from '@/shared/components/FolderSelect';
 import { useFolderChoices } from '../hooks/useFolderChoices';
 import type { SectionBodyProps } from '../types/section';
 
@@ -13,23 +14,14 @@ export function FolderPicker({ location, onLocation }: SectionBodyProps): React.
   const choices = useFolderChoices(location.folder);
 
   return (
-    <label className="flex flex-col gap-1 text-ui-sm md:max-w-md">
-      {t('agentSettings.folder.label')}
-      <select
-        className="h-10 rounded-lg border border-border bg-transparent px-3 text-ui md:h-8"
-        value={location.folder ?? ''}
-        onChange={(event) => {
-          const folder = event.target.value;
-          onLocation(folder === '' ? { section: location.section } : { ...location, folder });
-        }}
-      >
-        <option value="">{t('agentSettings.folder.none')}</option>
-        {choices.map((choice) => (
-          <option key={choice} value={choice}>
-            {choice}
-          </option>
-        ))}
-      </select>
-    </label>
+    <FolderSelect
+      label={t('agentSettings.folder.label')}
+      noneLabel={t('agentSettings.folder.none')}
+      value={location.folder}
+      choices={choices}
+      onChange={(folder) => {
+        onLocation(folder === undefined ? { section: location.section } : { ...location, folder });
+      }}
+    />
   );
 }

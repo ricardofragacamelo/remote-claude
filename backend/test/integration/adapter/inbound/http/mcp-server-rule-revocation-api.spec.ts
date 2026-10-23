@@ -32,6 +32,7 @@ describe('a changed or removed MCP server revoking the permission rules that rea
   let identity: IdentityServer;
   let harness: TestApp;
   let token: string;
+  let otherToken: string;
 
   beforeAll(async () => {
     database = await startPostgres();
@@ -40,6 +41,7 @@ describe('a changed or removed MCP server revoking the permission rules that rea
       RC_MCP_SECRET_KEY_FILE: writeKeyFile(),
     });
     token = await identity.accessToken({ subject: SUBJECT });
+    otherToken = await identity.accessToken({ subject: 'auth|preview-other' });
   });
 
   afterAll(async () => {
@@ -184,5 +186,89 @@ describe('a changed or removed MCP server revoking the permission rules that rea
     });
 
     expect((await rules()).body.rules).toHaveLength(1);
+  });
+
+  describe('the edit preview listing what it would revoke — plan 13, B-28, D-62, D-79, S-132', () => {
+    it('lists the rules a program change would revoke, without touching anything yet', async () => {
+      const id = await withStoredServer('github');
+      await grantAlways('mcp(github:create_issue)');
+      await grantAlways('mcp(github:*)');
+
+      const previewed = await post('/engines/claude/mcp-servers/preview', {
+        id,
+        name: 'github',
+        scope: 'user',
+        transport: 'stdio',
+        command: 'node',
+        args: ['-y', 'server-github'],
+      });
+
+      expect(previewed.status).toBe(200);
+      expect(previewed.body.revokedRules.sort()).toEqual(
+        ['mcp(github:*)', 'mcp(github:create_issue)'].sort(),
+      );
+      // Nothing was actually revoked — this was only a preview (S-68, S-132).
+      expect((await rules()).body.rules).toHaveLength(2);
+    });
+
+    it('lists nothing for a rename alone — the program did not change', async () => {
+      const id = await withStoredServer('github');
+      await grantAlways('mcp(github:*)');
+
+      const previewed = await post('/engines/claude/mcp-servers/preview', {
+        id,
+        name: 'github2',
+        scope: 'user',
+        transport: 'stdio',
+        command: 'npx',
+        args: ['-y', 'server-github'],
+      });
+
+      expect(previewed.body.revokedRules).toEqual([]);
+    });
+
+    it('lists nothing for a create — there is no server yet to change the program of', async () => {
+      const previewed = await post('/engines/claude/mcp-servers/preview', {
+        name: 'github',
+        scope: 'user',
+        transport: 'stdio',
+        command: 'npx',
+        args: [],
+      });
+
+      expect(previewed.status).toBe(200);
+      expect(previewed.body.revokedRules).toEqual([]);
+    });
+
+    it('answers 403 previewing an edit of somebody else’s server', async () => {
+      const id = await withStoredServer('github');
+
+      const previewed = await http()
+        .post('/engines/claude/mcp-servers/preview')
+        .set('authorization', `Bearer ${otherToken}`)
+        .send({
+          id,
+          name: 'github',
+          scope: 'user',
+          transport: 'stdio',
+          command: 'node',
+          args: [],
+        });
+
+      expect(previewed.status).toBe(403);
+    });
+
+    it('answers 404 previewing an edit of a server that does not exist', async () => {
+      const previewed = await post('/engines/claude/mcp-servers/preview', {
+        id: 'nope',
+        name: 'github',
+        scope: 'user',
+        transport: 'stdio',
+        command: 'node',
+        args: [],
+      });
+
+      expect(previewed.status).toBe(404);
+    });
   });
 });

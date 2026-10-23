@@ -1,6 +1,5 @@
 import type { UserId } from '@domain/auth';
-import { hasCapability } from '@domain/engine';
-import { liveControl } from './session-registry';
+import { liveControl, liveSessionsWithCapability } from './session-registry';
 import type { LiveSession, SessionRegistry } from './session-registry';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
 
@@ -24,14 +23,7 @@ export class DisableMcpServerEverywhereUseCase {
   ) {}
 
   async execute(userId: UserId, engine: string, name: string): Promise<void> {
-    const affected = this.registry
-      .all()
-      .filter(
-        (live) =>
-          live.session.isOwnedBy(userId) &&
-          live.conversation.ref.engine.value === engine &&
-          hasCapability(live.handle.capabilities, 'mcp'),
-      );
+    const affected = liveSessionsWithCapability(this.registry, userId, engine, 'mcp');
 
     await Promise.all(affected.map((live) => this.disableIn(live, name)));
   }

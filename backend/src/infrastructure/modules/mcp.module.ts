@@ -6,6 +6,7 @@ import { DrizzleMcpServerRepository } from '@adapter/outbound/persistence/mcp/mc
 import { MCP_SECRET_KEY_FILE } from '@adapter/outbound/persistence/mcp/mcp-server.repository';
 import { DrizzleMcpProjectApprovalRepository } from '@adapter/outbound/persistence/mcp/drizzle-mcp-project-approval.repository';
 import { SessionRegistryLiveMcpRevocation } from '@adapter/outbound/mcp/session-registry.live-mcp-revocation';
+import { SessionRegistryLiveMcpStatus } from '@adapter/outbound/mcp/session-registry.live-mcp-status';
 import {
   ApproveProjectMcpServerUseCase,
   ComposeSessionMcpServersUseCase,
@@ -15,6 +16,7 @@ import {
   ListMcpServersUseCase,
   ListProjectMcpServersUseCase,
   MCP_PROJECT_APPROVAL_REPOSITORY,
+  MCP_SERVER_LIVE_STATUS_SOURCE,
   MCP_SERVER_REPOSITORY,
   MCP_SERVER_TEST_TIMEOUT,
   MCP_SERVER_TEST_TIMEOUT_MS,
@@ -33,6 +35,7 @@ import type {
   McpProjectApprovalDependencies,
   McpProjectApprovalRepository,
   McpServerDependencies,
+  McpServerLiveStatusSource,
   McpServerRepository,
   McpServerRuleRevocation,
 } from '@application/mcp';
@@ -103,6 +106,7 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
         new DisableMcpServerEverywhereUseCase(registry, broadcaster),
     },
     { provide: LIVE_SESSION_MCP_REVOCATION, useClass: SessionRegistryLiveMcpRevocation },
+    { provide: MCP_SERVER_LIVE_STATUS_SOURCE, useClass: SessionRegistryLiveMcpStatus },
     {
       provide: MCP_SERVER_DEPENDENCIES,
       inject: [
@@ -114,6 +118,7 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
         CLOCK,
         LIVE_SESSION_MCP_REVOCATION,
         RevokeMcpServerRulesUseCase,
+        MCP_SERVER_LIVE_STATUS_SOURCE,
       ],
       useFactory: (
         servers: McpServerRepository,
@@ -124,6 +129,7 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
         clock: Clock,
         liveSessions: LiveSessionMcpRevocation,
         ruleRevocation: McpServerRuleRevocation,
+        liveStatus: McpServerLiveStatusSource,
       ): McpServerDependencies => ({
         servers,
         capabilities,
@@ -133,6 +139,7 @@ const MCP_PROJECT_APPROVAL_DEPENDENCIES = Symbol('McpProjectApprovalDependencies
         clock,
         liveSessions,
         ruleRevocation,
+        liveStatus,
       }),
     },
     {

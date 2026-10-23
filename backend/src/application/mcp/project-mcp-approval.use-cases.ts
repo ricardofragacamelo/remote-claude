@@ -5,8 +5,13 @@ import {
   describeMcpServer,
   digestOfProjectMcpEntry,
   projectMcpApprovalStateOf,
+  snapshotOfProjectMcpEntry,
 } from '@domain/mcp';
-import type { ProjectMcpApprovalState, ProjectMcpEntry } from '@domain/mcp';
+import type {
+  ProjectMcpApprovalState,
+  ProjectMcpEntry,
+  ProjectMcpEntrySnapshot,
+} from '@domain/mcp';
 import type { UserId } from '@domain/auth';
 import type { Clock } from '@domain/shared';
 import type { McpEngineCapabilities } from './mcp-engine-capabilities';
@@ -36,6 +41,13 @@ export interface ProjectMcpServerView {
   readonly url: string | null;
   readonly env: ProjectMcpEntry['env'];
   readonly headers: ProjectMcpEntry['headers'];
+
+  /**
+   * What was approved, when `state` is `approved` or `changed` — `null` for `pending`/`rejected`,
+   * and for an approval written before this field existed (plan 13, B-28, D-80). The screen that
+   * shows a `changed` entry diffs this against the fields above, the current content.
+   */
+  readonly approvedSnapshot: ProjectMcpEntrySnapshot | null;
 }
 
 /** One folder's file the climb could not read — nothing of it is approvable (S-106). */
@@ -61,8 +73,9 @@ function viewOf(
   entry: ProjectMcpEntry,
   state: ProjectMcpApprovalState,
   digest: string,
+  approvedSnapshot: ProjectMcpEntrySnapshot | null = null,
 ): ProjectMcpServerView {
-  return { folderPath, state, digest, ...entry };
+  return { folderPath, state, digest, approvedSnapshot, ...entry };
 }
 
 /** The audit record of an approval decision — the por-extenso description, as B-18 already has it. */
@@ -148,7 +161,8 @@ export class ListProjectMcpServersUseCase {
         const digest = digestOfProjectMcpEntry(entry);
         const decision = decisionByKey.get(key(file.folderPath, entry.name)) ?? null;
         const state = projectMcpApprovalStateOf(digest, decision);
-        servers.push(viewOf(file.folderPath, entry, state, digest));
+        const approvedSnapshot = decision?.decision === 'approved' ? decision.snapshot : null;
+        servers.push(viewOf(file.folderPath, entry, state, digest, approvedSnapshot));
       }
     }
 
@@ -187,19 +201,20 @@ export class ApproveProjectMcpServerUseCase {
     const existing = await this.deps.approvals.findOne(userId, engine, folderPath, name);
     if (existing?.decision === 'approved' && existing.digest === digest) {
       // S-107: the same digest approved again writes nothing a second time.
-      return viewOf(folderPath, entry, 'approved', digest);
+      return viewOf(folderPath, entry, 'approved', digest, existing.snapshot);
     }
 
+    const snapshot = snapshotOfProjectMcpEntry(entry);
     const at = this.deps.clock.now();
     await this.deps.approvals.upsert(
-      { userId, engine, folderPath, name, digest, decision: 'approved' },
+      { userId, engine, folderPath, name, digest, decision: 'approved', snapshot },
       at,
     );
     await this.deps.trail.execute(
       approvalEvent('mcp.projectServerApproved', userId, engine, folderPath, entry, at),
     );
 
-    return viewOf(folderPath, entry, 'approved', digest);
+    return viewOf(folderPath, entry, 'approved', digest, snapshot);
   }
 }
 
@@ -229,7 +244,7 @@ export class RejectProjectMcpServerUseCase {
     const at = this.deps.clock.now();
 
     await this.deps.approvals.upsert(
-      { userId, engine, folderPath, name, digest, decision: 'rejected' },
+      { userId, engine, folderPath, name, digest, decision: 'rejected', snapshot: null },
       at,
     );
 
