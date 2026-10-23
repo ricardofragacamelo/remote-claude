@@ -22,6 +22,8 @@ import {
   WorkspaceNotAllowedError,
   WorkspacePath,
 } from '@domain/workspace';
+import { FakeMarketplaceAllowlist } from '../../../../support/fakes/fake-marketplace-allowlist';
+import { FakeMarketplacePluginSource } from '../../../../support/fakes/fake-marketplace-plugin-source';
 import { FakePluginManifestReader } from '../../../../support/fakes/fake-plugin-manifest-reader';
 import { FixedClock } from '../../../../support/fakes/fixed-clock';
 import { InMemoryPluginRepository } from '../../../../support/fakes/in-memory-plugin.repository';
@@ -75,6 +77,9 @@ function harness() {
     firstRoot: () => Promise.resolve(WorkspacePath.create(ROOT)),
   };
 
+  const marketplaces = new FakeMarketplaceAllowlist();
+  const source = new FakeMarketplacePluginSource();
+
   const deps: PluginDependencies = {
     engine: ENGINE,
     plugins,
@@ -83,6 +88,9 @@ function harness() {
     trail: new RecordAuditEventUseCase(events, new SequentialIds()),
     ids: new SequentialIds('plugin-'),
     clock,
+    marketplaces,
+    source,
+    pluginDownloadDir: '/srv/plugin-downloads',
   };
 
   return {
@@ -90,6 +98,8 @@ function harness() {
     manifests,
     events,
     clock,
+    marketplaces,
+    source,
     list: new ListPluginsUseCase(deps),
     preview: new PreviewLocalPluginUseCase(deps),
     add: new AddLocalPluginUseCase(deps),

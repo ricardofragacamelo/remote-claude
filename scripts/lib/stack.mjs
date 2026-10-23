@@ -124,6 +124,7 @@ export const E2E_POSTGRES = {
  * @property {string} RC_SESSION_MAX_BUDGET_USD
  * @property {string} RC_MODEL_CHECK_MAX_BUDGET_USD
  * @property {string} RC_SESSION_DEFAULT_MODEL
+ * @property {string} RC_PLUGIN_DOWNLOAD_DIR
  * @property {string} RC_SESSION_DEFAULT_PERMISSION_MODE
  * @property {string} RC_PERMISSION_TIMEOUT_MS
  * @property {string} RC_QUESTION_TIMEOUT_MS
@@ -245,6 +246,12 @@ export function ephemeralEnvironment(ports, options = {}) {
     RC_SESSION_MAX_BUDGET_USD: '10',
     RC_MODEL_CHECK_MAX_BUDGET_USD: '0.05',
     RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
+    // Where a marketplace plugin downloads to, per user (plan 13, B-47, D-15) — a folder of this
+    // stack's own, like the checkpoints and the file history below.
+    RC_PLUGIN_DOWNLOAD_DIR: path.join(
+      os.tmpdir(),
+      `remote-claude-plugins-${String(ports.backend)}`,
+    ),
     RC_SESSION_DEFAULT_PERMISSION_MODE: 'default',
 
     // High on purpose: three scenarios overflow a 1,000-event replay buffer by sending frames, and

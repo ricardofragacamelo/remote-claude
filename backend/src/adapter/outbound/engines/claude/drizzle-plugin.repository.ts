@@ -32,6 +32,21 @@ function rowOrNull(rows: readonly Row[]): StoredPlugin | null {
   return rows[0] === undefined ? null : storedOf(rows[0]);
 }
 
+/**
+ * What {@link DrizzlePluginRepository.insertIfAbsent} does with its own re-read, once it knows its
+ * insert lost a conflict: the row [reread] has to exist, because the conflict itself is proof that
+ * one exists at this `(userId, path)` right now — Postgres only ever reports a conflict against a
+ * row some transaction has already committed (or is committing), never one that was since deleted
+ * before this call's own re-read. Pulled out as a pure function so this guard — otherwise
+ * unreachable outside of a database bug — is still proven by a unit test, not left untested or cut.
+ */
+export function resolvedConflict(reread: StoredPlugin | null, path: string): StoredPlugin {
+  if (reread === null) {
+    throw new Error(`plugin at ${path} conflicted but could not be re-read`);
+  }
+  return reread;
+}
+
 function insertRowOf(id: string, write: PluginWrite, now: Date): typeof claudePlugins.$inferInsert {
   return {
     id,
@@ -105,18 +120,46 @@ export class DrizzlePluginRepository implements PluginRepository {
     return storedOf(row as Row);
   }
 
-  async setEnabled(id: string, enabled: boolean, now: Date): Promise<StoredPlugin> {
-    const [row] = await runLogged(
+  async insertIfAbsent(
+    id: string,
+    write: PluginWrite,
+    now: Date,
+  ): Promise<{ plugin: StoredPlugin; created: boolean }> {
+    const inserted = await runLogged(
       this.context.logger,
-      'plugin.setEnabled',
+      'plugin.insertIfAbsent',
       this.context.db
-        .update(claudePlugins)
-        .set({ enabled, updatedAt: now })
-        .where(eq(claudePlugins.id, id))
+        .insert(claudePlugins)
+        .values(insertRowOf(id, write, now))
+        .onConflictDoNothing({ target: [claudePlugins.userId, claudePlugins.path] })
         .returning(),
     );
 
-    return storedOf(row as Row);
+    if (inserted[0] !== undefined) {
+      return { plugin: storedOf(inserted[0]), created: true };
+    }
+
+    // Lost the race (plan 13, S-208): the row at this exact (userId, path) already exists — found,
+    // never re-inserted, by the same unique index that just refused this call's own insert.
+    const existing = await this.findByPath(write.userId, write.identity.path);
+    return { plugin: resolvedConflict(existing, write.identity.path), created: false };
+  }
+
+  setEnabled(id: string, enabled: boolean, now: Date): Promise<StoredPlugin> {
+    return this.updateRow('plugin.setEnabled', id, { enabled }, now);
+  }
+
+  updateInstalled(
+    id: string,
+    fields: { readonly commit: string; readonly approvedDigest: string },
+    now: Date,
+  ): Promise<StoredPlugin> {
+    return this.updateRow(
+      'plugin.updateInstalled',
+      id,
+      { commit: fields.commit, approvedDigest: fields.approvedDigest },
+      now,
+    );
   }
 
   async delete(id: string): Promise<void> {
@@ -125,5 +168,25 @@ export class DrizzlePluginRepository implements PluginRepository {
       'plugin.delete',
       this.context.db.delete(claudePlugins).where(eq(claudePlugins.id, id)),
     );
+  }
+
+  /** `UPDATE … SET <patch>, updated_at = now WHERE id = id RETURNING *` — one row, always found. */
+  private async updateRow(
+    logOp: string,
+    id: string,
+    patch: Partial<typeof claudePlugins.$inferInsert>,
+    now: Date,
+  ): Promise<StoredPlugin> {
+    const [row] = await runLogged(
+      this.context.logger,
+      logOp,
+      this.context.db
+        .update(claudePlugins)
+        .set({ ...patch, updatedAt: now })
+        .where(eq(claudePlugins.id, id))
+        .returning(),
+    );
+
+    return storedOf(row as Row);
   }
 }

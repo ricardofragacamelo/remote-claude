@@ -21,8 +21,15 @@ export type {
   PluginState,
 } from './entities/plugin.entity';
 export { digestOfPluginManifest } from './services/plugin-manifest-digest';
-export { describePlugin } from './services/plugin-description';
+export { describePlugin, describePluginUpdate } from './services/plugin-description';
 export type { PluginDescription } from './services/plugin-description';
+export { diffPluginManifests } from './services/plugin-manifest-diff';
+export type { PluginManifestDiff } from './services/plugin-manifest-diff';
+export { effectivePluginState } from './entities/marketplace-plugin.entity';
+export type {
+  MarketplaceManifest,
+  MarketplacePluginEntry,
+} from './entities/marketplace-plugin.entity';
 export type { AccountState } from './services/account-state';
 export {
   CLAUDE_COMMAND_MENU,

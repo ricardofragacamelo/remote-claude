@@ -2554,7 +2554,9 @@
         "checkDetails": "Modelo: {{model}} · {{latency}} ms · US$ {{cost}}"
       },
       "plugin": {
-        "descriptionLocal": "{{name}}, de {{path}} nesta máquina: {{commandCount}} comando(s) ({{commandNames}}), {{agentCount}} agent(s) ({{agentNames}}), {{hookCount}} hook(s), {{skillCount}} skill(s) ({{skillNames}}), e {{mcpServerCount}} servidor(es) MCP ({{mcpServerNames}}) — que não sobem sozinhos e precisam ser aprovados à parte."
+        "descriptionLocal": "{{name}}, de {{path}} nesta máquina: {{commandCount}} comando(s) ({{commandNames}}), {{agentCount}} agent(s) ({{agentNames}}), {{hookCount}} hook(s), {{skillCount}} skill(s) ({{skillNames}}), e {{mcpServerCount}} servidor(es) MCP ({{mcpServerNames}}) — que não sobem sozinhos e precisam ser aprovados à parte.",
+        "descriptionMarketplace": "{{name}}, do marketplace {{marketplace}}, fixado no commit {{commit}}: {{commandCount}} comando(s) ({{commandNames}}), {{agentCount}} agent(s) ({{agentNames}}), {{hookCount}} hook(s), {{skillCount}} skill(s) ({{skillNames}}), e {{mcpServerCount}} servidor(es) MCP ({{mcpServerNames}}) — que não sobem sozinhos e precisam ser aprovados à parte.",
+        "descriptionUpdate": "{{name}}, de {{marketplace}}, passando do commit {{fromCommit}} para {{toCommit}}: acrescenta {{commandsAddedCount}} comando(s) ({{commandsAddedNames}}) e tira {{commandsRemovedCount}} ({{commandsRemovedNames}}); acrescenta {{agentsAddedCount}} agent(s) ({{agentsAddedNames}}) e tira {{agentsRemovedCount}} ({{agentsRemovedNames}}); acrescenta {{skillsAddedCount}} skill(s) ({{skillsAddedNames}}) e tira {{skillsRemovedCount}} ({{skillsRemovedNames}}); acrescenta {{mcpServersAddedCount}} servidor(es) MCP ({{mcpServersAddedNames}}) e tira {{mcpServersRemovedCount}} ({{mcpServersRemovedNames}}); hooks vão de {{hookCountBefore}} para {{hookCountAfter}}."
       },
       "plugins": {
         "title": "Plugins",

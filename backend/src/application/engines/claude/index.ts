@@ -45,11 +45,34 @@ export type {
   PluginManifestReadError,
   PluginManifestReader,
 } from './ports/plugin-manifest-reader.port';
+export { MARKETPLACE_PLUGIN_SOURCE } from './ports/marketplace-plugin-source.port';
+export type {
+  MarketplacePluginSource,
+  MarketplaceSourceFailure,
+  PreparedMarketplacePlugin,
+} from './ports/marketplace-plugin-source.port';
 export {
   AddLocalPluginUseCase,
   ListPluginsUseCase,
+  ownedPlugin,
+  pluginEvent,
   PreviewLocalPluginUseCase,
   RemovePluginUseCase,
   SetPluginEnabledUseCase,
+  viewOf,
 } from './plugin.use-cases';
-export type { LocalPluginPreview, PluginDependencies, PluginView } from './plugin.use-cases';
+export type {
+  LocalPluginPreview,
+  PluginAuditKind,
+  PluginDependencies,
+  PluginView,
+} from './plugin.use-cases';
+export {
+  AddMarketplacePluginUseCase,
+  ApplyMarketplacePluginUpdateUseCase,
+  CheckMarketplacePluginUpdateUseCase,
+  ListMarketplacePluginsUseCase,
+  ListMarketplacesUseCase,
+} from './marketplace-plugin.use-cases';
+export type { MarketplacePluginUpdateCheck } from './marketplace-plugin.use-cases';
+export { isSafePathSegment, marketplacePluginDestination } from './marketplace-plugin-path';

@@ -21,6 +21,11 @@ export type { FolderState, FolderView, FoldersOfUser } from './folder-view';
 export type { WorkspaceAllowlistSource } from './ports/workspace-allowlist.port';
 export { WORKSPACE_ALLOWLIST_SOURCE } from './ports/workspace-allowlist.port';
 export type {
+  DeclaredMarketplace,
+  MarketplaceAllowlistSource,
+} from './ports/marketplace-allowlist.port';
+export { MARKETPLACE_ALLOWLIST_SOURCE } from './ports/marketplace-allowlist.port';
+export type {
   DirectoryInspection,
   WorkspaceDirectoryProbe,
 } from './ports/workspace-directory.probe';

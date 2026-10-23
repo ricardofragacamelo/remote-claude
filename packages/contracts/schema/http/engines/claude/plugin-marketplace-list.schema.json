@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/plugin-marketplace-list.json",
+  "title": "ClaudePluginMarketplaceList",
+  "description": "`GET /engines/claude/plugins/marketplaces`: every marketplace this installation's allowlist file currently declares (plan 13, B-47). An empty list means the feature is off — the file declares none.",
+  "x-kind": "http",
+  "x-type": "engines.claude.pluginMarketplaceList",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/plugins/marketplaces" }],
+  "type": "object",
+  "required": ["marketplaces"],
+  "properties": {
+    "marketplaces": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": { "name": { "type": "string" } }
+      }
+    }
+  }
+}

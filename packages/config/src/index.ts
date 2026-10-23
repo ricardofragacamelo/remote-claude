@@ -11,5 +11,14 @@
  * See docs/architecture/shared/07-repository-layout.md#configuração-e-segredo.
  */
 export { ConfigurationError, parseEnvironment } from './environment';
-export { workspaceAllowlistSchema, workspaceRootSchema } from './workspace-allowlist';
-export type { RawWorkspaceAllowlist, RawWorkspaceRoot } from './workspace-allowlist';
+export {
+  workspaceAllowlistSchema,
+  workspaceRootSchema,
+  workspaceMarketplaceSchema,
+  workspaceMarketplaceSourceSchema,
+} from './workspace-allowlist';
+export type {
+  RawWorkspaceAllowlist,
+  RawWorkspaceRoot,
+  RawWorkspaceMarketplace,
+} from './workspace-allowlist';

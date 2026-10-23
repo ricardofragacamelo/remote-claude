@@ -30,6 +30,8 @@ import {
   TRANSCRIPT_READ_LIMITS,
 } from '@adapter/outbound/engines/claude/transcript-reads';
 import { realTranscriptSdk, TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
+import { MARKETPLACE_ALLOWLIST_SOURCE } from '@application/workspace';
+import type { MarketplaceAllowlistSource } from '@application/workspace';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
 import { LOGGER, type Logger } from '@shared/logging/logger';
@@ -140,9 +142,9 @@ export const CLAUDE_SESSION_EXTENSION_PATHS = Symbol('ClaudeSessionExtensionPath
 export const claudeSessionExtensionPathsProviders: readonly Provider[] = [
   {
     provide: CLAUDE_SESSION_EXTENSION_PATHS,
-    inject: [PERSISTENCE_CONTEXT],
-    useFactory: (context: PersistenceContext) =>
-      new ClaudePluginSessionExtensionPaths(new DrizzlePluginRepository(context)),
+    inject: [PERSISTENCE_CONTEXT, MARKETPLACE_ALLOWLIST_SOURCE],
+    useFactory: (context: PersistenceContext, marketplaces: MarketplaceAllowlistSource) =>
+      new ClaudePluginSessionExtensionPaths(new DrizzlePluginRepository(context), marketplaces),
   },
 ];
 

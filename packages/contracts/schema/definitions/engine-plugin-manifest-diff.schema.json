@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/engine-plugin-manifest-diff.json",
+  "title": "EnginePluginManifestDiff",
+  "description": "What an available update to a plugin would change (plan 13, B-47; S-205) — names added or removed per category, and the hook count on each side. Never a line-level diff of any file.",
+  "type": "object",
+  "required": [
+    "commandsAdded",
+    "commandsRemoved",
+    "agentsAdded",
+    "agentsRemoved",
+    "skillsAdded",
+    "skillsRemoved",
+    "mcpServersAdded",
+    "mcpServersRemoved",
+    "hookCountBefore",
+    "hookCountAfter"
+  ],
+  "properties": {
+    "commandsAdded": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "commandsRemoved": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "agentsAdded": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "agentsRemoved": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "skillsAdded": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "skillsRemoved": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "mcpServersAdded": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "mcpServersRemoved": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "hookCountBefore": { "type": "integer" },
+    "hookCountAfter": { "type": "integer" }
+  }
+}

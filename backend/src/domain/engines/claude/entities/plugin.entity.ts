@@ -38,8 +38,11 @@ export interface PluginManifest {
 /** `^[A-Za-z0-9_-]{1,64}$` — the same universal name shape the MCP domain already uses (B-18). */
 export const PLUGIN_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
-/** Where a plugin stands against what was approved when it was added or last re-approved (S-128). */
-export const PLUGIN_STATES = ['current', 'changed', 'unreadable'] as const;
+/**
+ * Where a plugin stands against what was approved when it was added or last re-approved (S-128), or
+ * against the allowlist file for one that came from a marketplace (plan 13, B-47, S-213).
+ */
+export const PLUGIN_STATES = ['current', 'changed', 'unreadable', 'marketplaceNotAllowed'] as const;
 export type PluginState = (typeof PLUGIN_STATES)[number];
 
 /**
@@ -48,11 +51,15 @@ export type PluginState = (typeof PLUGIN_STATES)[number];
  * `unreadable` when it cannot be read at all any more (the directory moved, the manifest no longer
  * parses) — a state of its own, not folded into `changed`, because there is nothing to compare the
  * approved digest against.
+ *
+ * Never answers `marketplaceNotAllowed` — that one is not about the manifest at all, and is laid
+ * over whichever of these three this function answers (see
+ * {@link import('./marketplace-plugin.entity').effectivePluginState}).
  */
 export function pluginStateOf(
   approvedDigest: string,
   current: { readonly digest: string } | null,
-): PluginState {
+): Exclude<PluginState, 'marketplaceNotAllowed'> {
   if (current === null) {
     return 'unreadable';
   }

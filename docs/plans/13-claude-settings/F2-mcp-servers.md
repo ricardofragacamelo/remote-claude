@@ -235,7 +235,7 @@ origem pelo rótulo que a extensão dá. Digest do manifesto: mudou, volta a pen
 gravam `engine.plugin*`. Plugin de marketplace usa esta mesma construção, a partir do diretório que a
 B-47 baixa. Cenários S-123…S-130.
 
-### B-47 — Plugins de marketplace 🔲
+### B-47 — Plugins de marketplace ✅
 
 [D-15](decisions.md#d-15--plugins-do-claude), decidida pelo usuário contra a recomendação. Na extensão do Claude,
 como a B-27: rotas sob `/engines/claude/plugins…`, `claude_plugins` e `engine.plugin*` (atualizar grava

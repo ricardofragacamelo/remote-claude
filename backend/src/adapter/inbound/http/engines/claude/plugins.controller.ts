@@ -15,9 +15,13 @@ import type {
   ClaudePluginDetailPayload,
   ClaudePluginListPayload,
   ClaudePluginPreviewPayload,
+  ClaudePluginUpdatePreviewPayload,
 } from '@remote-claude/contracts';
 import {
   AddLocalPluginUseCase,
+  AddMarketplacePluginUseCase,
+  ApplyMarketplacePluginUpdateUseCase,
+  CheckMarketplacePluginUpdateUseCase,
   ListPluginsUseCase,
   PreviewLocalPluginUseCase,
   RemovePluginUseCase,
@@ -27,11 +31,14 @@ import { ZodPipe } from '@shared/validation/zod.pipe';
 import type { UserId } from '@domain/auth';
 import { BearerAuthGuard, CurrentUser } from '../../auth/bearer.guard';
 import {
+  installMarketplacePluginSchema,
   localPluginPathSchema,
   setPluginEnabledSchema,
   toPluginDto,
   toPluginListDto,
   toPluginPreviewDto,
+  toUpdatePreviewDto,
+  type InstallMarketplacePluginBody,
   type LocalPluginPathBody,
   type SetPluginEnabledBody,
 } from './plugins.dto';
@@ -47,14 +54,15 @@ import {
  *
  * | Status | When |
  * |---|---|
- * | `200` | `GET`, `preview`, `PATCH` |
- * | `201` | `POST` — a plugin added (or the existing one, for the same path again — S-130) |
+ * | `200` | `GET`, `preview`, `PATCH`, `POST :id/update` — applying an update changes an existing resource, never a new one |
+ * | `201` | `POST`, `POST marketplace` — a plugin added (or the existing one, for the same path/install again — S-130, S-207) |
  * | `204` | `DELETE`, always |
  * | `400` | a malformed body |
  * | `401` | no bearer, or an invalid one |
  * | `403` | somebody else's plugin, or the path's own refusals |
- * | `404` | a plugin that does not exist |
- * | `422` | the directory has no plugin manifest, or it does not parse |
+ * | `404` | a plugin that does not exist, or a marketplace install naming a plugin it does not list |
+ * | `422` | the directory has no plugin manifest, or it does not parse; a marketplace plugin whose own `source` is unsupported, or escapes its repository |
+ * | `502` | a declared marketplace's source could not be reached, or its content did not parse |
  */
 @Controller('engines/claude/plugins')
 @UseGuards(BearerAuthGuard)
@@ -65,6 +73,12 @@ export class PluginsController {
     @Inject(AddLocalPluginUseCase) private readonly add: AddLocalPluginUseCase,
     @Inject(SetPluginEnabledUseCase) private readonly setEnabled: SetPluginEnabledUseCase,
     @Inject(RemovePluginUseCase) private readonly removePlugin: RemovePluginUseCase,
+    @Inject(AddMarketplacePluginUseCase)
+    private readonly addFromMarketplace: AddMarketplacePluginUseCase,
+    @Inject(CheckMarketplacePluginUpdateUseCase)
+    private readonly checkUpdate: CheckMarketplacePluginUpdateUseCase,
+    @Inject(ApplyMarketplacePluginUpdateUseCase)
+    private readonly applyUpdate: ApplyMarketplacePluginUpdateUseCase,
   ) {}
 
   @Get()
@@ -88,6 +102,38 @@ export class PluginsController {
     @CurrentUser() userId: UserId,
   ): Promise<ClaudePluginDetailPayload> {
     return toPluginDto(await this.add.execute(userId, body.path));
+  }
+
+  /**
+   * Declared **before** the `:id` routes below: `POST .../plugins/marketplace` has one fixed
+   * segment, never a plugin id, and Nest matches routes of one controller in declaration order.
+   */
+  @Post('marketplace')
+  @HttpCode(201)
+  async addFromMarketplaceSource(
+    @Body(new ZodPipe(installMarketplacePluginSchema)) body: InstallMarketplacePluginBody,
+    @CurrentUser() userId: UserId,
+  ): Promise<ClaudePluginDetailPayload> {
+    return toPluginDto(
+      await this.addFromMarketplace.execute(userId, body.marketplace, body.plugin),
+    );
+  }
+
+  @Get(':id/update')
+  async updateAvailable(
+    @Param('id') id: string,
+    @CurrentUser() userId: UserId,
+  ): Promise<ClaudePluginUpdatePreviewPayload> {
+    return toUpdatePreviewDto(await this.checkUpdate.execute(userId, id));
+  }
+
+  @Post(':id/update')
+  @HttpCode(200)
+  async applyUpdateOf(
+    @Param('id') id: string,
+    @CurrentUser() userId: UserId,
+  ): Promise<ClaudePluginDetailPayload> {
+    return toPluginDto(await this.applyUpdate.execute(userId, id));
   }
 
   @Patch(':id')

@@ -1,9 +1,15 @@
 import { Module } from '@nestjs/common';
 
 import { ClaudeController } from '@adapter/inbound/http/engines/claude/claude.controller';
+import { MarketplacesController } from '@adapter/inbound/http/engines/claude/marketplaces.controller';
 import { PluginsController } from '@adapter/inbound/http/engines/claude/plugins.controller';
 import { CLAUDE_ENGINE } from '@adapter/outbound/engines/claude/claude-engine';
 import { DrizzlePluginRepository } from '@adapter/outbound/engines/claude/drizzle-plugin.repository';
+import {
+  GitMarketplacePluginSource,
+  MARKETPLACE_PLUGIN_SOURCE_SETTINGS,
+} from '@adapter/outbound/engines/claude/git-marketplace-plugin-source';
+import type { MarketplacePluginSourceSettings } from '@adapter/outbound/engines/claude/git-marketplace-plugin-source';
 import {
   AgentSdkModelCheck,
   MODEL_CHECK_SETTINGS,
@@ -15,10 +21,16 @@ import type { FolderAccess } from '@application/agent-settings';
 import { RecordAuditEventUseCase } from '@application/audit';
 import {
   AddLocalPluginUseCase,
+  AddMarketplacePluginUseCase,
+  ApplyMarketplacePluginUpdateUseCase,
   CheckModelUseCase,
+  CheckMarketplacePluginUpdateUseCase,
   ClaudeInstallationCatalog,
   INSTALLATION_FACTS,
+  ListMarketplacePluginsUseCase,
+  ListMarketplacesUseCase,
   ListPluginsUseCase,
+  MARKETPLACE_PLUGIN_SOURCE,
   MODEL_CHECK,
   ModelChecks,
   OUTPUT_STYLE_DEFAULTS_REPOSITORY,
@@ -34,6 +46,7 @@ import {
 } from '@application/engines/claude';
 import type {
   InstallationFacts,
+  MarketplacePluginSource,
   ModelCheck,
   OutputStyleDefaultsRepository,
   OutputStyleDependencies,
@@ -42,10 +55,13 @@ import type {
   PluginRepository,
 } from '@application/engines/claude';
 import { CLOCK, ID_GENERATOR } from '@application/shared';
+import { MARKETPLACE_ALLOWLIST_SOURCE } from '@application/workspace';
+import type { MarketplaceAllowlistSource } from '@application/workspace';
 import type { Clock, IdGenerator } from '@domain/shared';
 import { AgentSettingsModule } from '../agent-settings.module';
 import { AuditModule } from '../audit.module';
 import { AuthModule } from '../auth.module';
+import { WorkspaceModule } from '../workspace.module';
 import { ClaudeInstallationModule } from './claude-installation.module';
 import { CLAUDE_SETTINGS } from './claude.environment';
 import type { ClaudeSettings } from './claude.environment';
@@ -53,7 +69,7 @@ import type { ClaudeSettings } from './claude.environment';
 /** What every output-style use case is built with. */
 const OUTPUT_STYLE_DEPENDENCIES = Symbol('OutputStyleDependencies');
 
-/** What every plugin use case is built with (plan 13, B-27). */
+/** What every plugin use case (local and marketplace, B-27 and B-47) is built with. */
 const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
 
 /**
@@ -68,8 +84,14 @@ const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
  * See docs/architecture/backend/03-modules.md.
  */
 @Module({
-  imports: [AgentSettingsModule, AuditModule, AuthModule, ClaudeInstallationModule],
-  controllers: [ClaudeController, PluginsController],
+  imports: [
+    AgentSettingsModule,
+    AuditModule,
+    AuthModule,
+    ClaudeInstallationModule,
+    WorkspaceModule,
+  ],
+  controllers: [MarketplacesController, ClaudeController, PluginsController],
   providers: [
     { provide: MODEL_CHECK, useClass: AgentSdkModelCheck },
     {
@@ -128,6 +150,14 @@ const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
     { provide: PLUGIN_REPOSITORY, useClass: DrizzlePluginRepository },
     { provide: PLUGIN_MANIFEST_READER, useClass: ClaudePluginManifestReader },
     {
+      provide: MARKETPLACE_PLUGIN_SOURCE_SETTINGS,
+      inject: [CLAUDE_SETTINGS],
+      useFactory: (settings: ClaudeSettings): MarketplacePluginSourceSettings => ({
+        baseDir: settings.pluginDownloadDir,
+      }),
+    },
+    { provide: MARKETPLACE_PLUGIN_SOURCE, useClass: GitMarketplacePluginSource },
+    {
       provide: PLUGIN_DEPENDENCIES,
       inject: [
         PLUGIN_REPOSITORY,
@@ -136,6 +166,9 @@ const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
         RecordAuditEventUseCase,
         ID_GENERATOR,
         CLOCK,
+        MARKETPLACE_ALLOWLIST_SOURCE,
+        MARKETPLACE_PLUGIN_SOURCE,
+        CLAUDE_SETTINGS,
       ],
       useFactory: (
         plugins: PluginRepository,
@@ -144,6 +177,9 @@ const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
         trail: RecordAuditEventUseCase,
         ids: IdGenerator,
         clock: Clock,
+        marketplaces: MarketplaceAllowlistSource,
+        source: MarketplacePluginSource,
+        settings: ClaudeSettings,
       ): PluginDependencies => ({
         engine: CLAUDE_ENGINE,
         plugins,
@@ -152,6 +188,9 @@ const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
         trail,
         ids,
         clock,
+        marketplaces,
+        source,
+        pluginDownloadDir: settings.pluginDownloadDir,
       }),
     },
     {
@@ -178,6 +217,31 @@ const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
       provide: RemovePluginUseCase,
       inject: [PLUGIN_DEPENDENCIES],
       useFactory: (deps: PluginDependencies) => new RemovePluginUseCase(deps),
+    },
+    {
+      provide: ListMarketplacesUseCase,
+      inject: [PLUGIN_DEPENDENCIES],
+      useFactory: (deps: PluginDependencies) => new ListMarketplacesUseCase(deps),
+    },
+    {
+      provide: ListMarketplacePluginsUseCase,
+      inject: [PLUGIN_DEPENDENCIES],
+      useFactory: (deps: PluginDependencies) => new ListMarketplacePluginsUseCase(deps),
+    },
+    {
+      provide: AddMarketplacePluginUseCase,
+      inject: [PLUGIN_DEPENDENCIES],
+      useFactory: (deps: PluginDependencies) => new AddMarketplacePluginUseCase(deps),
+    },
+    {
+      provide: CheckMarketplacePluginUpdateUseCase,
+      inject: [PLUGIN_DEPENDENCIES],
+      useFactory: (deps: PluginDependencies) => new CheckMarketplacePluginUpdateUseCase(deps),
+    },
+    {
+      provide: ApplyMarketplacePluginUpdateUseCase,
+      inject: [PLUGIN_DEPENDENCIES],
+      useFactory: (deps: PluginDependencies) => new ApplyMarketplacePluginUpdateUseCase(deps),
     },
   ],
 })

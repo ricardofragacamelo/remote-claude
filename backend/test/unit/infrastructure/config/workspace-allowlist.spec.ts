@@ -50,7 +50,7 @@ function problemsOf(load: () => unknown): readonly string[] {
 
 describe('loadWorkspaceAllowlist', () => {
   it('reads a root, its label and its users', () => {
-    const [workspace] = loadWorkspaceAllowlist(FILE, fakeFs(VALID), parseYaml);
+    const [workspace] = loadWorkspaceAllowlist(FILE, fakeFs(VALID), parseYaml).workspaces;
 
     expect(workspace?.root.value).toBe('/srv/projects');
     expect(workspace?.label).toBe('Projects');
@@ -59,7 +59,7 @@ describe('loadWorkspaceAllowlist', () => {
 
   it('accepts the comments the file exists to carry', () => {
     // The reason this configuration is a file and not an environment variable — D-02.
-    expect(loadWorkspaceAllowlist(FILE, fakeFs(VALID), parseYaml)).toHaveLength(1);
+    expect(loadWorkspaceAllowlist(FILE, fakeFs(VALID), parseYaml).workspaces).toHaveLength(1);
   });
 
   it('reads every root, not only the first', () => {
@@ -73,9 +73,60 @@ roots:
       FILE,
       fakeFs(text, ['/srv/projects', '/srv/other']),
       parseYaml,
-    );
+    ).workspaces;
 
     expect(loaded.map((workspace) => workspace.label)).toEqual(['A', 'B']);
+  });
+
+  it('is off — an empty list, nothing more — when the file declares no marketplaces at all', () => {
+    // Absent is off (D-15, B-47): no line to maintain for an installation that never wants it.
+    expect(loadWorkspaceAllowlist(FILE, fakeFs(VALID), parseYaml).marketplaces).toEqual([]);
+  });
+
+  it('reads a declared marketplace, by name and git source — S-202', () => {
+    const text = `
+roots:
+  - path: /srv/projects
+    label: Projects
+    users:
+      - auth|owner
+marketplaces:
+  - name: acme
+    source:
+      type: git
+      url: https://example.invalid/acme/marketplace.git
+`;
+
+    const { marketplaces } = loadWorkspaceAllowlist(FILE, fakeFs(text), parseYaml);
+
+    expect(marketplaces).toEqual([
+      {
+        name: 'acme',
+        source: { type: 'git', url: 'https://example.invalid/acme/marketplace.git' },
+      },
+    ]);
+  });
+
+  it('refuses a marketplace section that does not match the schema — S-202', () => {
+    const text = `${VALID}\nmarketplaces:\n  - name: acme\n`;
+
+    expect(problemsOf(() => loadWorkspaceAllowlist(FILE, fakeFs(text), parseYaml))[0]).toContain(
+      'marketplaces[0]',
+    );
+  });
+
+  it('refuses a marketplace of a source type other than git — S-204', () => {
+    const text = `${VALID}\nmarketplaces:\n  - name: acme\n    source: { type: http, url: https://example.invalid }\n`;
+
+    expect(() => loadWorkspaceAllowlist(FILE, fakeFs(text), parseYaml)).toThrow(ConfigurationError);
+  });
+
+  it('refuses a marketplace name declared twice', () => {
+    const text = `${VALID}\nmarketplaces:\n  - name: acme\n    source: { type: git, url: https://example.invalid/a.git }\n  - name: acme\n    source: { type: git, url: https://example.invalid/b.git }\n`;
+
+    expect(problemsOf(() => loadWorkspaceAllowlist(FILE, fakeFs(text), parseYaml))[0]).toContain(
+      'declared more than once',
+    );
   });
 
   describe('what stops the process from starting — S-18', () => {
@@ -186,6 +237,8 @@ roots:
     const text = 'roots:\n  - { path: /srv/link, label: A, users: [auth|owner] }\n';
     const fs = fakeFs(text, ['/data/projects'], { '/srv/link': '/data/projects' });
 
-    expect(loadWorkspaceAllowlist(FILE, fs, parseYaml)[0]?.root.value).toBe('/data/projects');
+    expect(loadWorkspaceAllowlist(FILE, fs, parseYaml).workspaces[0]?.root.value).toBe(
+      '/data/projects',
+    );
   });
 });

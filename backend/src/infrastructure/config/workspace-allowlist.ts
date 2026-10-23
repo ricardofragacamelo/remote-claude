@@ -1,6 +1,7 @@
 import { isAbsolute } from 'node:path';
 
 import { ConfigurationError, workspaceAllowlistSchema } from '@remote-claude/config';
+import type { RawWorkspaceMarketplace } from '@remote-claude/config';
 import { Workspace, WorkspacePath } from '@domain/workspace';
 
 /*
@@ -32,13 +33,24 @@ export interface AllowlistFileSystem {
 /** Parses the YAML document, or reports that it is not a document. */
 export type AllowlistParser = (text: string) => unknown;
 
+/** A plugin marketplace the file declares (plan 13, B-47) — the schema's own shape, unchanged. */
+export type DeclaredMarketplace = RawWorkspaceMarketplace;
+
+/** What a parse of the file produces: the roots, and the marketplaces it may declare. */
+export interface LoadedAllowlist {
+  readonly workspaces: readonly Workspace[];
+  readonly marketplaces: readonly DeclaredMarketplace[];
+}
+
 /**
  * Reads the allowlist, or refuses to produce one.
  *
  * Every failure is fatal and every failure is reported at once: an operator who learns about one
  * bad root per restart is an operator who eventually stops reading the message. A backend running
  * with an allowlist it could not fully validate is worse than a backend that is down — down is
- * visible, and a root that silently vanished is not.
+ * visible, and a root that silently vanished is not. The same discipline covers `marketplaces`: an
+ * absent section is the feature switched off, never an error; a present, malformed one fails the
+ * boot exactly like a malformed root — collected into the same list of problems, reported once.
  *
  * @param file absolute path of the allowlist file
  * @param fs how the file and the roots are read
@@ -49,13 +61,13 @@ export function loadWorkspaceAllowlist(
   file: string,
   fs: AllowlistFileSystem,
   parse: AllowlistParser,
-): readonly Workspace[] {
+): LoadedAllowlist {
   const document = readDocument(file, fs, parse);
   const parsed = workspaceAllowlistSchema.safeParse(document);
 
   if (!parsed.success) {
     throw new ConfigurationError(
-      parsed.error.issues.map((issue) => `${file}: roots${pathOf(issue.path)}: ${issue.message}`),
+      parsed.error.issues.map((issue) => `${file}: ${pathOf(issue.path)}: ${issue.message}`),
     );
   }
 
@@ -90,11 +102,22 @@ export function loadWorkspaceAllowlist(
     );
   }
 
+  const seenMarketplaceNames = new Set<string>();
+  for (const [index, marketplace] of (parsed.data.marketplaces ?? []).entries()) {
+    const where = `${file}: marketplaces[${String(index)}]`;
+
+    if (seenMarketplaceNames.has(marketplace.name)) {
+      problems.push(`${where}.name: "${marketplace.name}" is declared more than once`);
+      continue;
+    }
+    seenMarketplaceNames.add(marketplace.name);
+  }
+
   if (problems.length > 0) {
     throw new ConfigurationError(problems);
   }
 
-  return workspaces;
+  return { workspaces, marketplaces: parsed.data.marketplaces ?? [] };
 }
 
 /** The parsed file, or a `ConfigurationError` saying which of the two steps failed. */
@@ -116,12 +139,14 @@ function readDocument(file: string, fs: AllowlistFileSystem, parse: AllowlistPar
   }
 }
 
-/** `["roots", 0, "path"]` → `[0].path`, with the leading `roots` already printed by the caller. */
+/** `["roots", 0, "path"]` → `roots[0].path`; `["marketplaces", 0, "name"]` → `marketplaces[0].name`. */
 function pathOf(segments: readonly PropertyKey[]): string {
   return segments
-    .slice(1)
-    .map((segment) =>
-      typeof segment === 'number' ? `[${String(segment)}]` : `.${String(segment)}`,
-    )
+    .map((segment, index) => {
+      if (typeof segment === 'number') {
+        return `[${String(segment)}]`;
+      }
+      return index === 0 ? String(segment) : `.${String(segment)}`;
+    })
     .join('');
 }

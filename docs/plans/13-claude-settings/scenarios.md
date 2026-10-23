@@ -209,20 +209,20 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-200 | instalar plugin de marketplace declarado baixa para o diretório do backend, fixado no commit, e ele entra na sessão como `local` com `skipMcpDiscovery: true` | eq | integração | — | B-47 | ⬜ |
-| S-201 | marketplace fora do arquivo da allowlist é recusado, na listagem e na instalação | err | integração | `PLUGIN_MARKETPLACE_NOT_ALLOWED` | B-47 | ⬜ |
-| S-202 | seção de marketplaces ausente é marketplace desligado (lista vazia, explicada); seção fora do schema derruba o boot | fron | unit | — | B-47 | ⬜ |
-| S-203 | fonte inacessível, commit inexistente ou manifesto inválido: nada é gravado e nenhum diretório parcial fica | err | integração | `PLUGIN_SOURCE_UNAVAILABLE`, `PLUGIN_PATH_INVALID` | B-47 | ⬜ |
-| S-204 | fonte de tipo não suportado, ou caminho de plugin que escapa do repositório (`..`, link) | err | unit | `PLUGIN_PATH_INVALID` | B-47 | ⬜ |
-| S-205 | versão nova aparece como "atualização disponível" sem mudar o que roda; atualizar mostra a diferença do que o plugin traz e só troca o commit depois do segundo passo | est | integração | — | B-47 | ⬜ |
-| S-206 | arquivo do diretório instalado alterado fora do fluxo diverge do digest e volta a pendente | est | integração | — | B-47 | ⬜ |
-| S-207 | instalar o mesmo plugin no mesmo commit duas vezes devolve o existente | idem | integração | — | B-47 | ⬜ |
-| S-208 | duas instalações simultâneas do mesmo plugin pelo mesmo usuário deixam um diretório e um registro | conc | integração | — | B-47 | ⬜ |
-| S-209 | instalar, atualizar e remover gravam `engine.pluginAdded`, `engine.pluginUpdated` e `engine.pluginRemoved`, com o motor no payload, antes do efeito; remover apaga o diretório | eq | integração | — | B-47 | ⬜ |
-| S-210 | o plugin de marketplace de um usuário nunca entra na sessão de outro, nem é lido por ele | err | integração | `FORBIDDEN` | B-47 | ⬜ |
-| S-211 | baixar não executa código do plugin, não chama `claude plugin`, não escreve em `~/.claude`, e o subprocesso não recebe os segredos do backend | err | unit | — | B-47 | ⬜ |
+| S-200 | instalar plugin de marketplace declarado baixa para o diretório do backend, fixado no commit, e ele entra na sessão como `local` com `skipMcpDiscovery: true` | eq | integração | — | B-47 | ✅ |
+| S-201 | marketplace fora do arquivo da allowlist é recusado, na listagem e na instalação | err | integração | `PLUGIN_MARKETPLACE_NOT_ALLOWED` | B-47 | ✅ |
+| S-202 | seção de marketplaces ausente é marketplace desligado (lista vazia, explicada); seção fora do schema derruba o boot | fron | unit | — | B-47 | ✅ |
+| S-203 | fonte inacessível, commit inexistente ou manifesto inválido: nada é gravado e nenhum diretório parcial fica | err | integração | `PLUGIN_SOURCE_UNAVAILABLE`, `PLUGIN_PATH_INVALID` | B-47 | ✅ |
+| S-204 | fonte de tipo não suportado, ou caminho de plugin que escapa do repositório (`..`, link) | err | unit | `PLUGIN_PATH_INVALID` | B-47 | ✅ |
+| S-205 | versão nova aparece como "atualização disponível" sem mudar o que roda; atualizar mostra a diferença do que o plugin traz e só troca o commit depois do segundo passo | est | integração | — | B-47 | ✅ |
+| S-206 | arquivo do diretório instalado alterado fora do fluxo diverge do digest e volta a pendente — reusa `pluginStateOf`/`changed` da B-27, sem caminho de código próprio | est | integração | — | B-47 | ✅ |
+| S-207 | instalar o mesmo plugin no mesmo commit duas vezes devolve o existente | idem | integração | — | B-47 | ✅ |
+| S-208 | duas instalações simultâneas do mesmo plugin pelo mesmo usuário deixam um diretório e um registro | conc | integração | — | B-47 | ✅ |
+| S-209 | instalar, atualizar e remover gravam `engine.pluginAdded`, `engine.pluginUpdated` e `engine.pluginRemoved`, com o motor no payload, antes do efeito; remover apaga o diretório | eq | integração | — | B-47 | ✅ |
+| S-210 | o plugin de marketplace de um usuário nunca entra na sessão de outro, nem é lido por ele | err | integração | `FORBIDDEN` | B-47 | ✅ |
+| S-211 | baixar não executa código do plugin, não chama `claude plugin`, não escreve em `~/.claude`, e o subprocesso não recebe os segredos do backend | err | unit | — | B-47 | ✅ |
 | S-212 | a seção de plugins navega os marketplaces declarados (busca, detalhe, instalar com prévia) e, sem nenhum, ensina a declarar no arquivo | eq | integração | — | B-29 | ⬜ |
-| S-213 | marketplace retirado do arquivo por recarga: os plugins dele saem das sessões novas, com a razão na tela | est | integração | — | B-47 | ⬜ |
+| S-213 | marketplace retirado do arquivo por recarga: os plugins dele saem das sessões novas, com a razão na tela | est | integração | — | B-47 | ✅ |
 
 ## Tela — servidores MCP e plugins — B-28…B-30
 

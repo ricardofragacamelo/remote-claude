@@ -101,3 +101,62 @@ describe('ReloadableWorkspaceAllowlist, as plan 06 reloads it', () => {
     expect(new ReloadableWorkspaceAllowlist(FILE, mutableFs(one).fs, parseYaml).file).toBe(FILE);
   });
 });
+
+const withMarketplace = `${one}marketplaces:\n  - name: acme\n    source: { type: git, url: https://example.invalid/acme.git }\n`;
+
+describe('ReloadableWorkspaceAllowlist — declared marketplaces (plan 13, B-47)', () => {
+  it('is off — finds and lists nothing — when the file declares none at all', () => {
+    const allowlist = new ReloadableWorkspaceAllowlist(FILE, mutableFs(one).fs, parseYaml);
+
+    expect(allowlist.list()).toEqual([]);
+    expect(allowlist.find('acme')).toBeNull();
+  });
+
+  it('finds a declared marketplace by name — S-202', () => {
+    const allowlist = new ReloadableWorkspaceAllowlist(
+      FILE,
+      mutableFs(withMarketplace).fs,
+      parseYaml,
+    );
+
+    expect(allowlist.list()).toEqual([
+      { name: 'acme', source: { type: 'git', url: 'https://example.invalid/acme.git' } },
+    ]);
+    expect(allowlist.find('acme')).toEqual({
+      name: 'acme',
+      source: { type: 'git', url: 'https://example.invalid/acme.git' },
+    });
+    expect(allowlist.find('nope')).toBeNull();
+  });
+
+  it('stops finding a marketplace a reload removes — S-213', () => {
+    const file = mutableFs(withMarketplace);
+    const allowlist = new ReloadableWorkspaceAllowlist(FILE, file.fs, parseYaml);
+    expect(allowlist.find('acme')).not.toBeNull();
+
+    file.set(one);
+    allowlist.reload();
+
+    expect(allowlist.find('acme')).toBeNull();
+    expect(allowlist.list()).toEqual([]);
+  });
+
+  it('starts finding a marketplace a reload adds', () => {
+    const file = mutableFs(one);
+    const allowlist = new ReloadableWorkspaceAllowlist(FILE, file.fs, parseYaml);
+    expect(allowlist.find('acme')).toBeNull();
+
+    file.set(withMarketplace);
+    allowlist.reload();
+
+    expect(allowlist.find('acme')).not.toBeNull();
+  });
+
+  it('refuses to be constructed from a `marketplaces` section that fails the schema', () => {
+    const malformed = `${one}marketplaces:\n  - name: acme\n`;
+
+    expect(
+      () => new ReloadableWorkspaceAllowlist(FILE, mutableFs(malformed).fs, parseYaml),
+    ).toThrow(ConfigurationError);
+  });
+});

@@ -19,6 +19,7 @@ import {
   WORKSPACE_FOLDER_REPOSITORY,
   WORKSPACE_USAGE_REPOSITORY,
 } from '@application/workspace';
+import { MARKETPLACE_ALLOWLIST_SOURCE } from '@application/workspace';
 import type {
   WorkspaceAllowlistSource,
   WorkspaceDirectoryLister,
@@ -65,6 +66,9 @@ const RELOADABLE_ALLOWLIST = Symbol('ReloadableWorkspaceAllowlist');
         ReloadableWorkspaceAllowlist.load(config.workspaceAllowlistFile, logger),
     },
     { provide: WORKSPACE_ALLOWLIST_SOURCE, useExisting: RELOADABLE_ALLOWLIST },
+    // The same singleton: a second instance would never hear the `SIGHUP` the one below reloads,
+    // and a declared marketplace would never stop being found after it left the file (S-213).
+    { provide: MARKETPLACE_ALLOWLIST_SOURCE, useExisting: RELOADABLE_ALLOWLIST },
     {
       // The reload is announced on the internal bus, and `workspace` never learns who listens —
       // the watched folders of `files` do (plan 07, S-143).
@@ -165,6 +169,11 @@ const RELOADABLE_ALLOWLIST = Symbol('ReloadableWorkspaceAllowlist');
       useFactory: (folders: WorkspaceFolderRepository) => new ForgetRecentFolderUseCase(folders),
     },
   ],
-  exports: [ListWorkspacesUseCase, ResolveWorkspaceUseCase, WORKSPACE_ALLOWLIST_SOURCE],
+  exports: [
+    ListWorkspacesUseCase,
+    ResolveWorkspaceUseCase,
+    WORKSPACE_ALLOWLIST_SOURCE,
+    MARKETPLACE_ALLOWLIST_SOURCE,
+  ],
 })
 export class WorkspaceModule {}

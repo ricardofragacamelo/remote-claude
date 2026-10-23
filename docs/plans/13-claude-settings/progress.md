@@ -10,14 +10,14 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F2 — em andamento: B-18…B-27 concluídas (domínio, store e segredos, ambiente do subprocesso, composição por sessão, status vivo, mudança de configuração e sessões vivas, `.mcp.json` do projeto, testar conexão, tool MCP e permissão, plugins locais); B-28…B-30 e B-47 (4 das 14 tasks) ainda não começadas
-**Última atualização:** 2026-10-22
+**Fase corrente:** F2 — em andamento: B-18…B-27 e B-47 concluídas (domínio, store e segredos, ambiente do subprocesso, composição por sessão, status vivo, mudança de configuração e sessões vivas, `.mcp.json` do projeto, testar conexão, tool MCP e permissão, plugins locais, plugins de marketplace); B-28…B-30 (3 das 14 tasks, as duas telas web e a ajuda) ainda não começadas
+**Última atualização:** 2026-10-23
 **Bloqueios:** nenhum — o [plano 26](../26-mobile-conversation-parity/README.md) e o [plano 28](../28-agent-neutral-core/README.md) já estão concluídos (D-31, D-33)
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
-F2 ██████████████░░░░░░  71%   🔄 em andamento
+F2 ████████████████░░░░  79%   🔄 em andamento
 F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
@@ -32,10 +32,10 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 |---|---|---|---|
 | [F0](F0-contract.md) | B-01…B-09 | 9/9 | ✅ |
 | [F1](F1-models-and-modes.md) | B-10…B-17 | 8/8 | ✅ |
-| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 10/14 | 🔄 |
+| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 11/14 | 🔄 |
 | [F3](F3-project-config.md) | B-31…B-40 | 0/10 | 🔲 |
 | [F4](F4-e2e.md) | B-41…B-46 | 0/6 | 🔲 |
-| **Total** | **B-01…B-47** | **27/47** | 🔄 |
+| **Total** | **B-01…B-47** | **28/47** | 🔄 |
 
 ---
 
@@ -43,7 +43,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 215 | 88 | 0 | 127 | 0 |
+| [Matriz](scenarios.md) | 215 | 75 | 0 | 140 | 0 |
 
 ---
 
@@ -80,6 +80,12 @@ Um registro por **ciclo**, conforme o
 | 13 | 2026-10-19 | F2 (B-18, B-19) | 5 · duplicação | jscpd (limiar 0 %) achou 7 blocos repetidos: os campos de identidade entre `McpServerConfig`/`StoredMcpServer`/os dois tipos de input, e a forma do par cifra/decifra e da transação de escrita no repositório | `McpServerIdentity` extraído e compartilhado (D-37); `encryptedRowOf`/`decryptedFieldOf` e `writeTransaction` extraídos (D-38) | reinício do portão 1 — 0 clones |
 | 14 | 2026-10-19 | F2 (B-18, B-19) | 7 · cobertura (medida por arquivo, fora do `pnpm verify` de ponta a ponta) | `mcp-server.repository.ts` em 0 % (sem teste de integração); `mcp-server-config.entity.ts` em 89,4 % de branch; `mcp-server-description.ts` em 71,4 % de branch; `mcp-server.use-cases.ts` em 70 % de branch — todos abaixo de 90 % | suíte de integração do repositório contra PostgreSQL real (14 cenários); casos de borda do domínio (transporte/escopo inválidos, tetos, URL/comando sem valor); as duas ramificações defensivas do repositório viraram funções puras testáveis sem banco (D-38); cenários de ramo não exercido no caso de uso (servidor remoto, erro que não é conflito de nome, `reveal()` perdendo a corrida) | 100 % de branch nos arquivos de `domain/mcp` e `application/mcp`; `mcp-server.repository.ts` acima de 90 % nas quatro dimensões |
 | 15 | 2026-10-19 | F2 (B-18, B-19) | — | — | — | ✅ portões 1-5 do `pnpm verify` saem com 0; o portão 6 pára só no S-11 pré-existente (histórico #11), confirmado alheio a esta entrega |
+| 16 | 2026-10-23 | F2 (B-47) | 1 · formatação | 21 arquivos novos/alterados fora do Prettier | `prettier --write .` | reinício do portão 1 |
+| 17 | 2026-10-23 | F2 (B-47) | 1 · formatação | um arquivo editado depois do `--write` anterior (a redação do log de `git`, D-77) voltou a ficar fora do estilo | `prettier --write` só nesse arquivo | reinício do portão 1 |
+| 18 | 2026-10-23 | F2 (B-47) | 2 · lint | `PluginWrite` importado e nunca usado em `marketplace-plugin.use-cases.spec.ts` | import removido | reinício do portão 1 |
+| 19 | 2026-10-23 | F2 (B-47) | 5 · duplicação | jscpd (limiar 0 %) achou 4 blocos repetidos: o wrapper de `execFile` como texto entre `installation-facts.adapter.ts` e `git-marketplace-plugin-source.ts`; a função `stringField` entre `plugin-manifest.reader.ts` e `git-marketplace-plugin-source.ts`; o preâmbulo "clonar, checar nulo, `try`/`finally`" repetido entre `listPlugins` e `prepare` no próprio `git-marketplace-plugin-source.ts`; e o par `setEnabled`/`updateInstalled` em `drizzle-plugin.repository.ts` | `execFileText` extraído para `shared/process/exec-file-text.ts` (reusado pelos dois adapters); `stringField` extraído para `shared/utils/string-field.ts`; `withClone` extraído como método privado que `listPlugins`/`prepare` chamam; `updateRow` extraído como método privado que `setEnabled`/`updateInstalled` chamam | reinício do portão 1 — 0 clones |
+| 20 | 2026-10-23 | F2 (B-47) | 7 · cobertura (integração) | `test/integration/scripts/run-e2e-local.spec.mjs` (3 cenários) falhando: `scripts/lib/stack.mjs` — o fixture de ambiente que a pilha efêmera de e2e usa — não tinha `RC_PLUGIN_DOWNLOAD_DIR`, a variável nova de B-47; o backend recusava subir com `ConfigurationError`. Um quarto lugar que precisava da variável, além dos três já cobertos (`claude.environment.ts`, `process-environment.ts`, `test-app.ts`) | `RC_PLUGIN_DOWNLOAD_DIR` acrescentada a `ephemeralEnvironment()` em `stack.mjs`, no mesmo padrão de `RC_CHECKPOINT_DIR`/`RC_FILES_HISTORY_DIR` (um diretório de `os.tmpdir()` por porta do backend) | reinício do portão 1 |
+| 21 | 2026-10-23 | F2 (B-47) | 7 · cobertura (integração) | `test/integration/scripts/cli.spec.mjs` > `engine-neutrality.mjs` falhando: o comentário de `shared/process/exec-file-text.ts` (extraído no ciclo 19) citava "claude" literalmente num arquivo do núcleo — achado só depois de `pnpm neutral:check` rodar de novo como parte deste portão, porque o ciclo 19 não repetiu essa checagem isoladamente antes de seguir | a citação de "claude" virou "an engine's own" — a mesma generalização que outros comentários do núcleo já usam | reinício do portão 1 |
 
 ---
 
@@ -89,6 +95,17 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-10-23 | [D-68](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): forma de uma entrada de marketplace no arquivo da allowlist — `{ name, source: { type: 'git', url } }`, `marketplaces` opcional (ausente é desligado) | só `git` é de fato clonado; aceitar outra forma mentiria sobre o que a entrada faz | `packages/config`, `backend/src/infrastructure/config/{workspace-allowlist,reloadable-workspace-allowlist}.ts`; S-202 |
+| 2026-10-23 | [D-69](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): **corte de escopo** — só `source` em formato de caminho relativo (string) é instalável; marketplace privado/autenticado não é suportado | implementar um segundo repositório por plugin ou credencial de marketplace seria especulativo sem cenário que o peça | `domain`/`adapter` de `engines/claude`; S-204 |
+| 2026-10-23 | [D-70](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): **corte de escopo** — nenhuma leitura de `marketplace.json` é cacheada; toda chamada clona ou pergunta ao remoto de novo | simplicidade (nunca desatualizado) venceu performance para a primeira entrega; a porta não impede um cache depois | `git-marketplace-plugin-source.ts` |
+| 2026-10-23 | [D-71](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): caminho de instalação determinístico (hash do usuário/marketplace/plugin); concorrência resolvida por `insertIfAbsent` (`ON CONFLICT DO NOTHING RETURNING`) + baixar sempre para um diretório próprio, só o vencedor movendo para o caminho final | pedido explícito da tarefa: usar o determinismo do caminho e a unicidade do banco para tornar a corrida seg­ura sem trava em memória | `marketplace-plugin-path.ts`, `plugin-repository.port.ts`, `drizzle-plugin.repository.ts`, `marketplace-plugin-source.port.ts`; S-207, S-208 |
+| 2026-10-23 | [D-72](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): atualizar grava a trilha **antes** de trocar o diretório ou o commit no banco — ordem oposta à de B-19/B-27 para escrita que amplia | reverter uma troca de diretório já feita é mais arriscado que reverter uma linha nova; gravar antes faz a trilha recusada abortar sem tocar em nada | `marketplace-plugin.use-cases.ts`, `plugin-manifest-diff.ts`, `plugin-description.ts`; S-205 |
+| 2026-10-23 | [D-73](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): novo estado `marketplaceNotAllowed`, calculado ao vivo (nunca persistido), sem nenhum evento novo — a sessão nova e a listagem perguntam à allowlist em memória a cada chamada | ao contrário da B-23 (sessão viva), aqui só sessão **nova** e leitura importam, já perguntas síncronas | `plugin.entity.ts`, `marketplace-plugin.entity.ts`, `plugin.use-cases.ts` (`viewOf`), `plugin-session-extension-paths.ts`; S-213 |
+| 2026-10-23 | [D-74](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): `MarketplaceAllowlistSource` declarado no núcleo (`application/workspace`), implementado pela mesma instância de `WorkspaceAllowlistSource` | só o `SIGHUP` já registrado recarrega; uma segunda instância nunca ouviria o sinal | `application/workspace`, `workspace.module.ts`, `claude-settings.module.ts`, `claude.providers.ts` |
+| 2026-10-23 | [D-75](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): prova da S-211 pelo mesmo padrão de B-20 (`GitCommand` injetável, `execFile` nunca `exec`, `hostEnvironment` reusado), provada por `vi.mock` de `node:child_process` | reusar o mecanismo de prova já existente em vez de inventar um segundo | `git-marketplace-plugin-source.ts`, `run-git.spec.ts` |
+| 2026-10-23 | [D-76](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): a variável de ambiente chama-se `RC_PLUGIN_DOWNLOAD_DIR`, não `RC_CLAUDE_PLUGIN_DOWNLOAD_DIR` | achado pelo `pnpm neutral:check`: `process-environment.ts` é do núcleo, e o nome de uma variável é string literal que o portão lê | `.env.example`, `process-environment.ts`, `claude.environment.ts`, fixtures de teste |
+| 2026-10-23 | [D-77](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): o log de `debug` de cada chamada a `git` nunca inclui os argumentos inteiros, só o subcomando | nenhuma URL suportada carrega credencial hoje (D-69), mas nada garante que uma futura não o faça — a mesma disciplina de S-75 para argumento de MCP com forma de segredo | `git-marketplace-plugin-source.ts`; teste varre o log por uma credencial plantada |
+| 2026-10-23 | [D-78](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23): o nome de catálogo de um plugin no `marketplace.json` é tratado como o mesmo `name` do `plugin.json` — sem coluna nova para guardar os dois | evitar migração por uma divergência que o formato real normalmente não tem | `marketplace-plugin.use-cases.ts` (`ApplyMarketplacePluginUpdateUseCase`) |
 | 2026-10-19 | [D-34](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): adicionar/ligar gravam o efeito primeiro e revertem se a trilha falhar; remover/desligar gravam o efeito e ficam, mesmo que a trilha falhe | a mesma assimetria apertar-já/afrouxar-depois da D-10 aplicada à trilha — o que amplia reverte, o que restringe fica | `mcp-server.use-cases.ts`; S-79 |
 | 2026-10-19 | [D-35](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): `DELETE /engines/:engine/mcp-servers/:id` responde `204` sem corpo | não há nada coerente para devolver depois de uma remoção de verdade, ao contrário de uma regra revogada | contrato `mcp-server.schema.json`, `scripts/contracts-route-exceptions.json` |
 | 2026-10-19 | [D-36](decisions.md#decididas-durante-a-execução-de-b-18b-19-2026-10-19): B-20 não implementada — o `claudeEnvironment` existente (plano 12) já cobre o requisito de segurança de S-81 por construção, mas mover para `shared/` sem um segundo consumidor pronto é risco desproporcional nesta entrega | tempo e risco de um refactor sem o segundo consumidor (plano 12) para provar a extração | B-20 continua 🔲 |
@@ -118,6 +135,7 @@ Tirar coisa do escopo é decisão legítima; **omitir que tirou, não**.
 
 | Data | O que saiu | Por quê | Para onde foi |
 |---|---|---|---|
+| 2026-10-23 | Da B-47: marketplace privado/autenticado (credencial embutida na URL), um plugin cujo `source` aponta para um segundo repositório git, e cache de leitura de `marketplace.json` | nenhum cenário de S-200…S-213 exige as três coisas; implementá-las seria especulativo sem um marketplace real que peça | documentado em [D-69](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23) e [D-70](decisions.md#decididas-durante-a-execução-de-b-47-2026-10-23); reabre se um cenário novo pedir |
 | 2026-10-19 | Desta execução da F2: B-20…B-30 e B-47 (12 das 14 tasks) — ambiente do subprocesso extraído para `shared/`, composição por sessão com `setMcpServers()`, status vivo e os dois comandos de sessão, a assimetria de sessões vivas, a aprovação do `.mcp.json`, testar conexão, a prova de que a tool MCP passa pelo `canUseTool` existente, plugins locais e de marketplace, as duas telas web, e ajuda/i18n/acessibilidade | o tamanho de uma fase inteira (14 tasks, ~150 cenários, backend+web+SDK+contrato WS) excede o que uma sessão consegue entregar com o rigor que o protocolo exige (matriz de cenários, três níveis de teste, 90 % por arquivo); B-18 e B-19 são a base de segurança mais crítica (R-01, R-02) e saem completas e testadas em vez de 14 tasks pela metade | ficam no `F2-mcp-servers.md`, com as tasks ainda 🔲; a próxima sessão continua de B-20 |
 | 2026-10-09 | Da B-46 (e do S-214), conferir na paridade do plano 26 a mensagem que o CLI acrescenta à skill de usuário e a imagem no resultado da tool MCP. As fixtures continuam aqui | são perdas do backend, que só o plano da [discovery 09](../../discovery/09-perdas-do-backend-na-conversa.md) corrige, e a ordem é 26 → 13 → esse plano: a paridade daqui gravaria o erro de hoje como esperado | o plano da [discovery 09](../../discovery/09-perdas-do-backend-na-conversa.md) (D-11 de lá) |
 
@@ -129,7 +147,7 @@ Riscos do [plano](README.md#riscos-e-decisões-em-aberto).
 
 | # | Risco | Estado | Observação |
 |---|---|---|---|
-| R-01 | Servidor MCP e plugin são código arbitrário, subindo com a sessão | 🔲 aberto | mitigação por desenho na F2; com a D-15, inclui plugin de marketplace baixado da rede (B-47) |
+| R-01 | Servidor MCP e plugin são código arbitrário, subindo com a sessão | 🔄 em mitigação | B-47 entrega a parte do plugin de marketplace: baixar nunca executa nada (S-211), sempre `skipMcpDiscovery: true`; falta B-28…B-30 (a tela) |
 | R-02 | Segredo de MCP vazando pelo argv, log, trilha, resposta ou erro do servidor | 🔲 aberto | confirmado no `/proc` pela B-01; a entrega passa a ser `setMcpServers()`, e o `realQueryFactory` recusa `mcpServers` não vazio |
 | R-03 | Hooks de projeto e `permissionMode` de subagent de projeto agindo sem aprovação | 🔲 aberto | medido na B-01: o hook de projeto **roda** sem aprovação (aberto, a tela dirá); o subagent foi fechado pela D-23 |
 | R-04 | Shell inline (`!`) de skill e slash command fora da aprovação | ✅ mitigado | medido: roda fora da aprovação com `allowed-tools`; desligado em toda sessão pela flag (D-24) |

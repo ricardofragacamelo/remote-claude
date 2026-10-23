@@ -1,10 +1,10 @@
-import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 
 import type { InstallationFacts, ReadVersion } from '@application/engines/claude';
 import type { Logger } from '@shared/logging/logger';
 import { CLAUDE_ENGINE } from './claude-engine';
+import { execFileText } from '@shared/process/exec-file-text';
 import { hostEnvironment } from '@shared/process/host-environment';
 import { readAgentSdkVersion, readBundledCliVersion } from './cli-version';
 import type { BundledVersion } from './cli-version';
@@ -25,16 +25,9 @@ export type VersionCommand = () => Promise<string>;
 
 /** `claude --version`, with the machine's environment minus the backend's configuration. */
 export const runPathCli: VersionCommand = () =>
-  new Promise((resolve, reject) => {
-    execFile(
-      'claude',
-      ['--version'],
-      { timeout: PATH_CLI_TIMEOUT_MS, env: hostEnvironment(process.env) },
-      (error, stdout) => {
-        if (error === null) resolve(String(stdout));
-        else reject(error);
-      },
-    );
+  execFileText('claude', ['--version'], {
+    timeoutMs: PATH_CLI_TIMEOUT_MS,
+    env: hostEnvironment(process.env),
   });
 
 const asRead = (version: BundledVersion): ReadVersion => ({

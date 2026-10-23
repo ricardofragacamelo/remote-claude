@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/plugin-marketplace-catalog.json",
+  "title": "ClaudePluginMarketplaceCatalog",
+  "description": "`GET /engines/claude/plugins/marketplaces/:name`: what a declared marketplace's own `.claude-plugin/marketplace.json` lists, read live (plan 13, B-47). `supported: false` names a plugin whose own `source` is not a kind this product clones — shown, never installable (`PLUGIN_PATH_INVALID` if tried).",
+  "x-kind": "http",
+  "x-type": "engines.claude.pluginMarketplaceCatalog",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/plugins/marketplaces/:name" }],
+  "type": "object",
+  "required": ["name", "plugins"],
+  "properties": {
+    "name": { "type": "string" },
+    "plugins": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "supported"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string", "x-nullable": true },
+          "supported": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

@@ -942,6 +942,111 @@ bool engineOriginLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+/// What an available update to a plugin would change (plan 13, B-47; S-205) — names added or removed per category, and the hook count on each side. Never a line-level diff of any file.
+class EnginePluginManifestDiff {
+  const EnginePluginManifestDiff({
+    required this.commandsAdded,
+    required this.commandsRemoved,
+    required this.agentsAdded,
+    required this.agentsRemoved,
+    required this.skillsAdded,
+    required this.skillsRemoved,
+    required this.mcpServersAdded,
+    required this.mcpServersRemoved,
+    required this.hookCountBefore,
+    required this.hookCountAfter,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EnginePluginManifestDiff.fromJson(Map<String, Object?> json) => EnginePluginManifestDiff(
+        commandsAdded: (json['commandsAdded']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        commandsRemoved: (json['commandsRemoved']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        agentsAdded: (json['agentsAdded']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        agentsRemoved: (json['agentsRemoved']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        skillsAdded: (json['skillsAdded']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        skillsRemoved: (json['skillsRemoved']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        mcpServersAdded: (json['mcpServersAdded']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        mcpServersRemoved: (json['mcpServersRemoved']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        hookCountBefore: json['hookCountBefore']! as int,
+        hookCountAfter: json['hookCountAfter']! as int,
+      );
+
+  final List<String> commandsAdded;
+
+  final List<String> commandsRemoved;
+
+  final List<String> agentsAdded;
+
+  final List<String> agentsRemoved;
+
+  final List<String> skillsAdded;
+
+  final List<String> skillsRemoved;
+
+  final List<String> mcpServersAdded;
+
+  final List<String> mcpServersRemoved;
+
+  final int hookCountBefore;
+
+  final int hookCountAfter;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'commandsAdded': commandsAdded,
+      'commandsRemoved': commandsRemoved,
+      'agentsAdded': agentsAdded,
+      'agentsRemoved': agentsRemoved,
+      'skillsAdded': skillsAdded,
+      'skillsRemoved': skillsRemoved,
+      'mcpServersAdded': mcpServersAdded,
+      'mcpServersRemoved': mcpServersRemoved,
+      'hookCountBefore': hookCountBefore,
+      'hookCountAfter': hookCountAfter,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [EnginePluginManifestDiff].
+bool enginePluginManifestDiffLimitsHold(Map<String, Object?> json) {
+  if (json['commandsAdded'] is List<Object?> && (json['commandsAdded']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['commandsRemoved'] is List<Object?> && (json['commandsRemoved']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['agentsAdded'] is List<Object?> && (json['agentsAdded']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['agentsRemoved'] is List<Object?> && (json['agentsRemoved']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['skillsAdded'] is List<Object?> && (json['skillsAdded']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['skillsRemoved'] is List<Object?> && (json['skillsRemoved']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['mcpServersAdded'] is List<Object?> && (json['mcpServersAdded']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['mcpServersRemoved'] is List<Object?> && (json['mcpServersRemoved']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
 /// What a plugin's manifest declares, read fresh (plan 13, B-27): names only, never the content of a hook or a command — reading further than that would be interpreting a format of the engine's own.
 class EnginePluginManifest {
   const EnginePluginManifest({
@@ -1022,13 +1127,14 @@ bool enginePluginManifestLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
-/// One plugin of the caller, of whichever engine has them (plan 13, B-27) — the engine's own routes say which one. `manifest` is `null` only when it can no longer be read at all — the directory moved, or the manifest stopped parsing.
+/// One plugin of the caller, of whichever engine has them (plan 13, B-27, B-47) — the engine's own routes say which one. `manifest` is `null` only when it can no longer be read at all — the directory moved, or the manifest stopped parsing.
 class EnginePlugin {
   const EnginePlugin({
     required this.id,
     required this.origin,
     required this.path,
     required this.marketplace,
+    required this.commit,
     required this.name,
     required this.state,
     required this.enabled,
@@ -1043,6 +1149,7 @@ class EnginePlugin {
         origin: json['origin']! as String,
         path: json['path']! as String,
         marketplace: json['marketplace'] as String?,
+        commit: json['commit'] as String?,
         name: json['name']! as String,
         state: json['state']! as String,
         enabled: json['enabled']! as bool,
@@ -1059,9 +1166,12 @@ class EnginePlugin {
 
   final String? marketplace;
 
+  /// The commit a marketplace plugin is pinned at — `null` for a local one, which has none (plan 13, B-47).
+  final String? commit;
+
   final String name;
 
-  /// `current`: the manifest reads the same as when approved. `changed`: it still reads, but differently — pending re-approval. `unreadable`: it can no longer be read at all.
+  /// `current`: the manifest reads the same as when approved. `changed`: it still reads, but differently — pending re-approval. `unreadable`: it can no longer be read at all. `marketplaceNotAllowed`: a marketplace plugin whose marketplace left the allowlist file (plan 13, B-47).
   final String state;
 
   final bool enabled;
@@ -1079,6 +1189,7 @@ class EnginePlugin {
       'origin': origin,
       'path': path,
       'marketplace': marketplace,
+      'commit': commit,
       'name': name,
       'state': state,
       'enabled': enabled,
@@ -6889,6 +7000,129 @@ bool claudePluginListPayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+class ClaudePluginMarketplaceCatalogPayloadPluginsItem {
+  const ClaudePluginMarketplaceCatalogPayloadPluginsItem({
+    required this.name,
+    required this.description,
+    required this.supported,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudePluginMarketplaceCatalogPayloadPluginsItem.fromJson(Map<String, Object?> json) => ClaudePluginMarketplaceCatalogPayloadPluginsItem(
+        name: json['name']! as String,
+        description: json['description'] as String?,
+        supported: json['supported']! as bool,
+      );
+
+  final String name;
+
+  final String? description;
+
+  final bool supported;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'description': description,
+      'supported': supported,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /engines/claude/plugins/marketplaces/:name`: what a declared marketplace's own `.claude-plugin/marketplace.json` lists, read live (plan 13, B-47). `supported: false` names a plugin whose own `source` is not a kind this product clones — shown, never installable (`PLUGIN_PATH_INVALID` if tried).
+class ClaudePluginMarketplaceCatalogPayload {
+  const ClaudePluginMarketplaceCatalogPayload({
+    required this.name,
+    required this.plugins,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudePluginMarketplaceCatalogPayload.fromJson(Map<String, Object?> json) => ClaudePluginMarketplaceCatalogPayload(
+        name: json['name']! as String,
+        plugins: (json['plugins']! as List<Object?>).map((item) => ClaudePluginMarketplaceCatalogPayloadPluginsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final String name;
+
+  final List<ClaudePluginMarketplaceCatalogPayloadPluginsItem> plugins;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'plugins': plugins.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ClaudePluginMarketplaceCatalogPayload].
+bool claudePluginMarketplaceCatalogPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['plugins'] is List<Object?> && (json['plugins']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+class ClaudePluginMarketplaceListPayloadMarketplacesItem {
+  const ClaudePluginMarketplaceListPayloadMarketplacesItem({
+    required this.name,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudePluginMarketplaceListPayloadMarketplacesItem.fromJson(Map<String, Object?> json) => ClaudePluginMarketplaceListPayloadMarketplacesItem(
+        name: json['name']! as String,
+      );
+
+  final String name;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /engines/claude/plugins/marketplaces`: every marketplace this installation's allowlist file currently declares (plan 13, B-47). An empty list means the feature is off — the file declares none.
+class ClaudePluginMarketplaceListPayload {
+  const ClaudePluginMarketplaceListPayload({
+    required this.marketplaces,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudePluginMarketplaceListPayload.fromJson(Map<String, Object?> json) => ClaudePluginMarketplaceListPayload(
+        marketplaces: (json['marketplaces']! as List<Object?>).map((item) => ClaudePluginMarketplaceListPayloadMarketplacesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<ClaudePluginMarketplaceListPayloadMarketplacesItem> marketplaces;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'marketplaces': marketplaces.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ClaudePluginMarketplaceListPayload].
+bool claudePluginMarketplaceListPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['marketplaces'] is List<Object?> && (json['marketplaces']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
 /// `POST /engines/claude/plugins/preview`: what a local directory would bring, before the second step (plan 13, B-27, S-125) — the exact description adding it would record, word for word, the same guarantee `mcp.serverPreview` already gives the MCP screen.
 class ClaudePluginPreviewPayload {
   const ClaudePluginPreviewPayload({
@@ -6917,6 +7151,39 @@ class ClaudePluginPreviewPayload {
       'manifest': manifest.toJson(),
       'messageKey': messageKey,
       'params': params,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /engines/claude/plugins/:id/update`: whether a marketplace plugin has an update available, and what it would change — without installing anything (plan 13, B-47; S-205). `diff` is `null` when there is nothing to compare yet, even though `available` is `true`.
+class ClaudePluginUpdatePreviewPayload {
+  const ClaudePluginUpdatePreviewPayload({
+    required this.available,
+    required this.newCommit,
+    required this.diff,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudePluginUpdatePreviewPayload.fromJson(Map<String, Object?> json) => ClaudePluginUpdatePreviewPayload(
+        available: json['available']! as bool,
+        newCommit: json['newCommit'] as String?,
+        diff: json['diff'] == null ? null : EnginePluginManifestDiff.fromJson(json['diff']! as Map<String, Object?>),
+      );
+
+  final bool available;
+
+  final String? newCommit;
+
+  final EnginePluginManifestDiff? diff;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'available': available,
+      'newCommit': newCommit,
+      'diff': diff?.toJson(),
     };
 
     return json;
@@ -8887,7 +9154,7 @@ typedef DevicePayload = Device;
 /// `POST /engines/claude/diagnostics/model-check`: one turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). The same shape `GET /engines/claude/installation`'s `lastModelCheck` carries, named again rather than declared twice (plan 28, B-48).
 typedef ModelCheckOutcomePayload = ModelCheckOutcome;
 
-/// `POST /engines/claude/plugins`, `PATCH /engines/claude/plugins/:id`: one plugin, after the write (plan 13, B-27). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.
+/// `POST /engines/claude/plugins`, `PATCH /engines/claude/plugins/:id`: one plugin, after the write (plan 13, B-27). `POST /engines/claude/plugins/marketplace` installs one from a declared marketplace, and `POST /engines/claude/plugins/:id/update` applies an available update to one — both B-47, and both answer the same shape. `DELETE` of the plugin resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.
 typedef ClaudePluginDetailPayload = EnginePlugin;
 
 /// `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.

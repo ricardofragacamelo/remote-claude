@@ -190,6 +190,20 @@ export interface EngineOrigin {
   readonly native: string;
 }
 
+/** What an available update to a plugin would change (plan 13, B-47; S-205) — names added or removed per category, and the hook count on each side. Never a line-level diff of any file. */
+export interface EnginePluginManifestDiff {
+  readonly commandsAdded: readonly string[];
+  readonly commandsRemoved: readonly string[];
+  readonly agentsAdded: readonly string[];
+  readonly agentsRemoved: readonly string[];
+  readonly skillsAdded: readonly string[];
+  readonly skillsRemoved: readonly string[];
+  readonly mcpServersAdded: readonly string[];
+  readonly mcpServersRemoved: readonly string[];
+  readonly hookCountBefore: number;
+  readonly hookCountAfter: number;
+}
+
 /** What a plugin's manifest declares, read fresh (plan 13, B-27): names only, never the content of a hook or a command — reading further than that would be interpreting a format of the engine's own. */
 export interface EnginePluginManifest {
   readonly name: string;
@@ -203,15 +217,17 @@ export interface EnginePluginManifest {
   readonly mcpServerNames: readonly string[];
 }
 
-/** One plugin of the caller, of whichever engine has them (plan 13, B-27) — the engine's own routes say which one. `manifest` is `null` only when it can no longer be read at all — the directory moved, or the manifest stopped parsing. */
+/** One plugin of the caller, of whichever engine has them (plan 13, B-27, B-47) — the engine's own routes say which one. `manifest` is `null` only when it can no longer be read at all — the directory moved, or the manifest stopped parsing. */
 export interface EnginePlugin {
   readonly id: string;
   readonly origin: 'local' | 'marketplace';
   readonly path: string;
   readonly marketplace: string | null;
+  /** The commit a marketplace plugin is pinned at — `null` for a local one, which has none (plan 13, B-47). */
+  readonly commit: string | null;
   readonly name: string;
-  /** `current`: the manifest reads the same as when approved. `changed`: it still reads, but differently — pending re-approval. `unreadable`: it can no longer be read at all. */
-  readonly state: 'current' | 'changed' | 'unreadable';
+  /** `current`: the manifest reads the same as when approved. `changed`: it still reads, but differently — pending re-approval. `unreadable`: it can no longer be read at all. `marketplaceNotAllowed`: a marketplace plugin whose marketplace left the allowlist file (plan 13, B-47). */
+  readonly state: 'current' | 'changed' | 'unreadable' | 'marketplaceNotAllowed';
   readonly enabled: boolean;
   readonly manifest: EnginePluginManifest | null;
   readonly createdAt: string;
@@ -1498,12 +1514,40 @@ export interface ClaudePluginListPayload {
   readonly plugins: readonly EnginePlugin[];
 }
 
+export interface ClaudePluginMarketplaceCatalogPayloadPluginsItem {
+  readonly name: string;
+  readonly description: string | null;
+  readonly supported: boolean;
+}
+
+/** `GET /engines/claude/plugins/marketplaces/:name`: what a declared marketplace's own `.claude-plugin/marketplace.json` lists, read live (plan 13, B-47). `supported: false` names a plugin whose own `source` is not a kind this product clones — shown, never installable (`PLUGIN_PATH_INVALID` if tried). */
+export interface ClaudePluginMarketplaceCatalogPayload {
+  readonly name: string;
+  readonly plugins: readonly ClaudePluginMarketplaceCatalogPayloadPluginsItem[];
+}
+
+export interface ClaudePluginMarketplaceListPayloadMarketplacesItem {
+  readonly name: string;
+}
+
+/** `GET /engines/claude/plugins/marketplaces`: every marketplace this installation's allowlist file currently declares (plan 13, B-47). An empty list means the feature is off — the file declares none. */
+export interface ClaudePluginMarketplaceListPayload {
+  readonly marketplaces: readonly ClaudePluginMarketplaceListPayloadMarketplacesItem[];
+}
+
 /** `POST /engines/claude/plugins/preview`: what a local directory would bring, before the second step (plan 13, B-27, S-125) — the exact description adding it would record, word for word, the same guarantee `mcp.serverPreview` already gives the MCP screen. */
 export interface ClaudePluginPreviewPayload {
   readonly manifest: EnginePluginManifest;
   readonly messageKey: string;
   /** Every value a string — a count or a flag travels as text, the way `mcp.serverPreview`'s `params` already does. */
   readonly params: Readonly<Record<string, unknown>>;
+}
+
+/** `GET /engines/claude/plugins/:id/update`: whether a marketplace plugin has an update available, and what it would change — without installing anything (plan 13, B-47; S-205). `diff` is `null` when there is nothing to compare yet, even though `available` is `true`. */
+export interface ClaudePluginUpdatePreviewPayload {
+  readonly available: boolean;
+  readonly newCommit: string | null;
+  readonly diff: EnginePluginManifestDiff | null;
 }
 
 /** `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only. */
@@ -1945,6 +1989,18 @@ export const ENGINE_ORIGIN_LIMITS = {
   native: { maxLength: 256 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link EnginePluginManifestDiff}. */
+export const ENGINE_PLUGIN_MANIFEST_DIFF_LIMITS = {
+  commandsAdded: { maxItems: 10000 },
+  commandsRemoved: { maxItems: 10000 },
+  agentsAdded: { maxItems: 10000 },
+  agentsRemoved: { maxItems: 10000 },
+  skillsAdded: { maxItems: 10000 },
+  skillsRemoved: { maxItems: 10000 },
+  mcpServersAdded: { maxItems: 10000 },
+  mcpServersRemoved: { maxItems: 10000 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link EnginePluginManifest}. */
 export const ENGINE_PLUGIN_MANIFEST_LIMITS = {
   commands: { maxItems: 10000 },
@@ -2151,6 +2207,16 @@ export const ENGINE_MODELS_PAYLOAD_LIMITS = {
 /** The bounds the schema gives the fields of {@link ClaudePluginListPayload}. */
 export const CLAUDE_PLUGIN_LIST_PAYLOAD_LIMITS = {
   plugins: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ClaudePluginMarketplaceCatalogPayload}. */
+export const CLAUDE_PLUGIN_MARKETPLACE_CATALOG_PAYLOAD_LIMITS = {
+  plugins: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ClaudePluginMarketplaceListPayload}. */
+export const CLAUDE_PLUGIN_MARKETPLACE_LIST_PAYLOAD_LIMITS = {
+  marketplaces: { maxItems: 10000 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link FileTreePayload}. */
@@ -2459,6 +2525,38 @@ export function isEngineOrigin(value: unknown): value is EngineOrigin {
 }
 
 /**
+ * Whether `value` carries every required field of {@link EnginePluginManifestDiff}. Unknown fields are accepted.
+ */
+export function isEnginePluginManifestDiff(value: unknown): value is EnginePluginManifestDiff {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['commandsAdded']),
+    Array.isArray(record['commandsRemoved']),
+    Array.isArray(record['agentsAdded']),
+    Array.isArray(record['agentsRemoved']),
+    Array.isArray(record['skillsAdded']),
+    Array.isArray(record['skillsRemoved']),
+    Array.isArray(record['mcpServersAdded']),
+    Array.isArray(record['mcpServersRemoved']),
+    typeof record['hookCountBefore'] === 'number',
+    typeof record['hookCountAfter'] === 'number',
+    withinMaxItems(record['commandsAdded'], 10000),
+    withinMaxItems(record['commandsRemoved'], 10000),
+    withinMaxItems(record['agentsAdded'], 10000),
+    withinMaxItems(record['agentsRemoved'], 10000),
+    withinMaxItems(record['skillsAdded'], 10000),
+    withinMaxItems(record['skillsRemoved'], 10000),
+    withinMaxItems(record['mcpServersAdded'], 10000),
+    withinMaxItems(record['mcpServersRemoved'], 10000),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link EnginePluginManifest}. Unknown fields are accepted.
  */
 export function isEnginePluginManifest(value: unknown): value is EnginePluginManifest {
@@ -2499,6 +2597,7 @@ export function isEnginePlugin(value: unknown): value is EnginePlugin {
     typeof record['origin'] === 'string',
     typeof record['path'] === 'string',
     nullOr(record['marketplace'], typeof record['marketplace'] === 'string'),
+    nullOr(record['commit'], typeof record['commit'] === 'string'),
     typeof record['name'] === 'string',
     typeof record['state'] === 'string',
     typeof record['enabled'] === 'boolean',
@@ -4722,6 +4821,71 @@ export function isClaudePluginListPayload(value: unknown): value is ClaudePlugin
 }
 
 /**
+ * Whether `value` carries every required field of {@link ClaudePluginMarketplaceCatalogPayloadPluginsItem}. Unknown fields are accepted.
+ */
+export function isClaudePluginMarketplaceCatalogPayloadPluginsItem(value: unknown): value is ClaudePluginMarketplaceCatalogPayloadPluginsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    nullOr(record['description'], typeof record['description'] === 'string'),
+    typeof record['supported'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudePluginMarketplaceCatalogPayload}. Unknown fields are accepted.
+ */
+export function isClaudePluginMarketplaceCatalogPayload(value: unknown): value is ClaudePluginMarketplaceCatalogPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    Array.isArray(record['plugins']),
+    withinMaxItems(record['plugins'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudePluginMarketplaceListPayloadMarketplacesItem}. Unknown fields are accepted.
+ */
+export function isClaudePluginMarketplaceListPayloadMarketplacesItem(value: unknown): value is ClaudePluginMarketplaceListPayloadMarketplacesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudePluginMarketplaceListPayload}. Unknown fields are accepted.
+ */
+export function isClaudePluginMarketplaceListPayload(value: unknown): value is ClaudePluginMarketplaceListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['marketplaces']),
+    withinMaxItems(record['marketplaces'], 10000),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link ClaudePluginPreviewPayload}. Unknown fields are accepted.
  */
 export function isClaudePluginPreviewPayload(value: unknown): value is ClaudePluginPreviewPayload {
@@ -4735,6 +4899,23 @@ export function isClaudePluginPreviewPayload(value: unknown): value is ClaudePlu
     isEnginePluginManifest(record['manifest']),
     typeof record['messageKey'] === 'string',
     isNonNullObject(record['params']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudePluginUpdatePreviewPayload}. Unknown fields are accepted.
+ */
+export function isClaudePluginUpdatePreviewPayload(value: unknown): value is ClaudePluginUpdatePreviewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['available'] === 'boolean',
+    nullOr(record['newCommit'], typeof record['newCommit'] === 'string'),
+    nullOr(record['diff'], isEnginePluginManifestDiff(record['diff'])),
   ].every(Boolean);
 }
 
@@ -5540,7 +5721,7 @@ export type ModelCheckOutcomePayload = ModelCheckOutcome;
 /** Whether `value` is a {@link ModelCheckOutcomePayload}. */
 export const isModelCheckOutcomePayload = isModelCheckOutcome;
 
-/** `POST /engines/claude/plugins`, `PATCH /engines/claude/plugins/:id`: one plugin, after the write (plan 13, B-27). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`. */
+/** `POST /engines/claude/plugins`, `PATCH /engines/claude/plugins/:id`: one plugin, after the write (plan 13, B-27). `POST /engines/claude/plugins/marketplace` installs one from a declared marketplace, and `POST /engines/claude/plugins/:id/update` applies an available update to one — both B-47, and both answer the same shape. `DELETE` of the plugin resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`. */
 export type ClaudePluginDetailPayload = EnginePlugin;
 
 /** Whether `value` is a {@link ClaudePluginDetailPayload}. */

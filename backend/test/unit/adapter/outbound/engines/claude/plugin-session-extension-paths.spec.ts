@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { ClaudePluginSessionExtensionPaths } from '@adapter/outbound/engines/claude/plugin-session-extension-paths';
 import { UserId } from '@domain/auth';
+import {
+  declaredMarketplace,
+  FakeMarketplaceAllowlist,
+} from '../../../../../support/fakes/fake-marketplace-allowlist';
 import { InMemoryPluginRepository } from '../../../../../support/fakes/in-memory-plugin.repository';
 
 const USER = UserId.create('auth|plugin-session');
@@ -32,7 +36,7 @@ describe('ClaudePluginSessionExtensionPaths — plan 13, B-27, S-123', () => {
     );
     await plugins.setEnabled(disabled.id, false, NOW);
 
-    const source = new ClaudePluginSessionExtensionPaths(plugins);
+    const source = new ClaudePluginSessionExtensionPaths(plugins, new FakeMarketplaceAllowlist());
     const paths = await source.pathsFor({ userId: USER, engine: 'claude' });
 
     expect(paths).toEqual(['/one']);
@@ -51,12 +55,55 @@ describe('ClaudePluginSessionExtensionPaths — plan 13, B-27, S-123', () => {
       NOW,
     );
 
-    const source = new ClaudePluginSessionExtensionPaths(plugins);
+    const source = new ClaudePluginSessionExtensionPaths(plugins, new FakeMarketplaceAllowlist());
     expect(await source.pathsFor({ userId: USER, engine: 'codex' })).toEqual([]);
   });
 
   it('answers nothing when the caller has no plugins at all', async () => {
-    const source = new ClaudePluginSessionExtensionPaths(new InMemoryPluginRepository());
+    const source = new ClaudePluginSessionExtensionPaths(
+      new InMemoryPluginRepository(),
+      new FakeMarketplaceAllowlist(),
+    );
     expect(await source.pathsFor({ userId: USER, engine: 'claude' })).toEqual([]);
+  });
+
+  describe('marketplace plugins — plan 13, B-47, S-213', () => {
+    it('includes an enabled marketplace plugin whose marketplace is still declared', async () => {
+      const plugins = new InMemoryPluginRepository();
+      await plugins.insert(
+        'p1',
+        {
+          userId: USER,
+          identity: { origin: 'marketplace', path: '/mp/one', marketplace: 'acme', commit: 'c1' },
+          name: 'one',
+          approvedDigest: 'd1',
+        },
+        NOW,
+      );
+      const marketplaces = new FakeMarketplaceAllowlist([declaredMarketplace('acme')]);
+
+      const source = new ClaudePluginSessionExtensionPaths(plugins, marketplaces);
+      expect(await source.pathsFor({ userId: USER, engine: 'claude' })).toEqual(['/mp/one']);
+    });
+
+    it('leaves out an enabled marketplace plugin once its marketplace is no longer declared', async () => {
+      const plugins = new InMemoryPluginRepository();
+      await plugins.insert(
+        'p1',
+        {
+          userId: USER,
+          identity: { origin: 'marketplace', path: '/mp/one', marketplace: 'acme', commit: 'c1' },
+          name: 'one',
+          approvedDigest: 'd1',
+        },
+        NOW,
+      );
+      const marketplaces = new FakeMarketplaceAllowlist([declaredMarketplace('acme')]);
+      const source = new ClaudePluginSessionExtensionPaths(plugins, marketplaces);
+
+      marketplaces.set([]); // the same effect a SIGHUP reload has on the allowlist in memory
+
+      expect(await source.pathsFor({ userId: USER, engine: 'claude' })).toEqual([]);
+    });
   });
 });

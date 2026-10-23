@@ -2,13 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/definitions/engine-plugin.json",
   "title": "EnginePlugin",
-  "description": "One plugin of the caller, of whichever engine has them (plan 13, B-27) — the engine's own routes say which one. `manifest` is `null` only when it can no longer be read at all — the directory moved, or the manifest stopped parsing.",
+  "description": "One plugin of the caller, of whichever engine has them (plan 13, B-27, B-47) — the engine's own routes say which one. `manifest` is `null` only when it can no longer be read at all — the directory moved, or the manifest stopped parsing.",
   "type": "object",
   "required": [
     "id",
     "origin",
     "path",
     "marketplace",
+    "commit",
     "name",
     "state",
     "enabled",
@@ -21,11 +22,16 @@
     "origin": { "type": "string", "enum": ["local", "marketplace"] },
     "path": { "type": "string" },
     "marketplace": { "type": "string", "x-nullable": true },
+    "commit": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The commit a marketplace plugin is pinned at — `null` for a local one, which has none (plan 13, B-47)."
+    },
     "name": { "type": "string" },
     "state": {
       "type": "string",
-      "enum": ["current", "changed", "unreadable"],
-      "description": "`current`: the manifest reads the same as when approved. `changed`: it still reads, but differently — pending re-approval. `unreadable`: it can no longer be read at all."
+      "enum": ["current", "changed", "unreadable", "marketplaceNotAllowed"],
+      "description": "`current`: the manifest reads the same as when approved. `changed`: it still reads, but differently — pending re-approval. `unreadable`: it can no longer be read at all. `marketplaceNotAllowed`: a marketplace plugin whose marketplace left the allowlist file (plan 13, B-47)."
     },
     "enabled": { "type": "boolean" },
     "manifest": {

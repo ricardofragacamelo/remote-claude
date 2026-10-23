@@ -39,6 +39,7 @@ const complete: RawEnvironment = {
   RC_SESSION_MAX_BUDGET_USD: '10',
   RC_MODEL_CHECK_MAX_BUDGET_USD: '0.05',
   RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
+  RC_PLUGIN_DOWNLOAD_DIR: '/var/lib/remote-claude/claude-plugins',
   RC_ENGINES_ENABLED: '',
   RC_ENGINE_DEFAULT: '',
   RC_SESSION_DEFAULT_PERMISSION_MODE: 'ask',

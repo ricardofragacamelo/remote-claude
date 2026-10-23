@@ -36,7 +36,32 @@ export interface PluginRepository {
 
   insert(id: string, write: PluginWrite, now: Date): Promise<StoredPlugin>;
 
+  /**
+   * Inserts [write] at [id], unless a row already exists for `(userId, path)` — the one unique
+   * constraint the table has (plan 13, B-47; S-207, S-208). `created: true` means this call's own
+   * row is the one now stored, and the caller is the sole owner of whatever it staged on disk for
+   * it; `created: false` means somebody else's row won — by a genuine race (S-208) or because the
+   * same deterministic path was already installed (S-207) — and the caller must discard, never
+   * move, whatever it staged.
+   *
+   * The single round trip (an `ON CONFLICT DO NOTHING ... RETURNING`, falling back to a read only
+   * when that returns nothing) is what makes the decision atomic: two callers racing each other can
+   * each only ever see one of them as `created`.
+   */
+  insertIfAbsent(
+    id: string,
+    write: PluginWrite,
+    now: Date,
+  ): Promise<{ readonly plugin: StoredPlugin; readonly created: boolean }>;
+
   setEnabled(id: string, enabled: boolean, now: Date): Promise<StoredPlugin>;
+
+  /** What an applied update changes about an already-installed marketplace plugin (plan 13, B-47). */
+  updateInstalled(
+    id: string,
+    fields: { readonly commit: string; readonly approvedDigest: string },
+    now: Date,
+  ): Promise<StoredPlugin>;
 
   /** Idempotent in effect — the use case turns a second call into `PLUGIN_NOT_FOUND`. */
   delete(id: string): Promise<void>;

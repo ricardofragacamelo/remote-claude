@@ -31,6 +31,12 @@ export interface TestApp {
   close(): Promise<void>;
 }
 
+/** One declared marketplace, as the allowlist file's own section writes it (plan 13, B-47). */
+export interface TestMarketplace {
+  readonly name: string;
+  readonly url: string;
+}
+
 /**
  * A workspace allowlist for one suite, written to a temporary file.
  *
@@ -40,19 +46,33 @@ export interface TestApp {
  * anything the suite did not create.
  *
  * @param subjects OIDC subjects the roots are declared for
+ * @param marketplaces plugin marketplaces to declare alongside the root (plan 13, B-47) — absent
+ *   is the ordinary case, the same "off unless declared" the feature itself has
  * @returns the file's path and the root it declares
  */
-export function writeTestAllowlist(subjects: readonly string[] = [SUBJECT]): TestAllowlist {
+export function writeTestAllowlist(
+  subjects: readonly string[] = [SUBJECT],
+  marketplaces: readonly TestMarketplace[] = [],
+): TestAllowlist {
   const directory = mkdtempSync(path.join(tmpdir(), 'rc-allowlist-'));
   const root = path.join(directory, 'workspace');
   const file = path.join(directory, 'allowlist.yaml');
 
   mkdirSync(root);
+  const marketplacesSection =
+    marketplaces.length === 0
+      ? ''
+      : `marketplaces:\n${marketplaces
+          .map(
+            (marketplace) =>
+              `  - name: ${marketplace.name}\n    source: { type: git, url: ${marketplace.url} }\n`,
+          )
+          .join('')}`;
   writeFileSync(
     file,
     `roots:\n  - path: ${root}\n    label: Suite\n    users:\n${subjects
       .map((subject) => `      - ${subject}`)
-      .join('\n')}\n`,
+      .join('\n')}\n${marketplacesSection}`,
     'utf8',
   );
 
@@ -125,6 +145,7 @@ export function testEnvironment(
   process.env['RC_SESSION_MAX_BUDGET_USD'] = '10';
   process.env['RC_MODEL_CHECK_MAX_BUDGET_USD'] = '0.05';
   process.env['RC_SESSION_DEFAULT_MODEL'] = 'claude-sonnet-5';
+  process.env['RC_PLUGIN_DOWNLOAD_DIR'] = mkdtempSync(path.join(tmpdir(), 'rc-claude-plugins-'));
   process.env['RC_SESSION_DEFAULT_PERMISSION_MODE'] = 'default';
   // Small and explicit, because every scenario has to fix the values it uses or stop being
   // deterministic. The deadline is short enough for a suite to wait on it; the extension is twice

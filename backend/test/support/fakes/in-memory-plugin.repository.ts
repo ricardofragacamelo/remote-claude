@@ -48,6 +48,37 @@ export class InMemoryPluginRepository implements PluginRepository {
     return Promise.resolve(row);
   }
 
+  async insertIfAbsent(
+    id: string,
+    write: PluginWrite,
+    now: Date,
+  ): Promise<{ plugin: StoredPlugin; created: boolean }> {
+    const existing = await this.findByPath(write.userId, write.identity.path);
+    if (existing !== null) {
+      return { plugin: existing, created: false };
+    }
+    return { plugin: await this.insert(id, write, now), created: true };
+  }
+
+  updateInstalled(
+    id: string,
+    fields: { readonly commit: string; readonly approvedDigest: string },
+    now: Date,
+  ): Promise<StoredPlugin> {
+    const existing = this.rows.get(id);
+    if (existing === undefined) {
+      return Promise.reject(new Error(`no row ${id} to update`));
+    }
+    const row = {
+      ...existing,
+      commit: fields.commit,
+      approvedDigest: fields.approvedDigest,
+      updatedAt: now,
+    };
+    this.rows.set(id, row);
+    return Promise.resolve(row);
+  }
+
   setEnabled(id: string, enabled: boolean, now: Date): Promise<StoredPlugin> {
     const existing = this.rows.get(id);
     if (existing === undefined) {

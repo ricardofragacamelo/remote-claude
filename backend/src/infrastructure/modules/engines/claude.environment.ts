@@ -15,12 +15,17 @@ const claudeEnvironmentSchema = z.object({
   RC_SESSION_DEFAULT_MODEL: z.string().min(1),
   // The ceiling of the test of the connection, the one thing of plan 13 that spends quota (D-08).
   RC_MODEL_CHECK_MAX_BUDGET_USD: z.coerce.number().positive().max(1),
+  // Where a marketplace plugin is downloaded to, per user — never `~/.claude`, never a path the
+  // Claude CLI itself reads (plan 13, B-47, D-15). One directory per backend, outside the
+  // allowlist's own roots on purpose: it is ours to write, never a folder a session browses.
+  RC_PLUGIN_DOWNLOAD_DIR: z.string().min(1),
 });
 
 /** What the extension of `claude` is configured with. */
 export interface ClaudeSettings {
   readonly defaultModel: string;
   readonly modelCheck: { readonly maxBudgetUsd: number; readonly cwd: string };
+  readonly pluginDownloadDir: string;
 }
 
 /**
@@ -35,6 +40,7 @@ export function loadClaudeSettings(source: RawEnvironment): ClaudeSettings {
     defaultModel: env.RC_SESSION_DEFAULT_MODEL,
     // A folder of nobody's: the test reads no project and writes no transcript.
     modelCheck: { maxBudgetUsd: env.RC_MODEL_CHECK_MAX_BUDGET_USD, cwd: tmpdir() },
+    pluginDownloadDir: env.RC_PLUGIN_DOWNLOAD_DIR,
   };
 }
 

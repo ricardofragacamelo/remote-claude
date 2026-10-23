@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/plugin-update-preview.json",
+  "title": "ClaudePluginUpdatePreview",
+  "description": "`GET /engines/claude/plugins/:id/update`: whether a marketplace plugin has an update available, and what it would change — without installing anything (plan 13, B-47; S-205). `diff` is `null` when there is nothing to compare yet, even though `available` is `true`.",
+  "x-kind": "http",
+  "x-type": "engines.claude.pluginUpdatePreview",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/plugins/:id/update" }],
+  "type": "object",
+  "required": ["available", "newCommit", "diff"],
+  "properties": {
+    "available": { "type": "boolean" },
+    "newCommit": { "type": "string", "x-nullable": true },
+    "diff": { "$ref": "../definitions/engine-plugin-manifest-diff.schema.json", "x-nullable": true }
+  }
+}

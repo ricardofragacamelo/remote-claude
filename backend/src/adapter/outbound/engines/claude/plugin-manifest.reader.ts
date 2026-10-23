@@ -11,12 +11,10 @@ import type {
 import { digestOfPluginManifest } from '@domain/engines/claude';
 import type { PluginManifest } from '@domain/engines/claude';
 import type { ProjectMcpEntry } from '@domain/mcp';
-import { WorkspacePath } from '@domain/workspace';
 import { isPlainObject } from '@shared/utils/plain-object';
+import { stringField } from '@shared/utils/string-field';
 import { mcpJsonEntriesOf, mcpServerMapEntriesOf } from './mcp-json-format';
-
-/** A plugin manifest or `.mcp.json` larger than this is not read — a manifest, not a data dump. */
-const MAX_FILE_BYTES = 65_536;
+import { readJsonWithin } from './plugin-fs-read';
 
 const MANIFEST_PATH = ['.claude-plugin', 'plugin.json'];
 const MCP_JSON_NAME = '.mcp.json';
@@ -25,27 +23,6 @@ const AGENTS_DIR = 'agents';
 const SKILLS_DIR = 'skills';
 const HOOKS_FILE = ['hooks', 'hooks.json'];
 const SKILL_MANIFEST = 'SKILL.md';
-
-/** Reads a small JSON file within [root], refusing one above the size limit or outside it via a link. */
-async function readJsonWithin(root: string, relativeSegments: readonly string[]): Promise<unknown> {
-  const filePath = path.join(root, ...relativeSegments);
-
-  const stat = await fs.lstat(filePath).catch(() => null);
-  if (stat === null) {
-    return undefined;
-  }
-  if (stat.size > MAX_FILE_BYTES) {
-    throw new Error('file too large');
-  }
-
-  const real = await fs.realpath(filePath);
-  if (!WorkspacePath.create(real).isWithin(WorkspacePath.create(root))) {
-    throw new Error('escapes plugin root');
-  }
-
-  const raw = await fs.readFile(real, 'utf8');
-  return JSON.parse(raw);
-}
 
 /** The `.md` files directly inside [dir] (not recursive), by name without extension — `[]` if absent. */
 async function markdownNamesIn(dir: string): Promise<readonly string[]> {
@@ -105,10 +82,6 @@ async function mcpServersOf(
     return [];
   }
   return mcpJsonEntriesOf(parsed) ?? [];
-}
-
-function stringField(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
 /**

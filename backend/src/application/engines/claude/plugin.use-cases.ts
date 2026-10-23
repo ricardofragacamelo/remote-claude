@@ -1,7 +1,9 @@
 import type { RecordAuditEventUseCase } from '@application/audit';
 import type { FolderAccess } from '@application/agent-settings';
+import type { MarketplaceAllowlistSource } from '@application/workspace';
 import {
   describePlugin,
+  effectivePluginState,
   PluginForbiddenError,
   PluginNotFoundError,
   PluginPathInvalidError,
@@ -15,10 +17,11 @@ import type {
 } from '@domain/engines/claude';
 import type { UserId } from '@domain/auth';
 import type { Clock, IdGenerator } from '@domain/shared';
+import type { MarketplacePluginSource } from './ports/marketplace-plugin-source.port';
 import type { PluginManifestReader } from './ports/plugin-manifest-reader.port';
 import type { PluginRepository, StoredPlugin } from './ports/plugin-repository.port';
 
-/** What every plugin use case of this file shares. */
+/** What every plugin use case of this file (and of `marketplace-plugin.use-cases.ts`) shares. */
 export interface PluginDependencies {
   readonly engine: string;
   readonly plugins: PluginRepository;
@@ -27,6 +30,12 @@ export interface PluginDependencies {
   readonly trail: RecordAuditEventUseCase;
   readonly ids: IdGenerator;
   readonly clock: Clock;
+  /** Which marketplaces are currently declared (plan 13, B-47) — asked fresh on every read. */
+  readonly marketplaces: MarketplaceAllowlistSource;
+  /** How a marketplace's plugins are listed and downloaded (plan 13, B-47). */
+  readonly source: MarketplacePluginSource;
+  /** The base directory a marketplace plugin is downloaded under, one subtree per user. */
+  readonly pluginDownloadDir: string;
 }
 
 /** A plugin with its manifest read fresh — `manifest` is `null` only when it could no longer be read. */
@@ -45,8 +54,8 @@ function identityOf(path: string): PluginIdentity {
   return { origin: 'local', path, marketplace: null, commit: null };
 }
 
-/** The plugin with that id, provided it is the caller's (S-129). */
-async function ownedPlugin(
+/** The plugin with that id, provided it is the caller's (S-129). Reused by the marketplace use cases. */
+export async function ownedPlugin(
   plugins: PluginRepository,
   userId: UserId,
   pluginId: string,
@@ -63,13 +72,34 @@ async function ownedPlugin(
   return plugin;
 }
 
-/** [plugin], with its manifest read fresh — the same view {@link ListPluginsUseCase} builds per row. */
-async function viewOf(manifests: PluginManifestReader, plugin: StoredPlugin): Promise<PluginView> {
-  const read = await manifests.read(plugin.path);
+/**
+ * [plugin], with its manifest read fresh — the same view {@link ListPluginsUseCase} builds per row.
+ * `marketplaceNotAllowed` (plan 13, B-47, S-213) overrides whatever the manifest says whenever a
+ * marketplace plugin's own marketplace is no longer declared — checked fresh on every call, so a
+ * `SIGHUP` reload is reflected the moment this is next asked, never only at the next restart.
+ * Reused by the marketplace use cases, so every route answers the same shape from the same rule.
+ */
+export async function viewOf(deps: PluginDependencies, plugin: StoredPlugin): Promise<PluginView> {
+  const marketplaceAllowed =
+    plugin.marketplace === null ? true : deps.marketplaces.find(plugin.marketplace) !== null;
+  const read = await deps.manifests.read(plugin.path);
+
   if (typeof read === 'string') {
-    return { ...plugin, state: 'unreadable', manifest: null };
+    return {
+      ...plugin,
+      state: effectivePluginState(plugin, marketplaceAllowed, 'unreadable'),
+      manifest: null,
+    };
   }
-  return { ...plugin, state: pluginStateOf(plugin.approvedDigest, read), manifest: read.manifest };
+  return {
+    ...plugin,
+    state: effectivePluginState(
+      plugin,
+      marketplaceAllowed,
+      pluginStateOf(plugin.approvedDigest, read),
+    ),
+    manifest: read.manifest,
+  };
 }
 
 /** Reads a local directory's manifest, or turns a read failure into the domain's own error. */
@@ -86,9 +116,16 @@ async function readLocalManifest(
   return read;
 }
 
-/** The audit record of a plugin write — the por-extenso description, when there is one to show. */
-function pluginEvent(
-  kind: 'engine.pluginAdded' | 'engine.pluginToggled' | 'engine.pluginRemoved',
+/** Every kind of audit event a plugin write records (plan 13, B-27, B-47). */
+export type PluginAuditKind =
+  'engine.pluginAdded' | 'engine.pluginToggled' | 'engine.pluginRemoved' | 'engine.pluginUpdated';
+
+/**
+ * The audit record of a plugin write — the por-extenso description, when there is one to show.
+ * Reused by the marketplace use cases for `engine.pluginAdded` and `engine.pluginUpdated`.
+ */
+export function pluginEvent(
+  kind: PluginAuditKind,
   engine: string,
   userId: UserId,
   pluginId: string,
@@ -112,7 +149,7 @@ export class ListPluginsUseCase {
 
   async execute(userId: UserId): Promise<readonly PluginView[]> {
     const stored = await this.deps.plugins.listFor(userId);
-    return Promise.all(stored.map((plugin) => viewOf(this.deps.manifests, plugin)));
+    return Promise.all(stored.map((plugin) => viewOf(this.deps, plugin)));
   }
 }
 
@@ -154,7 +191,7 @@ export class AddLocalPluginUseCase {
     const resolved = await this.deps.folders.resolve(rawPath, userId);
     const existing = await this.deps.plugins.findByPath(userId, resolved.value);
     if (existing !== null) {
-      return viewOf(this.deps.manifests, existing);
+      return viewOf(this.deps, existing);
     }
 
     const { manifest, digest } = await readLocalManifest(this.deps.manifests, resolved.value);
@@ -204,7 +241,7 @@ export class SetPluginEnabledUseCase {
   async execute(userId: UserId, pluginId: string, enabled: boolean): Promise<PluginView> {
     const before = await ownedPlugin(this.deps.plugins, userId, pluginId);
     if (before.enabled === enabled) {
-      return viewOf(this.deps.manifests, before);
+      return viewOf(this.deps, before);
     }
 
     const at = this.deps.clock.now();
@@ -230,15 +267,21 @@ export class SetPluginEnabledUseCase {
       throw error;
     }
 
-    return viewOf(this.deps.manifests, stored);
+    return viewOf(this.deps, stored);
   }
 }
 
 /**
- * `DELETE /engines/claude/plugins/:id` — removing a plugin for good (plan 13, B-27).
+ * `DELETE /engines/claude/plugins/:id` — removing a plugin for good (plan 13, B-27, B-47).
  *
  * Narrowing, so it is safe by default — the row is gone whether or not the trail could keep up, the
  * same choice {@link import('@application/mcp').DeleteMcpServerUseCase} makes for the same reason.
+ *
+ * A **local** plugin's directory is the user's own, somewhere in the allowlist — never ours to
+ * delete. A **marketplace** one is ours: we downloaded it, so removing the plugin removes the
+ * directory too (plan 13, B-47; S-209), best-effort and never throwing — the row leaving the store
+ * is what makes the plugin gone; a directory that could not be removed is a disk to clean up later,
+ * not a reason to fail the request.
  */
 export class RemovePluginUseCase {
   constructor(private readonly deps: PluginDependencies) {}
@@ -249,6 +292,9 @@ export class RemovePluginUseCase {
     const at = this.deps.clock.now();
 
     await this.deps.plugins.delete(pluginId);
+    if (plugin.origin === 'marketplace') {
+      await this.deps.source.discard(plugin.path);
+    }
     await this.deps.trail.execute(
       pluginEvent(
         'engine.pluginRemoved',
