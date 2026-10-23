@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/plugin-preview.json",
+  "title": "ClaudePluginPreview",
+  "description": "`POST /engines/claude/plugins/preview`: what a local directory would bring, before the second step (plan 13, B-27, S-125) — the exact description adding it would record, word for word, the same guarantee `mcp.serverPreview` already gives the MCP screen.",
+  "x-kind": "http",
+  "x-type": "engines.claude.pluginPreview",
+  "x-route": [{ "method": "POST", "path": "/engines/claude/plugins/preview" }],
+  "type": "object",
+  "required": ["manifest", "messageKey", "params"],
+  "properties": {
+    "manifest": { "$ref": "../definitions/engine-plugin-manifest.schema.json" },
+    "messageKey": { "type": "string" },
+    "params": {
+      "type": "object",
+      "description": "Every value a string — a count or a flag travels as text, the way `mcp.serverPreview`'s `params` already does."
+    }
+  }
+}

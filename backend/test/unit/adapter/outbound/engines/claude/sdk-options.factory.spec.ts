@@ -13,6 +13,7 @@ const input = (overrides: Partial<SdkOptionsInput> = {}): SdkOptionsInput => ({
   model: null,
   permissionMode: 'ask',
   conversation: { claudeSessionId: NEW, resumedFrom: null },
+  pluginPaths: [],
   limits: { maxBudgetUsd: 10, maxTurns: 100 },
   abortController: new AbortController(),
   environment: { PATH: '/usr/bin', REMOTE_CLAUDE_OWNER: 'remote-claude-backend' },
@@ -176,6 +177,23 @@ describe('buildSdkOptions', () => {
     expect(buildSdkOptions(input())).toMatchObject({
       thinking: { type: 'adaptive', display: 'summarized' },
       forwardSubagentText: true,
+    });
+  });
+
+  describe('plugins — plan 13, B-27, S-123', () => {
+    it('carries no plugins field at all when there are none', () => {
+      expect('plugins' in buildSdkOptions(input({ pluginPaths: [] }))).toBe(false);
+    });
+
+    it('turns each extension path into a local plugin with MCP discovery skipped', () => {
+      const options = buildSdkOptions(
+        input({ pluginPaths: ['/srv/projects/plugin-a', '/srv/projects/plugin-b'] }),
+      );
+
+      expect(options.plugins).toEqual([
+        { type: 'local', path: '/srv/projects/plugin-a', skipMcpDiscovery: true },
+        { type: 'local', path: '/srv/projects/plugin-b', skipMcpDiscovery: true },
+      ]);
     });
   });
 });

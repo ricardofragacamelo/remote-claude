@@ -149,6 +149,11 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
     return { op, engine: CLAUDE_ENGINE, layer: 'adapter', sessionId };
   }
 
+  /** The local plugin directories this session loads (plan 13, B-27) — `[]` when the core sent none. */
+  private pluginPaths(): readonly string[] {
+    return this.start.extensionPaths ?? [];
+  }
+
   constructor(
     private readonly start: AgentSessionStart,
     private readonly deps: SessionRunnerDeps,
@@ -200,6 +205,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       outputStyle: this.start.outputStyle ?? null,
       fallbackModel: this.start.fallbackModel ?? null,
       forkAt: this.start.forkAt ?? null,
+      pluginPaths: this.pluginPaths(),
       limits: this.deps.limits,
       abortController: this.abort,
       // The machine's environment without the backend's configuration, and the mark on top.

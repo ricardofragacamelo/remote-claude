@@ -196,14 +196,14 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-123 | plugin local de diretório dentro da allowlist entra na sessão com `skipMcpDiscovery: true` | eq | integração | — | B-27 | ⬜ |
-| S-124 | caminho fora da allowlist, ou diretório sem manifesto de plugin | err | integração | `WORKSPACE_NOT_ALLOWED`, `PLUGIN_PATH_INVALID` | B-27 | ⬜ |
-| S-125 | a prévia mostra os hooks, comandos, agents e servidores MCP que o plugin declara | eq | unit | — | B-27 | ⬜ |
-| S-126 | servidor MCP declarado pelo plugin só sobe se aprovado como servidor nosso | err | integração | — | B-27 | ⬜ |
-| S-127 | adicionar, ligar e remover plugin gravam `engine.pluginAdded`, `engine.pluginToggled` e `engine.pluginRemoved`, com o motor no payload, antes do efeito | eq | integração | — | B-27 | ⬜ |
-| S-128 | manifesto que muda depois de aprovado volta a pendente | est | integração | — | B-27 | ⬜ |
-| S-129 | plugin inexistente, ou de outra pessoa | err | integração | `PLUGIN_NOT_FOUND`, `FORBIDDEN` | B-27 | ⬜ |
-| S-130 | adicionar o mesmo diretório duas vezes devolve o existente | idem | integração | — | B-27 | ⬜ |
+| S-123 | plugin local de diretório dentro da allowlist entra na sessão com `skipMcpDiscovery: true` | eq | integração | — | B-27 | ✅ |
+| S-124 | caminho fora da allowlist, ou diretório sem manifesto de plugin | err | integração | `WORKSPACE_NOT_ALLOWED`, `PLUGIN_PATH_INVALID` | B-27 | ✅ |
+| S-125 | a prévia mostra os hooks, comandos, agents e servidores MCP que o plugin declara | eq | unit | — | B-27 | ✅ |
+| S-126 | servidor MCP declarado pelo plugin só sobe se aprovado como servidor nosso | err | integração | — | B-27 | ✅ |
+| S-127 | adicionar, ligar e remover plugin gravam `engine.pluginAdded`, `engine.pluginToggled` e `engine.pluginRemoved`, com o motor no payload, antes do efeito | eq | integração | — | B-27 | ✅ |
+| S-128 | manifesto que muda depois de aprovado volta a pendente | est | integração | — | B-27 | ✅ |
+| S-129 | plugin inexistente, ou de outra pessoa | err | integração | `PLUGIN_NOT_FOUND`, `FORBIDDEN` | B-27 | ✅ |
+| S-130 | adicionar o mesmo diretório duas vezes devolve o existente | idem | integração | — | B-27 | ✅ |
 
 ## Plugins de marketplace — B-47
 

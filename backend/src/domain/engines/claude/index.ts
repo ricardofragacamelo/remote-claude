@@ -1,12 +1,28 @@
 // The public surface of the domain of the Claude extension (plan 28, B-36, B-37): what only Claude
 // has as a rule — its account and installation, its menu, its output styles, its plugins and skills.
 // The core never imports it; the composition and the rest of the extension do.
+export { PluginForbiddenError } from './errors/plugin-forbidden.error';
 export { PluginMarketplaceNotAllowedError } from './errors/plugin-marketplace-not-allowed.error';
 export { PluginNotFoundError } from './errors/plugin-not-found.error';
 export { PluginPathInvalidError } from './errors/plugin-path-invalid.error';
 export { PluginSourceUnavailableError } from './errors/plugin-source-unavailable.error';
 export { SkillNameInvalidError } from './errors/skill-name-invalid.error';
 export { accountStateOf } from './services/account-state';
+export {
+  PLUGIN_NAME_PATTERN,
+  PLUGIN_ORIGINS,
+  PLUGIN_STATES,
+  pluginStateOf,
+} from './entities/plugin.entity';
+export type {
+  PluginIdentity,
+  PluginManifest,
+  PluginOrigin,
+  PluginState,
+} from './entities/plugin.entity';
+export { digestOfPluginManifest } from './services/plugin-manifest-digest';
+export { describePlugin } from './services/plugin-description';
+export type { PluginDescription } from './services/plugin-description';
 export type { AccountState } from './services/account-state';
 export {
   CLAUDE_COMMAND_MENU,

@@ -942,6 +942,155 @@ bool engineOriginLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+/// What a plugin's manifest declares, read fresh (plan 13, B-27): names only, never the content of a hook or a command — reading further than that would be interpreting a format of the engine's own.
+class EnginePluginManifest {
+  const EnginePluginManifest({
+    required this.name,
+    required this.description,
+    required this.version,
+    required this.commands,
+    required this.agents,
+    required this.hookCount,
+    required this.skills,
+    required this.mcpServerNames,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EnginePluginManifest.fromJson(Map<String, Object?> json) => EnginePluginManifest(
+        name: json['name']! as String,
+        description: json['description'] as String?,
+        version: json['version'] as String?,
+        commands: (json['commands']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        agents: (json['agents']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        hookCount: json['hookCount']! as int,
+        skills: (json['skills']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        mcpServerNames: (json['mcpServerNames']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+      );
+
+  final String name;
+
+  final String? description;
+
+  final String? version;
+
+  final List<String> commands;
+
+  final List<String> agents;
+
+  final int hookCount;
+
+  final List<String> skills;
+
+  /// Only the names the plugin's own manifest or `.mcp.json` declares — never the full configuration: a plugin's MCP servers never run on their own (`skipMcpDiscovery: true`), so there is nothing here to approve from, only to see.
+  final List<String> mcpServerNames;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'description': description,
+      'version': version,
+      'commands': commands,
+      'agents': agents,
+      'hookCount': hookCount,
+      'skills': skills,
+      'mcpServerNames': mcpServerNames,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [EnginePluginManifest].
+bool enginePluginManifestLimitsHold(Map<String, Object?> json) {
+  if (json['commands'] is List<Object?> && (json['commands']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['agents'] is List<Object?> && (json['agents']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['skills'] is List<Object?> && (json['skills']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['mcpServerNames'] is List<Object?> && (json['mcpServerNames']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// One plugin of the caller, of whichever engine has them (plan 13, B-27) — the engine's own routes say which one. `manifest` is `null` only when it can no longer be read at all — the directory moved, or the manifest stopped parsing.
+class EnginePlugin {
+  const EnginePlugin({
+    required this.id,
+    required this.origin,
+    required this.path,
+    required this.marketplace,
+    required this.name,
+    required this.state,
+    required this.enabled,
+    required this.manifest,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EnginePlugin.fromJson(Map<String, Object?> json) => EnginePlugin(
+        id: json['id']! as String,
+        origin: json['origin']! as String,
+        path: json['path']! as String,
+        marketplace: json['marketplace'] as String?,
+        name: json['name']! as String,
+        state: json['state']! as String,
+        enabled: json['enabled']! as bool,
+        manifest: json['manifest'] == null ? null : EnginePluginManifest.fromJson(json['manifest']! as Map<String, Object?>),
+        createdAt: json['createdAt']! as String,
+        updatedAt: json['updatedAt']! as String,
+      );
+
+  final String id;
+
+  final String origin;
+
+  final String path;
+
+  final String? marketplace;
+
+  final String name;
+
+  /// `current`: the manifest reads the same as when approved. `changed`: it still reads, but differently — pending re-approval. `unreadable`: it can no longer be read at all.
+  final String state;
+
+  final bool enabled;
+
+  final EnginePluginManifest? manifest;
+
+  final String createdAt;
+
+  final String updatedAt;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'origin': origin,
+      'path': path,
+      'marketplace': marketplace,
+      'name': name,
+      'state': state,
+      'enabled': enabled,
+      'manifest': manifest?.toJson(),
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+    };
+
+    return json;
+  }
+}
+
 /// A file a tool call changes, and how. It is what the backend's undo snapshots and what turns on the diff of a row and of a pending request: the diff itself comes from `GET /sessions/:sessionId/tools/:toolUseId/diff`, never computed by the client, so the text being replaced never travels here (plan 28, D-28).
 class FileChange {
   const FileChange({
@@ -6708,6 +6857,72 @@ class OutputStyleViewPayload {
   }
 }
 
+/// `GET /engines/claude/plugins`: every plugin of the caller, with its manifest read fresh (plan 13, B-27).
+class ClaudePluginListPayload {
+  const ClaudePluginListPayload({
+    required this.plugins,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudePluginListPayload.fromJson(Map<String, Object?> json) => ClaudePluginListPayload(
+        plugins: (json['plugins']! as List<Object?>).map((item) => EnginePlugin.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<EnginePlugin> plugins;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'plugins': plugins.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ClaudePluginListPayload].
+bool claudePluginListPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['plugins'] is List<Object?> && (json['plugins']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `POST /engines/claude/plugins/preview`: what a local directory would bring, before the second step (plan 13, B-27, S-125) — the exact description adding it would record, word for word, the same guarantee `mcp.serverPreview` already gives the MCP screen.
+class ClaudePluginPreviewPayload {
+  const ClaudePluginPreviewPayload({
+    required this.manifest,
+    required this.messageKey,
+    required this.params,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudePluginPreviewPayload.fromJson(Map<String, Object?> json) => ClaudePluginPreviewPayload(
+        manifest: EnginePluginManifest.fromJson(json['manifest']! as Map<String, Object?>),
+        messageKey: json['messageKey']! as String,
+        params: json['params']! as Map<String, Object?>,
+      );
+
+  final EnginePluginManifest manifest;
+
+  final String messageKey;
+
+  /// Every value a string — a count or a flag travels as text, the way `mcp.serverPreview`'s `params` already does.
+  final Map<String, Object?> params;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'manifest': manifest.toJson(),
+      'messageKey': messageKey,
+      'params': params,
+    };
+
+    return json;
+  }
+}
+
 /// `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only.
 class FileContentPayload {
   const FileContentPayload({
@@ -8671,6 +8886,9 @@ typedef DevicePayload = Device;
 
 /// `POST /engines/claude/diagnostics/model-check`: one turn with a fixed minimal prompt, no tools, one turn, a spending ceiling — the only thing this plan does that spends quota, and only on a click (plan 13, B-12, D-08). The same shape `GET /engines/claude/installation`'s `lastModelCheck` carries, named again rather than declared twice (plan 28, B-48).
 typedef ModelCheckOutcomePayload = ModelCheckOutcome;
+
+/// `POST /engines/claude/plugins`, `PATCH /engines/claude/plugins/:id`: one plugin, after the write (plan 13, B-27). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.
+typedef ClaudePluginDetailPayload = EnginePlugin;
 
 /// `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.
 typedef McpServerDetailPayload = McpServer;

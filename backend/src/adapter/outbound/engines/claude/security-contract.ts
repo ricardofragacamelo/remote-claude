@@ -48,6 +48,7 @@ function sessionOptions(overrides: Partial<SdkOptionsInput> = {}): Options {
       model: null,
       permissionMode: 'ask',
       conversation: { claudeSessionId: 'probe', resumedFrom: null },
+      pluginPaths: [],
       limits: { maxBudgetUsd: 1, maxTurns: 1 },
       abortController: new AbortController(),
       environment: hostEnvironment({ PATH: '/usr/bin', [BACKEND_VARIABLE]: 'postgres://probe' }),

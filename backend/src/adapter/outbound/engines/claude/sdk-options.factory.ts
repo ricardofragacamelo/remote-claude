@@ -49,6 +49,15 @@ export interface SdkOptionsInput {
   readonly abortController: AbortController;
 
   /**
+   * The local plugin directories this session loads (plan 13, B-27) — `session`'s
+   * `extensionPaths`, opaque there, read here as what it actually is for this engine: each one
+   * becomes `{ type: 'local', path, skipMcpDiscovery: true }`. `skipMcpDiscovery` is always `true`:
+   * a plugin's own MCP servers never start on their own — only ever as a server of our own store,
+   * approved through the same second step as any other (B-18).
+   */
+  readonly pluginPaths: readonly string[];
+
+  /**
    * The subprocess's environment — the backend's own plus the mark that lets the next boot find it
    * if this backend dies without closing it (B-03). See `process-marker.ts`.
    */
@@ -122,6 +131,18 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     // right after the start, over the control channel (ADR-018, plan 13 · D-02).
     strictMcpConfig: true,
     mcpServers: {},
+
+    // Each a directory our own engine adapter read from `extensionPaths` (plan 13, B-27) — never a
+    // plugin's own MCP servers on their own, which is what `skipMcpDiscovery` refuses.
+    ...(input.pluginPaths.length === 0
+      ? {}
+      : {
+          plugins: input.pluginPaths.map((path) => ({
+            type: 'local' as const,
+            path,
+            skipMcpDiscovery: true,
+          })),
+        }),
 
     // The flag layer, from its builder: the shell inline of skills and slash commands off — it runs
     // with no `canUseTool` and no `PreToolUse`, measured — and the output style when one was chosen.

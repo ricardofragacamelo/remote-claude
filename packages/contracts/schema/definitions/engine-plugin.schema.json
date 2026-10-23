@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/engine-plugin.json",
+  "title": "EnginePlugin",
+  "description": "One plugin of the caller, of whichever engine has them (plan 13, B-27) — the engine's own routes say which one. `manifest` is `null` only when it can no longer be read at all — the directory moved, or the manifest stopped parsing.",
+  "type": "object",
+  "required": [
+    "id",
+    "origin",
+    "path",
+    "marketplace",
+    "name",
+    "state",
+    "enabled",
+    "manifest",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "origin": { "type": "string", "enum": ["local", "marketplace"] },
+    "path": { "type": "string" },
+    "marketplace": { "type": "string", "x-nullable": true },
+    "name": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["current", "changed", "unreadable"],
+      "description": "`current`: the manifest reads the same as when approved. `changed`: it still reads, but differently — pending re-approval. `unreadable`: it can no longer be read at all."
+    },
+    "enabled": { "type": "boolean" },
+    "manifest": {
+      "$ref": "./engine-plugin-manifest.schema.json",
+      "x-nullable": true
+    },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" }
+  }
+}

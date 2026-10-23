@@ -32,6 +32,7 @@ import type {
   SessionConfigurationSource,
 } from './ports/session-configuration.source';
 import type { SessionBroadcaster } from './ports/session-broadcaster.port';
+import type { SessionExtensionPathsSource } from './ports/session-extension-paths.source';
 import type { SessionMcpServersSource } from './ports/session-mcp-servers.source';
 import type { SessionOriginRepository } from './ports/session-origin.repository';
 import type { WorkspaceResolver } from './ports/workspace-resolver.port';
@@ -151,6 +152,7 @@ export class StartSessionUseCase {
     private readonly models: ModelCatalog | null = null,
     private readonly configuration: SessionConfigurationSource | null = null,
     private readonly mcpServers: SessionMcpServersSource | null = null,
+    private readonly extensionPaths: SessionExtensionPathsSource | null = null,
   ) {}
 
   /**
@@ -390,6 +392,7 @@ export class StartSessionUseCase {
     try {
       const conversation = await conversationFor(session);
       this.registry.announce(session, conversation);
+      const extensionPaths = await this.resolveExtensionPaths(command.userId, engine.engine.value);
 
       const handle = await engine.start({
         sessionId: session.id,
@@ -402,6 +405,7 @@ export class StartSessionUseCase {
         outputStyle: applied.outputStyle,
         fallbackModel: applied.fallbackModel,
         forkAt,
+        extensionPaths,
         onEvent: (event) => {
           this.onEvent(session, event);
         },
@@ -440,6 +444,23 @@ export class StartSessionUseCase {
       this.registry.withdraw(session.id);
       this.registry.release();
     }
+  }
+
+  /**
+   * What an engine's own extension contributes to this session's start, opaque to this use case
+   * (plan 13, B-27): `[]` when nothing composes it at all (`this.extensionPaths === null`, the same
+   * optionality every other cross-module source here already has). Unlike MCP servers, this is
+   * asked *before* `engine.start()`, because the engine's own process only reads its equivalent of
+   * this list when it begins — there is no later hand-over for it to arrive through.
+   */
+  private async resolveExtensionPaths(
+    userId: StartSessionCommand['userId'],
+    engine: string,
+  ): Promise<readonly string[]> {
+    if (this.extensionPaths === null) {
+      return [];
+    }
+    return this.extensionPaths.pathsFor({ userId, engine });
   }
 
   /**

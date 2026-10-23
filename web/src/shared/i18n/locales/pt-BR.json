@@ -2496,6 +2496,7 @@
         "testConnection": "Claude: testar a conexão com o modelo"
       },
       "error": {
+        "pluginForbidden": "Esse plugin pertence a outra pessoa.",
         "pluginNotFound": "Esse plugin não existe.",
         "pluginPathInvalid": "Isso não é um plugin que este produto consiga carregar ({{reason}}).",
         "pluginMarketplaceNotAllowed": "O marketplace {{marketplace}} não está declarado no arquivo de allowlist desta máquina, então nada é instalado dele.",
@@ -2551,6 +2552,9 @@
         "check": "Testar a conexão",
         "checking": "Testando…",
         "checkDetails": "Modelo: {{model}} · {{latency}} ms · US$ {{cost}}"
+      },
+      "plugin": {
+        "descriptionLocal": "{{name}}, de {{path}} nesta máquina: {{commandCount}} comando(s) ({{commandNames}}), {{agentCount}} agent(s) ({{agentNames}}), {{hookCount}} hook(s), {{skillCount}} skill(s) ({{skillNames}}), e {{mcpServerCount}} servidor(es) MCP ({{mcpServerNames}}) — que não sobem sozinhos e precisam ser aprovados à parte."
       },
       "plugins": {
         "title": "Plugins",

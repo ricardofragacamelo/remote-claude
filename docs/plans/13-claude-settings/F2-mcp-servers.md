@@ -218,7 +218,7 @@ auto-aprova vira cenário fixo. Três ajustes:
   no núcleo, sem perguntar ao dialeto, na mesma transação
   da alteração, e a prévia lista quais — a regra foi concedida a outro programa. `deny` fica. Cenários S-116…S-122.
 
-### B-27 — Plugins locais 🔲
+### B-27 — Plugins locais ✅
 
 [D-15](decisions.md#d-15--plugins-do-claude): plugin é **só do Claude**, e nasce na extensão — `domain/engines/claude/`,
 `application/engines/claude/`, `adapter/inbound/http/engines/claude/` e `adapter/outbound/engines/claude/`, com as

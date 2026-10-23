@@ -19,6 +19,8 @@ import { PermissionBridge } from '@adapter/outbound/engines/claude/permission-br
 import { SESSION_LIMITS } from '@adapter/outbound/engines/claude/session-limits';
 import { claudeMcpEngineDialect } from '@adapter/outbound/engines/claude/mcp-engine-dialect';
 import { AgentSdkMcpServerConnectionTest } from '@adapter/outbound/engines/claude/mcp-server-connection-test.adapter';
+import { DrizzlePluginRepository } from '@adapter/outbound/engines/claude/drizzle-plugin.repository';
+import { ClaudePluginSessionExtensionPaths } from '@adapter/outbound/engines/claude/plugin-session-extension-paths';
 import { ClaudeProjectMcpFileReader } from '@adapter/outbound/engines/claude/project-mcp-file.reader';
 import { claudeRuleDialect } from '@adapter/outbound/engines/claude/rule-dialect';
 import { classifyTool } from '@adapter/outbound/engines/claude/tool-classifier';
@@ -28,6 +30,8 @@ import {
   TRANSCRIPT_READ_LIMITS,
 } from '@adapter/outbound/engines/claude/transcript-reads';
 import { realTranscriptSdk, TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
+import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
+import type { PersistenceContext } from '@infra/database/persistence-context';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { APP_CONFIG } from '../../config/environment';
 import type { AppConfig } from '../../config/environment';
@@ -123,6 +127,23 @@ export const CLAUDE_PROJECT_MCP_SOURCE = Symbol('ClaudeProjectMcpSource');
 /** How the engine `claude` reads its own project MCP file — stateless, so one instance is enough. */
 export const claudeProjectMcpSourceProviders: readonly Provider[] = [
   { provide: CLAUDE_PROJECT_MCP_SOURCE, useClass: ClaudeProjectMcpFileReader },
+];
+
+/**
+ * The token of `claude`'s own answer to a session's `extensionPaths` (plan 13, B-27) — built with
+ * its own repository instance, since `ClaudeSettingsModule` (where the one `PLUGIN_REPOSITORY` the
+ * plugins screen uses is provided) is never imported by the session module, the same reasoning
+ * {@link CLAUDE_PROJECT_MCP_SOURCE} already follows.
+ */
+export const CLAUDE_SESSION_EXTENSION_PATHS = Symbol('ClaudeSessionExtensionPaths');
+
+export const claudeSessionExtensionPathsProviders: readonly Provider[] = [
+  {
+    provide: CLAUDE_SESSION_EXTENSION_PATHS,
+    inject: [PERSISTENCE_CONTEXT],
+    useFactory: (context: PersistenceContext) =>
+      new ClaudePluginSessionExtensionPaths(new DrizzlePluginRepository(context)),
+  },
 ];
 
 /** The token of the connection tester of the engine `claude`, for its registry (plan 13, B-25). */

@@ -10,14 +10,14 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F2 — em andamento: B-18 (domínio) e B-19 (store e segredos) concluídas e com `pnpm verify` dos portões 1-5 verde; B-20…B-30 e B-47 (12 das 14 tasks) ainda não começadas
-**Última atualização:** 2026-10-19
+**Fase corrente:** F2 — em andamento: B-18…B-27 concluídas (domínio, store e segredos, ambiente do subprocesso, composição por sessão, status vivo, mudança de configuração e sessões vivas, `.mcp.json` do projeto, testar conexão, tool MCP e permissão, plugins locais); B-28…B-30 e B-47 (4 das 14 tasks) ainda não começadas
+**Última atualização:** 2026-10-22
 **Bloqueios:** nenhum — o [plano 26](../26-mobile-conversation-parity/README.md) e o [plano 28](../28-agent-neutral-core/README.md) já estão concluídos (D-31, D-33)
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
-F2 █████████████░░░░░░░  64%   🔄 em andamento
+F2 ██████████████░░░░░░  71%   🔄 em andamento
 F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
@@ -32,10 +32,10 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 |---|---|---|---|
 | [F0](F0-contract.md) | B-01…B-09 | 9/9 | ✅ |
 | [F1](F1-models-and-modes.md) | B-10…B-17 | 8/8 | ✅ |
-| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 9/14 | 🔄 |
+| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 10/14 | 🔄 |
 | [F3](F3-project-config.md) | B-31…B-40 | 0/10 | 🔲 |
 | [F4](F4-e2e.md) | B-41…B-46 | 0/6 | 🔲 |
-| **Total** | **B-01…B-47** | **26/47** | 🔄 |
+| **Total** | **B-01…B-47** | **27/47** | 🔄 |
 
 ---
 
@@ -43,7 +43,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 215 | 96 | 0 | 119 | 0 |
+| [Matriz](scenarios.md) | 215 | 88 | 0 | 127 | 0 |
 
 ---
 

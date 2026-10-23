@@ -158,5 +158,10 @@ export type {
   SessionMcpServersSource,
 } from './ports/session-mcp-servers.source';
 export { SESSION_MCP_SERVERS_SOURCE } from './ports/session-mcp-servers.source';
+export type {
+  SessionExtensionPathsRequest,
+  SessionExtensionPathsSource,
+} from './ports/session-extension-paths.source';
+export { SESSION_EXTENSION_PATHS_SOURCE } from './ports/session-extension-paths.source';
 export type { SessionOrigin, SessionOriginRepository } from './ports/session-origin.repository';
 export { SESSION_ORIGIN_REPOSITORY } from './ports/session-origin.repository';

@@ -106,6 +106,18 @@ export interface AgentSessionStart {
    */
   readonly forkAt?: { readonly keepUpTo: string; readonly dropsTurn: string } | null;
 
+  /**
+   * Local directories an engine's own extension contributes to this session — opaque to the core,
+   * which never learns what they are (plan 13, B-27): only the engine's own adapter knows what a
+   * directory here means and what to do with it. Composed by {@link SessionExtensionPathsSource}
+   * before the engine starts, the same way
+   * {@link import('@application/mcp').ComposeSessionMcpServersUseCase} composes MCP servers — but
+   * handed over *before* the start, never after: unlike an MCP server's secret, there is nothing
+   * sensitive here for a process's own arguments to leak, and the engine only reads this list when
+   * the process begins. `undefined` or `[]` for an engine, or a session, with none.
+   */
+  readonly extensionPaths?: readonly string[];
+
   /** Called for every event the stream produced, in order. */
   onEvent(event: SessionEvent): void;
 

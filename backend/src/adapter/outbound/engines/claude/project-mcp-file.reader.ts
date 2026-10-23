@@ -10,103 +10,13 @@ import type {
   ProjectMcpServersSource,
 } from '@application/mcp';
 import { WorkspacePath } from '@domain/workspace';
-import type { ProjectMcpEntry } from '@domain/mcp';
-import { isPlainObject } from '@shared/utils/plain-object';
+import { mcpJsonEntriesOf } from './mcp-json-format';
 
 /** A `.mcp.json` larger than this is not read at all — a project file, not a data dump. */
 const MAX_MCP_JSON_BYTES = 65_536;
 
 const FILE_NAME = '.mcp.json';
 const VCS_ROOT_MARKER = '.git';
-
-function pairsOf(
-  value: unknown,
-): readonly { readonly name: string; readonly value: string }[] | null {
-  if (value === undefined) {
-    return [];
-  }
-  if (!isPlainObject(value)) {
-    return null;
-  }
-
-  const pairs: { name: string; value: string }[] = [];
-  for (const [name, raw] of Object.entries(value)) {
-    if (typeof raw !== 'string') {
-      return null;
-    }
-    pairs.push({ name, value: raw });
-  }
-  return pairs;
-}
-
-function remoteEntryOf(
-  name: string,
-  transport: 'http' | 'sse',
-  raw: Record<string, unknown>,
-): ProjectMcpEntry | null {
-  const url = raw['url'];
-  const headers = pairsOf(raw['headers']);
-  if (typeof url !== 'string' || headers === null) {
-    return null;
-  }
-  return { name, transport, command: null, args: [], url, env: [], headers };
-}
-
-function stdioArgsOf(raw: unknown): readonly string[] | null {
-  if (raw === undefined) {
-    return [];
-  }
-  if (!Array.isArray(raw) || raw.some((arg) => typeof arg !== 'string')) {
-    return null;
-  }
-  return raw as string[];
-}
-
-function stdioEntryOf(name: string, raw: Record<string, unknown>): ProjectMcpEntry | null {
-  const command = raw['command'];
-  const args = stdioArgsOf(raw['args']);
-  const env = pairsOf(raw['env']);
-
-  if (typeof command !== 'string' || args === null || env === null) {
-    return null;
-  }
-
-  return { name, transport: 'stdio', command, args, url: null, env, headers: [] };
-}
-
-/** One entry of the `mcpServers` map, as the CLI's own file shape has it. */
-function entryOf(name: string, raw: unknown): ProjectMcpEntry | null {
-  if (!isPlainObject(raw)) {
-    return null;
-  }
-
-  const type = raw['type'];
-  if (type === 'http' || type === 'sse') {
-    return remoteEntryOf(name, type, raw);
-  }
-  if (type !== undefined && type !== 'stdio') {
-    return null;
-  }
-
-  return stdioEntryOf(name, raw);
-}
-
-/** Every entry of `mcpServers`, or `null` the moment one of them cannot be understood. */
-function entriesOf(parsed: unknown): readonly ProjectMcpEntry[] | null {
-  if (!isPlainObject(parsed) || !isPlainObject(parsed['mcpServers'])) {
-    return null;
-  }
-
-  const entries: ProjectMcpEntry[] = [];
-  for (const [name, raw] of Object.entries(parsed['mcpServers'])) {
-    const entry = entryOf(name, raw);
-    if (entry === null) {
-      return null;
-    }
-    entries.push(entry);
-  }
-  return entries;
-}
 
 function failed(folderPath: string, error: ProjectMcpFileError): ProjectMcpFileRead {
   return { folderPath, entries: [], error };
@@ -223,7 +133,7 @@ export class ClaudeProjectMcpFileReader implements ProjectMcpServersSource {
       return failed(folder, 'malformed');
     }
 
-    const entries = entriesOf(parsed);
+    const entries = mcpJsonEntriesOf(parsed);
     if (entries === null) {
       return failed(folder, 'malformed');
     }

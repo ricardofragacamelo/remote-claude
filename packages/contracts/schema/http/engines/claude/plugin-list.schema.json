@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/plugin-list.json",
+  "title": "ClaudePluginList",
+  "description": "`GET /engines/claude/plugins`: every plugin of the caller, with its manifest read fresh (plan 13, B-27).",
+  "x-kind": "http",
+  "x-type": "engines.claude.pluginList",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/plugins" }],
+  "type": "object",
+  "required": ["plugins"],
+  "properties": {
+    "plugins": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": { "$ref": "../definitions/engine-plugin.schema.json" }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/engine-plugin-manifest.json",
+  "title": "EnginePluginManifest",
+  "description": "What a plugin's manifest declares, read fresh (plan 13, B-27): names only, never the content of a hook or a command — reading further than that would be interpreting a format of the engine's own.",
+  "type": "object",
+  "required": [
+    "name",
+    "description",
+    "version",
+    "commands",
+    "agents",
+    "hookCount",
+    "skills",
+    "mcpServerNames"
+  ],
+  "properties": {
+    "name": { "type": "string" },
+    "description": { "type": "string", "x-nullable": true },
+    "version": { "type": "string", "x-nullable": true },
+    "commands": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "agents": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "hookCount": { "type": "integer" },
+    "skills": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+    "mcpServerNames": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": { "type": "string" },
+      "description": "Only the names the plugin's own manifest or `.mcp.json` declares — never the full configuration: a plugin's MCP servers never run on their own (`skipMcpDiscovery: true`), so there is nothing here to approve from, only to see."
+    }
+  }
+}

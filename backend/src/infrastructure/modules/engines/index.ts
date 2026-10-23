@@ -11,7 +11,7 @@ import {
 import type { McpServerConnectionTester, ProjectMcpServersSource } from '@application/mcp';
 import { RuleDialects } from '@application/permission';
 import type { RuleDialect } from '@application/permission';
-import { EngineRegistry } from '@application/session';
+import { EngineRegistry, SESSION_EXTENSION_PATHS_SOURCE } from '@application/session';
 import type { AgentEnginePort, EngineSecurityContract } from '@application/session';
 import { TRANSCRIPT_STORE, TranscriptStoreRegistry } from '@application/transcript';
 import type { EngineTranscriptStore } from '@application/transcript';
@@ -33,12 +33,14 @@ import {
   CLAUDE_RULE_DIALECT,
   CLAUDE_SECURITY_CONTRACT,
   CLAUDE_SESSION_ENGINE,
+  CLAUDE_SESSION_EXTENSION_PATHS,
   CLAUDE_TOOL_CLASSIFIER,
   CLAUDE_TRANSCRIPT_STORE,
   claudeMcpDialectProviders,
   claudeMcpServerConnectionTesterProviders,
   claudeProjectMcpSourceProviders,
   claudeRuleDialectProviders,
+  claudeSessionExtensionPathsProviders,
   claudeSessionProviders,
   claudeToolClassifierProviders,
   claudeTranscriptProviders,
@@ -105,12 +107,14 @@ export function engineRegistryOf(
 /** What the session module wires of the engines: each engine's providers, and the registry. */
 export const engineSessionProviders: readonly Provider[] = [
   ...claudeSessionProviders,
+  ...claudeSessionExtensionPathsProviders,
   {
     provide: EngineRegistry,
     inject: [APP_CONFIG, LOGGER, CLAUDE_SESSION_ENGINE],
     useFactory: (config: AppConfig, logger: Logger, ...ports: AgentEnginePort[]) =>
       engineRegistryOf(ports, config.engines, logger),
   },
+  { provide: SESSION_EXTENSION_PATHS_SOURCE, useExisting: CLAUDE_SESSION_EXTENSION_PATHS },
 ];
 
 /**

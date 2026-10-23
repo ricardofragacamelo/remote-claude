@@ -190,6 +190,34 @@ export interface EngineOrigin {
   readonly native: string;
 }
 
+/** What a plugin's manifest declares, read fresh (plan 13, B-27): names only, never the content of a hook or a command — reading further than that would be interpreting a format of the engine's own. */
+export interface EnginePluginManifest {
+  readonly name: string;
+  readonly description: string | null;
+  readonly version: string | null;
+  readonly commands: readonly string[];
+  readonly agents: readonly string[];
+  readonly hookCount: number;
+  readonly skills: readonly string[];
+  /** Only the names the plugin's own manifest or `.mcp.json` declares — never the full configuration: a plugin's MCP servers never run on their own (`skipMcpDiscovery: true`), so there is nothing here to approve from, only to see. */
+  readonly mcpServerNames: readonly string[];
+}
+
+/** One plugin of the caller, of whichever engine has them (plan 13, B-27) — the engine's own routes say which one. `manifest` is `null` only when it can no longer be read at all — the directory moved, or the manifest stopped parsing. */
+export interface EnginePlugin {
+  readonly id: string;
+  readonly origin: 'local' | 'marketplace';
+  readonly path: string;
+  readonly marketplace: string | null;
+  readonly name: string;
+  /** `current`: the manifest reads the same as when approved. `changed`: it still reads, but differently — pending re-approval. `unreadable`: it can no longer be read at all. */
+  readonly state: 'current' | 'changed' | 'unreadable';
+  readonly enabled: boolean;
+  readonly manifest: EnginePluginManifest | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
 /** A file a tool call changes, and how. It is what the backend's undo snapshots and what turns on the diff of a row and of a pending request: the diff itself comes from `GET /sessions/:sessionId/tools/:toolUseId/diff`, never computed by the client, so the text being replaced never travels here (plan 28, D-28). */
 export interface FileChange {
   /** The file, absolute. A call that names a relative path has no change: it would resolve against the wrong folder. */
@@ -1465,6 +1493,19 @@ export interface OutputStyleViewPayload {
   readonly folder: OutputStyleViewPayloadFolder | null;
 }
 
+/** `GET /engines/claude/plugins`: every plugin of the caller, with its manifest read fresh (plan 13, B-27). */
+export interface ClaudePluginListPayload {
+  readonly plugins: readonly EnginePlugin[];
+}
+
+/** `POST /engines/claude/plugins/preview`: what a local directory would bring, before the second step (plan 13, B-27, S-125) — the exact description adding it would record, word for word, the same guarantee `mcp.serverPreview` already gives the MCP screen. */
+export interface ClaudePluginPreviewPayload {
+  readonly manifest: EnginePluginManifest;
+  readonly messageKey: string;
+  /** Every value a string — a count or a flag travels as text, the way `mcp.serverPreview`'s `params` already does. */
+  readonly params: Readonly<Record<string, unknown>>;
+}
+
 /** `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only. */
 export interface FileContentPayload {
   readonly path: string;
@@ -1904,6 +1945,14 @@ export const ENGINE_ORIGIN_LIMITS = {
   native: { maxLength: 256 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link EnginePluginManifest}. */
+export const ENGINE_PLUGIN_MANIFEST_LIMITS = {
+  commands: { maxItems: 10000 },
+  agents: { maxItems: 10000 },
+  skills: { maxItems: 10000 },
+  mcpServerNames: { maxItems: 10000 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link InteractionQuestionsItemOptionsItem}. */
 export const INTERACTION_QUESTIONS_ITEM_OPTIONS_ITEM_LIMITS = {
   label: { maxLength: 200 },
@@ -2097,6 +2146,11 @@ export const DIRECTORY_LISTING_PAYLOAD_LIMITS = {
 export const ENGINE_MODELS_PAYLOAD_LIMITS = {
   models: { maxItems: 256 },
   permissionModes: { maxItems: 16 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ClaudePluginListPayload}. */
+export const CLAUDE_PLUGIN_LIST_PAYLOAD_LIMITS = {
+  plugins: { maxItems: 10000 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link FileTreePayload}. */
@@ -2401,6 +2455,56 @@ export function isEngineOrigin(value: unknown): value is EngineOrigin {
     typeof record['native'] === 'string',
     withinMaxLength(record['engine'], 32),
     withinMaxLength(record['native'], 256),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link EnginePluginManifest}. Unknown fields are accepted.
+ */
+export function isEnginePluginManifest(value: unknown): value is EnginePluginManifest {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    nullOr(record['description'], typeof record['description'] === 'string'),
+    nullOr(record['version'], typeof record['version'] === 'string'),
+    Array.isArray(record['commands']),
+    Array.isArray(record['agents']),
+    typeof record['hookCount'] === 'number',
+    Array.isArray(record['skills']),
+    Array.isArray(record['mcpServerNames']),
+    withinMaxItems(record['commands'], 10000),
+    withinMaxItems(record['agents'], 10000),
+    withinMaxItems(record['skills'], 10000),
+    withinMaxItems(record['mcpServerNames'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link EnginePlugin}. Unknown fields are accepted.
+ */
+export function isEnginePlugin(value: unknown): value is EnginePlugin {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['origin'] === 'string',
+    typeof record['path'] === 'string',
+    nullOr(record['marketplace'], typeof record['marketplace'] === 'string'),
+    typeof record['name'] === 'string',
+    typeof record['state'] === 'string',
+    typeof record['enabled'] === 'boolean',
+    nullOr(record['manifest'], isEnginePluginManifest(record['manifest'])),
+    typeof record['createdAt'] === 'string',
+    typeof record['updatedAt'] === 'string',
   ].every(Boolean);
 }
 
@@ -4602,6 +4706,39 @@ export function isOutputStyleViewPayload(value: unknown): value is OutputStyleVi
 }
 
 /**
+ * Whether `value` carries every required field of {@link ClaudePluginListPayload}. Unknown fields are accepted.
+ */
+export function isClaudePluginListPayload(value: unknown): value is ClaudePluginListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['plugins']),
+    withinMaxItems(record['plugins'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudePluginPreviewPayload}. Unknown fields are accepted.
+ */
+export function isClaudePluginPreviewPayload(value: unknown): value is ClaudePluginPreviewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isEnginePluginManifest(record['manifest']),
+    typeof record['messageKey'] === 'string',
+    isNonNullObject(record['params']),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link FileContentPayload}. Unknown fields are accepted.
  */
 export function isFileContentPayload(value: unknown): value is FileContentPayload {
@@ -5402,6 +5539,12 @@ export type ModelCheckOutcomePayload = ModelCheckOutcome;
 
 /** Whether `value` is a {@link ModelCheckOutcomePayload}. */
 export const isModelCheckOutcomePayload = isModelCheckOutcome;
+
+/** `POST /engines/claude/plugins`, `PATCH /engines/claude/plugins/:id`: one plugin, after the write (plan 13, B-27). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`. */
+export type ClaudePluginDetailPayload = EnginePlugin;
+
+/** Whether `value` is a {@link ClaudePluginDetailPayload}. */
+export const isClaudePluginDetailPayload = isEnginePlugin;
 
 /** `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`. */
 export type McpServerDetailPayload = McpServer;

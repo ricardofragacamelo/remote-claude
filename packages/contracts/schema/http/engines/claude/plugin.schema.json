@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/plugin.json",
+  "title": "ClaudePluginDetail",
+  "description": "`POST /engines/claude/plugins`, `PATCH /engines/claude/plugins/:id`: one plugin, after the write (plan 13, B-27). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.",
+  "x-kind": "http",
+  "x-type": "engines.claude.plugin",
+  "x-route": [
+    { "method": "POST", "path": "/engines/claude/plugins" },
+    { "method": "PATCH", "path": "/engines/claude/plugins/:id" }
+  ],
+  "$ref": "../definitions/engine-plugin.schema.json"
+}

@@ -48,6 +48,7 @@ import {
   TOOL_INVOCATION_RECORDER,
   WORKSPACE_RESOLVER,
   SESSION_CONFIGURATION_SOURCE,
+  SESSION_EXTENSION_PATHS_SOURCE,
   SESSION_MCP_SERVERS_SOURCE,
 } from '@application/session';
 import type {
@@ -64,6 +65,7 @@ import type {
   SessionPermissionGate,
   WorkspaceResolver,
   SessionConfigurationSource,
+  SessionExtensionPathsSource,
   SessionMcpServersSource,
 } from '@application/session';
 import { CLOCK, ID_GENERATOR, PATH_LOCK } from '@application/shared';
@@ -331,6 +333,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         ModelCatalog,
         SESSION_CONFIGURATION_SOURCE,
         SESSION_MCP_SERVERS_SOURCE,
+        SESSION_EXTENSION_PATHS_SOURCE,
       ],
       useFactory: (
         workspaces: WorkspaceResolver,
@@ -346,6 +349,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         models: ModelCatalog,
         configuration: SessionConfigurationSource,
         mcpServers: SessionMcpServersSource,
+        extensionPaths: SessionExtensionPathsSource,
       ) =>
         new StartSessionUseCase(
           workspaces,
@@ -360,6 +364,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
           models,
           configuration,
           mcpServers,
+          extensionPaths,
         ),
     },
 
