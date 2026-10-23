@@ -282,7 +282,7 @@ plugin traz antes do segundo passo, "atualização disponível" com a diferença
 com confirmação, e o atalho para aprovar os servidores MCP que ele sugere. Sem marketplace declarado, o
 estado vazio diz como declarar um no arquivo. Cenários S-137, S-212.
 
-### B-30 — Usabilidade e ajuda: MCP e plugins 🔲
+### B-30 — Usabilidade e ajuda: MCP e plugins ✅
 
 Ajuda en/pt-BR para quem nunca viu MCP: o que é um servidor MCP, a diferença entre stdio e http, por que
 acrescentar um é tão sensível quanto uma regra `always` e o que o segundo passo protege, o que

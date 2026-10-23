@@ -2439,7 +2439,19 @@
       "effortHeading": "Esforço",
       "effortBody": "O quanto o modelo pensa antes de responder. Mais esforço custa mais e demora mais; só alguns modelos aceitam, cada um com os seus níveis.",
       "thinkingHeading": "Thinking",
-      "thinkingBody": "Se o modelo raciocina passo a passo antes de responder, mostrado dobrado na sessão. Desligado é mais rápido e mais barato."
+      "thinkingBody": "Se o modelo raciocina passo a passo antes de responder, mostrado dobrado na sessão. Desligado é mais rápido e mais barato.",
+      "mcpWhatHeading": "O que é um servidor MCP",
+      "mcpWhatBody": "Um servidor MCP é um programa separado, ou um endpoint de rede, que dá ao {{agent}} ferramentas novas — navegar numa wiki, chamar uma API interna, ler um banco de dados — além do que ele já faz. Não é parte do {{agent}} em si: uma vez acrescentado, ele sobe com toda sessão a que se aplica e roda com as suas próprias credenciais, antes de você ter aprovado qualquer ferramenta que ele ofereça.",
+      "mcpTransportHeading": "Comando ou rede",
+      "mcpTransportBody": "Duas formas de um servidor chegar ao {{agent}}. Um servidor stdio é um comando que esta máquina roda — com os próprios argumentos e variáveis de ambiente — que conversa pela entrada e saída padrão; só existe enquanto a sessão que o abriu está aberta. Um servidor http ou sse já está rodando em outro lugar, alcançado por uma URL, com cabeçalhos no lugar de variáveis de ambiente para o que precisar saber, como um token.",
+      "mcpSecondStepHeading": "Por que o segundo passo",
+      "mcpSecondStepBody": "Acrescentar um servidor MCP é exatamente tão sensível quanto uma regra de permissão que nunca mais pergunta: o {{agent}} ganha as ferramentas que o servidor oferece, em toda sessão a que ele se aplica, sem você aprovar cada uma. Por isso salvar um é um segundo passo, não um clique só — ele mostra, por extenso, o que rodaria ou o que seria alcançado, a pasta onde vale, e quais das suas próprias regras de permissão seriam revogadas por terem sido concedidas a outro programa. Nada é gravado até você confirmar esse passo.",
+      "mcpNeedsAuthHeading": "O que \"precisa entrar\" significa",
+      "mcpNeedsAuthBody": "Alguns servidores pedem para você entrar com a sua própria conta antes de funcionar — por OAuth, num navegador. Esse login precisa de um navegador na própria máquina; nenhum endereço de OAuth trafega por este produto até o seu celular ou outro navegador. Para resolver, abra a máquina onde o {{agent}} roda e termine o login lá, depois reconecte o servidor por aqui ou pela sessão.",
+      "mcpProjectFileHeading": "Aprovando o arquivo de MCP do projeto",
+      "mcpProjectFileBody": "Um repositório pode declarar os próprios servidores MCP, num arquivo do {{agent}}. Ninguém é obrigado a rodar um só porque um projeto pede: cada entrada precisa da sua aprovação aqui primeiro, o mesmo segundo passo de um servidor seu, e só uma entrada aprovada cujo conteúdo ainda bate com o que você aprovou entra numa sessão. Qualquer coisa que a mude — um `git pull` que edita o comando, a URL ou o ambiente — a devolve a pendente, com a diferença exata mostrada, até você olhar de novo.",
+      "mcpSecretsHeading": "O que nunca é registrado",
+      "mcpSecretsBody": "Os valores de variáveis de ambiente e cabeçalhos — como o valor por trás de GITHUB_TOKEN — nunca voltam a aparecer depois de salvos, nunca entram na resposta desta tela, e nunca são gravados na trilha. Só os nomes ficam guardados, para você sempre saber quais segredos um servidor precisa sem este produto jamais guardar, logar ou devolver o que eles são."
     },
     "sections": {
       "label": "Seções da configuração do {{agent}}"
@@ -2628,7 +2640,11 @@
         "checkHeading": "O teste de conexão",
         "checkBody": "Um turno do modelo com uma frase fixa e nenhuma tool: diz se o Claude responde aqui, quanto demorou e quanto custou. É a única coisa desta tela que gasta cota, e só roda quando você clica.",
         "outputStyleHeading": "Output style",
-        "outputStyleBody": "Como o Claude escreve as respostas — conciso, explicativo, um estilo do projeto. Um estilo que não existe mais cai no da instalação."
+        "outputStyleBody": "Como o Claude escreve as respostas — conciso, explicativo, um estilo do projeto. Um estilo que não existe mais cai no da instalação.",
+        "pluginWhatHeading": "O que um plugin pode trazer",
+        "pluginWhatBody": "Um plugin é um pacote: pode trazer hooks (código que roda em todo evento que casar, como todo uso de ferramenta), comandos, agents e skills, e servidores MCP próprios. Acrescentar um plugin nunca sobe os servidores MCP dele sozinhos — eles só viram ferramentas que o Claude pode usar depois que você aprova cada um separadamente como um servidor seu, na seção de servidores MCP, o mesmo segundo passo de qualquer outro servidor.",
+        "pluginMarketplaceHeading": "Marketplaces",
+        "pluginMarketplaceBody": "Um marketplace é um catálogo de plugins publicado em outro lugar. Só os marketplaces que o arquivo de allowlist desta máquina declara aparecem aqui — esta tela não tem como acrescentar um sozinha. Se nenhum estiver declarado, peça a quem administra esse arquivo para acrescentar um; esta tela só navega e instala do que ele já lista."
       },
       "account": {
         "title": "Conta",

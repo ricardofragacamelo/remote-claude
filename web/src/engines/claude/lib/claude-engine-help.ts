@@ -32,3 +32,24 @@ export function outputStyleHelp(t: TFunction): HelpExtra {
     body: t('engines.claude.help.outputStyleBody'),
   };
 }
+
+/**
+ * The help of "Plugins", written for somebody who has never seen one (plan 13, B-30, S-138): what a
+ * plugin can bring — hooks, commands, agents, skills and MCP servers of its own, which never start on
+ * their own — and what a marketplace is, and why only the ones this machine's allowlist file declares
+ * ever show up here. Claude's own extension, so `engines.claude.*` — never the core's `agentSettings.help`.
+ */
+export function pluginsSectionHelp(t: TFunction): HelpExtra[] {
+  return [
+    {
+      id: 'claude-plugin-what',
+      heading: t('engines.claude.help.pluginWhatHeading'),
+      body: t('engines.claude.help.pluginWhatBody'),
+    },
+    {
+      id: 'claude-plugin-marketplace',
+      heading: t('engines.claude.help.pluginMarketplaceHeading'),
+      body: t('engines.claude.help.pluginMarketplaceBody'),
+    },
+  ];
+}

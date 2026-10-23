@@ -1,9 +1,11 @@
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@/shared/components/ErrorState';
 import { DialogFrame } from '@/shared/components/DialogFrame';
 import type { WizardFooterKeys } from '@/shared/components/WizardFooter';
 import { WizardFooter } from '@/shared/components/WizardFooter';
+import { useWizardStepFocus } from '@/shared/hooks/useWizardStepFocus';
 import type { AddServerFlow, WizardState } from '../hooks/useAddServerFlow';
 import { WIZARD_SCOPE_KEYS } from '../lib/status-words';
 import { ServerForm } from './ServerForm';
@@ -82,7 +84,12 @@ export function AddEditServerDialog({
   );
 }
 
-/** The one step on screen — the form, with its own error, or the preview, with its own. */
+/**
+ * The one step on screen — the form, with its own error, or the preview, with its own. Each step is
+ * its own focusable container: `useWizardStepFocus` moves the focus to it when a step replaces
+ * another, so "Next" never leaves the focus on the preview's own "Confirm" button — the one place a
+ * stray `Enter` would write the server before its description was read (S-140).
+ */
 function WizardBody({
   flow,
   state,
@@ -92,6 +99,9 @@ function WizardBody({
   readonly state: WizardState | null;
   readonly folderChoices: readonly string[];
 }): React.JSX.Element | null {
+  const stepRef = useRef<HTMLDivElement>(null);
+  useWizardStepFocus(state?.step ?? null, stepRef);
+
   if (state === null) {
     return null;
   }
@@ -103,24 +113,51 @@ function WizardBody({
 
   if (state.step === 'preview') {
     return (
-      <PreviewStep fields={state.fields} preview={state.preview} saveError={state.saveError} />
+      <div ref={stepRef} tabIndex={-1} className="outline-none">
+        <PreviewStep fields={state.fields} preview={state.preview} saveError={state.saveError} />
+      </div>
     );
   }
 
+  return (
+    <div ref={stepRef} tabIndex={-1} className="flex flex-col gap-2 outline-none">
+      <FormStep flow={flow} state={state} folderChoices={folderChoices} />
+    </div>
+  );
+}
+
+/**
+ * The form step's own body — split out of `WizardBody` to keep it under the complexity gate: the
+ * focus effect and the three-way step dispatch were already enough branching of their own, before
+ * this step's own secret-name merge and its inline error ever entered the count.
+ */
+function FormStep({
+  flow,
+  state,
+  folderChoices,
+}: {
+  readonly flow: AddServerFlow;
+  readonly state: WizardState;
+  readonly folderChoices: readonly string[];
+}): React.JSX.Element {
   return (
     <>
       <ServerForm
         fields={state.fields}
         issues={state.issues}
-        existingSecretNames={
-          new Set([...(state.editing?.envNames ?? []), ...(state.editing?.headerNames ?? [])])
-        }
+        existingSecretNames={existingSecretNamesOf(state.editing)}
         folderChoices={folderChoices}
         onChange={flow.setFields}
       />
       {state.previewError !== null && <ErrorState error={state.previewError} />}
     </>
   );
+}
+
+/** The secret names a server being edited already has — what `ServerForm` never lets a row hide
+ * behind "set" twice, merged from the two kinds of secret a server can carry. */
+function existingSecretNamesOf(editing: WizardState['editing']): ReadonlySet<string> {
+  return new Set([...(editing?.envNames ?? []), ...(editing?.headerNames ?? [])]);
 }
 
 function PreviewStep({

@@ -10,14 +10,14 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F2 — em andamento: B-18…B-29 e B-47 concluídas (domínio, store e segredos, ambiente do subprocesso, composição por sessão, status vivo, mudança de configuração e sessões vivas, `.mcp.json` do projeto, testar conexão, tool MCP e permissão, plugins locais, a tela de servidores MCP, plugins de marketplace, a tela de plugins); só falta B-30 (1 das 14 tasks, a ajuda/paleta de MCP e plugins), ainda não começada
+**Fase corrente:** F3 ainda por começar. F2 concluída (14/14): B-18…B-30 e B-47 (domínio, store e segredos, ambiente do subprocesso, composição por sessão, status vivo, mudança de configuração e sessões vivas, `.mcp.json` do projeto, testar conexão, tool MCP e permissão, plugins locais, a tela de servidores MCP, plugins de marketplace, a tela de plugins, usabilidade e ajuda de MCP/plugins). O fechamento da fase (`pnpm verify`, `test:integration`, `contracts:check`, `scan:security`, `neutral:check`, `i18n:check`) saiu verde em 2026-10-23
 **Última atualização:** 2026-10-23
 **Bloqueios:** nenhum — o [plano 26](../26-mobile-conversation-parity/README.md) e o [plano 28](../28-agent-neutral-core/README.md) já estão concluídos (D-31, D-33)
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
-F2 ███████████████████░  93%   🔄 em andamento
+F2 ████████████████████ 100%   ✅ concluída
 F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
@@ -32,10 +32,10 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 |---|---|---|---|
 | [F0](F0-contract.md) | B-01…B-09 | 9/9 | ✅ |
 | [F1](F1-models-and-modes.md) | B-10…B-17 | 8/8 | ✅ |
-| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 13/14 | 🔄 |
+| [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 14/14 | ✅ |
 | [F3](F3-project-config.md) | B-31…B-40 | 0/10 | 🔲 |
 | [F4](F4-e2e.md) | B-41…B-46 | 0/6 | 🔲 |
-| **Total** | **B-01…B-47** | **30/47** | 🔄 |
+| **Total** | **B-01…B-47** | **31/47** | 🔄 |
 
 ---
 
@@ -43,7 +43,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 215 | 67 | 0 | 148 | 0 |
+| [Matriz](scenarios.md) | 215 | 64 | 0 | 151 | 0 |
 
 ---
 
@@ -91,6 +91,11 @@ Um registro por **ciclo**, conforme o
 | 24 | 2026-10-23 | F2 (B-29) | 7 · cobertura (à parte, por arquivo) | 8 arquivos abaixo de 90 % por dimensão: `AddLocalPluginDialog.tsx` (branch 81,8 %), `PluginUpdateDialog.tsx` (statements/lines 87,5 %, branch 80 %), `MarketplaceBrowser.tsx` (branch 88 %), `PluginTable.tsx` (branch 62,5 %), `useInstallMarketplaceFlow.ts` (branch 75 %), `usePluginUpdateFlow.ts` (branch 62,5 % depois 87,5 %), `settled-batch.ts` (branch 75 %) — a maioria por cenário de erro/corrida não escrito ainda, duas por ramo defensivo inalcançável (o mesmo padrão do ciclo 14) | ~20 cenários novos de teste (falha de verificação de atualização, `diff` disponível sem conteúdo, "Aplicando…" em voo, entrada de marketplace sem suporte, sem correspondência de busca, falha de leitura do catálogo/marketplaces, linha sem manifesto/commit, `previewError`/`saveError` do assistente local, cancelar em voo do confirmar de marketplace e do verificar/aplicar atualização); dois ramos defensivos inalcançáveis removidos com `!` e comentário (o `?? {id:'',name:''}` de `settled-batch.ts`, o `check===null`/`preview===null` que a própria máquina de estados já impede) | todos os arquivos ≥ 90 % nas quatro dimensões — `src/engines/claude/settings/**` em particular |
 | 25 | 2026-10-23 | F2 (B-29) | 1 · formatação | primeiro `pnpm verify` desta task: 6 arquivos de teste novos/alterados depois do último `prettier --write` | `pnpm format` | reinício do portão 1 |
 | 26 | 2026-10-23 | F2 (B-29) | — | — | — | ✅ segundo `pnpm verify`, do portão 1: gates 1-7 verdes — formatação 19,7 s · lint 35,9 s · tipos 14,6 s · arquitetura 23,6 s · duplicação 8,7 s · unit 209,6 s (358 arquivos, 3875 testes web + backend + mobile) · cobertura 861,8 s (338 arquivos ≥ 90 %; web: statements 99,77 %, branches 97,83 %, functions 99,63 %, lines 99,78 %) |
+| 27 | 2026-10-23 | F2 (B-30) | 1 · formatação | 3 arquivos (`useWizardStepFocus.ts`, dois `.spec.ts` novos) fora do Prettier, do trabalho já em disco quando esta sessão começou | `prettier --write` nos três | reinício do portão 1 |
+| 28 | 2026-10-23 | F2 (B-30) | 2 · lint | complexidade 12 (limite 10) em `WizardBody` de `AddEditServerDialog.tsx`, do `useWizardStepFocus` e do `existingSecretNames` somados ao que já havia | `FormStep` e `existingSecretNamesOf()` extraídos de `WizardBody`, mesmo padrão do ciclo 23 (`wizardViewOf()`) | reinício do portão 1 |
+| 29 | 2026-10-23 | F2 (B-30) | — (achado rodando `tsc`/`vitest` à parte, antes do `pnpm verify` seguinte) | `useWizardStepFocus.spec.ts`: `rerender({ step: null })` não tipava — `Props` do `renderHook` tinha sido inferido como `{ step: string }` a partir do `initialProps` da primeira chamada, nunca `string \| null` | `renderStep()` extraída, com `initialProps` já tipado `string \| null` desde a primeira renderização | — |
+| 30 | 2026-10-23 | F2 (B-30) | `scan:security` (fora do `pnpm verify` de 1-7, parte do fechamento da fase) | 5 avisos de dependência pré-existentes (nenhum arquivo da B-30): `dompurify@3.4.16`, `vite@7.3.6`, um segundo `vite@8.3.0` (peer aberto de `vitest`), `@vitest/mocker@4.1.11`, `ip-address@10.7.3` — todos com correção de patch disponível (D-100) | `pnpm.overrides` da raiz ganhou as versões corrigidas; o `vite` do `web` subiu para `^8.3.3` (os três plugins de Vite do `web` já declaram suporte); `pnpm --filter web build` confirmado de verdade antes de reiniciar a validação | `pnpm verify` reiniciado do portão 1 depois da mudança de dependência |
+| 31 | 2026-10-23 | F2 (B-30) | — | — | — | ✅ terceiro `pnpm verify` (gates 1-7, depois da correção de dependência): todos verdes — cobertura 1016,2 s, 338 arquivos ≥ 90 %, 99,2 % de linhas. Depois, `pnpm test:integration` (web 112/1536, backend 99/1397, mobile widget todos verdes), `pnpm contracts:check`, `pnpm scan:security`, `pnpm neutral:check` (1915 arquivos) e `pnpm i18n:check` — todos ✅. **F2 concluída** |
 
 ---
 

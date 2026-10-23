@@ -47,11 +47,14 @@ describe('the MCP servers section of the agent settings — plan 13, B-28', () =
     expect(within_.getByText(t('agentSettings.mcp.transportStdio'))).toBeVisible();
   });
 
-  it('teaches the next step when there is nothing yet', async () => {
+  it('teaches the next step when there is nothing yet — S-139', async () => {
     mcpBackendAnswers();
     mountApp(URL);
 
     expect(await screen.findByText(t('agentSettings.mcp.emptyTitle'))).toBeVisible();
+    // The body names both paths S-139 asks for — adding one of your own, or approving one of the
+    // project's — in the same sentence, never just "nothing here".
+    expect(screen.getByText(t('agentSettings.mcp.emptyBody'))).toBeVisible();
     expect(screen.getAllByRole('button', { name: t('agentSettings.mcp.addServer') })).not.toEqual(
       [],
     );
@@ -861,5 +864,53 @@ describe('the MCP servers section of the agent settings — plan 13, B-28', () =
     await user.type(within(dialog).getByLabelText(t('agentSettings.mcp.headerName')), 'X-Token');
 
     expect(within(dialog).getByLabelText(t('agentSettings.mcp.headerName'))).toHaveValue('X-Token');
+  });
+
+  it('explains MCP to somebody who has never seen it, in the help panel — S-138', async () => {
+    const user = userEvent.setup();
+    mcpBackendAnswers();
+    const { container } = mountApp(URL);
+
+    await screen.findByText(t('agentSettings.mcp.emptyTitle'));
+    await user.click(screen.getByRole('button', { name: t('help.panel.open') }));
+
+    const panel = await screen.findByRole('complementary');
+    const topics = [
+      ['agentSettings.help.mcpWhatHeading', 'agentSettings.help.mcpWhatBody'],
+      ['agentSettings.help.mcpTransportHeading', 'agentSettings.help.mcpTransportBody'],
+      ['agentSettings.help.mcpSecondStepHeading', 'agentSettings.help.mcpSecondStepBody'],
+      ['agentSettings.help.mcpNeedsAuthHeading', 'agentSettings.help.mcpNeedsAuthBody'],
+      ['agentSettings.help.mcpProjectFileHeading', 'agentSettings.help.mcpProjectFileBody'],
+      ['agentSettings.help.mcpSecretsHeading', 'agentSettings.help.mcpSecretsBody'],
+    ] as const;
+
+    for (const [headingKey, bodyKey] of topics) {
+      const region = within(panel).getByRole('region', { name: t(headingKey) });
+      expect(within(region).getByText(t(bodyKey, { engine: 'claude' }))).toBeVisible();
+    }
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('keeps the MCP help out of the panel for an engine without the mcp capability — D-82', async () => {
+    const user = userEvent.setup();
+    mcpBackendAnswers({
+      '/engines': () =>
+        Promise.resolve(
+          anEngineList({
+            engines: [anEngineDto({ capabilities: { ...CAPABILITIES, mcp: false } })],
+          }),
+        ),
+    });
+    mountApp('/settings/agents/claude?section=account');
+
+    await screen.findByRole('heading', { level: 1 });
+    await user.click(screen.getByRole('button', { name: t('help.panel.open') }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('region', { name: t('agentSettings.help.mcpWhatHeading') }),
+      ).toBeNull();
+    });
   });
 });

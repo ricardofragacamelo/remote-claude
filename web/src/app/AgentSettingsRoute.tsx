@@ -6,10 +6,13 @@ import {
   AgentSettingsScreen,
   agentSettingsSections,
   agentSettingsShortcuts,
+  sectionsForCapabilities,
   sectionsForEngine,
 } from '@/features/agent-settings';
 import type { AgentSettingsLocation } from '@/features/agent-settings';
+import { useEngineCapabilities, useEngines } from '@/features/session';
 import { ScreenFrame } from '@/shared/components/ScreenFrame';
+import { nameAgents } from '@/shared/i18n';
 import { useShellShortcuts } from './screen-shortcuts';
 
 /**
@@ -33,7 +36,19 @@ export function AgentSettingsRoute(): React.JSX.Element {
   const shortcuts = useShellShortcuts(shortcutIds);
   const search = useSearch({ from: '/_frame/settings/agents/$engine' });
   const navigate = useNavigate();
-  const sections = sectionsForEngine(agentSettingsSections.entries(), engine);
+  const capabilities = useEngineCapabilities(engine);
+  // `KeepAgentNames`' own effect (plan 28, B-13) only catches the directory up a commit *after* it
+  // loads — fine for an error shown after a request by then long settled, too slow for this screen's
+  // own title and help, drawn straight on the render that first has it. Reading the same query here
+  // keeps `{{agent}}` correct on this very render instead of the next one (plan 13, B-30).
+  nameAgents(useEngines().directory);
+  // The same capability filter `AgentSettingsScreen` applies to its tabs (D-82) — a section hidden
+  // because the engine lacks its capability never contributes help either: a "learn more" should
+  // never open for a tab that is not there (plan 13, B-30).
+  const sections = sectionsForCapabilities(
+    sectionsForEngine(agentSettingsSections.entries(), engine),
+    capabilities,
+  );
   const extra = sections.flatMap((section) => section.help?.(t, engine) ?? []);
 
   const go = useCallback(

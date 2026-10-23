@@ -601,4 +601,26 @@ describe('the plugins section of the agent settings — plan 13, B-29', () => {
     await user.click(checkbox);
     expect(screen.queryByText(t('engines.claude.plugins.selectionCount', { count: 1 }))).toBeNull();
   });
+
+  it('explains plugins and marketplaces to somebody who has never seen one, in the help panel — S-138', async () => {
+    const user = userEvent.setup();
+    pluginBackendAnswers();
+    const { container } = mountApp(URL);
+
+    await screen.findByText(t('engines.claude.plugins.emptyTitle'));
+    await user.click(screen.getByRole('button', { name: t('help.panel.open') }));
+
+    const panel = await screen.findByRole('complementary');
+    const topics = [
+      ['engines.claude.help.pluginWhatHeading', 'engines.claude.help.pluginWhatBody'],
+      ['engines.claude.help.pluginMarketplaceHeading', 'engines.claude.help.pluginMarketplaceBody'],
+    ] as const;
+
+    for (const [headingKey, bodyKey] of topics) {
+      const region = within(panel).getByRole('region', { name: t(headingKey) });
+      expect(within(region).getByText(t(bodyKey))).toBeVisible();
+    }
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
 });

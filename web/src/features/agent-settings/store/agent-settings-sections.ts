@@ -1,6 +1,6 @@
 import { Server, Sparkles } from 'lucide-react';
 
-import { McpSection } from '@/features/mcp';
+import { McpSection, mcpSectionHelp } from '@/features/mcp';
 import { canDo } from '@/features/session';
 import type { EngineCapabilities } from '@/features/session';
 import { createRegistry } from '@/shared/lib/registry';
@@ -34,6 +34,7 @@ const DECLARED: readonly AgentSettingsSection[] = [
     purposeKey: 'agentSettings.mcp.purpose',
     Body: McpSection,
     capability: 'mcp',
+    help: mcpSectionHelp,
   },
 ];
 

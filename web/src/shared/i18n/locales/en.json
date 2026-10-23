@@ -2439,7 +2439,19 @@
       "effortHeading": "Effort",
       "effortBody": "How hard the model thinks before it answers. More effort costs more and takes longer; only some models take it, each with its own levels.",
       "thinkingHeading": "Thinking",
-      "thinkingBody": "Whether the model reasons step by step before answering, shown folded in the session. Off is faster and cheaper."
+      "thinkingBody": "Whether the model reasons step by step before answering, shown folded in the session. Off is faster and cheaper.",
+      "mcpWhatHeading": "What an MCP server is",
+      "mcpWhatBody": "An MCP server is a separate program, or a network endpoint, that gives {{agent}} new tools — browsing a wiki, calling an internal API, reading a database — beyond what it can already do. It is not part of {{agent}} itself: once you add one, it starts with every session it applies to and runs with your own credentials, before you have approved any tool it offers.",
+      "mcpTransportHeading": "Command or network",
+      "mcpTransportBody": "Two ways a server reaches {{agent}}. A stdio server is a command this machine runs — with its own arguments and environment variables — that talks over its standard input and output; it only exists while the session that started it is open. An http or sse server is already running somewhere else, reached by a URL, with headers instead of environment variables for anything it needs to know, such as a token.",
+      "mcpSecondStepHeading": "Why the second step",
+      "mcpSecondStepBody": "Adding an MCP server is exactly as sensitive as a permission rule that never asks again: {{agent}} gains whatever tools the server offers, in every session the server applies to, without you approving each one. That is why saving one is a second step, not one click — it shows, in full, what would run or what would be reached, the folder it applies to, and which of your own permission rules it would revoke because they were granted to a different program. Nothing is written until you confirm that step.",
+      "mcpNeedsAuthHeading": "What \"needs sign-in\" means",
+      "mcpNeedsAuthBody": "Some servers ask you to sign in with your own account before they will work — over OAuth, in a browser. That sign-in needs a browser on the machine itself; no OAuth address ever travels through this product to your phone or your other browser. To resolve it, open the machine running {{agent}} and finish the sign-in there, then reconnect the server from here or from the session.",
+      "mcpProjectFileHeading": "Approving the project's MCP file",
+      "mcpProjectFileBody": "A repository can declare its own MCP servers, in a file of {{agent}}'s own. Nobody is made to run one just because a project asks: each entry needs your approval here first, the same second step as a server of your own, and only an approved entry whose contents still match what you approved is composed into a session. Anything that changes it — a `git pull` that edits the command, the URL or the environment — puts it back to pending, with the exact difference shown, until you look at it again.",
+      "mcpSecretsHeading": "What is never recorded",
+      "mcpSecretsBody": "The values of environment variables and headers — like the value behind GITHUB_TOKEN — are never shown back to you after you save them, never included in the response of this screen, and never written to the audit trail. Only their names are kept, so you always know which secrets a server needs without this product ever holding, logging or returning what they are."
     },
     "sections": {
       "label": "Sections of {{agent}} settings"
@@ -2628,7 +2640,11 @@
         "checkHeading": "The test of the connection",
         "checkBody": "One turn of the model with a fixed sentence and no tool: it says whether Claude answers here, how long it took and what it cost. It is the only thing on this screen that spends quota, and it runs only when you click.",
         "outputStyleHeading": "Output style",
-        "outputStyleBody": "How Claude writes its answers — concise, explanatory, a style of the project. A style that no longer exists falls back to the installation’s."
+        "outputStyleBody": "How Claude writes its answers — concise, explanatory, a style of the project. A style that no longer exists falls back to the installation’s.",
+        "pluginWhatHeading": "What a plugin can bring",
+        "pluginWhatBody": "A plugin is a bundle: it can add hooks (code that runs on every event it matches, such as every tool use), commands, agents and skills, and MCP servers of its own. Adding a plugin never starts its MCP servers by themselves — they only become tools Claude can use once you separately approve each one as a server of your own, from the MCP servers section, the same second step any other server goes through.",
+        "pluginMarketplaceHeading": "Marketplaces",
+        "pluginMarketplaceBody": "A marketplace is a catalogue of plugins published somewhere else. Only the marketplaces this machine's own allowlist file declares ever show up here — this screen has no way to add one itself. If none is declared, ask whoever manages that file to add one; this screen only browses and installs from what it already lists."
       },
       "account": {
         "title": "Account",

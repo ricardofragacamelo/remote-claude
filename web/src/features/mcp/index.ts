@@ -4,3 +4,4 @@
  * capability. Nothing here names an engine; `{{agent}}` is the only name a text ever uses.
  */
 export { McpSection } from './components/McpSection';
+export { mcpSectionHelp } from './lib/mcp-help';

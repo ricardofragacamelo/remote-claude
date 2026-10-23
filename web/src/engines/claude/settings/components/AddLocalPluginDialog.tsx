@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DialogFrame } from '@/shared/components/DialogFrame';
@@ -6,6 +6,7 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { Button } from '@/shared/components/ui/button';
 import type { WizardFooterKeys } from '@/shared/components/WizardFooter';
 import { WizardFooter } from '@/shared/components/WizardFooter';
+import { useWizardStepFocus } from '@/shared/hooks/useWizardStepFocus';
 import type { AddLocalPluginFlow, AddLocalPluginState } from '../hooks/useAddLocalPluginFlow';
 import { PluginFolderBrowseDialog } from './PluginFolderBrowseDialog';
 
@@ -78,7 +79,11 @@ export function AddLocalPluginDialog({ flow }: AddLocalPluginDialogProps): React
   );
 }
 
-/** The one step on screen — the path field, or the preview, each with its own error. */
+/**
+ * The one step on screen — the path field, or the preview, each with its own error. Each step is its
+ * own focusable container: `useWizardStepFocus` moves the focus to it when a step replaces another,
+ * the same discipline `mcp`'s own `AddEditServerDialog` has (S-140).
+ */
 function WizardBody({
   state,
   onBrowse,
@@ -87,6 +92,8 @@ function WizardBody({
   onBrowse(): void;
 }): React.JSX.Element | null {
   const { t } = useTranslation();
+  const stepRef = useRef<HTMLDivElement>(null);
+  useWizardStepFocus(state?.step ?? null, stepRef);
 
   if (state === null) {
     return null;
@@ -94,12 +101,14 @@ function WizardBody({
 
   if (state.step === 'form') {
     return (
-      <PathField
-        path={state.path}
-        pathIssue={state.pathIssue}
-        previewError={state.previewError}
-        onBrowse={onBrowse}
-      />
+      <div ref={stepRef} tabIndex={-1} className="outline-none">
+        <PathField
+          path={state.path}
+          pathIssue={state.pathIssue}
+          previewError={state.previewError}
+          onBrowse={onBrowse}
+        />
+      </div>
     );
   }
 
@@ -110,10 +119,10 @@ function WizardBody({
 
   // Nothing is written reaching here — the second step's own confirm does that.
   return (
-    <fieldset className="flex flex-col gap-3">
+    <div ref={stepRef} tabIndex={-1} className="flex flex-col gap-3 outline-none">
       <p className="text-ui">{t(preview.messageKey, preview.params)}</p>
       {state.saveError !== null && <ErrorState error={state.saveError} />}
-    </fieldset>
+    </div>
   );
 }
 

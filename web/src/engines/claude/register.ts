@@ -18,6 +18,7 @@ import {
   accountSectionHelp,
   installationSectionHelp,
   outputStyleHelp,
+  pluginsSectionHelp,
 } from './lib/claude-engine-help';
 import { PluginsSection } from './settings';
 
@@ -65,6 +66,7 @@ export function registerClaudeEngine(): () => void {
       titleKey: 'engines.claude.plugins.title',
       purposeKey: 'engines.claude.plugins.purpose',
       Body: PluginsSection,
+      help: pluginsSectionHelp,
     }),
     agentSettingsSections.register({
       id: 'skills',
