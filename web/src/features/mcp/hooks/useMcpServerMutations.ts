@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/api/errors';
+import type { BatchItemResult, BatchTarget } from '@/shared/lib/settled-batch';
+import { settledBatch } from '@/shared/lib/settled-batch';
 import { mcpErrorOf } from '../lib/mcp-errors';
 import {
   createMcpServer,
@@ -13,18 +15,7 @@ import {
 import type { McpServerFields, McpServerView, McpTestOutcome } from '../types/mcp';
 import { mcpKeys } from './mcp-keys';
 
-/** What a batch write names one server by — enough to run the request and to report the outcome. */
-export interface BatchTarget {
-  readonly id: string;
-  readonly name: string;
-}
-
-/** One item of a batch answer — a toggle or a removal run on more than one server at once (S-134):
- * a server refused does not stop the others, and the screen says which failed, and why. */
-export interface BatchItemResult extends BatchTarget {
-  readonly ok: boolean;
-  readonly error?: AppError;
-}
+export type { BatchItemResult, BatchTarget } from '@/shared/lib/settled-batch';
 
 /** The result of testing one server's connection, kept beside its own row. */
 export interface TestResult extends BatchTarget {
@@ -55,19 +46,6 @@ export interface McpServerMutations {
 
   readonly saving: boolean;
   readonly saveError: AppError | null;
-}
-
-async function settled(
-  items: readonly BatchTarget[],
-  run: (item: BatchTarget) => Promise<unknown>,
-): Promise<readonly BatchItemResult[]> {
-  const outcomes = await Promise.allSettled(items.map((item) => run(item)));
-  return outcomes.map((outcome, index) => {
-    const item = items[index] ?? { id: '', name: '' };
-    return outcome.status === 'fulfilled'
-      ? { ...item, ok: true }
-      : { ...item, ok: false, error: mcpErrorOf(outcome.reason) };
-  });
 }
 
 /**
@@ -105,14 +83,20 @@ export function useMcpServerMutations(engine: string): McpServerMutations {
     update: (id, fields) => update.mutateAsync({ id, fields }),
     remove: (id) => remove.mutateAsync(id),
     setEnabled: async (servers, enabled) => {
-      const results = await settled(servers, (server) =>
-        toggle.mutateAsync({ id: server.id, enabled }),
+      const results = await settledBatch(
+        servers,
+        (server) => toggle.mutateAsync({ id: server.id, enabled }),
+        mcpErrorOf,
       );
       await invalidate();
       return results;
     },
     removeMany: async (servers) => {
-      const results = await settled(servers, (server) => remove.mutateAsync(server.id));
+      const results = await settledBatch(
+        servers,
+        (server) => remove.mutateAsync(server.id),
+        mcpErrorOf,
+      );
       await invalidate();
       return results;
     },

@@ -2,6 +2,7 @@ import { Pencil, Plug, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import type { CommandDeclaration } from '@/features/commands';
+import { goCommandOf } from '@/features/commands';
 import type { McpServerMutations } from '../hooks/useMcpServerMutations';
 import type { McpServerView } from '../types/mcp';
 
@@ -121,13 +122,5 @@ export function asCommands(
   const wanted = new Set(['mcp.addServer', 'mcp.testSelected']);
   return actions
     .filter((action) => wanted.has(action.id))
-    .map((action) => ({
-      id: action.id,
-      labelKey: action.labelKey,
-      labelParams: { engine },
-      category: 'go',
-      icon: action.icon,
-      when: action.available,
-      run: action.run,
-    }));
+    .map((action) => goCommandOf(action, { engine }));
 }

@@ -270,7 +270,7 @@ Remover é destrutivo: confirmação sem foco inicial no botão de remover. Serv
 projeto (no Claude, o `.mcp.json`, nome que vem do motor) em grupo próprio, com aprovar/rejeitar e, para os alterados, a diferença entre o aprovado e o atual.
 Testar conexão com o resultado inline. Cenários S-131…S-136.
 
-### B-29 — Tela: plugins 🔲
+### B-29 — Tela: plugins ✅
 
 Seção "Plugins", da **extensão do Claude**: em `web/src/engines/claude/settings/`, registrada pelo
 `web/src/engines/claude/index.ts` nos registros do núcleo (via `web/src/app/engines/index.ts`, o único arquivo que

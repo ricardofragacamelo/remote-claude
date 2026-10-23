@@ -221,7 +221,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-209 | instalar, atualizar e remover gravam `engine.pluginAdded`, `engine.pluginUpdated` e `engine.pluginRemoved`, com o motor no payload, antes do efeito; remover apaga o diretório | eq | integração | — | B-47 | ✅ |
 | S-210 | o plugin de marketplace de um usuário nunca entra na sessão de outro, nem é lido por ele | err | integração | `FORBIDDEN` | B-47 | ✅ |
 | S-211 | baixar não executa código do plugin, não chama `claude plugin`, não escreve em `~/.claude`, e o subprocesso não recebe os segredos do backend | err | unit | — | B-47 | ✅ |
-| S-212 | a seção de plugins navega os marketplaces declarados (busca, detalhe, instalar com prévia) e, sem nenhum, ensina a declarar no arquivo | eq | integração | — | B-29 | ⬜ |
+| S-212 | a seção de plugins navega os marketplaces declarados (busca, detalhe, instalar com prévia) e, sem nenhum, ensina a declarar no arquivo | eq | integração | — | B-29 | ✅ |
 | S-213 | marketplace retirado do arquivo por recarga: os plugins dele saem das sessões novas, com a razão na tela | est | integração | — | B-47 | ✅ |
 
 ## Tela — servidores MCP e plugins — B-28…B-30
@@ -234,7 +234,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-134 | ligar/desligar em lote: um item recusado não impede os outros, e a tela diz qual falhou e por quê | err | integração | `FORBIDDEN` | B-28 | ✅ |
 | S-135 | remover pede confirmação (destrutivo), sem foco inicial no botão de remover | est | integração | — | B-28 | ✅ |
 | S-136 | servidor do `.mcp.json` alterado mostra a diferença entre o aprovado e o atual | eq | integração | — | B-28 | ✅ |
-| S-137 | a seção de plugins mostra o que cada plugin traz e o estado, e a prévia antes de adicionar | eq | integração | — | B-29 | ⬜ |
+| S-137 | a seção de plugins mostra o que cada plugin traz e o estado, e a prévia antes de adicionar | eq | integração | — | B-29 | ✅ |
 | S-138 | a ajuda está presente e traduzida: o que é MCP, por que acrescentar um é tão sensível quanto uma regra `always`, o que `needs-auth` significa, o que não é registrado (valores de segredo) | eq | integração | — | B-30 | ⬜ |
 | S-139 | estado vazio ensina o próximo passo: adicionar um servidor, ou aprovar os do projeto | fron | integração | — | B-30 | ⬜ |
 | S-140 | "Claude: adicionar servidor MCP" na palette; teclado e foco no assistente; tooltip em todo botão de ícone; axe sem violação | eq | integração | — | B-30 | ⬜ |

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { SectionBodyProps } from '@/features/agent-settings';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { LoadStatus } from '@/shared/components/LoadStatus';
+import { useSelection } from '@/shared/hooks/useSelection';
 import { useAddServerFlow } from '../hooks/useAddServerFlow';
 import { useFolderChoices } from '../hooks/useFolderChoices';
 import { useMcpServerMutations } from '../hooks/useMcpServerMutations';
@@ -65,13 +66,13 @@ export function McpSection({ engine, location, onLocation }: SectionBodyProps): 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<McpStatus | 'all'>('all');
   const [sort, setSort] = useState<McpSortOrder>('name');
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const selection = useSelection();
 
   const shown = useMemo(
     () => visibleServers(data.servers, search, statusFilter, sort),
     [data.servers, search, statusFilter, sort],
   );
-  const selectedServers = shown.filter((server) => selected.has(server.id));
+  const selectedServers = shown.filter((server) => selection.ids.has(server.id));
 
   const handlers: McpServerActionHandlers = {
     onAdd: () => {
@@ -121,18 +122,8 @@ export function McpSection({ engine, location, onLocation }: SectionBodyProps): 
           ) : (
             <McpServerTable
               servers={shown}
-              selected={selected}
-              onToggleSelected={(id) => {
-                setSelected((current) => {
-                  const next = new Set(current);
-                  if (next.has(id)) {
-                    next.delete(id);
-                  } else {
-                    next.add(id);
-                  }
-                  return next;
-                });
-              }}
+              selected={selection.ids}
+              onToggleSelected={selection.toggle}
               mutations={mutations}
               handlers={handlers}
             />

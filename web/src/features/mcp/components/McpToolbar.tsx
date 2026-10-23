@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
 import { useCommands } from '@/features/commands';
+import { SearchField } from '@/shared/components/SearchField';
+import type { SelectionBarKeys } from '@/shared/components/SelectionActionBar';
+import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
 import { Button } from '@/shared/components/ui/button';
 import type { McpServerMutations } from '../hooks/useMcpServerMutations';
 import { asCommands, mcpServerActions } from '../lib/mcp-server-actions';
@@ -10,6 +13,12 @@ import type { McpServerView, McpStatus } from '../types/mcp';
 
 const INPUT = 'h-10 rounded-lg border border-border bg-transparent px-3 text-ui md:h-8';
 const STATUSES: readonly McpStatus[] = ['connected', 'failed', 'needs-auth', 'pending', 'disabled'];
+
+/** The i18n keys of this toolbar's own selection bar — declared once, outside any JSX. */
+const SELECTION_KEYS: SelectionBarKeys = {
+  ariaLabel: 'agentSettings.mcp.selectionLabel',
+  count: 'agentSettings.mcp.selectionCount',
+};
 
 /** How the table is ordered — by name, or with the status that most needs attention first. */
 export type McpSortOrder = 'name' | 'status';
@@ -51,7 +60,7 @@ export function McpToolbar({
   const { t } = useTranslation();
   const allActions = mcpServerActions(servers, mutations, handlers);
   const bulkActions = mcpServerActions(selectedServers, mutations, handlers).filter(
-    (action) => action.group === 'row',
+    (action) => action.group === 'row' && action.id !== 'mcp.editServer',
   );
 
   useCommands(asCommands(allActions, engine));
@@ -59,16 +68,11 @@ export function McpToolbar({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col gap-1 text-ui-sm">
-          {t('agentSettings.mcp.searchLabel')}
-          <input
-            className={INPUT}
-            value={search}
-            onChange={(event) => {
-              onSearchChange(event.target.value);
-            }}
-          />
-        </label>
+        <SearchField
+          label={t('agentSettings.mcp.searchLabel')}
+          value={search}
+          onChange={onSearchChange}
+        />
 
         <label className="flex flex-col gap-1 text-ui-sm">
           {t('agentSettings.mcp.filterStatusLabel')}
@@ -107,31 +111,11 @@ export function McpToolbar({
         </Button>
       </div>
 
-      {selectedServers.length > 0 && (
-        <div
-          role="toolbar"
-          aria-label={t('agentSettings.mcp.selectionLabel', { count: selectedServers.length })}
-          className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-2"
-        >
-          <span className="text-ui-sm">
-            {t('agentSettings.mcp.selectionCount', { count: selectedServers.length })}
-          </span>
-          {bulkActions
-            .filter((action) => action.id !== 'mcp.editServer')
-            .map((action) => (
-              <Button
-                key={action.id}
-                variant="outline"
-                disabled={!action.available()}
-                onClick={action.run}
-                title={t(action.labelKey)}
-              >
-                <action.icon className="size-4" aria-hidden />
-                {t(action.labelKey)}
-              </Button>
-            ))}
-        </div>
-      )}
+      <SelectionActionBar
+        count={selectedServers.length}
+        keys={SELECTION_KEYS}
+        actions={bulkActions}
+      />
     </div>
   );
 }

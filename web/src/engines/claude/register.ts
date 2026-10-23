@@ -19,6 +19,7 @@ import {
   installationSectionHelp,
   outputStyleHelp,
 } from './lib/claude-engine-help';
+import { PluginsSection } from './settings';
 
 /** The engine this extension is — never read outside this folder (ADR-025). */
 const ENGINE = 'claude';
@@ -63,7 +64,7 @@ export function registerClaudeEngine(): () => void {
       icon: Puzzle,
       titleKey: 'engines.claude.plugins.title',
       purposeKey: 'engines.claude.plugins.purpose',
-      Body: Nothing,
+      Body: PluginsSection,
     }),
     agentSettingsSections.register({
       id: 'skills',

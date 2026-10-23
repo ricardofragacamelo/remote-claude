@@ -2,14 +2,41 @@ import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@/shared/components/ErrorState';
 import { DialogFrame } from '@/shared/components/DialogFrame';
-import { Button } from '@/shared/components/ui/button';
+import type { WizardFooterKeys } from '@/shared/components/WizardFooter';
+import { WizardFooter } from '@/shared/components/WizardFooter';
 import type { AddServerFlow, WizardState } from '../hooks/useAddServerFlow';
 import { WIZARD_SCOPE_KEYS } from '../lib/status-words';
 import { ServerForm } from './ServerForm';
 
+/** The i18n keys of this wizard's own footer — declared once, outside any JSX. */
+const FOOTER_KEYS: WizardFooterKeys = {
+  cancel: 'agentSettings.mcp.wizardCancel',
+  next: 'agentSettings.mcp.wizardNext',
+  previewing: 'agentSettings.mcp.wizardPreviewing',
+  back: 'agentSettings.mcp.wizardBack',
+  confirm: 'agentSettings.mcp.wizardConfirm',
+  saving: 'agentSettings.mcp.wizardSaving',
+};
+
 export interface AddEditServerDialogProps {
   readonly flow: AddServerFlow;
   readonly folderChoices: readonly string[];
+}
+
+/** What the dialog's own chrome needs from [state] — kept out of the component to stay under the
+ * complexity gate (S-132's two steps, each with its own busy flag, already branch enough on their
+ * own). */
+function wizardViewOf(state: WizardState | null): {
+  readonly editing: boolean;
+  readonly onPreview: boolean;
+  readonly busy: boolean;
+} {
+  const onPreview = state?.step === 'preview';
+  return {
+    editing: state?.editing !== null && state?.editing !== undefined,
+    onPreview,
+    busy: state === null ? false : onPreview ? state.saving : state.previewing,
+  };
 }
 
 /**
@@ -24,7 +51,7 @@ export function AddEditServerDialog({
 }: AddEditServerDialogProps): React.JSX.Element {
   const { t } = useTranslation();
   const state = flow.state;
-  const editing = state?.editing !== null && state?.editing !== undefined;
+  const { editing, onPreview, busy } = wizardViewOf(state);
 
   return (
     <DialogFrame
@@ -32,11 +59,23 @@ export function AddEditServerDialog({
       onClose={flow.cancel}
       title={t(editing ? 'agentSettings.mcp.editServer' : 'agentSettings.mcp.addServer')}
       description={t(
-        state?.step === 'preview'
-          ? 'agentSettings.mcp.wizardPreviewHint'
-          : 'agentSettings.mcp.wizardFormHint',
+        onPreview ? 'agentSettings.mcp.wizardPreviewHint' : 'agentSettings.mcp.wizardFormHint',
       )}
-      footer={<WizardFooter flow={flow} state={state} />}
+      footer={
+        <WizardFooter
+          step={onPreview ? 'preview' : 'form'}
+          keys={FOOTER_KEYS}
+          busy={busy}
+          onCancel={flow.cancel}
+          onBack={flow.back}
+          onNext={() => {
+            void flow.toPreview();
+          }}
+          onConfirm={() => {
+            void flow.confirm();
+          }}
+        />
+      }
     >
       <WizardBody flow={flow} state={state} folderChoices={folderChoices} />
     </DialogFrame>
@@ -57,8 +96,13 @@ function WizardBody({
     return null;
   }
 
+  // The preview step only renders once the server answered (S-132) — nothing before that.
+  if (state.step === 'preview' && state.preview === null) {
+    return null;
+  }
+
   if (state.step === 'preview') {
-    return state.preview === null ? null : (
+    return (
       <PreviewStep fields={state.fields} preview={state.preview} saveError={state.saveError} />
     );
   }
@@ -75,55 +119,6 @@ function WizardBody({
         onChange={flow.setFields}
       />
       {state.previewError !== null && <ErrorState error={state.previewError} />}
-    </>
-  );
-}
-
-/** The footer's two buttons — one pair for the form, another for the preview (S-132). */
-function WizardFooter({
-  flow,
-  state,
-}: {
-  readonly flow: AddServerFlow;
-  readonly state: WizardState | null;
-}): React.JSX.Element {
-  const { t } = useTranslation();
-
-  if (state?.step === 'preview') {
-    return (
-      <>
-        <Button variant="outline" disabled={state.saving} onClick={flow.back}>
-          {t('agentSettings.mcp.wizardBack')}
-        </Button>
-        <Button
-          disabled={state.saving}
-          onClick={() => {
-            void flow.confirm();
-          }}
-        >
-          {state.saving
-            ? t('agentSettings.mcp.wizardSaving')
-            : t('agentSettings.mcp.wizardConfirm')}
-        </Button>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Button variant="outline" onClick={flow.cancel}>
-        {t('agentSettings.mcp.wizardCancel')}
-      </Button>
-      <Button
-        disabled={state?.previewing}
-        onClick={() => {
-          void flow.toPreview();
-        }}
-      >
-        {state?.previewing
-          ? t('agentSettings.mcp.wizardPreviewing')
-          : t('agentSettings.mcp.wizardNext')}
-      </Button>
     </>
   );
 }

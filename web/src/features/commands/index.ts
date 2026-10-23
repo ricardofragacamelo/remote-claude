@@ -10,6 +10,8 @@ export { useCommands } from './hooks/useCommands';
 export type { CommandDeclaration } from './hooks/useCommands';
 export { useKeyContext } from './hooks/useKeyContext';
 export { useScreenShortcuts, useShortcut } from './hooks/useShortcut';
+export { goCommandOf } from './lib/go-command';
+export type { GoActionLike } from './lib/go-command';
 export { commandRegistry } from './store/command-registry';
 export { paletteModes, usePalette } from './store/palette.store';
 export type {
