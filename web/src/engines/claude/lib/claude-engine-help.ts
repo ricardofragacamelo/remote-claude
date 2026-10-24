@@ -53,3 +53,29 @@ export function pluginsSectionHelp(t: TFunction): HelpExtra[] {
     },
   ];
 }
+
+/**
+ * The help of "Skills", written for somebody who has never seen one (plan 13, B-34, B-39, S-182):
+ * what a skill is and where each origin comes from, that turning one off filters context rather than
+ * locking a file (D-20's own SDK fact, never a euphemism), and why turning an origin on asks first
+ * while turning one off does not (D-20's asymmetry).
+ */
+export function skillsSectionHelp(t: TFunction): HelpExtra[] {
+  return [
+    {
+      id: 'claude-skill-what',
+      heading: t('engines.claude.help.skillWhatHeading'),
+      body: t('engines.claude.help.skillWhatBody'),
+    },
+    {
+      id: 'claude-skill-filter',
+      heading: t('engines.claude.help.skillFilterHeading'),
+      body: t('engines.claude.help.skillFilterBody'),
+    },
+    {
+      id: 'claude-skill-origin',
+      heading: t('engines.claude.help.skillOriginHeading'),
+      body: t('engines.claude.help.skillOriginBody'),
+    },
+  ];
+}

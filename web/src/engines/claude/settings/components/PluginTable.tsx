@@ -1,11 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
-import { ContextMenuActionItems } from '@/shared/components/ContextMenuActionItems';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuTrigger,
-} from '@/shared/components/ui/context-menu';
+import { DenseTableFrame } from '@/shared/components/DenseTableFrame';
+import { DenseTableHead } from '@/shared/components/DenseTableHead';
+import { SelectableTableRow } from '@/shared/components/SelectableTableRow';
+import { SelectCell } from '@/shared/components/SelectCell';
 import type { PluginActionHandlers } from '../lib/plugin-actions';
 import { pluginActions } from '../lib/plugin-actions';
 import { ORIGIN_KEYS, STATE_KEYS } from '../lib/status-words';
@@ -50,41 +48,36 @@ export function PluginTable({
   const { t } = useTranslation();
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-ui-sm">
-        <caption className="sr-only">{t('engines.claude.plugins.tableCaption')}</caption>
-        <thead>
-          <tr className="border-b border-border text-left text-muted-foreground">
-            <th className="w-8 p-2">
-              <span className="sr-only">{t('engines.claude.plugins.columnSelect')}</span>
-            </th>
-            <th className="p-2">{t('engines.claude.plugins.columnName')}</th>
-            <th className="p-2">{t('engines.claude.plugins.columnOrigin')}</th>
-            <th className="p-2">{t('engines.claude.plugins.columnVersion')}</th>
-            <th className="p-2">{t('engines.claude.plugins.columnSource')}</th>
-            <th className="p-2">{t('engines.claude.plugins.columnState')}</th>
-            <th className="p-2">{t('engines.claude.plugins.columnBrings')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {plugins.map((plugin) => {
-            const actions = pluginActions([plugin], mutations, handlers).filter(
-              (action) => action.group === 'row',
-            );
+    <DenseTableFrame caption={t('engines.claude.plugins.tableCaption')}>
+      <DenseTableHead
+        selectLabel={t('engines.claude.plugins.columnSelect')}
+        columns={[
+          t('engines.claude.plugins.columnName'),
+          t('engines.claude.plugins.columnOrigin'),
+          t('engines.claude.plugins.columnVersion'),
+          t('engines.claude.plugins.columnSource'),
+          t('engines.claude.plugins.columnState'),
+          t('engines.claude.plugins.columnBrings'),
+        ]}
+      />
+      <tbody>
+        {plugins.map((plugin) => {
+          const actions = pluginActions([plugin], mutations, handlers).filter(
+            (action) => action.group === 'row',
+          );
 
-            return (
-              <PluginRow
-                key={plugin.id}
-                plugin={plugin}
-                selected={selected.has(plugin.id)}
-                onToggleSelected={onToggleSelected}
-                actions={actions}
-              />
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+          return (
+            <PluginRow
+              key={plugin.id}
+              plugin={plugin}
+              selected={selected.has(plugin.id)}
+              onToggleSelected={onToggleSelected}
+              actions={actions}
+            />
+          );
+        })}
+      </tbody>
+    </DenseTableFrame>
   );
 }
 
@@ -104,36 +97,25 @@ function PluginRow({
   const { t } = useTranslation();
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <tr className="border-b border-border last:border-b-0 hover:bg-accent/50">
-          <td className="p-2">
-            <input
-              type="checkbox"
-              aria-label={t('engines.claude.plugins.rowSelect', { name: plugin.name })}
-              checked={selected}
-              onChange={() => {
-                onToggleSelected(plugin.id);
-              }}
-            />
-          </td>
-          <td className="p-2 font-ui-strong">{plugin.name}</td>
-          <td className="p-2">{t(ORIGIN_KEYS[plugin.origin])}</td>
-          <td className="p-2">{plugin.manifest?.version ?? '—'}</td>
-          <td className="p-2 font-code text-ui-xs">
-            {plugin.origin === 'local' ? plugin.path : (plugin.commit ?? '—')}
-          </td>
-          <td className="p-2">{t(STATE_KEYS[plugin.state])}</td>
-          <td className="p-2 font-code text-ui-xs">{bringsOf(plugin)}</td>
-        </tr>
-      </ContextMenuTrigger>
-      <ContextMenuContent
-        aria-label={t('engines.claude.plugins.rowMenuLabel', { name: plugin.name })}
-      >
-        <ContextMenuActionItems
-          actions={actions.map((action) => ({ ...action, disabled: !action.available() }))}
-        />
-      </ContextMenuContent>
-    </ContextMenu>
+    <SelectableTableRow
+      ariaLabel={t('engines.claude.plugins.rowMenuLabel', { name: plugin.name })}
+      actions={actions}
+    >
+      <SelectCell
+        ariaLabel={t('engines.claude.plugins.rowSelect', { name: plugin.name })}
+        checked={selected}
+        onToggle={() => {
+          onToggleSelected(plugin.id);
+        }}
+      />
+      <td className="p-2 font-ui-strong">{plugin.name}</td>
+      <td className="p-2">{t(ORIGIN_KEYS[plugin.origin])}</td>
+      <td className="p-2">{plugin.manifest?.version ?? '—'}</td>
+      <td className="p-2 font-code text-ui-xs">
+        {plugin.origin === 'local' ? plugin.path : (plugin.commit ?? '—')}
+      </td>
+      <td className="p-2">{t(STATE_KEYS[plugin.state])}</td>
+      <td className="p-2 font-code text-ui-xs">{bringsOf(plugin)}</td>
+    </SelectableTableRow>
   );
 }

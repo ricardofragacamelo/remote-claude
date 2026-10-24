@@ -19,17 +19,18 @@ import {
   installationSectionHelp,
   outputStyleHelp,
   pluginsSectionHelp,
+  skillsSectionHelp,
 } from './lib/claude-engine-help';
-import { PluginsSection } from './settings';
+import { PluginsSection, SkillsSection } from './settings';
 
 /** The engine this extension is — never read outside this folder (ADR-025). */
 const ENGINE = 'claude';
 
 /**
  * Puts Claude's extension in the places of the core it fills (plan 28, B-36, B-38): its own sections
- * of the engine settings screen (account, installation; plugins, skills and the `.claude/` of a
- * project, bodies still to come), the output style it adds to the core's defaults form, its place in
- * the global navigation, and the two shortcuts of its screen.
+ * of the engine settings screen (account, installation, plugins, skills; the `.claude/` of a project
+ * still to come), the output style it adds to the core's defaults form, its place in the global
+ * navigation, and the two shortcuts of its screen.
  *
  * Imported once, for the side effect, by `web/src/app/engines/index.ts` — the one file of the core allowed
  * to know this folder exists.
@@ -75,7 +76,8 @@ export function registerClaudeEngine(): () => void {
       icon: Blocks,
       titleKey: 'engines.claude.skills.title',
       purposeKey: 'engines.claude.skills.purpose',
-      Body: Nothing,
+      Body: SkillsSection,
+      help: skillsSectionHelp,
     }),
     agentSettingsSections.register({
       id: 'project',

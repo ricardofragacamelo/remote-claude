@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { useCommands } from '@/features/commands';
+import { FilterSelect } from '@/shared/components/FilterSelect';
 import { SearchField } from '@/shared/components/SearchField';
 import type { SelectionBarKeys } from '@/shared/components/SelectionActionBar';
 import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
@@ -11,7 +12,6 @@ import type { McpServerActionHandlers } from '../lib/mcp-server-actions';
 import { STATUS_KEYS } from '../lib/status-words';
 import type { McpServerView, McpStatus } from '../types/mcp';
 
-const INPUT = 'h-10 rounded-lg border border-border bg-transparent px-3 text-ui md:h-8';
 const STATUSES: readonly McpStatus[] = ['connected', 'failed', 'needs-auth', 'pending', 'disabled'];
 
 /** The i18n keys of this toolbar's own selection bar — declared once, outside any JSX. */
@@ -74,37 +74,29 @@ export function McpToolbar({
           onChange={onSearchChange}
         />
 
-        <label className="flex flex-col gap-1 text-ui-sm">
-          {t('agentSettings.mcp.filterStatusLabel')}
-          <select
-            className={INPUT}
-            value={statusFilter}
-            onChange={(event) => {
-              onStatusFilterChange(event.target.value as McpStatus | 'all');
-            }}
-          >
-            <option value="all">{t('agentSettings.mcp.filterStatusAll')}</option>
-            {STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {t(STATUS_KEYS[status])}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterSelect
+          label={t('agentSettings.mcp.filterStatusLabel')}
+          value={statusFilter}
+          onChange={(value) => {
+            onStatusFilterChange(value as McpStatus | 'all');
+          }}
+          options={[
+            { value: 'all', label: t('agentSettings.mcp.filterStatusAll') },
+            ...STATUSES.map((status) => ({ value: status, label: t(STATUS_KEYS[status]) })),
+          ]}
+        />
 
-        <label className="flex flex-col gap-1 text-ui-sm">
-          {t('agentSettings.mcp.sortLabel')}
-          <select
-            className={INPUT}
-            value={sort}
-            onChange={(event) => {
-              onSortChange(event.target.value as 'name' | 'status');
-            }}
-          >
-            <option value="name">{t('agentSettings.mcp.sortByName')}</option>
-            <option value="status">{t('agentSettings.mcp.sortByStatus')}</option>
-          </select>
-        </label>
+        <FilterSelect
+          label={t('agentSettings.mcp.sortLabel')}
+          value={sort}
+          onChange={(value) => {
+            onSortChange(value as 'name' | 'status');
+          }}
+          options={[
+            { value: 'name', label: t('agentSettings.mcp.sortByName') },
+            { value: 'status', label: t('agentSettings.mcp.sortByStatus') },
+          ]}
+        />
 
         <Button onClick={handlers.onAdd} title={t('agentSettings.mcp.addServer')}>
           {t('agentSettings.mcp.addServer')}
