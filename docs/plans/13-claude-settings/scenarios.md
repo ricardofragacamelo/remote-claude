@@ -269,7 +269,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-164 | ligar a origem Usuário ou Sistema grava `engine.skillSourceToggled`, com o motor no payload, antes do efeito; desligar skill não vai para a trilha | eq | integração | — | B-34 | ✅ |
 | S-165 | uma skill de `~/.claude/skills` carrega pelo plugin sintético e aparece com o selo Usuário | eq | integração | — | B-35 | ⬜ |
 | S-166 | o plugin sintético expõe só `skills/`, com `skipMcpDiscovery: true` — nenhum hook, agent, comando ou servidor MCP | eq | unit | — | B-35 | ✅ |
-| S-167 | skill de usuário que declara hook no frontmatter não é carregada, e aparece com o motivo — o hook nunca ativa | err | integração | — | B-35 | ⬜ |
+| S-167 | skill de usuário que declara hook no frontmatter não é carregada, e aparece com o motivo — o hook nunca ativa | err | integração | — | B-35 | ✅ |
 | S-168 | com uma `allow` em `~/.claude/settings.json`, o `canUseTool` continua sendo chamado com o plugin sintético ligado — regressão da D-11 do plano 01 | err | integração | — | B-35 | ⬜ |
 | S-169 | symlink em `~/.claude/skills` que aponta para fora do home é recusado | err | integração | — | B-35 | ✅ |
 | S-170 | fontes sem mudança reusam o plugin; digest diferente o reconstrói; versão nova do CLI invalida | idem | integração | — | B-35 | ✅ |
@@ -285,6 +285,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-180 | permissões de projeto: `deny` descrito como aplicado; `allow` descrito como sem efeito aqui, porque a marca de confiança é limpa | eq | unit | — | B-38 | ✅ |
 | S-181 | `enabledPlugins` do projeto listado, com aviso | eq | unit | — | B-38 | ✅ |
 | S-182 | a seção Projeto troca de pasta pelo seletor (abas abertas e recentes do plano 06) e mostra os quatro estados | est | integração | — | B-39 | ⬜ |
+| S-216 | na seção Skills, ligar a origem Usuário ou Sistema abre uma confirmação com a lista exata do que vai começar a carregar, calculada do que a tela já tem em mãos; desligar aplica na hora, sem perguntar (D-20) | est | integração | — | B-39 | ✅ |
 | S-183 | a ajuda está presente e traduzida: CLAUDE.md, slash command, subagent, output style, e "hook é código que roda na máquina" | eq | integração | — | B-40 | ⬜ |
 | S-184 | "Claude: abrir CLAUDE.md", "Claude: novo slash command" e "Claude: novo subagent" na palette; atalho, teclado e axe | eq | integração | — | B-40 | ⬜ |
 

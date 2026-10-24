@@ -183,7 +183,7 @@ A tela não oferece editor estruturado para nada disso. O arquivo continua edit�
 07, como qualquer arquivo da pasta — escrita humana, auditada lá —, e a ajuda diz isso. A alternativa de
 um editor estruturado atrás de segundo passo está registrada na D-17. Cenários S-179…S-181.
 
-### B-39 — Tela: projeto e skills 🔲
+### B-39 — Tela: projeto e skills 🔄
 
 As duas seções são da extensão (`web/src/engines/claude/settings/`), registradas no registro de seções do
 núcleo e visíveis só quando o motor é o Claude — o núcleo da tela não sabe que elas existem. Os services falam com
@@ -200,6 +200,16 @@ filtro por origem e estado, ligar/desligar a origem inteira ou cada skill — pa
 pasta, com a origem da preferência à vista —, seleção com ligar/desligar em lote, "nova skill" pelo
 modelo, abrir no editor as do projeto, e as não carregadas com o motivo (declara hook, link que sai do
 home). Ligar Usuário ou Sistema mostra antes a lista do que vai entrar. Cenário S-182.
+
+**Entregue:** a seção "Skills" inteira — lista, busca, filtro por origem e estado, as duas origens
+ligáveis com a assimetria de D-20 (desligar aplica na hora, ligar pede confirmação mostrando o que vai
+carregar — S-182), seleção em lote, abrir no editor a skill do projeto por duplo clique, e o motivo de
+uma skill não carregada (S-167). **Falta a seção "Projeto"** inteira (os cartões de Memória, Slash
+commands, Subagents, Output styles, Hooks, Permissões, Plugins, `.mcp.json`) e, dentro da seção Skills,
+o fluxo "nova skill" (continua preso a S-159, como a B-34 já registrava — depende do mesmo padrão de
+modelo inicial que a B-33/B-36/B-37 também esperam). O placeholder `Nothing` da seção "Projeto" continua
+no registro, agora coberto só pela navegação até ela (`AgentSettingsRoute.spec.tsx`), sem corpo próprio
+ainda.
 
 ### B-40 — Usabilidade e ajuda: projeto 🔲
 
