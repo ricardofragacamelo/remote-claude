@@ -94,7 +94,9 @@ confirma que devolve só skills), cruzada com a origem: **Projeto** (`.claude/sk
 pasta), **Usuário** e **Sistema** (as do plugin sintético da B-35, qualificadas `plugin:<nome>`). A tela
 mostra o nome simples, o selo da origem, a descrição, o estado e o arquivo.
 
-Rotas da extensão: `GET /engines/claude/skills?folder=` e `PUT /engines/claude/skills/preferences`
+Rotas da extensão: `GET /engines/claude/skills?folder=`, `GET /engines/claude/skills/preferences?folder=`
+(o trio efetivo/usuário/pasta que a D-109 acrescentou, achado escopando a B-39 — sem ele a tela não tem
+como ler o valor gravado antes de mandar o `PUT` inteiro) e `PUT /engines/claude/skills/preferences`
 (ex-`/claude/skills…`). Preferências por usuário e por pasta, com a mesma sobreposição dos padrões
 ([D-04](decisions.md#d-04--padrões-por-usuário-e-por-pasta)): ligar/desligar uma **origem** inteira ou uma
 skill. Viram, no adapter do Claude, a opção `skills` do `query()` — omitida quando nada está desligado (omitir é o padrão do
