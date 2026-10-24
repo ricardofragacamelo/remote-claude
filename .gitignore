@@ -47,3 +47,9 @@ npm-debug.log*
 
 # Credential files the backend reads by path (RC_PUSH_CREDENTIALS_FILE). Never committed.
 /.secrets/
+
+# The backend's own runtime cache, relative to its own working directory rather than the
+# repository root (unlike `/.run/` and `/.secrets/` above): the synthetic skills plugin
+# (RC_SKILLS_PLUGIN_DIR, plan 13, F3/B-35) and the downloaded marketplace plugins
+# (RC_PLUGIN_DOWNLOAD_DIR, plan 13, B-47) a running `pnpm dev` regenerates on demand.
+backend/.data/

@@ -1,0 +1,10 @@
+{
+  "id": "13·S-187…S-189",
+  "title": "the MCP server cycle: adding one through the second step reaches the trail, its secret never comes back, and turning it off from the screen changes a live session's own indicator",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "serverName": "fixturemcp",
+    "secretName": "FIXTURE_SECRET",
+    "secretValue": "e2e-b42-s3cret-5f3a9c"
+  }
+}

@@ -5,15 +5,33 @@
  * `start-local` and `run-e2e-local` differ in exactly one thing — the first uses the fixed ports
  * of docs/plans/00-bootstrap/README.md#portas, the second allocates random ones. Everything
  * downstream of that choice is the same, so it is described once, here, as a pure function of
- * the ports.
+ * the ports — with the one exception of the MCP secret key below, which has to exist on disk
+ * before the backend can use it, not merely be named.
  */
 
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { repoRoot } from './paths.mjs';
 import { ALLOWLIST_FILE } from './workspaces.mjs';
+
+/**
+ * Writes a fresh MCP secret key (plan 13, D-02) for the stack of `backendPort`, and answers its
+ * path — base64 of 32 random bytes, mode `600`, the same shape `readMcpSecretKey` requires. Unlike
+ * the push credential beside it in {@link ephemeralEnvironment}, a scenario of this suite does
+ * store a server with a secret (plan 13, B-42), so the key has to be usable from the first
+ * request, not merely configured.
+ *
+ * @param {number} backendPort
+ * @returns {string}
+ */
+function mcpSecretKeyFile(backendPort) {
+  const file = path.join(os.tmpdir(), `remote-claude-mcp-key-${String(backendPort)}`);
+  fs.writeFileSync(file, randomBytes(32).toString('base64'), { mode: 0o600 });
+  return file;
+}
 
 /** Compose project of the development stack. Ephemeral e2e runs use `<this>-e2e-<id>`. */
 export const PROJECT_NAME = 'remote-claude';
@@ -308,12 +326,10 @@ export function ephemeralEnvironment(ports, options = {}) {
     ),
     RC_PUSH_SCOPE: 'https://push.invalid/auth',
 
-    // The key MCP server secrets are encrypted with (plan 13, D-02) — absent, same as the push
-    // credential above: a server with a secret would not be stored, and nothing here stores one.
-    RC_MCP_SECRET_KEY_FILE: path.join(
-      os.tmpdir(),
-      `remote-claude-mcp-key-${String(ports.backend)}`,
-    ),
+    // The key MCP server secrets are encrypted with (plan 13, D-02) — a fresh one per run, unlike
+    // the push credential above: the MCP suite does store a server with a secret (B-42), so the
+    // key has to be real and readable from the first request, not merely configured.
+    RC_MCP_SECRET_KEY_FILE: mcpSecretKeyFile(ports.backend),
 
     RC_CHECKPOINT_DIR: path.join(os.tmpdir(), `remote-claude-checkpoints-${String(ports.backend)}`),
     RC_CHECKPOINT_MAX_FILE_BYTES: '5242880',

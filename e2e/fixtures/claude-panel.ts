@@ -192,6 +192,24 @@ export function modelChip(page: Page, model?: string): Locator {
   });
 }
 
+/**
+ * The MCP indicator of the panel's header (plan 13, B-22, D-14) — "{{fine}} of {{count}} MCP
+ * server(s) connected", absent entirely while the session has none (S-44). The one place this
+ * spec's own fixture server shows as a live session sees it: the store's screen only ever answers
+ * the store's own `pending`/`disabled` (plan 13, B-42).
+ *
+ * @param fine how many of the session's servers are connected, if the count matters to the caller
+ * @param count how many servers the session has, if the count matters to the caller
+ */
+export function mcpIndicatorButton(page: Page, fine?: number, count?: number): Locator {
+  const name =
+    fine === undefined || count === undefined
+      ? /MCP server/
+      : `${fine} of ${count} MCP server(s) connected`;
+
+  return panelOf(page).getByRole('button', { name });
+}
+
 /** The button that shows, in the panel, what the session changed. */
 export function showChangesButton(page: Page): Locator {
   return panelOf(page).getByRole('button', { name: 'What the session changed' });

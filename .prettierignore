@@ -18,3 +18,7 @@ mobile/
 # Generated from packages/contracts/schema/ by `pnpm contracts:generate`, which formats its own
 # output. What guards it is `pnpm contracts:check`, which fails when it drifts from the schema.
 packages/contracts/src/protocol.ts
+
+# The backend's own runtime cache (see .gitignore) — a `pnpm dev` left running regenerates it
+# between one gate 1 and the next, and none of it is source this product owns the style of.
+backend/.data/
