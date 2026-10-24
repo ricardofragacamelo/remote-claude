@@ -6,6 +6,7 @@ import {
   AgentSettingsScreen,
   agentSettingsSections,
   agentSettingsShortcuts,
+  sectionHelpExtras,
   sectionsForCapabilities,
   sectionsForEngine,
 } from '@/features/agent-settings';
@@ -49,7 +50,7 @@ export function AgentSettingsRoute(): React.JSX.Element {
     sectionsForEngine(agentSettingsSections.entries(), engine),
     capabilities,
   );
-  const extra = sections.flatMap((section) => section.help?.(t, engine) ?? []);
+  const extra = sectionHelpExtras(sections, t, engine);
 
   const go = useCallback(
     (next: AgentSettingsLocation) => {

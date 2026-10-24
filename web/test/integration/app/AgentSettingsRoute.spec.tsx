@@ -64,7 +64,7 @@ describe("an engine's settings, a screen of its own — plan 13, B-09; plan 28, 
     ).toBeVisible();
   });
 
-  it('opens the "project" section too, its body still a later phase of the plan', async () => {
+  it('opens the "project" section too', async () => {
     const user = userEvent.setup();
     const app = mountApp('/settings/agents/claude?section=account&folder=%2Fsrv%2Fapp');
 

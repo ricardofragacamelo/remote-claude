@@ -9,7 +9,6 @@ import {
   sectionsForEngine,
 } from '@/features/agent-settings';
 import type { AgentSettingsSection } from '@/features/agent-settings';
-import { Nothing } from '@/features/agent-settings';
 
 function sectionOf(id: string, engine?: string, position = 100): AgentSettingsSection {
   return {
@@ -18,7 +17,7 @@ function sectionOf(id: string, engine?: string, position = 100): AgentSettingsSe
     icon: Bot,
     titleKey: `t.${id}`,
     purposeKey: `p.${id}`,
-    Body: Nothing,
+    Body: () => null,
     ...(engine === undefined ? {} : { engine }),
   };
 }

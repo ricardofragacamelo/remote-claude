@@ -404,6 +404,68 @@ describe('the skills section of the agent settings — plan 13, B-34, B-39, S-18
     await user.click(retry);
   });
 
+  it('creates a new skill from the template, then opens it — S-159', async () => {
+    const user = userEvent.setup();
+    skillBackendAnswers();
+    const post = vi
+      .spyOn(api, 'post')
+      .mockResolvedValue({ path: '.claude/skills/review/SKILL.md', etag: 'a' });
+    const app = mountApp(URL);
+
+    await user.click(
+      await screen.findByRole('button', { name: t('engines.claude.skills.newSkill') }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    await user.type(
+      within(dialog).getByLabelText(t('engines.claude.skills.newSkillNameLabel')),
+      'review',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: t('engines.claude.project.newArtifactConfirm') }),
+    );
+
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith('/files', {
+        folder: FOLDER,
+        path: '.claude/skills/review/SKILL.md',
+        kind: 'file',
+        content: expect.stringContaining('name: review'),
+        encoding: 'utf8',
+        bom: false,
+        confirmSensitive: false,
+      });
+    });
+    await waitFor(() => {
+      expect(app.path()).toBe('/workbench');
+    });
+    expect(app.search()).toMatchObject({ folder: FOLDER, file: '.claude/skills/review/SKILL.md' });
+  });
+
+  it('a skill name already taken shows the server’s own refusal', async () => {
+    const user = userEvent.setup();
+    skillBackendAnswers();
+    vi.spyOn(api, 'post').mockRejectedValue(
+      new AppError('FILE_EXISTS', 'common.error.fileExists', 't1'),
+    );
+    mountApp(URL);
+
+    await user.click(
+      await screen.findByRole('button', { name: t('engines.claude.skills.newSkill') }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    await user.type(
+      within(dialog).getByLabelText(t('engines.claude.skills.newSkillNameLabel')),
+      'review',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: t('engines.claude.project.newArtifactConfirm') }),
+    );
+
+    expect(
+      await within(dialog).findByText(t('engines.claude.project.newArtifactNameTaken')),
+    ).toBeVisible();
+  });
+
   it('has no accessibility violation', async () => {
     skillBackendAnswers({
       '/engines/claude/skills': () => Promise.resolve({ skills: [aSkill()] }),

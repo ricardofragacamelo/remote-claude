@@ -1,6 +1,7 @@
 import { Power, PowerOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/shared/components/ui/button';
 import { FilterSelect } from '@/shared/components/FilterSelect';
 import type { SelectionBarAction, SelectionBarKeys } from '@/shared/components/SelectionActionBar';
 import { SelectionActionBar } from '@/shared/components/SelectionActionBar';
@@ -34,6 +35,7 @@ export interface SkillsToolbarProps {
   onStateFilterChange(state: 'all' | 'enabled' | 'disabled'): void;
   readonly selectedSkills: readonly SkillView[];
   onToggleSelected(enabled: boolean): void;
+  onNewSkill(): void;
 }
 
 /**
@@ -52,6 +54,7 @@ export function SkillsToolbar({
   onStateFilterChange,
   selectedSkills,
   onToggleSelected,
+  onNewSkill,
 }: SkillsToolbarProps): React.JSX.Element {
   const { t } = useTranslation();
   const anyDisabled = selectedSkills.some((skill) => !skill.enabled);
@@ -140,6 +143,9 @@ export function SkillsToolbar({
           value={search}
           onChange={onSearchChange}
         />
+        <Button variant="outline" onClick={onNewSkill}>
+          {t('engines.claude.skills.newSkill')}
+        </Button>
       </div>
 
       <SelectionActionBar

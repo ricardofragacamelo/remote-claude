@@ -79,3 +79,46 @@ export function skillsSectionHelp(t: TFunction): HelpExtra[] {
     },
   ];
 }
+
+/**
+ * The help of "Project", written for somebody who has never seen `.claude/` before (plan 13, B-40):
+ * what `CLAUDE.md` is and where Claude looks for one, what a slash command and a subagent are (and
+ * why a subagent's own frontmatter can widen what it may do), what an output style changes, what a
+ * hook actually is — code that runs on this machine, on its own event, nobody approving it here —,
+ * and why the project's own permissions apply in the terminal's own Claude Code but not in this
+ * product's sessions (the folder's trust mark is cleared before a session opens).
+ */
+export function projectSectionHelp(t: TFunction): HelpExtra[] {
+  return [
+    {
+      id: 'claude-project-memory',
+      heading: t('engines.claude.help.projectMemoryHeading'),
+      body: t('engines.claude.help.projectMemoryBody'),
+    },
+    {
+      id: 'claude-project-command',
+      heading: t('engines.claude.help.projectCommandHeading'),
+      body: t('engines.claude.help.projectCommandBody'),
+    },
+    {
+      id: 'claude-project-subagent',
+      heading: t('engines.claude.help.projectSubagentHeading'),
+      body: t('engines.claude.help.projectSubagentBody'),
+    },
+    {
+      id: 'claude-project-output-style',
+      heading: t('engines.claude.help.projectOutputStyleHeading'),
+      body: t('engines.claude.help.projectOutputStyleBody'),
+    },
+    {
+      id: 'claude-project-hook',
+      heading: t('engines.claude.help.projectHookHeading'),
+      body: t('engines.claude.help.projectHookBody'),
+    },
+    {
+      id: 'claude-project-permissions',
+      heading: t('engines.claude.help.projectPermissionsHeading'),
+      body: t('engines.claude.help.projectPermissionsBody'),
+    },
+  ];
+}

@@ -3,7 +3,6 @@ import { Blocks, Bot, FolderCog, Puzzle, Wrench } from 'lucide-react';
 import { commandHosts } from '@/app/command-hosts';
 import { NAVIGATION_POSITIONS, globalNavigation } from '@/app/global-navigation';
 import {
-  Nothing,
   agentSettingsHref,
   agentSettingsSections,
   agentSettingsShortcuts,
@@ -19,9 +18,10 @@ import {
   installationSectionHelp,
   outputStyleHelp,
   pluginsSectionHelp,
+  projectSectionHelp,
   skillsSectionHelp,
 } from './lib/claude-engine-help';
-import { PluginsSection, SkillsSection } from './settings';
+import { PluginsSection, ProjectSection, SkillsSection } from './settings';
 
 /** The engine this extension is — never read outside this folder (ADR-025). */
 const ENGINE = 'claude';
@@ -86,7 +86,8 @@ export function registerClaudeEngine(): () => void {
       icon: FolderCog,
       titleKey: 'engines.claude.project.title',
       purposeKey: 'engines.claude.project.purpose',
-      Body: Nothing,
+      Body: ProjectSection,
+      help: projectSectionHelp,
     }),
     defaultsExtraFields.register({
       id: 'claude.outputStyle',

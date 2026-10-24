@@ -32,3 +32,5 @@ export { formatBytes } from './lib/text';
 export { useActiveFile, useFileDirty } from './hooks/useEditor';
 export { diffSources } from './store/diff-sources';
 export type { DiffSide, DiffSource, OpenFileOptions, ProvidedSide } from './types/editor';
+export { createFile } from './services/files.service';
+export type { TextWrite, WrittenFile } from './services/files.service';
