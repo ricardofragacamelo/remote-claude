@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import {
   attachFrom,
+  closeSession,
   connected,
   expectRecycledBuffer,
   lastSeqOf,
@@ -49,10 +50,16 @@ async function session(): Promise<{ socket: Awaited<ReturnType<typeof connected>
   return { socket, id: await startSession(socket, context().workspace) };
 }
 
-/** Waits for the turn to end, and lets the socket go. A turn that never ends is the failure. */
+/**
+ * Waits for the turn to end. A turn that never ends is the failure.
+ *
+ * Ending the session itself is the caller's job, in a `finally` — so a thrown assertion between
+ * opening the session and this call never leaves it running for the rest of the suite to starve on
+ * (the backend holds at most ten at once, and this stack's reaper is a 30-minute net, not a cleanup
+ * for tests).
+ */
 async function finished(socket: Awaited<ReturnType<typeof connected>>): Promise<void> {
   await socket.waitFor((frame) => frame.type === 'turn.completed', 30_000);
-  socket.close();
 }
 
 /** Opens a session, prompts it, and stops at the question the recorded run always asks. */
@@ -82,29 +89,32 @@ test(`${whole.id} — ${whole.title}`, async () => {
   };
 
   const { socket, id: sessionId } = await session();
-  prompt(socket, sessionId, expected.fixture);
 
-  // The machine really moves: `session.started` already meant `idle`, the first fragment of the
-  // answer says the model is thinking, and the finished turn says it is idle again.
-  const thinking = await socket.waitFor((frame) => frame.type === 'session.statusChanged');
-  expect(thinking.payload).toEqual({ status: expected.statusWhileAnswering });
+  try {
+    prompt(socket, sessionId, expected.fixture);
 
-  // The whole answer, not a fragment of it: `message.completed` supersedes the deltas.
-  await socket.waitFor((frame) => frame.type === 'message.completed');
-  const turn = await socket.waitFor((frame) => frame.type === 'turn.completed');
+    // The machine really moves: `session.started` already meant `idle`, the first fragment of the
+    // answer says the model is thinking, and the finished turn says it is idle again.
+    const thinking = await socket.waitFor((frame) => frame.type === 'session.statusChanged');
+    expect(thinking.payload).toEqual({ status: expected.statusWhileAnswering });
 
-  expect(turn.payload).toMatchObject({ costUsd: expect.any(String) });
+    // The whole answer, not a fragment of it: `message.completed` supersedes the deltas.
+    await socket.waitFor((frame) => frame.type === 'message.completed');
+    const turn = await socket.waitFor((frame) => frame.type === 'turn.completed');
 
-  expect((await statusReached(socket, expected.statusWhenDone)).payload).toEqual({
-    status: expected.statusWhenDone,
-  });
-  expect(sequencesOf(socket, sessionId)).toEqual(
-    // Every event of a session is numbered once, in order, with no hole: that is what makes
-    // replay possible at all.
-    Array.from({ length: sequencesOf(socket, sessionId).length }, (_unused, index) => index + 1),
-  );
+    expect(turn.payload).toMatchObject({ costUsd: expect.any(String) });
 
-  socket.close();
+    expect((await statusReached(socket, expected.statusWhenDone)).payload).toEqual({
+      status: expected.statusWhenDone,
+    });
+    expect(sequencesOf(socket, sessionId)).toEqual(
+      // Every event of a session is numbered once, in order, with no hole: that is what makes
+      // replay possible at all.
+      Array.from({ length: sequencesOf(socket, sessionId).length }, (_unused, index) => index + 1),
+    );
+  } finally {
+    await closeSession(socket, sessionId);
+  }
 });
 
 test(`${asking.id} — ${asking.title}`, async () => {
@@ -116,52 +126,60 @@ test(`${asking.id} — ${asking.title}`, async () => {
     statusWhileAsking: string;
   };
 
-  const { socket, request, requestId } = await asked(expected.fixture);
+  const { socket, id: sessionId, request, requestId } = await asked(expected.fixture);
 
-  expect(request.kind).toBe('request');
-  expect(request.payload).toMatchObject({
-    toolName: expected.toolName,
-    riskHint: expected.riskHint,
-    defaultToNo: true,
-  });
+  try {
+    expect(request.kind).toBe('request');
+    expect(request.payload).toMatchObject({
+      toolName: expected.toolName,
+      riskHint: expected.riskHint,
+      defaultToNo: true,
+    });
 
-  // The one status a UI cannot afford to confuse with `running`: the agent loop has stopped on a
-  // person, and a spinner for something that will never finish on its own is a lie.
-  await statusReached(socket, expected.statusWhileAsking);
+    // The one status a UI cannot afford to confuse with `running`: the agent loop has stopped on a
+    // person, and a spinner for something that will never finish on its own is a lie.
+    await statusReached(socket, expected.statusWhileAsking);
 
-  socket.respond(request, { requestId, decision: expected.decision, scope: 'once' });
+    socket.respond(request, { requestId, decision: expected.decision, scope: 'once' });
 
-  const resolved = await socket.waitFor((frame) => frame.type === 'permission.resolved');
-  expect(resolved.payload).toMatchObject({
-    requestId,
-    decision: expected.decision,
-    auto: false,
-    resolvedBy: context().user.userId,
-  });
+    const resolved = await socket.waitFor((frame) => frame.type === 'permission.resolved');
+    expect(resolved.payload).toMatchObject({
+      requestId,
+      decision: expected.decision,
+      auto: false,
+      resolvedBy: context().user.userId,
+    });
 
-  // The loop was blocked on that answer; the turn only finishes because it arrived.
-  await finished(socket);
+    // The loop was blocked on that answer; the turn only finishes because it arrived.
+    await finished(socket);
+  } finally {
+    await closeSession(socket, sessionId);
+  }
 });
 
 test(`${silence.id} — ${silence.title}`, async () => {
   const expected = silence.expect as { fixture: string; decision: string; auto: boolean };
 
-  const { socket, requestId } = await asked(expected.fixture);
+  const { socket, id: sessionId, requestId } = await asked(expected.fixture);
 
-  // Nobody answers. Ours is the only timeout there is — the CLI imposes none, measured — and it
-  // refuses. Silence never authorises.
-  const resolved = await socket.waitFor((frame) => frame.type === 'permission.resolved', 30_000);
+  try {
+    // Nobody answers. Ours is the only timeout there is — the CLI imposes none, measured — and it
+    // refuses. Silence never authorises.
+    const resolved = await socket.waitFor((frame) => frame.type === 'permission.resolved', 30_000);
 
-  expect(resolved.payload).toMatchObject({
-    requestId,
-    decision: expected.decision,
-    auto: expected.auto,
-  });
-  expect((resolved.payload as { resolvedBy?: string }).resolvedBy).toBeUndefined();
+    expect(resolved.payload).toMatchObject({
+      requestId,
+      decision: expected.decision,
+      auto: expected.auto,
+    });
+    expect((resolved.payload as { resolvedBy?: string }).resolvedBy).toBeUndefined();
 
-  // And the session carries on: the refusal goes back to the model as a message, and the turn
-  // finishes rather than hanging.
-  await finished(socket);
+    // And the session carries on: the refusal goes back to the model as a message, and the turn
+    // finishes rather than hanging.
+    await finished(socket);
+  } finally {
+    await closeSession(socket, sessionId);
+  }
 });
 
 test(`${denied.id} — ${denied.title}`, async () => {
@@ -185,48 +203,56 @@ test(`${interrupted.id} — ${interrupted.title}`, async () => {
 
   const { socket, id: sessionId } = await session();
 
-  // A turn that will not finish on its own: from the outside it is indistinguishable from a tool
-  // that takes minutes, which is the case `session.interrupt` exists for.
-  prompt(socket, sessionId, expected.fixture, 'do the work [hold]');
-  await socket.waitFor((frame) => frame.type === 'message.completed');
+  try {
+    // A turn that will not finish on its own: from the outside it is indistinguishable from a tool
+    // that takes minutes, which is the case `session.interrupt` exists for.
+    prompt(socket, sessionId, expected.fixture, 'do the work [hold]');
+    await socket.waitFor((frame) => frame.type === 'message.completed');
 
-  socket.send('session.interrupt', { sessionId });
+    socket.send('session.interrupt', { sessionId });
 
-  expect((await statusReached(socket, expected.statusAfterInterrupt)).payload).toEqual({
-    status: expected.statusAfterInterrupt,
-  });
-  expect(socket.frames.some((frame) => frame.type === 'turn.completed')).toBe(true);
-
-  socket.close();
+    expect((await statusReached(socket, expected.statusAfterInterrupt)).payload).toEqual({
+      status: expected.statusAfterInterrupt,
+    });
+    expect(socket.frames.some((frame) => frame.type === 'turn.completed')).toBe(true);
+  } finally {
+    await closeSession(socket, sessionId);
+  }
 });
 
 test(`${reconnect.id} — ${reconnect.title}`, async () => {
   const expected = reconnect.expect as { fixture: string; gap: boolean };
 
   const { socket: first, id: sessionId } = await session();
+  let back: Awaited<ReturnType<typeof connected>> | undefined;
 
-  prompt(first, sessionId, expected.fixture, 'do the work [hold]');
-  const seen = await first.waitFor((frame) => frame.type === 'message.completed');
-  const lastApplied = seen.seq ?? 0;
+  try {
+    prompt(first, sessionId, expected.fixture, 'do the work [hold]');
+    const seen = await first.waitFor((frame) => frame.type === 'message.completed');
+    const lastApplied = seen.seq ?? 0;
 
-  // Not a close frame: the one thing replay exists for is the connection that did **not** say
-  // goodbye.
-  first.drop();
+    // Not a close frame: the one thing replay exists for is the connection that did **not** say
+    // goodbye.
+    first.drop();
 
-  const back = await connected(context().user);
-  expect((await attachFrom(back, sessionId, lastApplied)).gap).toBe(expected.gap);
+    back = await connected(context().user);
+    expect((await attachFrom(back, sessionId, lastApplied)).gap).toBe(expected.gap);
 
-  // The turn only finishes once the interrupt lands, so what the second socket receives is
-  // exactly what the first one never saw.
-  back.send('session.interrupt', { sessionId });
-  await back.waitFor((frame) => frame.type === 'turn.completed');
+    // The turn only finishes once the interrupt lands, so what the second socket receives is
+    // exactly what the first one never saw.
+    back.send('session.interrupt', { sessionId });
+    await back.waitFor((frame) => frame.type === 'turn.completed');
 
-  const replayed = sequencesOf(back, sessionId);
-  expect(lastSeqOf(back)).toBeGreaterThan(lastApplied);
-  expect(replayed.every((seq) => seq > lastApplied)).toBe(true);
-  expect(new Set(replayed).size).toBe(replayed.length);
-
-  back.close();
+    const replayed = sequencesOf(back, sessionId);
+    expect(lastSeqOf(back)).toBeGreaterThan(lastApplied);
+    expect(replayed.every((seq) => seq > lastApplied)).toBe(true);
+    expect(new Set(replayed).size).toBe(replayed.length);
+  } finally {
+    // `back` is the socket to close through once it has attached; before that, `first` still
+    // holds the session it opened; `first.drop()` is a dropped TCP connection, not a goodbye, so
+    // sending on it is still exactly what a reconnecting client would do.
+    await closeSession(back ?? first, sessionId);
+  }
 });
 
 test(`${race.id} — ${race.title}`, async () => {
@@ -235,30 +261,32 @@ test(`${race.id} — ${race.title}`, async () => {
   const { socket: first, id: sessionId } = await session();
   const second = await connected(context().user);
 
-  await attachFrom(second, sessionId, 0);
+  try {
+    await attachFrom(second, sessionId, 0);
 
-  prompt(first, sessionId, expected.fixture);
-  const request = await permissionAsked(first);
-  const requestId = String((request.payload as { requestId: string }).requestId);
+    prompt(first, sessionId, expected.fixture);
+    const request = await permissionAsked(first);
+    const requestId = String((request.payload as { requestId: string }).requestId);
 
-  first.respond(request, { requestId, decision: expected.decision, scope: 'once' });
-  second.respond(request, { requestId, decision: 'deny', reason: 'too late', scope: 'once' });
+    first.respond(request, { requestId, decision: expected.decision, scope: 'once' });
+    second.respond(request, { requestId, decision: 'deny', reason: 'too late', scope: 'once' });
 
-  // Losing the race is not an error on either screen: the second client gets an ordinary ack and
-  // the event tells it which decision actually reached the agent, and who made it.
-  for (const socket of [first, second]) {
-    const resolved = await socket.waitFor((frame) => frame.type === 'permission.resolved');
-    expect(resolved.payload).toMatchObject({
-      requestId,
-      decision: expected.decision,
-      resolvedBy: context().user.userId,
-    });
+    // Losing the race is not an error on either screen: the second client gets an ordinary ack and
+    // the event tells it which decision actually reached the agent, and who made it.
+    for (const socket of [first, second]) {
+      const resolved = await socket.waitFor((frame) => frame.type === 'permission.resolved');
+      expect(resolved.payload).toMatchObject({
+        requestId,
+        decision: expected.decision,
+        resolvedBy: context().user.userId,
+      });
+    }
+
+    expect(second.frames.some((frame) => frame.kind === 'error')).toBe(false);
+  } finally {
+    await closeSession(first, sessionId);
+    second.close();
   }
-
-  expect(second.frames.some((frame) => frame.kind === 'error')).toBe(false);
-
-  first.close();
-  second.close();
 });
 
 test(`${trusted.id} — ${trusted.title}`, async () => {
@@ -274,12 +302,14 @@ test(`${trusted.id} — ${trusted.title}`, async () => {
   markAsTrusted(context().workspace);
   expect(trustMarkOf(context().workspace)).toBe(true);
 
-  const { socket, request } = await asked(expected.fixture);
+  const { socket, id: sessionId, request } = await asked(expected.fixture);
 
-  expect(request.payload).toMatchObject({ origin: { native: expected.toolName } });
-  expect(trustMarkOf(context().workspace)).toBe(false);
-
-  socket.close();
+  try {
+    expect(request.payload).toMatchObject({ origin: { native: expected.toolName } });
+    expect(trustMarkOf(context().workspace)).toBe(false);
+  } finally {
+    await closeSession(socket, sessionId);
+  }
 });
 
 test(`${overflow.id} — ${overflow.title}`, async () => {
@@ -291,16 +321,19 @@ test(`${overflow.id} — ${overflow.title}`, async () => {
   };
 
   const { socket: producer, id: sessionId } = await session();
+  let late: Awaited<ReturnType<typeof connected>> | undefined;
 
-  await pushPastSeq(producer, replayBufferSize(producer) + expected.overflowMargin, () => {
-    prompt(producer, sessionId, expected.fixture);
-  });
+  try {
+    await pushPastSeq(producer, replayBufferSize(producer) + expected.overflowMargin, () => {
+      prompt(producer, sessionId, expected.fixture);
+    });
 
-  // Coming back from before what the buffer still holds. A partial replay is never stitched: a
-  // client that believes it has everything and does not is worse than one told to reload.
-  const late = await connected(context().user);
-  expectRecycledBuffer(await attachFrom(late, sessionId, 1), expected);
-
-  producer.close();
-  late.close();
+    // Coming back from before what the buffer still holds. A partial replay is never stitched: a
+    // client that believes it has everything and does not is worse than one told to reload.
+    late = await connected(context().user);
+    expectRecycledBuffer(await attachFrom(late, sessionId, 1), expected);
+  } finally {
+    await closeSession(producer, sessionId);
+    late?.close();
+  }
 });
