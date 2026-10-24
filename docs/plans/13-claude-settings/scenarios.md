@@ -251,17 +251,17 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-146 | ler enquanto o Claude escreve em `.claude/` devolve o antes ou o depois, nunca um arquivo pela metade | conc | integração | — | B-31 | ✅ |
 | S-147 | a segunda leitura sem mudança em `.claude/` não refaz sonda; mudança de mtime invalida | idem | integração | — | B-31 | ✅ |
 | S-148 | memória: diz qual arquivo existe e qual é **carregado** pelas sessões deste produto; com sessão viva, a lista vem de `getContextUsage` | eq | integração | — | B-32 | ✅ |
-| S-149 | sem `CLAUDE.md`, o estado vazio oferece o `/init` e o modelo inicial | fron | integração | — | B-32 | ⬜ |
-| S-150 | "abrir no editor" leva à aba da pasta com o arquivo; arquivo fora da pasta não vira link | fron | integração | — | B-32 | ⬜ |
+| S-149 | sem `CLAUDE.md`, o estado vazio oferece o `/init` e o modelo inicial | fron | integração | — | B-32 | ✅ |
+| S-150 | "abrir no editor" leva à aba da pasta com o arquivo; arquivo fora da pasta não vira link | fron | integração | — | B-32 | ✅ |
 | S-151 | comandos do projeto são os de `supportedCommands()` sem `builtin`, com o arquivo de origem quando é da pasta | eq | integração | — | B-33 | ✅ |
-| S-152 | criar comando pelo modelo grava `.claude/commands/<nome>.md` pela escrita do plano 07 (trilha `file.*`), e ele aparece no menu do painel | est | integração | — | B-33 | ⬜ |
-| S-153 | nome de comando que já existe | err | integração | `FILE_EXISTS` | B-33 | ⬜ |
+| S-152 | criar comando pelo modelo grava `.claude/commands/<nome>.md` pela escrita do plano 07 (trilha `file.*`), e ele aparece no menu do painel | est | integração | — | B-33 | ✅ |
+| S-153 | nome de comando que já existe | err | integração | `FILE_EXISTS` | B-33 | ✅ |
 | S-154 | a lista de skills da pasta traz nome simples, selo da origem (Projeto, Usuário, Sistema), descrição e estado | eq | integração | — | B-34 | ✅ |
 | S-155 | nada desligado → a opção `skills` é omitida (padrão do CLI), nunca `'all'` nem lista | fron | unit | — | B-34 | ✅ |
 | S-156 | desligar uma origem ou uma skill → a sessão nova recebe `skills` sem ela; ela some do `/` do painel e a tool `Skill` a recusa | est | integração | — | B-34 | ✅ |
 | S-157 | colisão de nome projeto × usuário: as duas listadas com o selo; `/nome` chama a do projeto, a outra fica em `plugin:nome` | fron | unit | — | B-34 | ✅ |
 | S-158 | skill apagada do disco depois de desligada: a preferência fica, sem efeito, marcada | est | unit | — | B-34 | ✅ |
-| S-159 | criar skill pelo modelo grava `.claude/skills/<nome>/SKILL.md` pela escrita do plano 07, e ela aparece depois do `reloadSkills()` | est | integração | — | B-34 | ⬜ |
+| S-159 | criar skill pelo modelo grava `.claude/skills/<nome>/SKILL.md` pela escrita do plano 07, e ela aparece depois do `reloadSkills()` | est | integração | — | B-34 | ✅ |
 | S-160 | nome de skill fora do formato | err | unit | `INVALID_INPUT` | B-34 | ✅ |
 | S-161 | preferência de skills de uma pasta de outra pessoa | err | integração | `FORBIDDEN` | B-34 | ✅ |
 | S-162 | duas gravações de preferência de skills ao mesmo tempo → uma vence por inteiro | conc | integração | — | B-34 | ✅ |
@@ -278,16 +278,16 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-173 | o plugin sintético de um usuário nunca entra na sessão de outro | err | unit | — | B-35 | ✅ |
 | S-174 | com a política de shell inline ligada, o bloco `!` de uma skill vira o marcador, e a ajuda diz isso | est | integração | — | B-35 | ⬜ |
 | S-175 | subagent com `permissionMode`, `tools` amplos ou `mcpServers` no frontmatter aparece sinalizado, com a explicação | err | unit | — | B-36 | ✅ |
-| S-176 | criar subagent pelo modelo grava `.claude/agents/<nome>.md` e ele aparece em `supportedAgents()` na sessão seguinte | est | integração | — | B-36 | ⬜ |
+| S-176 | criar subagent pelo modelo grava `.claude/agents/<nome>.md` e ele aparece em `supportedAgents()` na sessão seguinte | est | integração | — | B-36 | ✅ |
 | S-177 | output styles: o atual e os disponíveis vêm de `initializationResult()`; um estilo criado pelo modelo aparece | eq | integração | — | B-37 | ✅ |
 | S-178 | escolher um output style como padrão grava pelo store da F1 | est | integração | — | B-37 | ✅ |
 | S-179 | hooks de projeto aparecem só leitura, com evento, matcher e comando por extenso, e o que o spike mediu sobre rodarem nas nossas sessões | eq | integração | — | B-38 | ✅ |
 | S-180 | permissões de projeto: `deny` descrito como aplicado; `allow` descrito como sem efeito aqui, porque a marca de confiança é limpa | eq | unit | — | B-38 | ✅ |
 | S-181 | `enabledPlugins` do projeto listado, com aviso | eq | unit | — | B-38 | ✅ |
-| S-182 | a seção Projeto troca de pasta pelo seletor (abas abertas e recentes do plano 06) e mostra os quatro estados | est | integração | — | B-39 | ⬜ |
+| S-182 | a seção Projeto troca de pasta pelo seletor (abas abertas e recentes do plano 06) e mostra os quatro estados | est | integração | — | B-39 | ✅ |
 | S-216 | na seção Skills, ligar a origem Usuário ou Sistema abre uma confirmação com a lista exata do que vai começar a carregar, calculada do que a tela já tem em mãos; desligar aplica na hora, sem perguntar (D-20) | est | integração | — | B-39 | ✅ |
-| S-183 | a ajuda está presente e traduzida: CLAUDE.md, slash command, subagent, output style, e "hook é código que roda na máquina" | eq | integração | — | B-40 | ⬜ |
-| S-184 | "Claude: abrir CLAUDE.md", "Claude: novo slash command" e "Claude: novo subagent" na palette; atalho, teclado e axe | eq | integração | — | B-40 | ⬜ |
+| S-183 | a ajuda está presente e traduzida: CLAUDE.md, slash command, subagent, output style, e "hook é código que roda na máquina" | eq | integração | — | B-40 | ✅ |
+| S-184 | "Claude: abrir CLAUDE.md", "Claude: novo slash command" e "Claude: novo subagent" na palette; atalho, teclado e axe | eq | integração | — | B-40 | ✅ |
 
 ## E2E e smoke-live — B-41…B-46
 

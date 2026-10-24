@@ -66,7 +66,7 @@ com formato publicado; a proibição de parser próprio do plano 04 é sobre o J
 Cache por pasta invalidado pelo mtime de `.claude/` e do `.mcp.json`; leitura concorrente com o Claude
 escrevendo devolve o antes ou o depois (arquivos escritos por rename). Cenários S-141…S-147.
 
-### B-32 — Memória: o que existe e o que vale 🔲
+### B-32 — Memória: o que existe e o que vale ✅
 
 `CLAUDE.md`, `.claude/CLAUDE.md`, `CLAUDE.local.md`, os `CLAUDE.md` de ancestrais até a raiz da
 allowlist, e o `~/.claude/CLAUDE.md` do usuário: existe, tamanho, modificado — e **se é carregado** pelas
@@ -76,7 +76,7 @@ resposta: "abrir no editor" leva à aba da pasta com o arquivo (plano 07); arqui
 link. Sem `CLAUDE.md`, o estado vazio oferece o `/init` (plano 04, pelo painel) e o modelo inicial.
 Cenários S-148…S-150.
 
-### B-33 — Slash commands do projeto 🔲
+### B-33 — Slash commands do projeto ✅
 
 A lista é a do `supportedCommands()` **sem** `builtin` (o SDK marca os do próprio Claude Code) e sem as skills (que têm a B-34), com o
 arquivo de origem quando ele está na pasta — reusando o `menuOf` do plano 04 para esconder interno e
@@ -86,7 +86,7 @@ gravado por `POST /files` do plano 07 em `.claude/commands/<nome>.md` e aberto n
 pasta é invalidado, e o comando aparece no menu do painel. Nome que já existe: o `409` do plano 07.
 Cenários S-151…S-153.
 
-### B-34 — Skills: lista, origem e preferências 🔄
+### B-34 — Skills: lista, origem e preferências ✅
 
 O composer do plano 08 completa `/` com slash commands **e** skills; a configuração das skills mora
 aqui. A lista da pasta vem de `reloadSkills()` no catálogo (sessão viva, ou a sonda da B-10 — a B-01
@@ -114,10 +114,9 @@ em `.claude/skills/<nome>/SKILL.md`, aberto no editor; `reloadSkills()` na sess�
 Cenários S-154…S-164.
 
 **Entregue:** a leitura (`GET`), as preferências (`PUT`, com a validação de nome, a trilha e a
-assimetria de D-20), e a composição de `Options.skills` no início de sessão — S-154…S-158, S-160…S-164
-(D-105…D-108). **Falta só S-159** — o fluxo "Nova skill" em si (o botão, o modelo inicial no editor,
-o `POST /files` do plano 07): depende da tela (B-39), que ainda não nasceu; reabre quando ela nascer,
-no mesmo padrão que a B-31 já deixou para B-33/B-36/B-37.
+assimetria de D-20), a composição de `Options.skills` no início de sessão, e o fluxo "Nova skill" em
+si (o botão na seção Skills, o modelo inicial no editor, gravado pelo `POST /files` do plano 07 em
+`.claude/skills/<nome>/SKILL.md`) — S-154…S-164, completo.
 
 ### B-35 — O plugin sintético das skills de usuário e de sistema ✅
 
@@ -147,7 +146,7 @@ expõe **só `skills/`**:
 O plugin de um usuário nunca entra na sessão de outro. A regressão que importa é a da D-11: com uma
 `allow` em `~/.claude/settings.json`, o `canUseTool` continua sendo chamado. Cenários S-165…S-174.
 
-### B-36 — Subagents do projeto 🔲
+### B-36 — Subagents do projeto ✅
 
 A lista vem de `supportedAgents()` (nome, descrição, modelo), com o arquivo de origem. Frontmatter que
 muda o que o subagent pode fazer — `permissionMode`, `tools` amplos, `mcpServers` — aparece
@@ -155,7 +154,7 @@ muda o que o subagent pode fazer — `permissionMode`, `tools` amplos, `mcpServe
 (`strictMcpConfig`); `permissionMode` de subagent é o cenário S-198. "Novo subagent" pelo modelo inicial,
 como na B-33, em `.claude/agents/<nome>.md`. Cenários S-175, S-176.
 
-### B-37 — Output styles 🔲
+### B-37 — Output styles ✅
 
 O atual e os disponíveis vêm de `initializationResult()` (`output_style`, `available_output_styles`),
 os do projeto com o arquivo de origem. "Novo output style" pelo modelo inicial em
@@ -165,7 +164,7 @@ usuário ou para a pasta, no campo que a extensão declara: o núcleo guarda o v
 aplica pela camada de flag, com allowlist, é o adapter do Claude ([D-06](decisions.md#d-06--o-que-entra-como-padrão)).
 Cenários S-177, S-178.
 
-### B-38 — Hooks, permissões e plugins do projeto: só leitura, explicados 🔲
+### B-38 — Hooks, permissões e plugins do projeto: só leitura, explicados ✅
 
 [D-17](decisions.md#d-17--permissões-hooks-e-plugins-de-projeto). Do `.claude/settings.json`:
 
@@ -183,7 +182,7 @@ A tela não oferece editor estruturado para nada disso. O arquivo continua edit�
 07, como qualquer arquivo da pasta — escrita humana, auditada lá —, e a ajuda diz isso. A alternativa de
 um editor estruturado atrás de segundo passo está registrada na D-17. Cenários S-179…S-181.
 
-### B-39 — Tela: projeto e skills 🔄
+### B-39 — Tela: projeto e skills ✅
 
 As duas seções são da extensão (`web/src/engines/claude/settings/`), registradas no registro de seções do
 núcleo e visíveis só quando o motor é o Claude — o núcleo da tela não sabe que elas existem. Os services falam com
@@ -201,17 +200,24 @@ pasta, com a origem da preferência à vista —, seleção com ligar/desligar e
 modelo, abrir no editor as do projeto, e as não carregadas com o motivo (declara hook, link que sai do
 home). Ligar Usuário ou Sistema mostra antes a lista do que vai entrar. Cenário S-182.
 
-**Entregue:** a seção "Skills" inteira — lista, busca, filtro por origem e estado, as duas origens
-ligáveis com a assimetria de D-20 (desligar aplica na hora, ligar pede confirmação mostrando o que vai
-carregar — S-182), seleção em lote, abrir no editor a skill do projeto por duplo clique, e o motivo de
-uma skill não carregada (S-167). **Falta a seção "Projeto"** inteira (os cartões de Memória, Slash
-commands, Subagents, Output styles, Hooks, Permissões, Plugins, `.mcp.json`) e, dentro da seção Skills,
-o fluxo "nova skill" (continua preso a S-159, como a B-34 já registrava — depende do mesmo padrão de
-modelo inicial que a B-33/B-36/B-37 também esperam). O placeholder `Nothing` da seção "Projeto" continua
-no registro, agora coberto só pela navegação até ela (`AgentSettingsRoute.spec.tsx`), sem corpo próprio
-ainda.
+**Entregue:** as duas seções inteiras. "Skills" — lista, busca, filtro por origem e estado, as duas
+origens ligáveis com a assimetria de D-20 (desligar aplica na hora, ligar pede confirmação mostrando o
+que vai carregar — S-216), seleção em lote, abrir no editor a skill do projeto por duplo clique, o
+motivo de uma skill não carregada (S-167), e "nova skill" pelo modelo (S-159). "Projeto" — os oito
+cartões (Memória com `/init`/modelo inicial quando vazio — S-149; abrir no editor que nunca vira link
+fora da pasta — S-150; Slash commands e Subagents com "novo X" pelo modelo — S-152, S-153, S-176;
+Output styles com "definir como padrão"; Hooks e Permissões só leitura, explicados; Plugins declarados;
+`.mcp.json` como link para a seção MCP do núcleo), o seletor de pasta e os quatro estados (S-182). O
+placeholder `Nothing` saiu do registro: sem nenhuma seção que ainda precise dele, o componente em si foi
+removido (achado rodando a cobertura, não suposto).
 
-### B-40 — Usabilidade e ajuda: projeto 🔲
+Um `ArtifactCardShell`/`ArtifactListCard`/`ArtifactNameCell` compartilhados nasceram de três cartões
+(Slash commands, Subagents, Output styles) repetindo a mesma casca letra por letra (achado rodando
+`pnpm lint:dup`, não suposto) — o único jeito de descer a zero clones sem copiar a mesma tabela três
+vezes; o fluxo "criar, escrever pelo plano 07, abrir no editor" das três (e da skill, B-34) também virou
+um hook só, `useCreateArtifactFlow`.
+
+### B-40 — Usabilidade e ajuda: projeto ✅
 
 Ajuda en/pt-BR: o que é o `CLAUDE.md` e onde o Claude o procura, o que é um slash command e uma skill,
 o que é uma skill e de onde cada origem vem (Projeto, Usuário, Sistema), por que desligar uma skill é
@@ -223,6 +229,11 @@ valem no terminal, e o que este produto não carrega (escopo `user`). Estado vaz
 CLAUDE.md", "Claude: novo slash command", "Claude: novo subagent" na palette — comandos **da extensão**,
 registrados por ela no registro de comandos do núcleo, com o rótulo em `engines.claude.*`; a ajuda também é da
 extensão, pendurada na gaveta de ajuda do núcleo; teclado; axe. Cenários S-183, S-184.
+
+**Entregue:** a ajuda de "Projeto" (`projectSectionHelp`, seis tópicos, en/pt-BR — S-183); os três
+atalhos da palette, modestos como os dois que a B-17 já tinha — navegam até a seção "Projeto", uma pasta
+ainda por escolher lá, nunca abrem um arquivo nem um diálogo direto (o mesmo "sem pasta ainda" dos
+atalhos de modelo e teste de conexão) —, com teclado (`Mod+K C`/`N`/`G`) e sem violação de axe (S-184).
 
 ---
 
