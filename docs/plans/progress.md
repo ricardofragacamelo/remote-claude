@@ -69,7 +69,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [10 — Layout do chat no app](10-mobile-chat-layout/README.md) | 11/11 | 48/48 | 177/178 | 30/31 | ✅ |
 | [11 — Busca](11-search/README.md) | 0/4 | 0/25 | 0/174 | 8/8 | 🔲 |
 | [12 — Terminal integrado](12-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 14/14 | 🔄 |
-| [13 — Configuração do Claude](13-claude-settings/README.md) | 3/5 | 33/47 | 170/215 | 31/31 | 🔄 |
+| [13 — Configuração do Claude](13-claude-settings/README.md) | 3/5 | 33/47 | 180/215 | 31/31 | 🔄 |
 | [14 — Auditoria explicada](14-audit-explained/README.md) | 0/5 | 0/38 | 0/152 | 1/15 | 🔲 |
 | [15 — Gestão de regras](15-rules-management/README.md) | 0/5 | 0/36 | 8/226 | 2/20 | 🔄 |
 | [16 — Uso e custo](16-usage-and-cost/README.md) | 0/5 | 0/33 | 0/123 | 1/16 | 🔲 |
@@ -85,7 +85,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 8/8 | 26/26 | 78/78 | 35/35 | ✅ |
 | [27 — Perdas da conversa](27-conversation-losses/README.md) | 0/8 | 0/28 | 0/107 | 3/14 | 🔲 |
 | [28 — Agent neutral core](28-agent-neutral-core/README.md) | 8/8 | 48/48 | 117/136 | 51/51 | ✅ |
-| **Total** | **130/177** | **694/977** | **2678/3969** | **510/602** | 🔄 |
+| **Total** | **130/177** | **694/977** | **2688/3969** | **510/602** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 

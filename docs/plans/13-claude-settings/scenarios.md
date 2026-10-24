@@ -256,17 +256,17 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-151 | comandos do projeto são os de `supportedCommands()` sem `builtin`, com o arquivo de origem quando é da pasta | eq | integração | — | B-33 | ✅ |
 | S-152 | criar comando pelo modelo grava `.claude/commands/<nome>.md` pela escrita do plano 07 (trilha `file.*`), e ele aparece no menu do painel | est | integração | — | B-33 | ⬜ |
 | S-153 | nome de comando que já existe | err | integração | `FILE_EXISTS` | B-33 | ⬜ |
-| S-154 | a lista de skills da pasta traz nome simples, selo da origem (Projeto, Usuário, Sistema), descrição e estado | eq | integração | — | B-34 | ⬜ |
-| S-155 | nada desligado → a opção `skills` é omitida (padrão do CLI), nunca `'all'` nem lista | fron | unit | — | B-34 | ⬜ |
-| S-156 | desligar uma origem ou uma skill → a sessão nova recebe `skills` sem ela; ela some do `/` do painel e a tool `Skill` a recusa | est | integração | — | B-34 | ⬜ |
-| S-157 | colisão de nome projeto × usuário: as duas listadas com o selo; `/nome` chama a do projeto, a outra fica em `plugin:nome` | fron | unit | — | B-34 | ⬜ |
-| S-158 | skill apagada do disco depois de desligada: a preferência fica, sem efeito, marcada | est | unit | — | B-34 | ⬜ |
+| S-154 | a lista de skills da pasta traz nome simples, selo da origem (Projeto, Usuário, Sistema), descrição e estado | eq | integração | — | B-34 | ✅ |
+| S-155 | nada desligado → a opção `skills` é omitida (padrão do CLI), nunca `'all'` nem lista | fron | unit | — | B-34 | ✅ |
+| S-156 | desligar uma origem ou uma skill → a sessão nova recebe `skills` sem ela; ela some do `/` do painel e a tool `Skill` a recusa | est | integração | — | B-34 | ✅ |
+| S-157 | colisão de nome projeto × usuário: as duas listadas com o selo; `/nome` chama a do projeto, a outra fica em `plugin:nome` | fron | unit | — | B-34 | ✅ |
+| S-158 | skill apagada do disco depois de desligada: a preferência fica, sem efeito, marcada | est | unit | — | B-34 | ✅ |
 | S-159 | criar skill pelo modelo grava `.claude/skills/<nome>/SKILL.md` pela escrita do plano 07, e ela aparece depois do `reloadSkills()` | est | integração | — | B-34 | ⬜ |
-| S-160 | nome de skill fora do formato | err | unit | `INVALID_INPUT` | B-34 | ⬜ |
-| S-161 | preferência de skills de uma pasta de outra pessoa | err | integração | `FORBIDDEN` | B-34 | ⬜ |
-| S-162 | duas gravações de preferência de skills ao mesmo tempo → uma vence por inteiro | conc | integração | — | B-34 | ⬜ |
-| S-163 | a mesma preferência gravada duas vezes não muda nada nem grava segundo evento | idem | unit | — | B-34 | ⬜ |
-| S-164 | ligar a origem Usuário ou Sistema grava `engine.skillSourceToggled`, com o motor no payload, antes do efeito; desligar skill não vai para a trilha | eq | integração | — | B-34 | ⬜ |
+| S-160 | nome de skill fora do formato | err | unit | `INVALID_INPUT` | B-34 | ✅ |
+| S-161 | preferência de skills de uma pasta de outra pessoa | err | integração | `FORBIDDEN` | B-34 | ✅ |
+| S-162 | duas gravações de preferência de skills ao mesmo tempo → uma vence por inteiro | conc | integração | — | B-34 | ✅ |
+| S-163 | a mesma preferência gravada duas vezes não muda nada nem grava segundo evento | idem | unit | — | B-34 | ✅ |
+| S-164 | ligar a origem Usuário ou Sistema grava `engine.skillSourceToggled`, com o motor no payload, antes do efeito; desligar skill não vai para a trilha | eq | integração | — | B-34 | ✅ |
 | S-165 | uma skill de `~/.claude/skills` carrega pelo plugin sintético e aparece com o selo Usuário | eq | integração | — | B-35 | ⬜ |
 | S-166 | o plugin sintético expõe só `skills/`, com `skipMcpDiscovery: true` — nenhum hook, agent, comando ou servidor MCP | eq | unit | — | B-35 | ✅ |
 | S-167 | skill de usuário que declara hook no frontmatter não é carregada, e aparece com o motivo — o hook nunca ativa | err | integração | — | B-35 | ⬜ |

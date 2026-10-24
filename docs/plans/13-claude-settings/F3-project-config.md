@@ -86,7 +86,7 @@ gravado por `POST /files` do plano 07 em `.claude/commands/<nome>.md` e aberto n
 pasta é invalidado, e o comando aparece no menu do painel. Nome que já existe: o `409` do plano 07.
 Cenários S-151…S-153.
 
-### B-34 — Skills: lista, origem e preferências 🔲
+### B-34 — Skills: lista, origem e preferências 🔄
 
 O composer do plano 08 completa `/` com slash commands **e** skills; a configuração das skills mora
 aqui. A lista da pasta vem de `reloadSkills()` no catálogo (sessão viva, ou a sonda da B-10 — a B-01
@@ -110,6 +110,12 @@ por `plugin:nome` — nenhuma some em silêncio. "Nova skill": nome validado, mo
 [D-21](decisions.md#d-21--shell-inline-de-skills-e-slash-commands)), gravado pelo `POST /files` do plano 07
 em `.claude/skills/<nome>/SKILL.md`, aberto no editor; `reloadSkills()` na sessão viva a faz aparecer.
 Cenários S-154…S-164.
+
+**Entregue:** a leitura (`GET`), as preferências (`PUT`, com a validação de nome, a trilha e a
+assimetria de D-20), e a composição de `Options.skills` no início de sessão — S-154…S-158, S-160…S-164
+(D-105…D-108). **Falta só S-159** — o fluxo "Nova skill" em si (o botão, o modelo inicial no editor,
+o `POST /files` do plano 07): depende da tela (B-39), que ainda não nasceu; reabre quando ela nascer,
+no mesmo padrão que a B-31 já deixou para B-33/B-36/B-37.
 
 ### B-35 — O plugin sintético das skills de usuário e de sistema ✅
 
