@@ -173,6 +173,12 @@ export interface ScriptOptions {
   /** What `initializationResult()` answers instead of the recording, field by field (plan 13). */
   readonly initialization?: Partial<SDKControlInitializeResponse>;
 
+  /**
+   * What `getContextUsage()` answers instead of the recording, field by field (plan 13, B-32) — the
+   * recorded fixture's own `memoryFiles` is always `[]`, since nothing was loaded where it ran.
+   */
+  readonly contextUsage?: Partial<SDKControlGetContextUsageResponse>;
+
   /** Thrown by `setMcpServers`, `toggleMcpServer` and `reconnectMcpServer`. */
   readonly mcpFails?: Error;
 
@@ -1003,7 +1009,10 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
 
   /** The use of the context window, as recorded — or as the script says. */
   getContextUsage(): Promise<SDKControlGetContextUsageResponse> {
-    return this.installation('contextUsage', () => loadInstallation().contextUsage);
+    return this.installation('contextUsage', () => ({
+      ...loadInstallation().contextUsage,
+      ...this.script.contextUsage,
+    }));
   }
 
   /** The MCP servers: none were configured where the recording ran, so a script names them. */

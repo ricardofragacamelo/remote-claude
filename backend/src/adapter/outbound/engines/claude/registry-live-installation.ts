@@ -5,7 +5,7 @@ import { liveControl, SessionRegistry } from '@application/session';
 import type { UserId } from '@domain/auth';
 import { claudeInitializationOf } from '@domain/engines/claude';
 import type { WorkspacePath } from '@domain/workspace';
-import { CLAUDE_ENGINE } from './claude-engine';
+import { liveClaudeSessionOf } from './live-claude-session';
 
 /**
  * What a live Claude session of the caller in a folder says about the installation — the answer
@@ -21,15 +21,7 @@ export class RegistryLiveInstallation implements LiveInstallation {
     userId: UserId,
     folder: WorkspacePath,
   ): Promise<InstallationAnswer | null> {
-    const live = this.registry
-      .all()
-      .find(
-        (entry) =>
-          entry.conversation.ref.engine.value === CLAUDE_ENGINE &&
-          entry.session.isOwnedBy(userId) &&
-          !entry.session.isClosed &&
-          entry.session.workspace.value === folder.value,
-      );
+    const live = liveClaudeSessionOf(this.registry, userId, folder);
 
     if (live === undefined) {
       return null;

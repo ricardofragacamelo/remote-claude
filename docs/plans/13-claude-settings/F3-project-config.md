@@ -49,7 +49,7 @@ escrita humana — allowlist, ETag, trilha `file.*` antes do disco
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-31 — `GET /engines/claude/project-config` 🔲
+### B-31 — `GET /engines/claude/project-config` ✅
 
 Rota da extensão (ex-`/claude/project-config`, movida pela 28 · F6), com o leitor em
 `adapter/outbound/engines/claude/`. [D-16](decisions.md#d-16--como-ler-a-configuração-de-projeto): o que é **arquivo de formato

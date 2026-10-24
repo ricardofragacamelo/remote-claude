@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/project-config-view.json",
+  "title": "ProjectConfigView",
+  "description": "`GET /engines/claude/project-config`: everything the project's own `.claude/` injects into this product's Claude sessions — memory, slash commands, subagents, output styles, hooks, permissions and plugins (plan 13, B-31…B-33, B-36…B-38; D-16). Skills have their own route (B-34).",
+  "x-kind": "http",
+  "x-type": "engines.claude.projectConfig",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/project-config" }],
+  "type": "object",
+  "required": [
+    "folderPath",
+    "memory",
+    "commands",
+    "agents",
+    "outputStyles",
+    "hooks",
+    "permissions",
+    "plugins",
+    "issues"
+  ],
+  "properties": {
+    "folderPath": { "type": "string" },
+    "memory": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "origin",
+          "exists",
+          "sizeBytes",
+          "modifiedAt",
+          "loadedByRule",
+          "loadedConfirmed",
+          "diverges"
+        ],
+        "properties": {
+          "path": { "type": "string" },
+          "origin": {
+            "type": "string",
+            "enum": ["root", "claudeDir", "local", "ancestor", "user"]
+          },
+          "exists": { "type": "boolean" },
+          "sizeBytes": { "type": "integer", "x-nullable": true },
+          "modifiedAt": { "type": "string", "x-nullable": true },
+          "loadedByRule": { "type": "boolean" },
+          "loadedConfirmed": { "type": "boolean", "x-nullable": true },
+          "diverges": { "type": "boolean" }
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "argumentHint", "sourceFile", "shadowed"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "argumentHint": { "type": "string" },
+          "sourceFile": { "type": "string", "x-nullable": true },
+          "shadowed": { "type": "boolean" }
+        }
+      }
+    },
+    "agents": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "model", "sourceFile", "risks"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "model": { "type": "string", "x-nullable": true },
+          "sourceFile": { "type": "string", "x-nullable": true },
+          "risks": {
+            "type": "array",
+            "maxItems": 3,
+            "items": { "type": "string", "enum": ["permissionMode", "broadTools", "mcpServers"] }
+          }
+        }
+      }
+    },
+    "outputStyles": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["name", "current", "sourceFile"],
+        "properties": {
+          "name": { "type": "string" },
+          "current": { "type": "boolean" },
+          "sourceFile": { "type": "string", "x-nullable": true }
+        }
+      }
+    },
+    "hooks": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["event", "matcher", "command"],
+        "properties": {
+          "event": { "type": "string" },
+          "matcher": { "type": "string", "x-nullable": true },
+          "command": { "type": "string" }
+        }
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["rule", "kind", "appliesHere"],
+        "properties": {
+          "rule": { "type": "string" },
+          "kind": { "type": "string", "enum": ["allow", "deny"] },
+          "appliesHere": { "type": "boolean" }
+        }
+      }
+    },
+    "plugins": {
+      "type": "object",
+      "required": ["enabled", "disabled", "enableAllProjectMcpServers"],
+      "properties": {
+        "enabled": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+        "disabled": { "type": "array", "maxItems": 10000, "items": { "type": "string" } },
+        "enableAllProjectMcpServers": { "type": "boolean" }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["path", "reason"],
+        "properties": {
+          "path": { "type": "string" },
+          "reason": { "type": "string", "enum": ["malformed", "tooLarge", "linkEscapesRoot"] }
+        }
+      }
+    }
+  }
+}

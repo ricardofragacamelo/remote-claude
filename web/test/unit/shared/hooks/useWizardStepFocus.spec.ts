@@ -1,27 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import type { RefObject } from 'react';
 
 import { useWizardStepFocus } from '@/shared/hooks/useWizardStepFocus';
-
-/** A ref of a focusable element whose `focus()` the test can spy on, without a real DOM node. */
-function aStepRef(): { ref: RefObject<HTMLElement | null>; focus: ReturnType<typeof vi.fn> } {
-  const focus = vi.fn();
-  return { ref: { current: { focus } as unknown as HTMLElement }, focus };
-}
 
 /**
  * Renders the hook with its `initialProps` typed as `string | null` from the start — so a later
  * `rerender` can pass `null` too (the dialog closing) without `Props` having been narrowed to
- * `string` alone by whatever the first render happened to pass.
+ * `string` alone by whatever the first render happened to pass. Returns the `focus` spy, wired to
+ * the ref the hook itself created and returned — as if a `<div>` had mounted under it.
  */
-function renderStep(step: string | null, ref: RefObject<HTMLElement | null>) {
-  return renderHook(
-    ({ step: current }: { step: string | null }) => useWizardStepFocus(current, ref),
-    {
-      initialProps: { step },
-    },
+function renderStep(step: string | null) {
+  const focus = vi.fn();
+  const rendered = renderHook(
+    ({ step: current }: { step: string | null }) => useWizardStepFocus(current),
+    { initialProps: { step } },
   );
+  rendered.result.current.current = { focus } as unknown as HTMLElement;
+  return { ...rendered, focus };
 }
 
 /**
@@ -30,16 +25,13 @@ function renderStep(step: string | null, ref: RefObject<HTMLElement | null>) {
  */
 describe('useWizardStepFocus — the focus of a wizard step, never stranded on a removed button', () => {
   it('never focuses on the very first render, however the step starts', () => {
-    const { ref, focus } = aStepRef();
-
-    renderStep('form', ref);
+    const { focus } = renderStep('form');
 
     expect(focus).not.toHaveBeenCalled();
   });
 
   it('focuses the step when it actually changes — "Next", then "Back"', () => {
-    const { ref, focus } = aStepRef();
-    const { rerender } = renderStep('form', ref);
+    const { rerender, focus } = renderStep('form');
 
     rerender({ step: 'preview' });
     expect(focus).toHaveBeenCalledTimes(1);
@@ -49,8 +41,7 @@ describe('useWizardStepFocus — the focus of a wizard step, never stranded on a
   });
 
   it('never focuses while re-rendered with the same step', () => {
-    const { ref, focus } = aStepRef();
-    const { rerender } = renderStep('form', ref);
+    const { rerender, focus } = renderStep('form');
 
     rerender({ step: 'form' });
     rerender({ step: 'form' });
@@ -59,13 +50,20 @@ describe('useWizardStepFocus — the focus of a wizard step, never stranded on a
   });
 
   it('never focuses when the wizard closes, and treats the next open as a first render again', () => {
-    const { ref, focus } = aStepRef();
-    const { rerender } = renderStep('form', ref);
+    const { rerender, focus } = renderStep('form');
 
     rerender({ step: null });
     expect(focus).not.toHaveBeenCalled();
 
     rerender({ step: 'form' });
     expect(focus).not.toHaveBeenCalled();
+  });
+
+  it('returns a fresh ref, unset until something attaches to it', () => {
+    const { result } = renderHook(({ step }: { step: string | null }) => useWizardStepFocus(step), {
+      initialProps: { step: 'form' },
+    });
+
+    expect(result.current.current).toBeNull();
   });
 });

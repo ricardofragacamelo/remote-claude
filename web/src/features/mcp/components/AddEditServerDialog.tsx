@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@/shared/components/ErrorState';
@@ -99,8 +98,7 @@ function WizardBody({
   readonly state: WizardState | null;
   readonly folderChoices: readonly string[];
 }): React.JSX.Element | null {
-  const stepRef = useRef<HTMLDivElement>(null);
-  useWizardStepFocus(state?.step ?? null, stepRef);
+  const stepRef = useWizardStepFocus<HTMLDivElement>(state?.step ?? null);
 
   if (state === null) {
     return null;

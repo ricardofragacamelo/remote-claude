@@ -995,6 +995,29 @@ describe('SessionRunner', () => {
       ]);
     });
 
+    it('answers the memory files a session loaded, by path — plan 13, B-32, S-148', async () => {
+      const withMemory = runner({
+        contextUsage: {
+          memoryFiles: [
+            { path: '/srv/projects/app/CLAUDE.md', type: 'Project', tokens: 42 },
+            { path: '/home/me/.claude/CLAUDE.md', type: 'User', tokens: 7 },
+          ],
+        },
+      });
+      withMemory.runner.run();
+
+      await expect(withMemory.runner.loadedMemoryFiles()).resolves.toEqual([
+        '/srv/projects/app/CLAUDE.md',
+        '/home/me/.claude/CLAUDE.md',
+      ]);
+    });
+
+    it('answers an empty list when the installation loaded no memory file at all', async () => {
+      harness.runner.run();
+
+      await expect(harness.runner.loadedMemoryFiles()).resolves.toEqual([]);
+    });
+
     it('reduces the MCP servers to a name, a status and a count — never the configuration — S-177', async () => {
       const withServers = runner({
         mcpServers: [

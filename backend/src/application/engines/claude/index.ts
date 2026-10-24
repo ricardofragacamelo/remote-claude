@@ -76,3 +76,18 @@ export {
 } from './marketplace-plugin.use-cases';
 export type { MarketplacePluginUpdateCheck } from './marketplace-plugin.use-cases';
 export { isSafePathSegment, marketplacePluginDestination } from './marketplace-plugin-path';
+export { ReadProjectConfigUseCase } from './project-config.use-cases';
+export type { ProjectConfigDependencies } from './project-config.use-cases';
+export { LIVE_LOADED_STATE } from './ports/live-loaded-state.port';
+export type { LiveLoadedState } from './ports/live-loaded-state.port';
+export { PROJECT_CONFIG_SOURCE } from './ports/project-config-source.port';
+export type {
+  MemoryFileStat,
+  ProjectAgentFile,
+  ProjectCommandFile,
+  ProjectConfigFileRead,
+  ProjectConfigReadRequest,
+  ProjectConfigSource,
+  ProjectOutputStyleFile,
+  ProjectPermissionsDeclaration,
+} from './ports/project-config-source.port';

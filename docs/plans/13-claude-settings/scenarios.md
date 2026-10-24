@@ -243,17 +243,17 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-141 | `GET /engines/claude/project-config` lista memória, comandos, agents, output styles, hooks, permissões e plugins do projeto | eq | integração | — | B-31 | ⬜ |
-| S-142 | pasta fora da allowlist, de outra pessoa ou inexistente | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND` | B-31 | ⬜ |
-| S-143 | `.claude/settings.json` malformado ou acima do teto → a parte é explicada, e o resto da tela funciona | err | integração | — | B-31 | ⬜ |
-| S-144 | arquivo de configuração que é symlink para fora da raiz não é lido | err | integração | — | B-31 | ⬜ |
+| S-141 | `GET /engines/claude/project-config` lista memória, comandos, agents, output styles, hooks, permissões e plugins do projeto | eq | integração | — | B-31 | ✅ |
+| S-142 | pasta fora da allowlist, de outra pessoa ou inexistente | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND` | B-31 | ✅ |
+| S-143 | `.claude/settings.json` malformado ou acima do teto → a parte é explicada, e o resto da tela funciona | err | integração | — | B-31 | ✅ |
+| S-144 | arquivo de configuração que é symlink para fora da raiz não é lido | err | integração | — | B-31 | ✅ |
 | S-145 | nenhum control request não público (`get_hooks_listing`, `list_permission_rules`, `get_settings`) é usado → a regra de máquina reprova | err | unit | — | B-31 | ✅ |
-| S-146 | ler enquanto o Claude escreve em `.claude/` devolve o antes ou o depois, nunca um arquivo pela metade | conc | integração | — | B-31 | ⬜ |
-| S-147 | a segunda leitura sem mudança em `.claude/` não refaz sonda; mudança de mtime invalida | idem | integração | — | B-31 | ⬜ |
-| S-148 | memória: diz qual arquivo existe e qual é **carregado** pelas sessões deste produto; com sessão viva, a lista vem de `getContextUsage` | eq | integração | — | B-32 | ⬜ |
+| S-146 | ler enquanto o Claude escreve em `.claude/` devolve o antes ou o depois, nunca um arquivo pela metade | conc | integração | — | B-31 | ✅ |
+| S-147 | a segunda leitura sem mudança em `.claude/` não refaz sonda; mudança de mtime invalida | idem | integração | — | B-31 | ✅ |
+| S-148 | memória: diz qual arquivo existe e qual é **carregado** pelas sessões deste produto; com sessão viva, a lista vem de `getContextUsage` | eq | integração | — | B-32 | ✅ |
 | S-149 | sem `CLAUDE.md`, o estado vazio oferece o `/init` e o modelo inicial | fron | integração | — | B-32 | ⬜ |
 | S-150 | "abrir no editor" leva à aba da pasta com o arquivo; arquivo fora da pasta não vira link | fron | integração | — | B-32 | ⬜ |
-| S-151 | comandos do projeto são os de `supportedCommands()` sem `builtin`, com o arquivo de origem quando é da pasta | eq | integração | — | B-33 | ⬜ |
+| S-151 | comandos do projeto são os de `supportedCommands()` sem `builtin`, com o arquivo de origem quando é da pasta | eq | integração | — | B-33 | ✅ |
 | S-152 | criar comando pelo modelo grava `.claude/commands/<nome>.md` pela escrita do plano 07 (trilha `file.*`), e ele aparece no menu do painel | est | integração | — | B-33 | ⬜ |
 | S-153 | nome de comando que já existe | err | integração | `FILE_EXISTS` | B-33 | ⬜ |
 | S-154 | a lista de skills da pasta traz nome simples, selo da origem (Projeto, Usuário, Sistema), descrição e estado | eq | integração | — | B-34 | ⬜ |
@@ -277,13 +277,13 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-172 | diretório de skills do usuário ausente ou vazio → origem vazia explicada, e a sessão abre | fron | integração | — | B-35 | ⬜ |
 | S-173 | o plugin sintético de um usuário nunca entra na sessão de outro | err | unit | — | B-35 | ⬜ |
 | S-174 | com a política de shell inline ligada, o bloco `!` de uma skill vira o marcador, e a ajuda diz isso | est | integração | — | B-35 | ⬜ |
-| S-175 | subagent com `permissionMode`, `tools` amplos ou `mcpServers` no frontmatter aparece sinalizado, com a explicação | err | unit | — | B-36 | ⬜ |
+| S-175 | subagent com `permissionMode`, `tools` amplos ou `mcpServers` no frontmatter aparece sinalizado, com a explicação | err | unit | — | B-36 | ✅ |
 | S-176 | criar subagent pelo modelo grava `.claude/agents/<nome>.md` e ele aparece em `supportedAgents()` na sessão seguinte | est | integração | — | B-36 | ⬜ |
-| S-177 | output styles: o atual e os disponíveis vêm de `initializationResult()`; um estilo criado pelo modelo aparece | eq | integração | — | B-37 | ⬜ |
-| S-178 | escolher um output style como padrão grava pelo store da F1 | est | integração | — | B-37 | ⬜ |
-| S-179 | hooks de projeto aparecem só leitura, com evento, matcher e comando por extenso, e o que o spike mediu sobre rodarem nas nossas sessões | eq | integração | — | B-38 | ⬜ |
-| S-180 | permissões de projeto: `deny` descrito como aplicado; `allow` descrito como sem efeito aqui, porque a marca de confiança é limpa | eq | unit | — | B-38 | ⬜ |
-| S-181 | `enabledPlugins` do projeto listado, com aviso | eq | unit | — | B-38 | ⬜ |
+| S-177 | output styles: o atual e os disponíveis vêm de `initializationResult()`; um estilo criado pelo modelo aparece | eq | integração | — | B-37 | ✅ |
+| S-178 | escolher um output style como padrão grava pelo store da F1 | est | integração | — | B-37 | ✅ |
+| S-179 | hooks de projeto aparecem só leitura, com evento, matcher e comando por extenso, e o que o spike mediu sobre rodarem nas nossas sessões | eq | integração | — | B-38 | ✅ |
+| S-180 | permissões de projeto: `deny` descrito como aplicado; `allow` descrito como sem efeito aqui, porque a marca de confiança é limpa | eq | unit | — | B-38 | ✅ |
+| S-181 | `enabledPlugins` do projeto listado, com aviso | eq | unit | — | B-38 | ✅ |
 | S-182 | a seção Projeto troca de pasta pelo seletor (abas abertas e recentes do plano 06) e mostra os quatro estados | est | integração | — | B-39 | ⬜ |
 | S-183 | a ajuda está presente e traduzida: CLAUDE.md, slash command, subagent, output style, e "hook é código que roda na máquina" | eq | integração | — | B-40 | ⬜ |
 | S-184 | "Claude: abrir CLAUDE.md", "Claude: novo slash command" e "Claude: novo subagent" na palette; atalho, teclado e axe | eq | integração | — | B-40 | ⬜ |

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DialogFrame } from '@/shared/components/DialogFrame';
@@ -92,8 +92,7 @@ function WizardBody({
   onBrowse(): void;
 }): React.JSX.Element | null {
   const { t } = useTranslation();
-  const stepRef = useRef<HTMLDivElement>(null);
-  useWizardStepFocus(state?.step ?? null, stepRef);
+  const stepRef = useWizardStepFocus<HTMLDivElement>(state?.step ?? null);
 
   if (state === null) {
     return null;

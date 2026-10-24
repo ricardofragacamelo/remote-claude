@@ -1564,6 +1564,75 @@ export interface ClaudePluginUpdatePreviewPayload {
   readonly diff: EnginePluginManifestDiff | null;
 }
 
+export interface ProjectConfigViewPayloadMemoryItem {
+  readonly path: string;
+  readonly origin: 'root' | 'claudeDir' | 'local' | 'ancestor' | 'user';
+  readonly exists: boolean;
+  readonly sizeBytes: number | null;
+  readonly modifiedAt: string | null;
+  readonly loadedByRule: boolean;
+  readonly loadedConfirmed: boolean | null;
+  readonly diverges: boolean;
+}
+
+export interface ProjectConfigViewPayloadCommandsItem {
+  readonly name: string;
+  readonly description: string;
+  readonly argumentHint: string;
+  readonly sourceFile: string | null;
+  readonly shadowed: boolean;
+}
+
+export interface ProjectConfigViewPayloadAgentsItem {
+  readonly name: string;
+  readonly description: string;
+  readonly model: string | null;
+  readonly sourceFile: string | null;
+  readonly risks: readonly ('permissionMode' | 'broadTools' | 'mcpServers')[];
+}
+
+export interface ProjectConfigViewPayloadOutputStylesItem {
+  readonly name: string;
+  readonly current: boolean;
+  readonly sourceFile: string | null;
+}
+
+export interface ProjectConfigViewPayloadHooksItem {
+  readonly event: string;
+  readonly matcher: string | null;
+  readonly command: string;
+}
+
+export interface ProjectConfigViewPayloadPermissionsItem {
+  readonly rule: string;
+  readonly kind: 'allow' | 'deny';
+  readonly appliesHere: boolean;
+}
+
+export interface ProjectConfigViewPayloadPlugins {
+  readonly enabled: readonly string[];
+  readonly disabled: readonly string[];
+  readonly enableAllProjectMcpServers: boolean;
+}
+
+export interface ProjectConfigViewPayloadIssuesItem {
+  readonly path: string;
+  readonly reason: 'malformed' | 'tooLarge' | 'linkEscapesRoot';
+}
+
+/** `GET /engines/claude/project-config`: everything the project's own `.claude/` injects into this product's Claude sessions — memory, slash commands, subagents, output styles, hooks, permissions and plugins (plan 13, B-31…B-33, B-36…B-38; D-16). Skills have their own route (B-34). */
+export interface ProjectConfigViewPayload {
+  readonly folderPath: string;
+  readonly memory: readonly ProjectConfigViewPayloadMemoryItem[];
+  readonly commands: readonly ProjectConfigViewPayloadCommandsItem[];
+  readonly agents: readonly ProjectConfigViewPayloadAgentsItem[];
+  readonly outputStyles: readonly ProjectConfigViewPayloadOutputStylesItem[];
+  readonly hooks: readonly ProjectConfigViewPayloadHooksItem[];
+  readonly permissions: readonly ProjectConfigViewPayloadPermissionsItem[];
+  readonly plugins: ProjectConfigViewPayloadPlugins;
+  readonly issues: readonly ProjectConfigViewPayloadIssuesItem[];
+}
+
 /** `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only. */
 export interface FileContentPayload {
   readonly path: string;
@@ -2240,6 +2309,28 @@ export const CLAUDE_PLUGIN_MARKETPLACE_CATALOG_PAYLOAD_LIMITS = {
 /** The bounds the schema gives the fields of {@link ClaudePluginMarketplaceListPayload}. */
 export const CLAUDE_PLUGIN_MARKETPLACE_LIST_PAYLOAD_LIMITS = {
   marketplaces: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ProjectConfigViewPayloadAgentsItem}. */
+export const PROJECT_CONFIG_VIEW_PAYLOAD_AGENTS_ITEM_LIMITS = {
+  risks: { maxItems: 3 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ProjectConfigViewPayloadPlugins}. */
+export const PROJECT_CONFIG_VIEW_PAYLOAD_PLUGINS_LIMITS = {
+  enabled: { maxItems: 10000 },
+  disabled: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ProjectConfigViewPayload}. */
+export const PROJECT_CONFIG_VIEW_PAYLOAD_LIMITS = {
+  memory: { maxItems: 64 },
+  commands: { maxItems: 10000 },
+  agents: { maxItems: 10000 },
+  outputStyles: { maxItems: 10000 },
+  hooks: { maxItems: 10000 },
+  permissions: { maxItems: 10000 },
+  issues: { maxItems: 10000 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link FileTreePayload}. */
@@ -4969,6 +5060,183 @@ export function isClaudePluginUpdatePreviewPayload(value: unknown): value is Cla
     typeof record['available'] === 'boolean',
     nullOr(record['newCommit'], typeof record['newCommit'] === 'string'),
     nullOr(record['diff'], isEnginePluginManifestDiff(record['diff'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectConfigViewPayloadMemoryItem}. Unknown fields are accepted.
+ */
+export function isProjectConfigViewPayloadMemoryItem(value: unknown): value is ProjectConfigViewPayloadMemoryItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['origin'] === 'string',
+    typeof record['exists'] === 'boolean',
+    nullOr(record['sizeBytes'], typeof record['sizeBytes'] === 'number'),
+    nullOr(record['modifiedAt'], typeof record['modifiedAt'] === 'string'),
+    typeof record['loadedByRule'] === 'boolean',
+    nullOr(record['loadedConfirmed'], typeof record['loadedConfirmed'] === 'boolean'),
+    typeof record['diverges'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectConfigViewPayloadCommandsItem}. Unknown fields are accepted.
+ */
+export function isProjectConfigViewPayloadCommandsItem(value: unknown): value is ProjectConfigViewPayloadCommandsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    typeof record['description'] === 'string',
+    typeof record['argumentHint'] === 'string',
+    nullOr(record['sourceFile'], typeof record['sourceFile'] === 'string'),
+    typeof record['shadowed'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectConfigViewPayloadAgentsItem}. Unknown fields are accepted.
+ */
+export function isProjectConfigViewPayloadAgentsItem(value: unknown): value is ProjectConfigViewPayloadAgentsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    typeof record['description'] === 'string',
+    nullOr(record['model'], typeof record['model'] === 'string'),
+    nullOr(record['sourceFile'], typeof record['sourceFile'] === 'string'),
+    Array.isArray(record['risks']),
+    withinMaxItems(record['risks'], 3),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectConfigViewPayloadOutputStylesItem}. Unknown fields are accepted.
+ */
+export function isProjectConfigViewPayloadOutputStylesItem(value: unknown): value is ProjectConfigViewPayloadOutputStylesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    typeof record['current'] === 'boolean',
+    nullOr(record['sourceFile'], typeof record['sourceFile'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectConfigViewPayloadHooksItem}. Unknown fields are accepted.
+ */
+export function isProjectConfigViewPayloadHooksItem(value: unknown): value is ProjectConfigViewPayloadHooksItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['event'] === 'string',
+    nullOr(record['matcher'], typeof record['matcher'] === 'string'),
+    typeof record['command'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectConfigViewPayloadPermissionsItem}. Unknown fields are accepted.
+ */
+export function isProjectConfigViewPayloadPermissionsItem(value: unknown): value is ProjectConfigViewPayloadPermissionsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['rule'] === 'string',
+    typeof record['kind'] === 'string',
+    typeof record['appliesHere'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectConfigViewPayloadPlugins}. Unknown fields are accepted.
+ */
+export function isProjectConfigViewPayloadPlugins(value: unknown): value is ProjectConfigViewPayloadPlugins {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['enabled']),
+    Array.isArray(record['disabled']),
+    typeof record['enableAllProjectMcpServers'] === 'boolean',
+    withinMaxItems(record['enabled'], 10000),
+    withinMaxItems(record['disabled'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectConfigViewPayloadIssuesItem}. Unknown fields are accepted.
+ */
+export function isProjectConfigViewPayloadIssuesItem(value: unknown): value is ProjectConfigViewPayloadIssuesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ProjectConfigViewPayload}. Unknown fields are accepted.
+ */
+export function isProjectConfigViewPayload(value: unknown): value is ProjectConfigViewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['folderPath'] === 'string',
+    Array.isArray(record['memory']),
+    Array.isArray(record['commands']),
+    Array.isArray(record['agents']),
+    Array.isArray(record['outputStyles']),
+    Array.isArray(record['hooks']),
+    Array.isArray(record['permissions']),
+    isProjectConfigViewPayloadPlugins(record['plugins']),
+    Array.isArray(record['issues']),
+    withinMaxItems(record['memory'], 64),
+    withinMaxItems(record['commands'], 10000),
+    withinMaxItems(record['agents'], 10000),
+    withinMaxItems(record['outputStyles'], 10000),
+    withinMaxItems(record['hooks'], 10000),
+    withinMaxItems(record['permissions'], 10000),
+    withinMaxItems(record['issues'], 10000),
   ].every(Boolean);
 }
 

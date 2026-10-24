@@ -7267,6 +7267,420 @@ class ClaudePluginUpdatePreviewPayload {
   }
 }
 
+class ProjectConfigViewPayloadMemoryItem {
+  const ProjectConfigViewPayloadMemoryItem({
+    required this.path,
+    required this.origin,
+    required this.exists,
+    required this.sizeBytes,
+    required this.modifiedAt,
+    required this.loadedByRule,
+    required this.loadedConfirmed,
+    required this.diverges,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectConfigViewPayloadMemoryItem.fromJson(Map<String, Object?> json) => ProjectConfigViewPayloadMemoryItem(
+        path: json['path']! as String,
+        origin: json['origin']! as String,
+        exists: json['exists']! as bool,
+        sizeBytes: json['sizeBytes'] as int?,
+        modifiedAt: json['modifiedAt'] as String?,
+        loadedByRule: json['loadedByRule']! as bool,
+        loadedConfirmed: json['loadedConfirmed'] as bool?,
+        diverges: json['diverges']! as bool,
+      );
+
+  final String path;
+
+  final String origin;
+
+  final bool exists;
+
+  final int? sizeBytes;
+
+  final String? modifiedAt;
+
+  final bool loadedByRule;
+
+  final bool? loadedConfirmed;
+
+  final bool diverges;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'origin': origin,
+      'exists': exists,
+      'sizeBytes': sizeBytes,
+      'modifiedAt': modifiedAt,
+      'loadedByRule': loadedByRule,
+      'loadedConfirmed': loadedConfirmed,
+      'diverges': diverges,
+    };
+
+    return json;
+  }
+}
+
+class ProjectConfigViewPayloadCommandsItem {
+  const ProjectConfigViewPayloadCommandsItem({
+    required this.name,
+    required this.description,
+    required this.argumentHint,
+    required this.sourceFile,
+    required this.shadowed,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectConfigViewPayloadCommandsItem.fromJson(Map<String, Object?> json) => ProjectConfigViewPayloadCommandsItem(
+        name: json['name']! as String,
+        description: json['description']! as String,
+        argumentHint: json['argumentHint']! as String,
+        sourceFile: json['sourceFile'] as String?,
+        shadowed: json['shadowed']! as bool,
+      );
+
+  final String name;
+
+  final String description;
+
+  final String argumentHint;
+
+  final String? sourceFile;
+
+  final bool shadowed;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'description': description,
+      'argumentHint': argumentHint,
+      'sourceFile': sourceFile,
+      'shadowed': shadowed,
+    };
+
+    return json;
+  }
+}
+
+class ProjectConfigViewPayloadAgentsItem {
+  const ProjectConfigViewPayloadAgentsItem({
+    required this.name,
+    required this.description,
+    required this.model,
+    required this.sourceFile,
+    required this.risks,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectConfigViewPayloadAgentsItem.fromJson(Map<String, Object?> json) => ProjectConfigViewPayloadAgentsItem(
+        name: json['name']! as String,
+        description: json['description']! as String,
+        model: json['model'] as String?,
+        sourceFile: json['sourceFile'] as String?,
+        risks: (json['risks']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+      );
+
+  final String name;
+
+  final String description;
+
+  final String? model;
+
+  final String? sourceFile;
+
+  final List<String> risks;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'description': description,
+      'model': model,
+      'sourceFile': sourceFile,
+      'risks': risks,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ProjectConfigViewPayloadAgentsItem].
+bool projectConfigViewPayloadAgentsItemLimitsHold(Map<String, Object?> json) {
+  if (json['risks'] is List<Object?> && (json['risks']! as List<Object?>).length > 3) {
+    return false;
+  }
+
+  return true;
+}
+
+class ProjectConfigViewPayloadOutputStylesItem {
+  const ProjectConfigViewPayloadOutputStylesItem({
+    required this.name,
+    required this.current,
+    required this.sourceFile,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectConfigViewPayloadOutputStylesItem.fromJson(Map<String, Object?> json) => ProjectConfigViewPayloadOutputStylesItem(
+        name: json['name']! as String,
+        current: json['current']! as bool,
+        sourceFile: json['sourceFile'] as String?,
+      );
+
+  final String name;
+
+  final bool current;
+
+  final String? sourceFile;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'current': current,
+      'sourceFile': sourceFile,
+    };
+
+    return json;
+  }
+}
+
+class ProjectConfigViewPayloadHooksItem {
+  const ProjectConfigViewPayloadHooksItem({
+    required this.event,
+    required this.matcher,
+    required this.command,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectConfigViewPayloadHooksItem.fromJson(Map<String, Object?> json) => ProjectConfigViewPayloadHooksItem(
+        event: json['event']! as String,
+        matcher: json['matcher'] as String?,
+        command: json['command']! as String,
+      );
+
+  final String event;
+
+  final String? matcher;
+
+  final String command;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'event': event,
+      'matcher': matcher,
+      'command': command,
+    };
+
+    return json;
+  }
+}
+
+class ProjectConfigViewPayloadPermissionsItem {
+  const ProjectConfigViewPayloadPermissionsItem({
+    required this.rule,
+    required this.kind,
+    required this.appliesHere,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectConfigViewPayloadPermissionsItem.fromJson(Map<String, Object?> json) => ProjectConfigViewPayloadPermissionsItem(
+        rule: json['rule']! as String,
+        kind: json['kind']! as String,
+        appliesHere: json['appliesHere']! as bool,
+      );
+
+  final String rule;
+
+  final String kind;
+
+  final bool appliesHere;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'rule': rule,
+      'kind': kind,
+      'appliesHere': appliesHere,
+    };
+
+    return json;
+  }
+}
+
+class ProjectConfigViewPayloadPlugins {
+  const ProjectConfigViewPayloadPlugins({
+    required this.enabled,
+    required this.disabled,
+    required this.enableAllProjectMcpServers,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectConfigViewPayloadPlugins.fromJson(Map<String, Object?> json) => ProjectConfigViewPayloadPlugins(
+        enabled: (json['enabled']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        disabled: (json['disabled']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        enableAllProjectMcpServers: json['enableAllProjectMcpServers']! as bool,
+      );
+
+  final List<String> enabled;
+
+  final List<String> disabled;
+
+  final bool enableAllProjectMcpServers;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'enabled': enabled,
+      'disabled': disabled,
+      'enableAllProjectMcpServers': enableAllProjectMcpServers,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ProjectConfigViewPayloadPlugins].
+bool projectConfigViewPayloadPluginsLimitsHold(Map<String, Object?> json) {
+  if (json['enabled'] is List<Object?> && (json['enabled']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['disabled'] is List<Object?> && (json['disabled']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+class ProjectConfigViewPayloadIssuesItem {
+  const ProjectConfigViewPayloadIssuesItem({
+    required this.path,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectConfigViewPayloadIssuesItem.fromJson(Map<String, Object?> json) => ProjectConfigViewPayloadIssuesItem(
+        path: json['path']! as String,
+        reason: json['reason']! as String,
+      );
+
+  final String path;
+
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /engines/claude/project-config`: everything the project's own `.claude/` injects into this product's Claude sessions — memory, slash commands, subagents, output styles, hooks, permissions and plugins (plan 13, B-31…B-33, B-36…B-38; D-16). Skills have their own route (B-34).
+class ProjectConfigViewPayload {
+  const ProjectConfigViewPayload({
+    required this.folderPath,
+    required this.memory,
+    required this.commands,
+    required this.agents,
+    required this.outputStyles,
+    required this.hooks,
+    required this.permissions,
+    required this.plugins,
+    required this.issues,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ProjectConfigViewPayload.fromJson(Map<String, Object?> json) => ProjectConfigViewPayload(
+        folderPath: json['folderPath']! as String,
+        memory: (json['memory']! as List<Object?>).map((item) => ProjectConfigViewPayloadMemoryItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        commands: (json['commands']! as List<Object?>).map((item) => ProjectConfigViewPayloadCommandsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        agents: (json['agents']! as List<Object?>).map((item) => ProjectConfigViewPayloadAgentsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        outputStyles: (json['outputStyles']! as List<Object?>).map((item) => ProjectConfigViewPayloadOutputStylesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        hooks: (json['hooks']! as List<Object?>).map((item) => ProjectConfigViewPayloadHooksItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        permissions: (json['permissions']! as List<Object?>).map((item) => ProjectConfigViewPayloadPermissionsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        plugins: ProjectConfigViewPayloadPlugins.fromJson(json['plugins']! as Map<String, Object?>),
+        issues: (json['issues']! as List<Object?>).map((item) => ProjectConfigViewPayloadIssuesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final String folderPath;
+
+  final List<ProjectConfigViewPayloadMemoryItem> memory;
+
+  final List<ProjectConfigViewPayloadCommandsItem> commands;
+
+  final List<ProjectConfigViewPayloadAgentsItem> agents;
+
+  final List<ProjectConfigViewPayloadOutputStylesItem> outputStyles;
+
+  final List<ProjectConfigViewPayloadHooksItem> hooks;
+
+  final List<ProjectConfigViewPayloadPermissionsItem> permissions;
+
+  final ProjectConfigViewPayloadPlugins plugins;
+
+  final List<ProjectConfigViewPayloadIssuesItem> issues;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'folderPath': folderPath,
+      'memory': memory.map((item) => item.toJson()).toList(growable: false),
+      'commands': commands.map((item) => item.toJson()).toList(growable: false),
+      'agents': agents.map((item) => item.toJson()).toList(growable: false),
+      'outputStyles': outputStyles.map((item) => item.toJson()).toList(growable: false),
+      'hooks': hooks.map((item) => item.toJson()).toList(growable: false),
+      'permissions': permissions.map((item) => item.toJson()).toList(growable: false),
+      'plugins': plugins.toJson(),
+      'issues': issues.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ProjectConfigViewPayload].
+bool projectConfigViewPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['memory'] is List<Object?> && (json['memory']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  if (json['commands'] is List<Object?> && (json['commands']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['agents'] is List<Object?> && (json['agents']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['outputStyles'] is List<Object?> && (json['outputStyles']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['hooks'] is List<Object?> && (json['hooks']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['permissions'] is List<Object?> && (json['permissions']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  if (json['issues'] is List<Object?> && (json['issues']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
 /// `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only.
 class FileContentPayload {
   const FileContentPayload({

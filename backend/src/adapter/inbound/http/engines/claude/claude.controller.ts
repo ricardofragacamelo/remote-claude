@@ -16,6 +16,7 @@ import type {
   InstallationViewPayload,
   ModelCheckOutcomePayload,
   OutputStyleViewPayload,
+  ProjectConfigViewPayload,
 } from '@remote-claude/contracts';
 
 import {
@@ -23,6 +24,7 @@ import {
   ReadAccountUseCase,
   ReadInstallationUseCase,
   ReadOutputStyleUseCase,
+  ReadProjectConfigUseCase,
   SaveOutputStyleUseCase,
 } from '@application/engines/claude';
 import type { InstallationView, ModelCheckOutcome } from '@application/engines/claude';
@@ -69,6 +71,7 @@ export class ClaudeController {
     @Inject(CheckModelUseCase) private readonly modelCheck: CheckModelUseCase,
     @Inject(ReadOutputStyleUseCase) private readonly readStyle: ReadOutputStyleUseCase,
     @Inject(SaveOutputStyleUseCase) private readonly saveStyle: SaveOutputStyleUseCase,
+    @Inject(ReadProjectConfigUseCase) private readonly projectConfig: ReadProjectConfigUseCase,
   ) {}
 
   @Get('engines/claude/account')
@@ -125,6 +128,14 @@ export class ClaudeController {
     @CurrentUser() userId: UserId,
   ): Promise<void> {
     await this.saveStyle.execute(userId, query.folder, null);
+  }
+
+  @Get('engines/claude/project-config')
+  readProjectConfig(
+    @Query(new ZodPipe(requiredFolderQuerySchema)) query: { folder: string },
+    @CurrentUser() userId: UserId,
+  ): Promise<ProjectConfigViewPayload> {
+    return this.projectConfig.execute(userId, query.folder);
   }
 }
 

@@ -10,15 +10,15 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 
 ## Estado atual
 
-**Fase corrente:** F3 ainda por começar. F2 concluída (14/14): B-18…B-30 e B-47 (domínio, store e segredos, ambiente do subprocesso, composição por sessão, status vivo, mudança de configuração e sessões vivas, `.mcp.json` do projeto, testar conexão, tool MCP e permissão, plugins locais, a tela de servidores MCP, plugins de marketplace, a tela de plugins, usabilidade e ajuda de MCP/plugins). O fechamento da fase (`pnpm verify`, `test:integration`, `contracts:check`, `scan:security`, `neutral:check`, `i18n:check`) saiu verde em 2026-10-23
-**Última atualização:** 2026-10-23
+**Fase corrente:** F3 em andamento (1/10). B-31 (`GET /engines/claude/project-config`) concluída: o leitor de `adapter/outbound/engines/claude/project-config-file.reader.ts` lê `settings.json` (hooks, permissões, plugins declarados), comandos/agents/output-styles de `.claude/`, e os `stat`s da cadeia de memória — cruzado com o catálogo resolvido (`ClaudeInstallationCatalog`, com `fresh: true`, D-101) e, para memória, com a confirmação de uma sessão viva (`RegistryLiveLoadedState`/`SessionRunner.loadedMemoryFiles()`, D-25 do F3 abaixo). Cache por pasta pela mtime de `.claude/` e de cada subdiretório/arquivo relevante, nunca só `.claude/` (achado real, não suposto — ver histórico). A leitura já satisfaz boa parte do que B-32, B-33, B-36, B-37 e B-38 pedem (memória, comandos, agents, output styles, hooks, permissões, plugins declarados — S-148, S-151, S-175, S-177…S-181), mas essas tasks continuam 🔲: falta o que cada uma ainda pede além da leitura — o fluxo de criação pelo modelo inicial (S-152, S-153, S-159, S-176), a navegação "abrir no editor"/estado vazio com `/init` (S-149, S-150), e tudo o que depende de skills (B-34, B-35) e da própria tela (B-39, B-40), que ainda não nasceram. F2 concluída (14/14): B-18…B-30 e B-47 (domínio, store e segredos, ambiente do subprocesso, composição por sessão, status vivo, mudança de configuração e sessões vivas, `.mcp.json` do projeto, testar conexão, tool MCP e permissão, plugins locais, a tela de servidores MCP, plugins de marketplace, a tela de plugins, usabilidade e ajuda de MCP/plugins). O fechamento da fase (`pnpm verify`, `test:integration`, `contracts:check`, `scan:security`, `neutral:check`, `i18n:check`) saiu verde em 2026-10-23
+**Última atualização:** 2026-10-24
 **Bloqueios:** nenhum — o [plano 26](../26-mobile-conversation-parity/README.md) e o [plano 28](../28-agent-neutral-core/README.md) já estão concluídos (D-31, D-33)
 
 ```
 F0 ████████████████████ 100%   ✅ concluída
 F1 ████████████████████ 100%   ✅ concluída
 F2 ████████████████████ 100%   ✅ concluída
-F3 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
+F3 ██░░░░░░░░░░░░░░░░░░  10%   🔄 em andamento
 F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciada
 ```
 
@@ -33,9 +33,9 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 | [F0](F0-contract.md) | B-01…B-09 | 9/9 | ✅ |
 | [F1](F1-models-and-modes.md) | B-10…B-17 | 8/8 | ✅ |
 | [F2](F2-mcp-servers.md) | B-18…B-30, B-47 | 14/14 | ✅ |
-| [F3](F3-project-config.md) | B-31…B-40 | 0/10 | 🔲 |
+| [F3](F3-project-config.md) | B-31…B-40 | 1/10 | 🔄 |
 | [F4](F4-e2e.md) | B-41…B-46 | 0/6 | 🔲 |
-| **Total** | **B-01…B-47** | **31/47** | 🔄 |
+| **Total** | **B-01…B-47** | **32/47** | 🔄 |
 
 ---
 
@@ -43,7 +43,7 @@ F4 ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 215 | 64 | 0 | 151 | 0 |
+| [Matriz](scenarios.md) | 215 | 50 | 0 | 165 | 0 |
 
 ---
 
@@ -96,6 +96,11 @@ Um registro por **ciclo**, conforme o
 | 29 | 2026-10-23 | F2 (B-30) | — (achado rodando `tsc`/`vitest` à parte, antes do `pnpm verify` seguinte) | `useWizardStepFocus.spec.ts`: `rerender({ step: null })` não tipava — `Props` do `renderHook` tinha sido inferido como `{ step: string }` a partir do `initialProps` da primeira chamada, nunca `string \| null` | `renderStep()` extraída, com `initialProps` já tipado `string \| null` desde a primeira renderização | — |
 | 30 | 2026-10-23 | F2 (B-30) | `scan:security` (fora do `pnpm verify` de 1-7, parte do fechamento da fase) | 5 avisos de dependência pré-existentes (nenhum arquivo da B-30): `dompurify@3.4.16`, `vite@7.3.6`, um segundo `vite@8.3.0` (peer aberto de `vitest`), `@vitest/mocker@4.1.11`, `ip-address@10.7.3` — todos com correção de patch disponível (D-100) | `pnpm.overrides` da raiz ganhou as versões corrigidas; o `vite` do `web` subiu para `^8.3.3` (os três plugins de Vite do `web` já declaram suporte); `pnpm --filter web build` confirmado de verdade antes de reiniciar a validação | `pnpm verify` reiniciado do portão 1 depois da mudança de dependência |
 | 31 | 2026-10-23 | F2 (B-30) | — | — | — | ✅ terceiro `pnpm verify` (gates 1-7, depois da correção de dependência): todos verdes — cobertura 1016,2 s, 338 arquivos ≥ 90 %, 99,2 % de linhas. Depois, `pnpm test:integration` (web 112/1536, backend 99/1397, mobile widget todos verdes), `pnpm contracts:check`, `pnpm scan:security`, `pnpm neutral:check` (1915 arquivos) e `pnpm i18n:check` — todos ✅. **F2 concluída** |
+| 32 | 2026-10-23 | F3 (B-31) | 6 · unit/integração (achado rodando `vitest` à parte, antes do primeiro `pnpm verify` desta task) | um subagent de projeto sem `name:` no frontmatter não aparece em `supportedAgents()` — medido contra o SDK de verdade, não suposto (o teste de integração falhava em silêncio, sem erro, só a lista vazia); separado, `commandViewsOf`/`agentViewsOf` cruzando a lista recém-escrita no disco com o catálogo da instalação (`ClaudeInstallationCatalog`) ficava escondido atrás da janela de novidade de 60 s pensada para a conta (`ACCOUNT_TTL_MS`), não para comandos/agents que acabaram de ser criados | frontmatter do teste corrigida com `name:` explícito (D-102); `ReadProjectConfigUseCase` passou a pedir `catalog.of(userId, folder, true)` — sempre fresco (D-101) | nenhum reinício de `pnpm verify` ainda — achado e corrigido antes do primeiro `pnpm verify` desta task, rodando a suíte de integração isolada |
+| 33 | 2026-10-23 | F3 (B-31) | 6 · unit (achado rodando `vitest` à parte) | a assinatura do cache por pasta só olhava a mtime de `.claude/` e de `.mcp.json` por extenso — mas criar um arquivo em `.claude/commands/`, `.claude/agents/` ou `.claude/output-styles/` nunca move a mtime de `.claude/` em si (só a do subdiretório), e reescrever o *conteúdo* de um `settings.json` já existente também não move a mtime do diretório-pai. A segunda leitura continuava servindo a resposta velha | `signatureOf()` passou a incluir, cada um com seu próprio `stat`: `.claude/`, `settings.json`, e as três subpastas (`commands/`, `agents/`, `output-styles/`), além de `.mcp.json` | `project-config-file.reader.ts`; S-147 |
+| 34 | 2026-10-23 | F3 (B-31) | 1 · formatação | nove arquivos novos fora do Prettier (achado pelo próprio `pnpm verify`) | `prettier --write` nos nove | reinício do portão 1 |
+| 35 | 2026-10-23 | F3 (B-31) | 1 · formatação | `mobile.mjs format:check` reportou 618 arquivos Dart "a formatar" — causa idêntica ao ciclo 10 da F2: `mobile/` neste worktree novo nunca teve `flutter pub get` rodado (`.dart_tool/` ausente), e sem resolver o pacote `flutter_lints` o `analysis_options.yaml` não aplica; `--output=none --set-exit-if-changed` não escreveu nada (confirmado por `git status`, sem nenhum arquivo de `mobile/` modificado) | `flutter pub get` no worktree; `dart format --set-exit-if-changed` confirmou 0 arquivos depois | reinício do portão 1 |
+| 36 | 2026-10-23 | F3 (B-31) | 5 · duplicação | jscpd (limiar 0 %) achou 3 clones: (a) meu — a mesma busca "a sessão viva de Claude, deste usuário, nesta pasta" repetida entre `registry-live-installation.ts` e `registry-live-loaded-state.ts`; (b) **pré-existente da F2** — `AddEditServerDialog.tsx` × `AddLocalPluginDialog.tsx` (`useRef` + `useWizardStepFocus` + a guarda `if (state === null) return null`), confirmado rodando `npx jscpd` na árvore principal intocada, na mesma revisão (`b67d06c`) — não é desta task, mas bloqueava o mesmo portão; (c) meu — o par `{path, reason}` do novo `project-config-view.schema.json` batendo com o de `session-rewound.schema.json` (forma de JSON Schema genérica, sem relação de domínio) | (a) `liveClaudeSessionOf()` extraída para `adapter/outbound/engines/claude/live-claude-session.ts`, usada pelos dois adaptadores; (b) `useWizardStepFocus` passou a criar e devolver o próprio `ref` (em vez de recebê-lo), eliminando a linha `useRef` repetida em cada chamador — `AddEditServerDialog`/`AddLocalPluginDialog` atualizados, teste do hook reescrito para a nova assinatura; (c) `project-config-view.schema.json` acrescentado ao `ignore` do `.jscpd.json`, mesmo padrão já usado para `output-style-view.schema.json`/`defaults-view.schema.json` e outros — forma de schema, não lógica duplicada | reinício do portão 1 — 0 clones; (b) documentado aqui porque foi corrigido como parte desta validação, embora pré-existente da F2 |
 
 ---
 
@@ -105,6 +110,8 @@ Decisão que altera o plano entra aqui **e** no documento normativo corresponden
 
 | Data | Decisão | Motivo | Afetou |
 |---|---|---|---|
+| 2026-10-23 | [D-101](decisions.md#decididas-durante-a-execução-de-b-31-2026-10-23): `ReadProjectConfigUseCase` sempre pede `catalog.of(..., true)` — fresco, nunca a janela de 60 s da conta | sem isto, um comando/agent recém-criado ficava invisível até a janela expirar; achado na integração de verdade | `project-config.use-cases.ts` |
+| 2026-10-23 | [D-102](decisions.md#decididas-durante-a-execução-de-b-31-2026-10-23): um subagent de projeto sem `name:` no frontmatter não aparece em `supportedAgents()` — registrado para a B-36 não repetir a surpresa no modelo inicial | medido rodando o SDK de verdade, ao escrever o teste de integração da B-31 | nenhum arquivo de produção ainda; requisito para o modelo inicial da B-36 |
 | 2026-10-23 | [D-90](decisions.md#decididas-durante-a-execução-de-b-29-2026-10-23): instalar de marketplace não tem prévia de rede separada — confirmado que `POST .../plugins/marketplace/preview` não existe; o primeiro passo é escolher do catálogo já lido, o segundo é a própria instalação | inventar uma rota de prévia que clona e descarta dobraria o custo de rede sem cenário que peça | `settings/services/plugin.service.ts`, `settings/hooks/useInstallMarketplaceFlow.ts`, `settings/components/InstallMarketplacePluginDialog.tsx`; S-212 |
 | 2026-10-23 | [D-91](decisions.md#decididas-durante-a-execução-de-b-29-2026-10-23): o atalho "aprovar os servidores MCP que ele sugere" vira só navegação (`onLocation({ section: 'mcp' })`), sem pré-preencher o assistente de servidor MCP | a tela de plugins só conhece o nome do servidor sugerido, nunca comando/URL/env; inventar um parâmetro novo em `useAddServerFlow` para um único consumidor seria especulativo | `settings/lib/plugin-actions.ts`, `settings/components/PluginsSection.tsx`; S-137 |
 | 2026-10-23 | [D-92](decisions.md#decididas-durante-a-execução-de-b-29-2026-10-23): peças genuinamente compartilhadas com `mcp` (B-28) nasceram em `shared/` e `features/commands/`, não copiadas — achado rodando `pnpm lint:dup` (limiar 0 %), não suposto; os arquivos de B-28 foram refatorados para as mesmas peças | duplicar o padrão de B-28 letra por letra era exatamente o que o portão existe para recusar | `shared/components/{SearchField,SelectionActionBar,WizardFooter,ConfirmFooterButtons,RemoveConfirmDialog}.tsx`, `shared/hooks/{useBatchRemoveFlow,useSelection}.ts`, `shared/lib/settled-batch.ts`, `features/commands/lib/go-command.ts`, `features/mcp/*` (refatorados) |

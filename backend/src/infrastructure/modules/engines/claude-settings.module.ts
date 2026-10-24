@@ -16,6 +16,8 @@ import {
   MODEL_CHECK_TIMEOUT_MS,
 } from '@adapter/outbound/engines/claude/model-check.adapter';
 import { ClaudePluginManifestReader } from '@adapter/outbound/engines/claude/plugin-manifest.reader';
+import { ClaudeProjectConfigFileReader } from '@adapter/outbound/engines/claude/project-config-file.reader';
+import { RegistryLiveLoadedState } from '@adapter/outbound/engines/claude/registry-live-loaded-state';
 import { FOLDER_ACCESS } from '@application/agent-settings';
 import type { FolderAccess } from '@application/agent-settings';
 import { RecordAuditEventUseCase } from '@application/audit';
@@ -27,6 +29,7 @@ import {
   CheckMarketplacePluginUpdateUseCase,
   ClaudeInstallationCatalog,
   INSTALLATION_FACTS,
+  LIVE_LOADED_STATE,
   ListMarketplacePluginsUseCase,
   ListMarketplacesUseCase,
   ListPluginsUseCase,
@@ -37,9 +40,11 @@ import {
   PLUGIN_MANIFEST_READER,
   PLUGIN_REPOSITORY,
   PreviewLocalPluginUseCase,
+  PROJECT_CONFIG_SOURCE,
   ReadAccountUseCase,
   ReadInstallationUseCase,
   ReadOutputStyleUseCase,
+  ReadProjectConfigUseCase,
   RemovePluginUseCase,
   SaveOutputStyleUseCase,
   SetPluginEnabledUseCase,
@@ -53,6 +58,7 @@ import type {
   PluginDependencies,
   PluginManifestReader,
   PluginRepository,
+  ProjectConfigDependencies,
 } from '@application/engines/claude';
 import { CLOCK, ID_GENERATOR } from '@application/shared';
 import { MARKETPLACE_ALLOWLIST_SOURCE } from '@application/workspace';
@@ -61,6 +67,7 @@ import type { Clock, IdGenerator } from '@domain/shared';
 import { AgentSettingsModule } from '../agent-settings.module';
 import { AuditModule } from '../audit.module';
 import { AuthModule } from '../auth.module';
+import { SessionRegistryModule } from '../session-registry.module';
 import { WorkspaceModule } from '../workspace.module';
 import { ClaudeInstallationModule } from './claude-installation.module';
 import { CLAUDE_SETTINGS } from './claude.environment';
@@ -71,6 +78,9 @@ const OUTPUT_STYLE_DEPENDENCIES = Symbol('OutputStyleDependencies');
 
 /** What every plugin use case (local and marketplace, B-27 and B-47) is built with. */
 const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
+
+/** What `ReadProjectConfigUseCase` (B-31) is built with. */
+const PROJECT_CONFIG_DEPENDENCIES = Symbol('ProjectConfigDependencies');
 
 /**
  * The settings only Claude has, composed (plan 13; plan 28, B-36, D-06): the account of its CLI,
@@ -89,6 +99,7 @@ const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
     AuditModule,
     AuthModule,
     ClaudeInstallationModule,
+    SessionRegistryModule,
     WorkspaceModule,
   ],
   controllers: [MarketplacesController, ClaudeController, PluginsController],
@@ -242,6 +253,30 @@ const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
       provide: ApplyMarketplacePluginUpdateUseCase,
       inject: [PLUGIN_DEPENDENCIES],
       useFactory: (deps: PluginDependencies) => new ApplyMarketplacePluginUpdateUseCase(deps),
+    },
+    { provide: PROJECT_CONFIG_SOURCE, useClass: ClaudeProjectConfigFileReader },
+    { provide: LIVE_LOADED_STATE, useClass: RegistryLiveLoadedState },
+    {
+      provide: PROJECT_CONFIG_DEPENDENCIES,
+      inject: [
+        FOLDER_ACCESS,
+        ClaudeInstallationCatalog,
+        PROJECT_CONFIG_SOURCE,
+        LIVE_LOADED_STATE,
+        INSTALLATION_FACTS,
+      ],
+      useFactory: (
+        folders: FolderAccess,
+        catalog: ClaudeInstallationCatalog,
+        source: ProjectConfigDependencies['source'],
+        liveLoadedState: ProjectConfigDependencies['liveLoadedState'],
+        facts: InstallationFacts,
+      ): ProjectConfigDependencies => ({ folders, catalog, source, liveLoadedState, facts }),
+    },
+    {
+      provide: ReadProjectConfigUseCase,
+      inject: [PROJECT_CONFIG_DEPENDENCIES],
+      useFactory: (deps: ProjectConfigDependencies) => new ReadProjectConfigUseCase(deps),
     },
   ],
 })

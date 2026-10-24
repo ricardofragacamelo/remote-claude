@@ -377,6 +377,22 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
     );
   }
 
+  /**
+   * The absolute paths of the memory files this session has actually loaded (plan 13, B-32, S-148) —
+   * `getContextUsage`'s own `memoryFiles`, read off the same control request `contextUse()` makes,
+   * but kept off the neutral {@link ContextUse} on purpose: `toContextUse`'s own comment already
+   * says that mapping carries "no file paths" by design (plan 28, B-24). This is a Claude-only
+   * extra capability, never part of `EngineControl` — the use case that calls it lives in
+   * `application/engines/claude/`, reached only through {@link RegistryLiveLoadedState}, never
+   * through the core's generic control dispatch.
+   */
+  async loadedMemoryFiles(): Promise<readonly string[]> {
+    const usage = await this.askControl('measure its context', 'engine.context', (query) =>
+      query.getContextUsage({ detail: 'summary' }),
+    );
+    return usage.memoryFiles.map((file) => file.path);
+  }
+
   /** `mcpServerStatus()`, reduced — never the configuration nor the raw error (B-38). */
   async mcpServers(): Promise<readonly McpServer[]> {
     const servers = await this.askControl('list its MCP servers', 'engine.mcp', (query) =>

@@ -48,3 +48,26 @@ export type {
   ClaudeAccount,
   ClaudeInitialization,
 } from './value-objects/claude-installation.value-object';
+export {
+  agentRisksOf,
+  memoryDiverges,
+  memoryFileCandidatesOf,
+  memoryLoadedByRule,
+  permissionRuleViewsOf,
+} from './entities/project-config.entity';
+export type {
+  AgentFrontmatter,
+  AgentRisk,
+  MemoryFileCandidate,
+  MemoryFileOrigin,
+  MemoryFileView,
+  ProjectAgentView,
+  ProjectCommandView,
+  ProjectConfigIssue,
+  ProjectConfigIssueReason,
+  ProjectConfigView,
+  ProjectHookView,
+  ProjectOutputStyleView,
+  ProjectPermissionRuleView,
+  ProjectPluginsDeclaration,
+} from './entities/project-config.entity';
