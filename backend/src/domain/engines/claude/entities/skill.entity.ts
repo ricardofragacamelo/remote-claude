@@ -1,3 +1,7 @@
+import { originOf } from '@domain/session';
+import type { SlashCommand } from '@domain/session';
+import { CLAUDE_COMMAND_MENU } from '../services/command-menu';
+
 /**
  * A skill of the project's `.claude/`, or loaded through the synthetic plugin of the user's or the
  * system's own (plan 13, B-34, B-35; D-20). Pure data — the adapter is the only place that reads a
@@ -44,4 +48,22 @@ export const SKILL_NAME_MAX_LENGTH = 64;
 /** Whether `name` is a skill name the CLI would accept as a directory name (S-160). */
 export function isValidSkillName(name: string): boolean {
   return name.length > 0 && name.length <= SKILL_NAME_MAX_LENGTH && SKILL_NAME_PATTERN.test(name);
+}
+
+/**
+ * Where a skill of `reloadSkills()` comes from — the project's own menu badge (plan 08's
+ * {@link originOf}), reused rather than reimplemented: a skill arrives in the very same
+ * `plugin:name`-or-bare shape a command does, qualified by the same two plugin names
+ * ({@link CLAUDE_COMMAND_MENU}'s own, B-35). `reloadSkills()` never marks an entry `builtin`
+ * (B-01) — the one case this falls back to `'system'` for is nothing a real answer has shown yet,
+ * kept only so the mapping stays total.
+ */
+export function skillOriginOf(skill: SlashCommand): SkillOrigin {
+  const origin = originOf(skill, CLAUDE_COMMAND_MENU);
+  return origin === 'builtin' ? 'system' : origin;
+}
+
+/** The name a person reads — without the namespace of a plugin (the same rule {@link skillOriginOf} uses). */
+export function skillLabelOf(name: string): string {
+  return name.slice(name.lastIndexOf(':') + 1);
 }

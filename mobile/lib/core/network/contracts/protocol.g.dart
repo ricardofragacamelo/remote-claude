@@ -7681,6 +7681,157 @@ bool projectConfigViewPayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+class ClaudeSkillListPayloadSkillsItem {
+  const ClaudeSkillListPayloadSkillsItem({
+    required this.name,
+    required this.origin,
+    required this.description,
+    required this.sourceFile,
+    required this.enabled,
+    required this.unloadedReason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudeSkillListPayloadSkillsItem.fromJson(Map<String, Object?> json) => ClaudeSkillListPayloadSkillsItem(
+        name: json['name']! as String,
+        origin: json['origin']! as String,
+        description: json['description']! as String,
+        sourceFile: json['sourceFile'] as String?,
+        enabled: json['enabled']! as bool,
+        unloadedReason: json['unloadedReason'] as String?,
+      );
+
+  final String name;
+
+  final String origin;
+
+  final String description;
+
+  final String? sourceFile;
+
+  final bool enabled;
+
+  final String? unloadedReason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'name': name,
+      'origin': origin,
+      'description': description,
+      'sourceFile': sourceFile,
+      'enabled': enabled,
+      'unloadedReason': unloadedReason,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /engines/claude/skills?folder=`: every skill of the project, the user and the system, with its origin, its state and why a declared hook kept one out (plan 13, B-34, B-35; D-20).
+class ClaudeSkillListPayload {
+  const ClaudeSkillListPayload({
+    required this.skills,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudeSkillListPayload.fromJson(Map<String, Object?> json) => ClaudeSkillListPayload(
+        skills: (json['skills']! as List<Object?>).map((item) => ClaudeSkillListPayloadSkillsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<ClaudeSkillListPayloadSkillsItem> skills;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'skills': skills.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ClaudeSkillListPayload].
+bool claudeSkillListPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['skills'] is List<Object?> && (json['skills']! as List<Object?>).length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Which toggleable origins are on — absent or `false` is off (D-20's safety default).
+class ClaudeSkillPreferencesPayloadSources {
+  const ClaudeSkillPreferencesPayloadSources({
+    this.user,
+    this.system,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudeSkillPreferencesPayloadSources.fromJson(Map<String, Object?> json) => ClaudeSkillPreferencesPayloadSources(
+        user: json['user'] as bool?,
+        system: json['system'] as bool?,
+      );
+
+  final bool? user;
+
+  final bool? system;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+    };
+
+    if (user != null) {
+      json['user'] = user;
+    }
+
+    if (system != null) {
+      json['system'] = system;
+    }
+
+    return json;
+  }
+}
+
+/// `PUT /engines/claude/skills/preferences`: the preferences now stored at the level asked — a user's own, or one folder's (plan 13, B-34; D-04, D-20).
+class ClaudeSkillPreferencesPayload {
+  const ClaudeSkillPreferencesPayload({
+    required this.sources,
+    required this.disabledSkills,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudeSkillPreferencesPayload.fromJson(Map<String, Object?> json) => ClaudeSkillPreferencesPayload(
+        sources: ClaudeSkillPreferencesPayloadSources.fromJson(json['sources']! as Map<String, Object?>),
+        disabledSkills: (json['disabledSkills']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+      );
+
+  /// Which toggleable origins are on — absent or `false` is off (D-20's safety default).
+  final ClaudeSkillPreferencesPayloadSources sources;
+
+  final List<String> disabledSkills;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sources': sources.toJson(),
+      'disabledSkills': disabledSkills,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ClaudeSkillPreferencesPayload].
+bool claudeSkillPreferencesPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['disabledSkills'] is List<Object?> && (json['disabledSkills']! as List<Object?>).length > 2000) {
+    return false;
+  }
+
+  return true;
+}
+
 /// `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only.
 class FileContentPayload {
   const FileContentPayload({

@@ -1,0 +1,55 @@
+import { Body, Controller, Get, Inject, Put, Query, UseGuards } from '@nestjs/common';
+
+import type {
+  ClaudeSkillListPayload,
+  ClaudeSkillPreferencesPayload,
+} from '@remote-claude/contracts';
+
+import { ReadProjectSkillsUseCase, SaveSkillPreferencesUseCase } from '@application/engines/claude';
+import type { UserId } from '@domain/auth';
+import { requiredFolderQuerySchema } from '../../agent-settings/agent-settings.dto';
+import { BearerAuthGuard, CurrentUser } from '../../auth/bearer.guard';
+import { ZodPipe } from '@shared/validation/zod.pipe';
+import { skillPreferencesOf, skillPreferencesSchema } from './claude.dto';
+import type { SkillPreferencesBody } from './claude.dto';
+
+/**
+ * `/engines/claude/skills*` — the skills of the project, the user and the system, and the
+ * preferences that turn an origin or one skill on or off (plan 13, B-34; D-20).
+ *
+ * Every route is Bearer and scoped by who asks; a folder clears the allowlist before anything else.
+ *
+ * | Status | When |
+ * |---|---|
+ * | `200` | the answer |
+ * | `400` | a malformed query or body, or a skill name outside its form (`INVALID_INPUT`) |
+ * | `401` | no bearer, or an invalid one |
+ * | `403` | the folder's refusals |
+ * | `429` / `502` / `504` | the installation had no slot, failed, or did not answer |
+ * | `503` | the trail could not take a change — nothing was saved |
+ */
+@Controller()
+@UseGuards(BearerAuthGuard)
+export class SkillsController {
+  constructor(
+    @Inject(ReadProjectSkillsUseCase) private readonly skills: ReadProjectSkillsUseCase,
+    @Inject(SaveSkillPreferencesUseCase)
+    private readonly savePreferences: SaveSkillPreferencesUseCase,
+  ) {}
+
+  @Get('engines/claude/skills')
+  async readSkills(
+    @Query(new ZodPipe(requiredFolderQuerySchema)) query: { folder: string },
+    @CurrentUser() userId: UserId,
+  ): Promise<ClaudeSkillListPayload> {
+    return { skills: await this.skills.execute(userId, query.folder) };
+  }
+
+  @Put('engines/claude/skills/preferences')
+  async savePreferencesRoute(
+    @Body(new ZodPipe(skillPreferencesSchema)) body: SkillPreferencesBody,
+    @CurrentUser() userId: UserId,
+  ): Promise<ClaudeSkillPreferencesPayload> {
+    return this.savePreferences.execute(userId, body.folder, skillPreferencesOf(body));
+  }
+}

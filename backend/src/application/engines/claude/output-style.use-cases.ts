@@ -1,18 +1,12 @@
 import { defaultsChangedEvent } from '@application/agent-settings';
-import type {
-  EngineSessionDefaults,
-  EngineSessionOptions,
-  FolderAccess,
-} from '@application/agent-settings';
+import type { FolderAccess } from '@application/agent-settings';
 import type { RecordAuditEventUseCase } from '@application/audit';
 import { exactOverride } from '@domain/agent-settings';
 import type { EffectiveValue } from '@domain/agent-settings';
 import type { UserId } from '@domain/auth';
-import { effectiveOutputStyle, outputStyleForSession } from '@domain/engines/claude';
+import { effectiveOutputStyle } from '@domain/engines/claude';
 import type { FolderOutputStyle, OutputStyleDefaults } from '@domain/engines/claude';
 import type { Clock } from '@domain/shared';
-import type { WorkspacePath } from '@domain/workspace';
-import type { ClaudeInstallationCatalog } from './installation-catalog';
 import type { OutputStyleDefaultsRepository } from './ports/output-style-defaults.repository';
 
 /** The output style as the screen shows it: what applies, the user's own, and the folder's. */
@@ -102,24 +96,5 @@ export class SaveOutputStyleUseCase {
     }
 
     return outputStyleView(await this.deps.styles.read(userId), folder);
-  }
-}
-
-/**
- * The defaults Claude's extension keeps for a session beside the core's: the output style that
- * applies in the folder, dropped when the installation is known not to have it any more (S-53).
- * Nothing is probed — a session opens on what is already known.
- */
-export class ClaudeSessionDefaults implements EngineSessionDefaults {
-  constructor(
-    readonly engine: string,
-    private readonly styles: OutputStyleDefaultsRepository,
-    private readonly catalog: ClaudeInstallationCatalog,
-  ) {}
-
-  async optionsFor(userId: UserId, folder: WorkspacePath): Promise<EngineSessionOptions> {
-    const effective = effectiveOutputStyle(await this.styles.read(userId), folder.value);
-    const offered = this.catalog.known(folder)?.initialization.outputStyles ?? null;
-    return outputStyleForSession(effective, offered);
   }
 }

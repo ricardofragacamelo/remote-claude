@@ -23,7 +23,7 @@ export class AgentSettingsModuleConfiguration implements SessionConfigurationSou
   ) {}
 
   async configurationFor(query: SessionConfigurationRequest): Promise<SessionConfiguration> {
-    const { defaults, outputStyle, stale } = await this.compose.execute(query);
+    const { defaults, outputStyle, stale, skills } = await this.compose.execute(query);
 
     if (stale.length > 0) {
       this.logger.warn(
@@ -46,6 +46,7 @@ export class AgentSettingsModuleConfiguration implements SessionConfigurationSou
       outputStyle,
       fallbackModel: defaults.fallbackModel,
       defaultsFrom: defaults.from,
+      skills,
     };
   }
 }

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/skill-preferences.json",
+  "title": "ClaudeSkillPreferences",
+  "description": "`PUT /engines/claude/skills/preferences`: the preferences now stored at the level asked — a user's own, or one folder's (plan 13, B-34; D-04, D-20).",
+  "x-kind": "http",
+  "x-type": "engines.claude.skillPreferences",
+  "x-route": [{ "method": "PUT", "path": "/engines/claude/skills/preferences" }],
+  "type": "object",
+  "required": ["sources", "disabledSkills"],
+  "properties": {
+    "sources": {
+      "type": "object",
+      "description": "Which toggleable origins are on — absent or `false` is off (D-20's safety default).",
+      "properties": {
+        "user": { "type": "boolean" },
+        "system": { "type": "boolean" }
+      }
+    },
+    "disabledSkills": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": { "type": "string" }
+    }
+  }
+}

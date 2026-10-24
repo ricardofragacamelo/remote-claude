@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/skill-list.json",
+  "title": "ClaudeSkillList",
+  "description": "`GET /engines/claude/skills?folder=`: every skill of the project, the user and the system, with its origin, its state and why a declared hook kept one out (plan 13, B-34, B-35; D-20).",
+  "x-kind": "http",
+  "x-type": "engines.claude.skillList",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/skills" }],
+  "type": "object",
+  "required": ["skills"],
+  "properties": {
+    "skills": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": ["name", "origin", "description", "sourceFile", "enabled", "unloadedReason"],
+        "properties": {
+          "name": { "type": "string" },
+          "origin": { "type": "string", "enum": ["project", "user", "system"] },
+          "description": { "type": "string" },
+          "sourceFile": { "type": "string", "x-nullable": true },
+          "enabled": { "type": "boolean" },
+          "unloadedReason": {
+            "type": "string",
+            "enum": ["declaresHook", "linkEscapesHome"],
+            "x-nullable": true
+          }
+        }
+      }
+    }
+  }
+}

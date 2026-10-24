@@ -97,7 +97,7 @@ describe('the initialisation, in our words — plan 13, D-05, D-07', () => {
   it('maps the recorded initialisation: commands, agents, models, styles and the account', () => {
     const { initialization } = loadInitialization();
 
-    const mapped = toSessionInitialization(initialization);
+    const mapped = toSessionInitialization(initialization, []);
 
     expect(mapped.models.map((model) => model.value)).toEqual(
       initialization.models.map((model) => model.value),

@@ -30,6 +30,9 @@ export interface SessionConfiguration {
 
   /** Every default the installation no longer has, the core's and the extension's — for the log. */
   readonly stale: readonly string[];
+
+  /** The engine's own filter on its named capabilities — `undefined` for none (plan 13, B-34). */
+  readonly skills?: readonly string[] | undefined;
 }
 
 /**
@@ -52,7 +55,7 @@ export class ComposeSessionConfigurationUseCase {
         null,
         query.client,
       );
-      return { defaults, outputStyle: null, stale: [] };
+      return { defaults, outputStyle: null, stale: [], skills: undefined };
     }
 
     const stored = await this.defaults.read(query.userId, query.engine);
@@ -69,6 +72,7 @@ export class ComposeSessionConfigurationUseCase {
       defaults,
       outputStyle: options.outputStyle,
       stale: [...defaults.stale, ...options.stale],
+      skills: options.skills,
     };
   }
 }

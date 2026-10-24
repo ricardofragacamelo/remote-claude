@@ -34,6 +34,9 @@ export interface SdkOptionsInput {
   /** The output style a default chose (plan 13, B-15) — absent for the installation's. */
   readonly outputStyle?: string | null;
 
+  /** The skills this session may use (plan 13, B-34) — absent for every one the CLI loaded. */
+  readonly skills?: readonly string[] | undefined;
+
   /** Thinking switched off by a default — absent or `on` for the product's own (plan 13, B-15). */
   readonly thinking?: 'on' | 'off' | null;
 
@@ -164,6 +167,7 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
     ...(input.model === null ? {} : { model: input.model }),
     ...(input.effort == null ? {} : { effort: input.effort }),
     ...(input.fallbackModel == null ? {} : { fallbackModel: input.fallbackModel }),
+    ...(input.skills === undefined ? {} : { skills: [...input.skills] }),
     ...conversationOptions(input.conversation),
     ...forkOptions(input.forkAt),
   };

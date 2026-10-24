@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -54,6 +54,9 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
     await harness.app
       .get<PersistenceContext>(PERSISTENCE_CONTEXT)
       .db.execute('DELETE FROM agent_defaults');
+    await harness.app
+      .get<PersistenceContext>(PERSISTENCE_CONTEXT)
+      .db.execute('DELETE FROM claude_skill_preferences');
   });
 
   afterEach(async () => {
@@ -203,5 +206,48 @@ describe('the defaults reach a new session — plan 13, B-15', () => {
     await open();
 
     expect(record.options?.thinking).toEqual({ type: 'disabled' });
+  });
+
+  describe('skills — plan 13, B-34', () => {
+    function skillFile(name: string): void {
+      const dir = path.join(root, 'repo', '.claude', 'skills', name);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        path.join(dir, 'SKILL.md'),
+        `---\nname: ${name}\ndescription: a skill\n---\n`,
+        'utf8',
+      );
+    }
+
+    it('omits `skills` with nothing disabled and nothing else offered (S-155)', async () => {
+      await open();
+
+      expect(record.options).not.toHaveProperty('skills');
+    });
+
+    it('narrows `skills` once a project skill is singled out, never omitted (S-156)', async () => {
+      skillFile('review');
+      await put('/engines/claude/skills/preferences', {
+        sources: {},
+        disabledSkills: ['review'],
+      });
+
+      await open();
+
+      expect(record.options?.skills).toEqual([]);
+    });
+
+    it('keeps every project skill a preference does not name, once something else is off', async () => {
+      skillFile('review');
+      skillFile('draft');
+      await put('/engines/claude/skills/preferences', {
+        sources: {},
+        disabledSkills: ['review'],
+      });
+
+      await open();
+
+      expect(record.options?.skills).toEqual(['draft']);
+    });
   });
 });

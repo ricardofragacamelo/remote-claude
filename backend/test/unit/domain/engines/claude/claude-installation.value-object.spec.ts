@@ -15,6 +15,7 @@ const full: ClaudeInitialization = {
   ...bare,
   outputStyle: 'Concise',
   outputStyles: ['default', 'Concise'],
+  skills: [{ name: 'review', description: 'Reviews a PR', argumentHint: '', aliases: [] }],
   account: { ...bare.account, tokenSource: 'claude.ai', apiKeySource: 'none' },
 };
 
@@ -28,6 +29,7 @@ describe('the initialisation Claude answers with — plan 13, D-05', () => {
       ...bare,
       outputStyle: '',
       outputStyles: [],
+      skills: [],
       account: { ...bare.account, tokenSource: null, apiKeySource: null },
     });
   });

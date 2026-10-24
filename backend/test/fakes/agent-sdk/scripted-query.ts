@@ -167,6 +167,12 @@ export interface ScriptOptions {
    */
   readonly commands?: readonly SlashCommand[] | Error | 'hang';
 
+  /**
+   * What `reloadSkills()` answers instead of the recorded catalogue (plan 13, B-34): a narrower
+   * list, or an error to throw — the CLI failing to reload, or never answering at all (`'hang'`).
+   */
+  readonly skills?: readonly SlashCommand[] | Error | 'hang';
+
   /** The MCP servers of the session: none were configured where the installation was recorded. */
   readonly mcpServers?: readonly McpServerStatus[];
 
@@ -1048,7 +1054,16 @@ export class ScriptedQuery implements AsyncGenerator<SDKMessage, void> {
   }
 
   reloadSkills(): Promise<SDKControlReloadSkillsResponse> {
-    return Promise.resolve({ skills: [...loadInitialization().skills] });
+    const skills = this.script.skills;
+
+    if (skills === 'hang') {
+      return new Promise<SDKControlReloadSkillsResponse>(() => undefined);
+    }
+    if (skills instanceof Error) {
+      return Promise.reject(skills);
+    }
+
+    return Promise.resolve({ skills: [...(skills ?? loadInitialization().skills)] });
   }
 
   /** The servers handed over after the start: each comes up connected with the fixture's tools. */

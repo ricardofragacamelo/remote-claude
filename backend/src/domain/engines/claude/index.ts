@@ -58,12 +58,31 @@ export {
 export {
   isValidSkillName,
   skillFrontmatterDeclaresHook,
+  skillLabelOf,
+  skillOriginOf,
   SKILL_NAME_MAX_LENGTH,
   SKILL_NAME_PATTERN,
 } from './entities/skill.entity';
 export type { ProjectSkillView, SkillOrigin, SkillUnloadedReason } from './entities/skill.entity';
 export { digestOfSkillSources } from './services/skill-source-digest';
 export type { SkillSourceFingerprint } from './services/skill-source-digest';
+export {
+  DEFAULT_SKILL_PREFERENCES,
+  effectiveSkillPreferences,
+  isOriginEnabled,
+  isSkillEnabled,
+  NO_SKILL_PREFERENCES,
+  sameSkillPreferences,
+  skillsOptionFor,
+  widenedOrigin,
+} from './services/skill-preferences';
+export type {
+  FolderSkillPreferences,
+  ResolvedSkillPreferences,
+  SkillPreferences,
+  SkillPreferencesDefaults,
+  ToggleableSkillOrigin,
+} from './services/skill-preferences';
 export type {
   AgentFrontmatter,
   AgentRisk,

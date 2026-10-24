@@ -26,6 +26,7 @@ const initWith = (account: Partial<ClaudeInitialization['account']>): ClaudeInit
   models: [],
   outputStyle: 'default',
   outputStyles: [],
+  skills: [],
   account: {
     email: null,
     organization: null,

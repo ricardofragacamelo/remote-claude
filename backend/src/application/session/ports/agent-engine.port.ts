@@ -97,6 +97,9 @@ export interface AgentSessionStart {
   /** The output style a default chose — `null` for the installation's. */
   readonly outputStyle?: string | null;
 
+  /** The named capabilities this session may use, a default narrowed — `undefined` for every one. */
+  readonly skills?: readonly string[] | undefined;
+
   /** The model used when the main one is overloaded — `null` for none. */
   readonly fallbackModel?: string | null;
 

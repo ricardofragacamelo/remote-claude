@@ -15,12 +15,12 @@ export {
 } from './installation.use-cases';
 export type { AccountView, InstallationView } from './installation.use-cases';
 export {
-  ClaudeSessionDefaults,
   outputStyleView,
   ReadOutputStyleUseCase,
   SaveOutputStyleUseCase,
 } from './output-style.use-cases';
 export type { OutputStyleDependencies, OutputStyleView } from './output-style.use-cases';
+export { ClaudeSessionDefaults } from './claude-session-defaults';
 export {
   INSTALLATION_FACTS,
   INSTALLATION_PROBE,
@@ -94,3 +94,14 @@ export type {
   ProjectOutputStyleFile,
   ProjectPermissionsDeclaration,
 } from './ports/project-config-source.port';
+export { PROJECT_SKILL_FILES } from './ports/project-skill-files.port';
+export type { ProjectSkillFiles } from './ports/project-skill-files.port';
+export { SKILL_PLUGIN_CANDIDATES } from './ports/skill-plugin-candidates.port';
+export type {
+  SkillPluginCandidates,
+  SkillPluginCandidateSet,
+} from './ports/skill-plugin-candidates.port';
+export { SKILL_PREFERENCES_REPOSITORY } from './ports/skill-preferences.repository';
+export type { SkillPreferencesRepository } from './ports/skill-preferences.repository';
+export { ReadProjectSkillsUseCase, SaveSkillPreferencesUseCase } from './skill.use-cases';
+export type { SkillDependencies } from './skill.use-cases';

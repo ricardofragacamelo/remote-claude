@@ -404,6 +404,7 @@ export class StartSessionUseCase {
         thinking: applied.thinking,
         outputStyle: applied.outputStyle,
         fallbackModel: applied.fallbackModel,
+        skills: applied.skills,
         forkAt,
         extensionPaths,
         onEvent: (event) => {

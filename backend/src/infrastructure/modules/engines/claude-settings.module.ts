@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { ClaudeController } from '@adapter/inbound/http/engines/claude/claude.controller';
+import { SkillsController } from '@adapter/inbound/http/engines/claude/skills.controller';
 import { MarketplacesController } from '@adapter/inbound/http/engines/claude/marketplaces.controller';
 import { PluginsController } from '@adapter/inbound/http/engines/claude/plugins.controller';
 import { CLAUDE_ENGINE } from '@adapter/outbound/engines/claude/claude-engine';
@@ -41,13 +42,18 @@ import {
   PLUGIN_REPOSITORY,
   PreviewLocalPluginUseCase,
   PROJECT_CONFIG_SOURCE,
+  PROJECT_SKILL_FILES,
   ReadAccountUseCase,
   ReadInstallationUseCase,
   ReadOutputStyleUseCase,
   ReadProjectConfigUseCase,
+  ReadProjectSkillsUseCase,
   RemovePluginUseCase,
   SaveOutputStyleUseCase,
+  SaveSkillPreferencesUseCase,
   SetPluginEnabledUseCase,
+  SKILL_PLUGIN_CANDIDATES,
+  SKILL_PREFERENCES_REPOSITORY,
 } from '@application/engines/claude';
 import type {
   InstallationFacts,
@@ -59,6 +65,10 @@ import type {
   PluginManifestReader,
   PluginRepository,
   ProjectConfigDependencies,
+  ProjectSkillFiles,
+  SkillDependencies,
+  SkillPluginCandidates,
+  SkillPreferencesRepository,
 } from '@application/engines/claude';
 import { CLOCK, ID_GENERATOR } from '@application/shared';
 import { MARKETPLACE_ALLOWLIST_SOURCE } from '@application/workspace';
@@ -82,6 +92,9 @@ const PLUGIN_DEPENDENCIES = Symbol('PluginDependencies');
 /** What `ReadProjectConfigUseCase` (B-31) is built with. */
 const PROJECT_CONFIG_DEPENDENCIES = Symbol('ProjectConfigDependencies');
 
+/** What every skill use case (B-34) is built with. */
+const SKILL_DEPENDENCIES = Symbol('SkillDependencies');
+
 /**
  * The settings only Claude has, composed (plan 13; plan 28, B-36, D-06): the account of its CLI,
  * the diagnostic of its installation, the test of the connection and the output style of its
@@ -102,7 +115,7 @@ const PROJECT_CONFIG_DEPENDENCIES = Symbol('ProjectConfigDependencies');
     SessionRegistryModule,
     WorkspaceModule,
   ],
-  controllers: [MarketplacesController, ClaudeController, PluginsController],
+  controllers: [MarketplacesController, ClaudeController, PluginsController, SkillsController],
   providers: [
     { provide: MODEL_CHECK, useClass: AgentSdkModelCheck },
     {
@@ -277,6 +290,46 @@ const PROJECT_CONFIG_DEPENDENCIES = Symbol('ProjectConfigDependencies');
       provide: ReadProjectConfigUseCase,
       inject: [PROJECT_CONFIG_DEPENDENCIES],
       useFactory: (deps: ProjectConfigDependencies) => new ReadProjectConfigUseCase(deps),
+    },
+    {
+      provide: SKILL_DEPENDENCIES,
+      inject: [
+        FOLDER_ACCESS,
+        ClaudeInstallationCatalog,
+        PROJECT_SKILL_FILES,
+        SKILL_PLUGIN_CANDIDATES,
+        SKILL_PREFERENCES_REPOSITORY,
+        RecordAuditEventUseCase,
+        CLOCK,
+      ],
+      useFactory: (
+        folders: FolderAccess,
+        catalog: ClaudeInstallationCatalog,
+        projectSkillFiles: ProjectSkillFiles,
+        skillPlugins: SkillPluginCandidates,
+        preferences: SkillPreferencesRepository,
+        trail: RecordAuditEventUseCase,
+        clock: Clock,
+      ): SkillDependencies => ({
+        engine: CLAUDE_ENGINE,
+        folders,
+        catalog,
+        projectSkillFiles,
+        skillPlugins,
+        preferences,
+        trail,
+        clock,
+      }),
+    },
+    {
+      provide: ReadProjectSkillsUseCase,
+      inject: [SKILL_DEPENDENCIES],
+      useFactory: (deps: SkillDependencies) => new ReadProjectSkillsUseCase(deps),
+    },
+    {
+      provide: SaveSkillPreferencesUseCase,
+      inject: [SKILL_DEPENDENCIES],
+      useFactory: (deps: SkillDependencies) => new SaveSkillPreferencesUseCase(deps),
     },
   ],
 })

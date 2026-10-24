@@ -14,6 +14,9 @@ export interface SessionConfiguration {
   readonly outputStyle: string | null;
   readonly fallbackModel: string | null;
   readonly defaultsFrom: DefaultsFrom;
+
+  /** The engine's own filter on its named capabilities — `undefined` for none (plan 13, B-34). */
+  readonly skills?: readonly string[] | undefined;
 }
 
 /** What a session asks before it opens: whose, where, and what the client already chose. */

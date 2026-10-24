@@ -57,6 +57,7 @@ function factoryOf(
     const query = Object.assign(stream(), {
       initializationResult:
         behaviour.init ?? (() => Promise.resolve(loadInitialization().initialization)),
+      reloadSkills: () => Promise.resolve({ skills: loadInitialization().skills }),
       close: () => {
         opened.closed += 1;
       },

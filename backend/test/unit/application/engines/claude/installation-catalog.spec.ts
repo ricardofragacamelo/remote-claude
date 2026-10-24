@@ -27,6 +27,7 @@ const init = (models: string[] = ['sonnet']): ClaudeInitialization => ({
   })),
   outputStyle: 'default',
   outputStyles: ['default'],
+  skills: [],
   account: {
     email: 'p@example.com',
     organization: null,

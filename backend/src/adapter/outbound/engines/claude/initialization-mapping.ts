@@ -2,6 +2,7 @@ import type {
   AccountInfo,
   AgentInfo,
   SDKControlInitializeResponse,
+  SlashCommand as SdkSlashCommand,
 } from '@anthropic-ai/claude-agent-sdk';
 
 import type { ClaudeAccount, ClaudeInitialization } from '@domain/engines/claude';
@@ -35,10 +36,14 @@ export function toInstallationAgent(agent: AgentInfo): InstallationAgent {
 }
 
 /**
- * The answer of `initializationResult()` → ours: one question that brings the commands, the agents,
- * the models, the output styles and the account together (plan 13, D-05).
+ * The answer of `initializationResult()`, with `reloadSkills()` asked alongside it, → ours: one
+ * question that brings the commands, the agents, the models, the output styles, the account and the
+ * skills together (plan 13, D-05, B-34).
  */
-export function toSessionInitialization(init: SDKControlInitializeResponse): ClaudeInitialization {
+export function toSessionInitialization(
+  init: SDKControlInitializeResponse,
+  skills: readonly SdkSlashCommand[],
+): ClaudeInitialization {
   return {
     commands: init.commands.map(toSlashCommand),
     agents: init.agents.map(toInstallationAgent),
@@ -46,5 +51,6 @@ export function toSessionInitialization(init: SDKControlInitializeResponse): Cla
     outputStyle: init.output_style,
     outputStyles: init.available_output_styles,
     account: toInstallationAccount(init.account),
+    skills: skills.map(toSlashCommand),
   };
 }

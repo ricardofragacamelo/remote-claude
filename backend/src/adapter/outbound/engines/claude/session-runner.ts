@@ -204,6 +204,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
       thinking: this.start.thinking ?? null,
       outputStyle: this.start.outputStyle ?? null,
       fallbackModel: this.start.fallbackModel ?? null,
+      skills: this.start.skills,
       forkAt: this.start.forkAt ?? null,
       pluginPaths: this.pluginPaths(),
       limits: this.deps.limits,
@@ -351,13 +352,17 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
     return listed.map(toSlashCommand);
   }
 
-  /** `initializationResult()`, under the same deadline — the catalogue of plan 13 (B-10). */
+  /**
+   * `initializationResult()` and `reloadSkills()`, under the same deadline — the catalogue of plan
+   * 13 (B-10, B-34).
+   */
   async initialization(): Promise<ClaudeInitialization> {
-    return toSessionInitialization(
-      await this.askControl('answer its initialisation', 'engine.initialization', (query) =>
-        query.initializationResult(),
-      ),
+    const [init, reloaded] = await this.askControl(
+      'answer its initialisation',
+      'engine.initialization',
+      (query) => Promise.all([query.initializationResult(), query.reloadSkills()]),
     );
+    return toSessionInitialization(init, reloaded.skills);
   }
 
   /** `supportedModels()`, under the same deadline — the selector of the panel (plan 08, B-36). */

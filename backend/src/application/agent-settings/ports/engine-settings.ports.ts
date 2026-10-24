@@ -42,6 +42,13 @@ export interface EngineSessionOptions {
 
   /** The defaults of the extension the installation no longer has — dropped, and logged. */
   readonly stale: readonly string[];
+
+  /**
+   * The named capabilities a session may use, filtered by what the owner turned off — `undefined`
+   * when nothing was, the engine's own default (plan 13, B-34). A core-neutral list: naming what one
+   * of them is (a skill, today) is the engine's own to know.
+   */
+  readonly skills?: readonly string[] | undefined;
 }
 
 /**

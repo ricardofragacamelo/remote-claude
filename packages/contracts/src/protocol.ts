@@ -1633,6 +1633,33 @@ export interface ProjectConfigViewPayload {
   readonly issues: readonly ProjectConfigViewPayloadIssuesItem[];
 }
 
+export interface ClaudeSkillListPayloadSkillsItem {
+  readonly name: string;
+  readonly origin: 'project' | 'user' | 'system';
+  readonly description: string;
+  readonly sourceFile: string | null;
+  readonly enabled: boolean;
+  readonly unloadedReason: 'declaresHook' | 'linkEscapesHome' | null;
+}
+
+/** `GET /engines/claude/skills?folder=`: every skill of the project, the user and the system, with its origin, its state and why a declared hook kept one out (plan 13, B-34, B-35; D-20). */
+export interface ClaudeSkillListPayload {
+  readonly skills: readonly ClaudeSkillListPayloadSkillsItem[];
+}
+
+/** Which toggleable origins are on — absent or `false` is off (D-20's safety default). */
+export interface ClaudeSkillPreferencesPayloadSources {
+  readonly user?: boolean;
+  readonly system?: boolean;
+}
+
+/** `PUT /engines/claude/skills/preferences`: the preferences now stored at the level asked — a user's own, or one folder's (plan 13, B-34; D-04, D-20). */
+export interface ClaudeSkillPreferencesPayload {
+  /** Which toggleable origins are on — absent or `false` is off (D-20's safety default). */
+  readonly sources: ClaudeSkillPreferencesPayloadSources;
+  readonly disabledSkills: readonly string[];
+}
+
 /** `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only. */
 export interface FileContentPayload {
   readonly path: string;
@@ -2331,6 +2358,16 @@ export const PROJECT_CONFIG_VIEW_PAYLOAD_LIMITS = {
   hooks: { maxItems: 10000 },
   permissions: { maxItems: 10000 },
   issues: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ClaudeSkillListPayload}. */
+export const CLAUDE_SKILL_LIST_PAYLOAD_LIMITS = {
+  skills: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ClaudeSkillPreferencesPayload}. */
+export const CLAUDE_SKILL_PREFERENCES_PAYLOAD_LIMITS = {
+  disabledSkills: { maxItems: 2000 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link FileTreePayload}. */
@@ -5237,6 +5274,70 @@ export function isProjectConfigViewPayload(value: unknown): value is ProjectConf
     withinMaxItems(record['hooks'], 10000),
     withinMaxItems(record['permissions'], 10000),
     withinMaxItems(record['issues'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudeSkillListPayloadSkillsItem}. Unknown fields are accepted.
+ */
+export function isClaudeSkillListPayloadSkillsItem(value: unknown): value is ClaudeSkillListPayloadSkillsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['name'] === 'string',
+    typeof record['origin'] === 'string',
+    typeof record['description'] === 'string',
+    nullOr(record['sourceFile'], typeof record['sourceFile'] === 'string'),
+    typeof record['enabled'] === 'boolean',
+    nullOr(record['unloadedReason'], typeof record['unloadedReason'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudeSkillListPayload}. Unknown fields are accepted.
+ */
+export function isClaudeSkillListPayload(value: unknown): value is ClaudeSkillListPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['skills']),
+    withinMaxItems(record['skills'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudeSkillPreferencesPayloadSources}. Unknown fields are accepted.
+ */
+export function isClaudeSkillPreferencesPayloadSources(value: unknown): value is ClaudeSkillPreferencesPayloadSources {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudeSkillPreferencesPayload}. Unknown fields are accepted.
+ */
+export function isClaudeSkillPreferencesPayload(value: unknown): value is ClaudeSkillPreferencesPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isClaudeSkillPreferencesPayloadSources(record['sources']),
+    Array.isArray(record['disabledSkills']),
+    withinMaxItems(record['disabledSkills'], 2000),
   ].every(Boolean);
 }
 

@@ -1,4 +1,4 @@
-import type { InstallationAccount, SessionInitialization } from '@domain/session';
+import type { InstallationAccount, SessionInitialization, SlashCommand } from '@domain/session';
 
 /**
  * The account the Claude CLI is signed in to: what every engine's account says, and of the sources
@@ -18,6 +18,9 @@ export interface ClaudeInitialization extends SessionInitialization {
   readonly outputStyle: string;
   readonly outputStyles: readonly string[];
   readonly account: ClaudeAccount;
+
+  /** `reloadSkills()`, asked in the same question (plan 13, B-34) — only skills, never a command (B-01). */
+  readonly skills: readonly SlashCommand[];
 }
 
 /** A string field of [value], or `null` — what an answer that did not say it reads as. */
@@ -32,6 +35,7 @@ function textOf(value: object, field: string): string | null {
  */
 export function claudeInitializationOf(init: SessionInitialization): ClaudeInitialization {
   const styles = (init as Partial<ClaudeInitialization>).outputStyles;
+  const skills = (init as Partial<ClaudeInitialization>).skills;
 
   return {
     ...init,
@@ -39,6 +43,7 @@ export function claudeInitializationOf(init: SessionInitialization): ClaudeIniti
     outputStyles: Array.isArray(styles)
       ? styles.filter((style): style is string => typeof style === 'string')
       : [],
+    skills: Array.isArray(skills) ? skills : [],
     account: {
       ...init.account,
       tokenSource: textOf(init.account, 'tokenSource'),
