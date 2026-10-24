@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/skill-preferences-view.json",
+  "title": "ClaudeSkillPreferencesView",
+  "description": "`GET /engines/claude/skills/preferences?folder=`: the preferences as the screen shows them — what applies, the user's own, and the folder's (plan 13, B-34, D-04, D-20).",
+  "x-kind": "http",
+  "x-type": "engines.claude.skillPreferencesView",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/skills/preferences" }],
+  "type": "object",
+  "required": ["effective", "user", "folder"],
+  "properties": {
+    "effective": {
+      "type": "object",
+      "required": ["value", "from"],
+      "description": "What applies in the folder asked, and where it came from.",
+      "properties": {
+        "value": { "$ref": "../definitions/engine-skill-preferences.schema.json" },
+        "from": {
+          "type": "string",
+          "enum": ["folder", "user", "installation"]
+        },
+        "folder": {
+          "type": "string",
+          "description": "The folder whose override set it, when `from` is `folder`."
+        }
+      }
+    },
+    "user": {
+      "$ref": "../definitions/engine-skill-preferences.schema.json",
+      "x-nullable": true
+    },
+    "folder": {
+      "type": "object",
+      "x-nullable": true,
+      "required": ["folder", "value"],
+      "description": "The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own.",
+      "properties": {
+        "folder": {
+          "type": "string"
+        },
+        "value": { "$ref": "../definitions/engine-skill-preferences.schema.json" }
+      }
+    }
+  }
+}

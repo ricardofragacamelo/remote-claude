@@ -1202,6 +1202,78 @@ class EnginePlugin {
   }
 }
 
+/// Which toggleable origins are on — absent or `false` is off (D-20's safety default).
+class EngineSkillPreferencesSources {
+  const EngineSkillPreferencesSources({
+    this.user,
+    this.system,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EngineSkillPreferencesSources.fromJson(Map<String, Object?> json) => EngineSkillPreferencesSources(
+        user: json['user'] as bool?,
+        system: json['system'] as bool?,
+      );
+
+  final bool? user;
+
+  final bool? system;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+    };
+
+    if (user != null) {
+      json['user'] = user;
+    }
+
+    if (system != null) {
+      json['system'] = system;
+    }
+
+    return json;
+  }
+}
+
+/// Which toggleable origins are on, and which skills are off one by one — a user's own, or one folder's. Named without the engine, like every shared definition (plan 28, D-10): the engine's own routes say which one (plan 13, B-34, D-20).
+class EngineSkillPreferences {
+  const EngineSkillPreferences({
+    required this.sources,
+    required this.disabledSkills,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory EngineSkillPreferences.fromJson(Map<String, Object?> json) => EngineSkillPreferences(
+        sources: EngineSkillPreferencesSources.fromJson(json['sources']! as Map<String, Object?>),
+        disabledSkills: (json['disabledSkills']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+      );
+
+  /// Which toggleable origins are on — absent or `false` is off (D-20's safety default).
+  final EngineSkillPreferencesSources sources;
+
+  final List<String> disabledSkills;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'sources': sources.toJson(),
+      'disabledSkills': disabledSkills,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [EngineSkillPreferences].
+bool engineSkillPreferencesLimitsHold(Map<String, Object?> json) {
+  if (json['disabledSkills'] is List<Object?> && (json['disabledSkills']! as List<Object?>).length > 2000) {
+    return false;
+  }
+
+  return true;
+}
+
 /// A file a tool call changes, and how. It is what the backend's undo snapshots and what turns on the diff of a row and of a pending request: the diff itself comes from `GET /sessions/:sessionId/tools/:toolUseId/diff`, never computed by the client, so the text being replaced never travels here (plan 28, D-28).
 class FileChange {
   const FileChange({
@@ -7760,76 +7832,104 @@ bool claudeSkillListPayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
-/// Which toggleable origins are on — absent or `false` is off (D-20's safety default).
-class ClaudeSkillPreferencesPayloadSources {
-  const ClaudeSkillPreferencesPayloadSources({
-    this.user,
-    this.system,
+/// What applies in the folder asked, and where it came from.
+class ClaudeSkillPreferencesViewPayloadEffective {
+  const ClaudeSkillPreferencesViewPayloadEffective({
+    required this.value,
+    required this.from,
+    this.folder,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory ClaudeSkillPreferencesPayloadSources.fromJson(Map<String, Object?> json) => ClaudeSkillPreferencesPayloadSources(
-        user: json['user'] as bool?,
-        system: json['system'] as bool?,
+  factory ClaudeSkillPreferencesViewPayloadEffective.fromJson(Map<String, Object?> json) => ClaudeSkillPreferencesViewPayloadEffective(
+        value: EngineSkillPreferences.fromJson(json['value']! as Map<String, Object?>),
+        from: json['from']! as String,
+        folder: json['folder'] as String?,
       );
 
-  final bool? user;
+  final EngineSkillPreferences value;
 
-  final bool? system;
+  final String from;
+
+  /// The folder whose override set it, when `from` is `folder`.
+  final String? folder;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
+      'value': value.toJson(),
+      'from': from,
     };
 
-    if (user != null) {
-      json['user'] = user;
-    }
-
-    if (system != null) {
-      json['system'] = system;
+    if (folder != null) {
+      json['folder'] = folder;
     }
 
     return json;
   }
 }
 
-/// `PUT /engines/claude/skills/preferences`: the preferences now stored at the level asked — a user's own, or one folder's (plan 13, B-34; D-04, D-20).
-class ClaudeSkillPreferencesPayload {
-  const ClaudeSkillPreferencesPayload({
-    required this.sources,
-    required this.disabledSkills,
+/// The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own.
+class ClaudeSkillPreferencesViewPayloadFolder {
+  const ClaudeSkillPreferencesViewPayloadFolder({
+    required this.folder,
+    required this.value,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory ClaudeSkillPreferencesPayload.fromJson(Map<String, Object?> json) => ClaudeSkillPreferencesPayload(
-        sources: ClaudeSkillPreferencesPayloadSources.fromJson(json['sources']! as Map<String, Object?>),
-        disabledSkills: (json['disabledSkills']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+  factory ClaudeSkillPreferencesViewPayloadFolder.fromJson(Map<String, Object?> json) => ClaudeSkillPreferencesViewPayloadFolder(
+        folder: json['folder']! as String,
+        value: EngineSkillPreferences.fromJson(json['value']! as Map<String, Object?>),
       );
 
-  /// Which toggleable origins are on — absent or `false` is off (D-20's safety default).
-  final ClaudeSkillPreferencesPayloadSources sources;
+  final String folder;
 
-  final List<String> disabledSkills;
+  final EngineSkillPreferences value;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
-      'sources': sources.toJson(),
-      'disabledSkills': disabledSkills,
+      'folder': folder,
+      'value': value.toJson(),
     };
 
     return json;
   }
 }
 
-/// Whether [json] keeps within the bounds the schema gives [ClaudeSkillPreferencesPayload].
-bool claudeSkillPreferencesPayloadLimitsHold(Map<String, Object?> json) {
-  if (json['disabledSkills'] is List<Object?> && (json['disabledSkills']! as List<Object?>).length > 2000) {
-    return false;
-  }
+/// `GET /engines/claude/skills/preferences?folder=`: the preferences as the screen shows them — what applies, the user's own, and the folder's (plan 13, B-34, D-04, D-20).
+class ClaudeSkillPreferencesViewPayload {
+  const ClaudeSkillPreferencesViewPayload({
+    required this.effective,
+    required this.user,
+    required this.folder,
+  });
 
-  return true;
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ClaudeSkillPreferencesViewPayload.fromJson(Map<String, Object?> json) => ClaudeSkillPreferencesViewPayload(
+        effective: ClaudeSkillPreferencesViewPayloadEffective.fromJson(json['effective']! as Map<String, Object?>),
+        user: json['user'] == null ? null : EngineSkillPreferences.fromJson(json['user']! as Map<String, Object?>),
+        folder: json['folder'] == null ? null : ClaudeSkillPreferencesViewPayloadFolder.fromJson(json['folder']! as Map<String, Object?>),
+      );
+
+  /// What applies in the folder asked, and where it came from.
+  final ClaudeSkillPreferencesViewPayloadEffective effective;
+
+  final EngineSkillPreferences? user;
+
+  /// The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own.
+  final ClaudeSkillPreferencesViewPayloadFolder? folder;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'effective': effective.toJson(),
+      'user': user?.toJson(),
+      'folder': folder?.toJson(),
+    };
+
+    return json;
+  }
 }
 
 /// `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only.
@@ -9813,6 +9913,9 @@ typedef ModelCheckOutcomePayload = ModelCheckOutcome;
 
 /// `POST /engines/claude/plugins`, `PATCH /engines/claude/plugins/:id`: one plugin, after the write (plan 13, B-27). `POST /engines/claude/plugins/marketplace` installs one from a declared marketplace, and `POST /engines/claude/plugins/:id/update` applies an available update to one — both B-47, and both answer the same shape. `DELETE` of the plugin resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.
 typedef ClaudePluginDetailPayload = EnginePlugin;
+
+/// `PUT /engines/claude/skills/preferences`: the preferences now stored at the level asked — a user's own, or one folder's (plan 13, B-34; D-04, D-20).
+typedef ClaudeSkillPreferencesPayload = EngineSkillPreferences;
 
 /// `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`.
 typedef McpServerDetailPayload = McpServer;

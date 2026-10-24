@@ -5,6 +5,7 @@ import { RecordAuditEventUseCase } from '@application/audit';
 import {
   ClaudeInstallationCatalog,
   ReadProjectSkillsUseCase,
+  ReadSkillPreferencesUseCase,
   SaveSkillPreferencesUseCase,
 } from '@application/engines/claude';
 import type {
@@ -395,6 +396,63 @@ describe('SaveSkillPreferencesUseCase — plan 13, B-34; D-04, D-20', () => {
       WorkspaceNotAllowedError,
     );
     await expect(useCase.execute(STRANGER, '/srv/projects/app', preferences)).rejects.toThrow(
+      WorkspaceForbiddenError,
+    );
+  });
+});
+
+describe('ReadSkillPreferencesUseCase — plan 13, B-34', () => {
+  it('is the safety default, from "installation", with no row anywhere', async () => {
+    const view = await new ReadSkillPreferencesUseCase(depsOf()).execute(USER, null);
+
+    expect(view).toEqual({
+      effective: { value: { sources: {}, disabledSkills: [] }, from: 'installation' },
+      user: null,
+      folder: null,
+    });
+  });
+
+  it('reads the user’s own, and a folder’s own override, separately', async () => {
+    const preferences = new InMemorySkillPreferencesRepository();
+    await preferences.save(USER, null, { sources: { user: true }, disabledSkills: [] });
+    await preferences.save(USER, '/srv/projects/app', {
+      sources: { system: true },
+      disabledSkills: [],
+    });
+
+    const userLevel = await new ReadSkillPreferencesUseCase(depsOf({ preferences })).execute(
+      USER,
+      null,
+    );
+    const folderLevel = await new ReadSkillPreferencesUseCase(depsOf({ preferences })).execute(
+      USER,
+      '/srv/projects/app',
+    );
+
+    expect(userLevel).toEqual({
+      effective: { value: { sources: { user: true }, disabledSkills: [] }, from: 'user' },
+      user: { sources: { user: true }, disabledSkills: [] },
+      folder: null,
+    });
+    expect(folderLevel).toEqual({
+      effective: {
+        value: { sources: { system: true }, disabledSkills: [] },
+        from: 'folder',
+        folder: '/srv/projects/app',
+      },
+      user: { sources: { user: true }, disabledSkills: [] },
+      folder: {
+        folder: '/srv/projects/app',
+        value: { sources: { system: true }, disabledSkills: [] },
+      },
+    });
+  });
+
+  it('refuses a folder outside the allowlist, and one of another user (S-161)', async () => {
+    const useCase = new ReadSkillPreferencesUseCase(depsOf());
+
+    await expect(useCase.execute(USER, '/elsewhere')).rejects.toThrow(WorkspaceNotAllowedError);
+    await expect(useCase.execute(STRANGER, '/srv/projects/app')).rejects.toThrow(
       WorkspaceForbiddenError,
     );
   });

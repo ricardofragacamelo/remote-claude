@@ -234,6 +234,19 @@ export interface EnginePlugin {
   readonly updatedAt: string;
 }
 
+/** Which toggleable origins are on — absent or `false` is off (D-20's safety default). */
+export interface EngineSkillPreferencesSources {
+  readonly user?: boolean;
+  readonly system?: boolean;
+}
+
+/** Which toggleable origins are on, and which skills are off one by one — a user's own, or one folder's. Named without the engine, like every shared definition (plan 28, D-10): the engine's own routes say which one (plan 13, B-34, D-20). */
+export interface EngineSkillPreferences {
+  /** Which toggleable origins are on — absent or `false` is off (D-20's safety default). */
+  readonly sources: EngineSkillPreferencesSources;
+  readonly disabledSkills: readonly string[];
+}
+
 /** A file a tool call changes, and how. It is what the backend's undo snapshots and what turns on the diff of a row and of a pending request: the diff itself comes from `GET /sessions/:sessionId/tools/:toolUseId/diff`, never computed by the client, so the text being replaced never travels here (plan 28, D-28). */
 export interface FileChange {
   /** The file, absolute. A call that names a relative path has no change: it would resolve against the wrong folder. */
@@ -1647,17 +1660,27 @@ export interface ClaudeSkillListPayload {
   readonly skills: readonly ClaudeSkillListPayloadSkillsItem[];
 }
 
-/** Which toggleable origins are on — absent or `false` is off (D-20's safety default). */
-export interface ClaudeSkillPreferencesPayloadSources {
-  readonly user?: boolean;
-  readonly system?: boolean;
+/** What applies in the folder asked, and where it came from. */
+export interface ClaudeSkillPreferencesViewPayloadEffective {
+  readonly value: EngineSkillPreferences;
+  readonly from: 'folder' | 'user' | 'installation';
+  /** The folder whose override set it, when `from` is `folder`. */
+  readonly folder?: string;
 }
 
-/** `PUT /engines/claude/skills/preferences`: the preferences now stored at the level asked — a user's own, or one folder's (plan 13, B-34; D-04, D-20). */
-export interface ClaudeSkillPreferencesPayload {
-  /** Which toggleable origins are on — absent or `false` is off (D-20's safety default). */
-  readonly sources: ClaudeSkillPreferencesPayloadSources;
-  readonly disabledSkills: readonly string[];
+/** The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own. */
+export interface ClaudeSkillPreferencesViewPayloadFolder {
+  readonly folder: string;
+  readonly value: EngineSkillPreferences;
+}
+
+/** `GET /engines/claude/skills/preferences?folder=`: the preferences as the screen shows them — what applies, the user's own, and the folder's (plan 13, B-34, D-04, D-20). */
+export interface ClaudeSkillPreferencesViewPayload {
+  /** What applies in the folder asked, and where it came from. */
+  readonly effective: ClaudeSkillPreferencesViewPayloadEffective;
+  readonly user: EngineSkillPreferences | null;
+  /** The folder's own override: it applies to the folder and everything under it. `null` when the folder has none of its own. */
+  readonly folder: ClaudeSkillPreferencesViewPayloadFolder | null;
 }
 
 /** `GET /files/content` and `GET /files/history/:entryId/content`: a file's text and its version. The version also travels in the `ETag` header. Absent on `304` — this schema is the present shape only. */
@@ -2121,6 +2144,11 @@ export const ENGINE_PLUGIN_MANIFEST_LIMITS = {
   mcpServerNames: { maxItems: 10000 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link EngineSkillPreferences}. */
+export const ENGINE_SKILL_PREFERENCES_LIMITS = {
+  disabledSkills: { maxItems: 2000 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link InteractionQuestionsItemOptionsItem}. */
 export const INTERACTION_QUESTIONS_ITEM_OPTIONS_ITEM_LIMITS = {
   label: { maxLength: 200 },
@@ -2363,11 +2391,6 @@ export const PROJECT_CONFIG_VIEW_PAYLOAD_LIMITS = {
 /** The bounds the schema gives the fields of {@link ClaudeSkillListPayload}. */
 export const CLAUDE_SKILL_LIST_PAYLOAD_LIMITS = {
   skills: { maxItems: 10000 },
-} as const;
-
-/** The bounds the schema gives the fields of {@link ClaudeSkillPreferencesPayload}. */
-export const CLAUDE_SKILL_PREFERENCES_PAYLOAD_LIMITS = {
-  disabledSkills: { maxItems: 2000 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link FileTreePayload}. */
@@ -2760,6 +2783,34 @@ export function isEnginePlugin(value: unknown): value is EnginePlugin {
     nullOr(record['manifest'], isEnginePluginManifest(record['manifest'])),
     typeof record['createdAt'] === 'string',
     typeof record['updatedAt'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link EngineSkillPreferencesSources}. Unknown fields are accepted.
+ */
+export function isEngineSkillPreferencesSources(value: unknown): value is EngineSkillPreferencesSources {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Whether `value` carries every required field of {@link EngineSkillPreferences}. Unknown fields are accepted.
+ */
+export function isEngineSkillPreferences(value: unknown): value is EngineSkillPreferences {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isEngineSkillPreferencesSources(record['sources']),
+    Array.isArray(record['disabledSkills']),
+    withinMaxItems(record['disabledSkills'], 2000),
   ].every(Boolean);
 }
 
@@ -5314,20 +5365,9 @@ export function isClaudeSkillListPayload(value: unknown): value is ClaudeSkillLi
 }
 
 /**
- * Whether `value` carries every required field of {@link ClaudeSkillPreferencesPayloadSources}. Unknown fields are accepted.
+ * Whether `value` carries every required field of {@link ClaudeSkillPreferencesViewPayloadEffective}. Unknown fields are accepted.
  */
-export function isClaudeSkillPreferencesPayloadSources(value: unknown): value is ClaudeSkillPreferencesPayloadSources {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  return true;
-}
-
-/**
- * Whether `value` carries every required field of {@link ClaudeSkillPreferencesPayload}. Unknown fields are accepted.
- */
-export function isClaudeSkillPreferencesPayload(value: unknown): value is ClaudeSkillPreferencesPayload {
+export function isClaudeSkillPreferencesViewPayloadEffective(value: unknown): value is ClaudeSkillPreferencesViewPayloadEffective {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -5335,9 +5375,41 @@ export function isClaudeSkillPreferencesPayload(value: unknown): value is Claude
   const record = value as Readonly<Record<string, unknown>>;
 
   return [
-    isClaudeSkillPreferencesPayloadSources(record['sources']),
-    Array.isArray(record['disabledSkills']),
-    withinMaxItems(record['disabledSkills'], 2000),
+    isEngineSkillPreferences(record['value']),
+    typeof record['from'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudeSkillPreferencesViewPayloadFolder}. Unknown fields are accepted.
+ */
+export function isClaudeSkillPreferencesViewPayloadFolder(value: unknown): value is ClaudeSkillPreferencesViewPayloadFolder {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['folder'] === 'string',
+    isEngineSkillPreferences(record['value']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link ClaudeSkillPreferencesViewPayload}. Unknown fields are accepted.
+ */
+export function isClaudeSkillPreferencesViewPayload(value: unknown): value is ClaudeSkillPreferencesViewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isClaudeSkillPreferencesViewPayloadEffective(record['effective']),
+    nullOr(record['user'], isEngineSkillPreferences(record['user'])),
+    nullOr(record['folder'], isClaudeSkillPreferencesViewPayloadFolder(record['folder'])),
   ].every(Boolean);
 }
 
@@ -6150,6 +6222,12 @@ export type ClaudePluginDetailPayload = EnginePlugin;
 
 /** Whether `value` is a {@link ClaudePluginDetailPayload}. */
 export const isClaudePluginDetailPayload = isEnginePlugin;
+
+/** `PUT /engines/claude/skills/preferences`: the preferences now stored at the level asked — a user's own, or one folder's (plan 13, B-34; D-04, D-20). */
+export type ClaudeSkillPreferencesPayload = EngineSkillPreferences;
+
+/** Whether `value` is a {@link ClaudeSkillPreferencesPayload}. */
+export const isClaudeSkillPreferencesPayload = isEngineSkillPreferences;
 
 /** `POST /engines/:engine/mcp-servers`, `PUT`/`PATCH /engines/:engine/mcp-servers/:id`: one server, after the write (plan 13, B-19). `DELETE` of the same resource answers `204` with no body — see `scripts/contracts-route-exceptions.json`. */
 export type McpServerDetailPayload = McpServer;

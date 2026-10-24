@@ -217,6 +217,47 @@ describe('/engines/claude/skills — plan 13, B-34', () => {
     expect(userSkill.enabled).toBe(false);
   });
 
+  it('GET preferences reads back the raw value a PUT just stored, user and folder apart', async () => {
+    await put('/engines/claude/skills/preferences', {
+      sources: { user: true },
+      disabledSkills: ['remote-claude-user:review'],
+    });
+    await put('/engines/claude/skills/preferences', {
+      folder: repo(),
+      sources: { system: true },
+      disabledSkills: [],
+    });
+
+    const userLevel = await get('/engines/claude/skills/preferences');
+    expect(userLevel.status).toBe(200);
+    expect(userLevel.body).toEqual({
+      effective: {
+        value: { sources: { user: true }, disabledSkills: ['remote-claude-user:review'] },
+        from: 'user',
+      },
+      user: { sources: { user: true }, disabledSkills: ['remote-claude-user:review'] },
+      folder: null,
+    });
+
+    const folderLevel = await get(
+      `/engines/claude/skills/preferences?folder=${encodeURIComponent(repo())}`,
+    );
+    expect(folderLevel.status).toBe(200);
+    expect(folderLevel.body.effective).toEqual({
+      value: { sources: { system: true }, disabledSkills: [] },
+      from: 'folder',
+      folder: repo(),
+    });
+  });
+
+  it('refuses a folder outside the allowlist, and one of another user, reading preferences', async () => {
+    expect((await get('/engines/claude/skills/preferences?folder=/not/allowed')).status).toBe(403);
+    expect(
+      (await get(`/engines/claude/skills/preferences?folder=${encodeURIComponent(repo())}`, other))
+        .status,
+    ).toBe(403);
+  });
+
   it('saves a folder’s own preference, separately from the user’s own', async () => {
     expect(
       (

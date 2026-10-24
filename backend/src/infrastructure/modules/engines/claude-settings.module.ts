@@ -48,6 +48,7 @@ import {
   ReadOutputStyleUseCase,
   ReadProjectConfigUseCase,
   ReadProjectSkillsUseCase,
+  ReadSkillPreferencesUseCase,
   RemovePluginUseCase,
   SaveOutputStyleUseCase,
   SaveSkillPreferencesUseCase,
@@ -325,6 +326,11 @@ const SKILL_DEPENDENCIES = Symbol('SkillDependencies');
       provide: ReadProjectSkillsUseCase,
       inject: [SKILL_DEPENDENCIES],
       useFactory: (deps: SkillDependencies) => new ReadProjectSkillsUseCase(deps),
+    },
+    {
+      provide: ReadSkillPreferencesUseCase,
+      inject: [SKILL_DEPENDENCIES],
+      useFactory: (deps: SkillDependencies) => new ReadSkillPreferencesUseCase(deps),
     },
     {
       provide: SaveSkillPreferencesUseCase,

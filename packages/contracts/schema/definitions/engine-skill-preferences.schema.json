@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/engine-skill-preferences.json",
+  "title": "EngineSkillPreferences",
+  "description": "Which toggleable origins are on, and which skills are off one by one — a user's own, or one folder's. Named without the engine, like every shared definition (plan 28, D-10): the engine's own routes say which one (plan 13, B-34, D-20).",
+  "type": "object",
+  "required": ["sources", "disabledSkills"],
+  "properties": {
+    "sources": {
+      "type": "object",
+      "description": "Which toggleable origins are on — absent or `false` is off (D-20's safety default).",
+      "properties": {
+        "user": { "type": "boolean" },
+        "system": { "type": "boolean" }
+      }
+    },
+    "disabledSkills": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -3,11 +3,21 @@ import { Body, Controller, Get, Inject, Put, Query, UseGuards } from '@nestjs/co
 import type {
   ClaudeSkillListPayload,
   ClaudeSkillPreferencesPayload,
+  ClaudeSkillPreferencesViewPayload,
 } from '@remote-claude/contracts';
 
-import { ReadProjectSkillsUseCase, SaveSkillPreferencesUseCase } from '@application/engines/claude';
+import {
+  ReadProjectSkillsUseCase,
+  ReadSkillPreferencesUseCase,
+  SaveSkillPreferencesUseCase,
+} from '@application/engines/claude';
+import type { SkillPreferencesView } from '@application/engines/claude';
 import type { UserId } from '@domain/auth';
-import { requiredFolderQuerySchema } from '../../agent-settings/agent-settings.dto';
+import {
+  folderQuerySchema,
+  requiredFolderQuerySchema,
+  type FolderQueryDto,
+} from '../../agent-settings/agent-settings.dto';
 import { BearerAuthGuard, CurrentUser } from '../../auth/bearer.guard';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { skillPreferencesOf, skillPreferencesSchema } from './claude.dto';
@@ -33,6 +43,8 @@ import type { SkillPreferencesBody } from './claude.dto';
 export class SkillsController {
   constructor(
     @Inject(ReadProjectSkillsUseCase) private readonly skills: ReadProjectSkillsUseCase,
+    @Inject(ReadSkillPreferencesUseCase)
+    private readonly readPreferences: ReadSkillPreferencesUseCase,
     @Inject(SaveSkillPreferencesUseCase)
     private readonly savePreferences: SaveSkillPreferencesUseCase,
   ) {}
@@ -45,6 +57,16 @@ export class SkillsController {
     return { skills: await this.skills.execute(userId, query.folder) };
   }
 
+  @Get('engines/claude/skills/preferences')
+  async readPreferencesRoute(
+    @Query(new ZodPipe(folderQuerySchema)) query: FolderQueryDto,
+    @CurrentUser() userId: UserId,
+  ): Promise<ClaudeSkillPreferencesViewPayload> {
+    return skillPreferencesViewDto(
+      await this.readPreferences.execute(userId, query.folder ?? null),
+    );
+  }
+
   @Put('engines/claude/skills/preferences')
   async savePreferencesRoute(
     @Body(new ZodPipe(skillPreferencesSchema)) body: SkillPreferencesBody,
@@ -52,4 +74,21 @@ export class SkillsController {
   ): Promise<ClaudeSkillPreferencesPayload> {
     return this.savePreferences.execute(userId, body.folder, skillPreferencesOf(body));
   }
+}
+
+/**
+ * The view, on the wire — `effective.folder` only present when `from` is `folder`, never the key set
+ * to `undefined`: `ResolvedSkillPreferences` reads it straight off `EffectiveValue`'s own optional
+ * field, which `exactOptionalPropertyTypes` needs spelled out again here to satisfy the contract.
+ */
+function skillPreferencesViewDto(view: SkillPreferencesView): ClaudeSkillPreferencesViewPayload {
+  return {
+    effective: {
+      value: view.effective.value,
+      from: view.effective.from,
+      ...(view.effective.folder === undefined ? {} : { folder: view.effective.folder }),
+    },
+    user: view.user,
+    folder: view.folder,
+  };
 }

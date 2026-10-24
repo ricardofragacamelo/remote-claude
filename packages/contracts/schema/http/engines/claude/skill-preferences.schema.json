@@ -6,21 +6,5 @@
   "x-kind": "http",
   "x-type": "engines.claude.skillPreferences",
   "x-route": [{ "method": "PUT", "path": "/engines/claude/skills/preferences" }],
-  "type": "object",
-  "required": ["sources", "disabledSkills"],
-  "properties": {
-    "sources": {
-      "type": "object",
-      "description": "Which toggleable origins are on — absent or `false` is off (D-20's safety default).",
-      "properties": {
-        "user": { "type": "boolean" },
-        "system": { "type": "boolean" }
-      }
-    },
-    "disabledSkills": {
-      "type": "array",
-      "maxItems": 2000,
-      "items": { "type": "string" }
-    }
-  }
+  "$ref": "../definitions/engine-skill-preferences.schema.json"
 }

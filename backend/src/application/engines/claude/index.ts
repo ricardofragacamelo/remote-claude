@@ -103,5 +103,10 @@ export type {
 } from './ports/skill-plugin-candidates.port';
 export { SKILL_PREFERENCES_REPOSITORY } from './ports/skill-preferences.repository';
 export type { SkillPreferencesRepository } from './ports/skill-preferences.repository';
-export { ReadProjectSkillsUseCase, SaveSkillPreferencesUseCase } from './skill.use-cases';
-export type { SkillDependencies } from './skill.use-cases';
+export {
+  ReadProjectSkillsUseCase,
+  ReadSkillPreferencesUseCase,
+  SaveSkillPreferencesUseCase,
+  skillPreferencesView,
+} from './skill.use-cases';
+export type { SkillDependencies, SkillPreferencesView } from './skill.use-cases';

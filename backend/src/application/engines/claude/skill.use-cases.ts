@@ -1,5 +1,6 @@
 import type { FolderAccess } from '@application/agent-settings';
 import type { RecordAuditEventUseCase } from '@application/audit';
+import { exactOverride } from '@domain/agent-settings';
 import type { UserId } from '@domain/auth';
 import {
   DEFAULT_SKILL_PREFERENCES,
@@ -14,7 +15,14 @@ import {
   USER_SKILLS_PLUGIN,
   widenedOrigin,
 } from '@domain/engines/claude';
-import type { ProjectSkillView, SkillOrigin, SkillPreferences } from '@domain/engines/claude';
+import type {
+  FolderSkillPreferences,
+  ProjectSkillView,
+  ResolvedSkillPreferences,
+  SkillOrigin,
+  SkillPreferences,
+  SkillPreferencesDefaults,
+} from '@domain/engines/claude';
 import type { Clock } from '@domain/shared';
 import type { SlashCommand } from '@domain/session';
 import type { ClaudeInstallationCatalog } from './installation-catalog';
@@ -116,6 +124,50 @@ export class ReadProjectSkillsUseCase {
   }
 }
 
+/** The folder a route names, through the fence — or `null` for the user's own (same helper output-style has). */
+async function folderOf(
+  folders: FolderAccess,
+  userId: UserId,
+  rawFolder: string | null,
+): Promise<string | null> {
+  return rawFolder === null ? null : (await folders.resolve(rawFolder, userId)).value;
+}
+
+/** The preferences as the screen shows them: what applies, the user's own, and the folder's. */
+export interface SkillPreferencesView {
+  readonly effective: ResolvedSkillPreferences;
+  readonly user: SkillPreferences | null;
+  readonly folder: FolderSkillPreferences | null;
+}
+
+/** The view of [stored] in [folder] — the same shape `outputStyleView` builds for output style. */
+export function skillPreferencesView(
+  stored: SkillPreferencesDefaults,
+  folder: string | null,
+): SkillPreferencesView {
+  return {
+    effective: effectiveSkillPreferences(stored, folder),
+    user: stored.user,
+    folder: exactOverride(stored.overrides, folder),
+  };
+}
+
+/**
+ * `GET /engines/claude/skills/preferences?folder=` — the raw preferences a caller set, not the
+ * per-skill `enabled` flags `GET /engines/claude/skills` derives from them: what a screen needs to
+ * read before it can send a whole new value back to `PUT` (S-162's own "read first, send the
+ * complete result").
+ */
+export class ReadSkillPreferencesUseCase {
+  constructor(private readonly deps: SkillDependencies) {}
+
+  /** @throws the folder's refusals */
+  async execute(userId: UserId, rawFolder: string | null): Promise<SkillPreferencesView> {
+    const folder = await folderOf(this.deps.folders, userId, rawFolder);
+    return skillPreferencesView(await this.deps.preferences.read(userId), folder);
+  }
+}
+
 /** The event `PUT /engines/claude/skills/preferences` records when turning an origin on (S-164). */
 function skillSourceToggledEvent(
   engine: string,
@@ -160,15 +212,12 @@ export class SaveSkillPreferencesUseCase {
       }
     }
 
-    const folder =
-      rawFolder === null ? null : (await this.deps.folders.resolve(rawFolder, userId)).value;
+    const folder = await folderOf(this.deps.folders, userId, rawFolder);
 
     const stored = await this.deps.preferences.read(userId);
     const before =
-      folder === null
-        ? (stored.user ?? DEFAULT_SKILL_PREFERENCES)
-        : (stored.overrides.find((override) => override.folder === folder)?.value ??
-          DEFAULT_SKILL_PREFERENCES);
+      (folder === null ? stored.user : exactOverride(stored.overrides, folder)?.value) ??
+      DEFAULT_SKILL_PREFERENCES;
 
     if (sameSkillPreferences(before, preferences)) {
       return before;
