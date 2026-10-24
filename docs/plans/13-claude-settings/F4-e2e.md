@@ -26,7 +26,7 @@ seção de padrões do núcleo e `/engines/:engine/defaults`), abrir uma sessão
 indicador do painel com o padrão; sobreposição da pasta vencendo a do usuário; o diagnóstico da
 instalação e o teste de conexão, com o resultado descrito. Cenários S-185, S-186.
 
-### B-42 — E2E: o ciclo do servidor MCP 🔲
+### B-42 — E2E: o ciclo do servidor MCP ✅
 
 Adicionar um servidor stdio de fixture ([D-19](decisions.md#d-19--servidor-mcp-de-fixture)) com um
 segredo em env, pelo segundo passo; ver o `mcp.serverAdded` na trilha (`/audit`, ou a linha do
