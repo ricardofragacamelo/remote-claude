@@ -17,7 +17,7 @@ const session = {
   idToken: null,
 };
 
-describe('Claude\'s two shortcuts, beyond the generic "go to its settings" — plan 13, B-17, S-59; plan 28, B-38', () => {
+describe('Claude\'s shortcuts, beyond the generic "go to its settings" — plan 13, B-17, S-59, B-40, S-184; plan 28, B-38', () => {
   beforeEach(() => {
     useAuthStore.setState({ status: 'unknown', session: null });
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
@@ -51,6 +51,40 @@ describe('Claude\'s two shortcuts, beyond the generic "go to its settings" — p
     await user.keyboard('{Control>}k{/Control}m');
     await waitFor(() => {
       expect(app.search()).toMatchObject({ section: 'models' });
+    });
+  });
+
+  it('has the Project shortcuts in the palette too, each landing on "Project" — B-40, S-184', async () => {
+    const user = userEvent.setup();
+    backendAnswers(ENGINES);
+    const app = mountApp('/settings');
+    await screen.findByRole('heading', { level: 1, name: t('settings.screen.title') });
+    await screen.findByRole('link', {
+      name: t('settings.links.agentSettings', { engine: 'claude' }),
+    });
+
+    await user.keyboard('{Control>}{Shift>}p{/Shift}{/Control}');
+    await user.type(await screen.findByRole('combobox'), 'CLAUDE.md');
+    expect(
+      await screen.findByRole('option', {
+        name: new RegExp(t('engines.claude.command.openMemory')),
+      }),
+    ).toBeVisible();
+    await user.keyboard('{Escape}');
+
+    await user.keyboard('{Control>}k{/Control}c');
+    await waitFor(() => {
+      expect(app.search()).toMatchObject({ section: 'project' });
+    });
+
+    await user.keyboard('{Control>}k{/Control}n');
+    await waitFor(() => {
+      expect(app.search()).toMatchObject({ section: 'project' });
+    });
+
+    await user.keyboard('{Control>}k{/Control}g');
+    await waitFor(() => {
+      expect(app.search()).toMatchObject({ section: 'project' });
     });
   });
 

@@ -2624,7 +2624,10 @@
       },
       "command": {
         "defaultModel": "Claude: trocar o modelo padrão",
-        "testConnection": "Claude: testar a conexão com o modelo"
+        "testConnection": "Claude: testar a conexão com o modelo",
+        "openMemory": "Claude: abrir CLAUDE.md",
+        "newCommand": "Claude: novo slash command",
+        "newSubagent": "Claude: novo subagent"
       },
       "error": {
         "pluginForbidden": "Esse plugin pertence a outra pessoa.",

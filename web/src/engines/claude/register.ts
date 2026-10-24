@@ -140,6 +140,24 @@ export function registerClaudeEngine(): () => void {
       engine: ENGINE,
       commandId: 'agent.testConnection',
     }),
+    agentSettingsShortcuts.register({
+      id: 'claude.openMemory',
+      position: 300,
+      engine: ENGINE,
+      commandId: 'agent.openMemory',
+    }),
+    agentSettingsShortcuts.register({
+      id: 'claude.newCommand',
+      position: 400,
+      engine: ENGINE,
+      commandId: 'agent.newCommand',
+    }),
+    agentSettingsShortcuts.register({
+      id: 'claude.newSubagent',
+      position: 500,
+      engine: ENGINE,
+      commandId: 'agent.newSubagent',
+    }),
   ];
 
   return () => {

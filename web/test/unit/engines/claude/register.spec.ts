@@ -50,7 +50,13 @@ describe('the Claude engine in the places of the core — plan 28, B-36, B-38', 
       .filter((entry) => entry.engine === 'claude')
       .map((entry) => entry.commandId);
 
-    expect(shortcuts).toEqual(['agent.defaultModel', 'agent.testConnection']);
+    expect(shortcuts).toEqual([
+      'agent.defaultModel',
+      'agent.testConnection',
+      'agent.openMemory',
+      'agent.newCommand',
+      'agent.newSubagent',
+    ]);
   });
 
   it('refuses a second registration, and is taken back out whole', () => {
