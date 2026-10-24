@@ -14,7 +14,7 @@ const INSTALL_ID_HEADER = 'x-install-id';
 
 /** How a call is made: the verb, whose installation — none for a browser — and the body. */
 export interface CallOptions {
-  readonly method?: 'GET' | 'POST' | 'DELETE';
+  readonly method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   readonly installId?: string;
   readonly body?: unknown;
 }

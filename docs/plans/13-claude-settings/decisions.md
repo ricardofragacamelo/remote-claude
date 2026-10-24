@@ -470,6 +470,12 @@ vazia com `warn`, não falha. O `smoke-live` (B-46) é quem avisa quando uma ver
 |---|---|---|---|---|---|
 | — | nenhuma decisão em aberto — a fixture de MCP que o e2e usa é a D-19, na F0, porque o spike precisa dela primeiro | — | — | — | — |
 
+### Decididas durante a execução de B-41 (2026-10-24)
+
+| ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
+|---|---|---|---|---|---|
+| D-119 | O rascunho do painel manda `permissionMode` sempre — nunca omitido como o `model` — e por isso o padrão de modo (B-14/B-15) não chega a uma sessão aberta por ele | se vale alinhar o `permissionMode` do rascunho com o `model` (opcional) agora, ou só quando o seletor de modo do painel ganhar uma opção "o padrão da instalação", como o de modelo já tem | — | 2026-10-24 · **achado pela B-41, não corrigido aqui**: `startDraft()` (`web/src/features/session/services/live-session.service.ts`) inclui `permissionMode: draft.permissionMode` sem condição nenhuma, ao contrário de `model`, que some do corpo quando `null`; um rascunho novo nasce com `DEFAULT_CHOICES.mode = 'ask'` (`web/src/features/session/store/agent-panel.store.ts`), que o `session.start` manda como escolha **do cliente** — e `defaultsFrom` vira `'client'`, nunca `'user'` nem `'folder'`, pulando o padrão configurado por este plano. O contrato já permite o campo opcional (`packages/contracts/schema/commands/session-start.schema.json`, só `workspacePath` obrigatório); falta o seletor de modo do painel saber mostrar "nenhum escolhido" — mexer nisso é do plano 08, fora do que a B-41 pode tocar. A B-41 prova o padrão de modo pelo `session.started` (aberto por quem omite o campo, como o e2e desta task faz por um socket puro) e o de modelo também pelo chip do painel, que não tem este problema | ✅ (achado registrado, correção adiada para o plano 08) |
+
 ---
 
 ### Decididas durante a execução de B-18/B-19 (2026-10-19)

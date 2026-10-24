@@ -1,0 +1,23 @@
+{
+  "id": "13·S-185…S-186",
+  "title": "the agent settings screen: a default changed on the screen reaches the session it opens, a folder's default wins over the user's, and the installation's diagnostic and the test of its connection to the model",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "userDefault": {
+      "model": "sonnet",
+      "displayName": "Sonnet",
+      "permissionMode": "readOnly",
+      "formModeLabel": "Only read and plan, change nothing"
+    },
+    "folderDefault": {
+      "model": "haiku",
+      "displayName": "Haiku",
+      "permissionMode": "acceptEdits",
+      "formModeLabel": "Edit files without asking"
+    },
+    "loginReady": "signed in",
+    "checkResult": "The model answered.",
+    "checkModel": "claude-opus-5",
+    "checkCost": "0.1553"
+  }
+}

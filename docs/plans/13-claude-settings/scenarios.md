@@ -293,8 +293,8 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-185 | trocar o padrão pela tela e ver a sessão nova nascer com ele | est | e2e | — | B-41 | ⬜ |
-| S-186 | o diagnóstico da instalação e o teste de conexão pela tela | eq | e2e | — | B-41 | ⬜ |
+| S-185 | trocar o padrão pela tela e ver a sessão nova nascer com ele | est | e2e | — | B-41 | ✅ |
+| S-186 | o diagnóstico da instalação e o teste de conexão pela tela | eq | e2e | — | B-41 | ✅ |
 | S-187 | adicionar servidor MCP pelo segundo passo e vê-lo na trilha | eq | e2e | — | B-42 | ⬜ |
 | S-188 | o segredo nunca volta inteiro — nem na resposta, nem na tela, nem depois de recarregar | err | e2e | — | B-42 | ⬜ |
 | S-189 | desligar um servidor com sessão viva muda o indicador da sessão | est | e2e | — | B-42 | ⬜ |

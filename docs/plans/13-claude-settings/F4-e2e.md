@@ -18,7 +18,7 @@ F0 mediu.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-41 — E2E: padrões e diagnóstico 🔲
+### B-41 — E2E: padrões e diagnóstico ✅
 
 Playwright com o SDK roteirizado ([06-testing-strategy](../../architecture/shared/06-testing-strategy.md#e2e--o-sistema-inteiro-pela-porta-do-usuário)):
 trocar o modelo e o modo padrão pela tela (o modo canônico — `ask`, `acceptEdits`, `readOnly`, `allowAll` —, pela

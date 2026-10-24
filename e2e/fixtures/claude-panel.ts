@@ -179,6 +179,19 @@ export function modeChip(page: Page, mode?: string): Locator {
   });
 }
 
+/**
+ * The chip of the model a session opened with — "Model: Sonnet" — of any model, or of the one
+ * given: what `session.started` resolved, by a default of the screen or the installation's own
+ * (plan 13, B-41, S-185).
+ *
+ * @param model the display name of the model the chip should say, as the installation lists it
+ */
+export function modelChip(page: Page, model?: string): Locator {
+  return panelOf(page).getByRole('button', {
+    name: model === undefined ? /^Model: / : `Model: ${model}`,
+  });
+}
+
 /** The button that shows, in the panel, what the session changed. */
 export function showChangesButton(page: Page): Locator {
   return panelOf(page).getByRole('button', { name: 'What the session changed' });
