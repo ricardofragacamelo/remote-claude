@@ -125,6 +125,7 @@ export const E2E_POSTGRES = {
  * @property {string} RC_MODEL_CHECK_MAX_BUDGET_USD
  * @property {string} RC_SESSION_DEFAULT_MODEL
  * @property {string} RC_PLUGIN_DOWNLOAD_DIR
+ * @property {string} RC_SKILLS_PLUGIN_DIR
  * @property {string} RC_SESSION_DEFAULT_PERMISSION_MODE
  * @property {string} RC_PERMISSION_TIMEOUT_MS
  * @property {string} RC_QUESTION_TIMEOUT_MS
@@ -251,6 +252,12 @@ export function ephemeralEnvironment(ports, options = {}) {
     RC_PLUGIN_DOWNLOAD_DIR: path.join(
       os.tmpdir(),
       `remote-claude-plugins-${String(ports.backend)}`,
+    ),
+    // Where the synthetic skills plugin is built, per user (plan 13, B-35) — a folder of this
+    // stack's own, the same pattern as RC_PLUGIN_DOWNLOAD_DIR above.
+    RC_SKILLS_PLUGIN_DIR: path.join(
+      os.tmpdir(),
+      `remote-claude-skills-plugins-${String(ports.backend)}`,
     ),
     RC_SESSION_DEFAULT_PERMISSION_MODE: 'default',
 

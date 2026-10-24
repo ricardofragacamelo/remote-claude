@@ -18,9 +18,9 @@ import type {
   ProjectHookView,
   ProjectPluginsDeclaration,
 } from '@domain/engines/claude';
-import { WorkspacePath } from '@domain/workspace';
 import { isPlainObject } from '@shared/utils/plain-object';
 import { parseFrontmatter } from './markdown-frontmatter';
+import { isWithinRoot } from './within-root';
 
 const SETTINGS_PATH = ['.claude', 'settings.json'];
 const COMMANDS_DIR = ['.claude', 'commands'];
@@ -30,10 +30,6 @@ const MCP_JSON_NAME = '.mcp.json';
 
 /** A `.claude/settings.json`, or a command/agent/output-style file, larger than this is not read. */
 const MAX_FILE_BYTES = 65_536;
-
-function isWithin(candidate: string, root: string): boolean {
-  return WorkspacePath.create(candidate).isWithin(WorkspacePath.create(root));
-}
 
 const EMPTY_STAT: MemoryFileStat = { exists: false, sizeBytes: null, modifiedAt: null };
 
@@ -52,7 +48,7 @@ async function memoryStatOf(
   if (real === null) {
     return EMPTY_STAT;
   }
-  if (!isWithin(real, allowlistRoot) && !isWithin(real, homeConfigDir)) {
+  if (!isWithinRoot(real, allowlistRoot) && !isWithinRoot(real, homeConfigDir)) {
     return EMPTY_STAT;
   }
 
@@ -82,7 +78,7 @@ async function readTextWithin(
   if (real === null) {
     return { issue: 'malformed' };
   }
-  if (!isWithin(real, root)) {
+  if (!isWithinRoot(real, root)) {
     return { issue: 'linkEscapesRoot' };
   }
 

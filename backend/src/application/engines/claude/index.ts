@@ -76,8 +76,11 @@ export {
 } from './marketplace-plugin.use-cases';
 export type { MarketplacePluginUpdateCheck } from './marketplace-plugin.use-cases';
 export { isSafePathSegment, marketplacePluginDestination } from './marketplace-plugin-path';
+export { userPathSegment } from './user-path-segment';
 export { ReadProjectConfigUseCase } from './project-config.use-cases';
 export type { ProjectConfigDependencies } from './project-config.use-cases';
+export { SKILL_SOURCES } from './ports/skill-sources.port';
+export type { SkillSourceCandidate, SkillSources } from './ports/skill-sources.port';
 export { LIVE_LOADED_STATE } from './ports/live-loaded-state.port';
 export type { LiveLoadedState } from './ports/live-loaded-state.port';
 export { PROJECT_CONFIG_SOURCE } from './ports/project-config-source.port';

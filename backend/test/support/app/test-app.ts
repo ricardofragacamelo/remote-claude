@@ -146,6 +146,13 @@ export function testEnvironment(
   process.env['RC_MODEL_CHECK_MAX_BUDGET_USD'] = '0.05';
   process.env['RC_SESSION_DEFAULT_MODEL'] = 'claude-sonnet-5';
   process.env['RC_PLUGIN_DOWNLOAD_DIR'] = mkdtempSync(path.join(tmpdir(), 'rc-claude-plugins-'));
+  process.env['RC_SKILLS_PLUGIN_DIR'] = mkdtempSync(path.join(tmpdir(), 'rc-claude-skills-'));
+  // Empty and of its own, never the machine's real `~/.claude`: the synthetic skills plugin (plan
+  // 13, B-35) reads `CLAUDE_CONFIG_DIR/skills` and `CLAUDE_CONFIG_DIR/plugins/installed_plugins.json`
+  // for every session this suite opens, and without this a test run would pick up whatever skills
+  // happen to be installed on the machine that runs it — the same determinism rule every other
+  // variable here already follows.
+  process.env['CLAUDE_CONFIG_DIR'] = mkdtempSync(path.join(tmpdir(), 'rc-claude-config-'));
   process.env['RC_SESSION_DEFAULT_PERMISSION_MODE'] = 'default';
   // Small and explicit, because every scenario has to fix the values it uses or stop being
   // deterministic. The deadline is short enough for a suite to wait on it; the extension is twice

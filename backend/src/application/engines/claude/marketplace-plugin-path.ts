@@ -1,7 +1,7 @@
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import type { UserId } from '@domain/auth';
+import { userPathSegment } from './user-path-segment';
 
 /**
  * Whether [value] is safe to use as one path segment on its own — never `.` or `..`, never empty,
@@ -35,6 +35,5 @@ export function marketplacePluginDestination(
   marketplace: string,
   pluginName: string,
 ): string {
-  const userSegment = createHash('sha256').update(userId.value).digest('hex').slice(0, 32);
-  return path.join(baseDir, userSegment, marketplace, pluginName);
+  return path.join(baseDir, userPathSegment(userId), marketplace, pluginName);
 }

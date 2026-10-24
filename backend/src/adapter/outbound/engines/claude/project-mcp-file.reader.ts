@@ -9,8 +9,8 @@ import type {
   ProjectMcpFileRead,
   ProjectMcpServersSource,
 } from '@application/mcp';
-import { WorkspacePath } from '@domain/workspace';
 import { mcpJsonEntriesOf } from './mcp-json-format';
+import { isWithinRoot } from './within-root';
 
 /** A `.mcp.json` larger than this is not read at all — a project file, not a data dump. */
 const MAX_MCP_JSON_BYTES = 65_536;
@@ -20,10 +20,6 @@ const VCS_ROOT_MARKER = '.git';
 
 function failed(folderPath: string, error: ProjectMcpFileError): ProjectMcpFileRead {
   return { folderPath, entries: [], error };
-}
-
-function isWithin(candidate: string, root: string): boolean {
-  return WorkspacePath.create(candidate).isWithin(WorkspacePath.create(root));
 }
 
 /**
@@ -60,7 +56,7 @@ export class ClaudeProjectMcpFileReader implements ProjectMcpServersSource {
       }
 
       const parentReal = await this.realOrSelf(parent);
-      if (!isWithin(parentReal, rootReal)) {
+      if (!isWithinRoot(parentReal, rootReal)) {
         break;
       }
 
@@ -115,7 +111,7 @@ export class ClaudeProjectMcpFileReader implements ProjectMcpServersSource {
       return failed(folder, 'malformed');
     }
 
-    if (!isWithin(real, rootReal)) {
+    if (!isWithinRoot(real, rootReal)) {
       return failed(folder, 'linkEscapesRoot');
     }
 

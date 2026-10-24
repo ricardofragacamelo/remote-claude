@@ -1,8 +1,6 @@
-import os from 'node:os';
-import path from 'node:path';
-
 import type { InstallationFacts, ReadVersion } from '@application/engines/claude';
 import type { Logger } from '@shared/logging/logger';
+import { effectiveClaudeConfigDir } from './claude-config-dir';
 import { CLAUDE_ENGINE } from './claude-engine';
 import { execFileText } from '@shared/process/exec-file-text';
 import { hostEnvironment } from '@shared/process/host-environment';
@@ -53,11 +51,7 @@ export class NodeInstallationFacts implements InstallationFacts {
     environment: Readonly<Record<string, string | undefined>> = process.env,
     private readonly now: () => number = Date.now,
   ) {
-    const configured = environment['CLAUDE_CONFIG_DIR']?.trim() ?? '';
-    this.configDir =
-      configured === ''
-        ? { path: path.join(os.homedir(), '.claude'), fromEnvironment: false }
-        : { path: configured, fromEnvironment: true };
+    this.configDir = effectiveClaudeConfigDir(environment);
   }
 
   async pathCli(): Promise<ReadVersion> {

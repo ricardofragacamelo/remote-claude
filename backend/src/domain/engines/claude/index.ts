@@ -55,6 +55,15 @@ export {
   memoryLoadedByRule,
   permissionRuleViewsOf,
 } from './entities/project-config.entity';
+export {
+  isValidSkillName,
+  skillFrontmatterDeclaresHook,
+  SKILL_NAME_MAX_LENGTH,
+  SKILL_NAME_PATTERN,
+} from './entities/skill.entity';
+export type { ProjectSkillView, SkillOrigin, SkillUnloadedReason } from './entities/skill.entity';
+export { digestOfSkillSources } from './services/skill-source-digest';
+export type { SkillSourceFingerprint } from './services/skill-source-digest';
 export type {
   AgentFrontmatter,
   AgentRisk,

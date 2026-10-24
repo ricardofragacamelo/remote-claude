@@ -23,6 +23,8 @@ import { DrizzlePluginRepository } from '@adapter/outbound/engines/claude/drizzl
 import { ClaudePluginSessionExtensionPaths } from '@adapter/outbound/engines/claude/plugin-session-extension-paths';
 import { ClaudeProjectMcpFileReader } from '@adapter/outbound/engines/claude/project-mcp-file.reader';
 import { claudeRuleDialect } from '@adapter/outbound/engines/claude/rule-dialect';
+import { ClaudeSkillSourcesReader } from '@adapter/outbound/engines/claude/skill-sources.reader';
+import { SyntheticSkillsPluginBuilder } from '@adapter/outbound/engines/claude/synthetic-skills-plugin.builder';
 import { classifyTool } from '@adapter/outbound/engines/claude/tool-classifier';
 import { AgentSdkTranscriptAdapter } from '@adapter/outbound/engines/claude/transcript.adapter';
 import {
@@ -37,6 +39,8 @@ import type { PersistenceContext } from '@infra/database/persistence-context';
 import { LOGGER, type Logger } from '@shared/logging/logger';
 import { APP_CONFIG } from '../../config/environment';
 import type { AppConfig } from '../../config/environment';
+import { processEnvironment } from '../../config/process-environment';
+import { loadClaudeSettings } from './claude.environment';
 
 /**
  * What a session of the engine `claude` needs from the session module, composed here (ADR-025):
@@ -144,7 +148,18 @@ export const claudeSessionExtensionPathsProviders: readonly Provider[] = [
     provide: CLAUDE_SESSION_EXTENSION_PATHS,
     inject: [PERSISTENCE_CONTEXT, MARKETPLACE_ALLOWLIST_SOURCE],
     useFactory: (context: PersistenceContext, marketplaces: MarketplaceAllowlistSource) =>
-      new ClaudePluginSessionExtensionPaths(new DrizzlePluginRepository(context), marketplaces),
+      new ClaudePluginSessionExtensionPaths(
+        new DrizzlePluginRepository(context),
+        marketplaces,
+        // Built here, not injected by `CLAUDE_SETTINGS`, for the same reason the repository above
+        // is: `ClaudeInstallationModule` (where that token lives) is never imported by the session
+        // module either — `loadClaudeSettings` is the same validated loader that token's own
+        // factory calls, read a second time rather than threaded across the module boundary.
+        new SyntheticSkillsPluginBuilder(
+          new ClaudeSkillSourcesReader(),
+          loadClaudeSettings(processEnvironment()).skillsPluginDir,
+        ),
+      ),
   },
 ];
 

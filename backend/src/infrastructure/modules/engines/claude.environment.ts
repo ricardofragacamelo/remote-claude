@@ -19,6 +19,9 @@ const claudeEnvironmentSchema = z.object({
   // Claude CLI itself reads (plan 13, B-47, D-15). One directory per backend, outside the
   // allowlist's own roots on purpose: it is ours to write, never a folder a session browses.
   RC_PLUGIN_DOWNLOAD_DIR: z.string().min(1),
+  // Where the synthetic local plugin of each user's skills is built, per user — never `~/.claude`
+  // (plan 13, B-35, D-20): the one path the CLI itself reads it from, built and rebuilt by us.
+  RC_SKILLS_PLUGIN_DIR: z.string().min(1),
 });
 
 /** What the extension of `claude` is configured with. */
@@ -26,6 +29,7 @@ export interface ClaudeSettings {
   readonly defaultModel: string;
   readonly modelCheck: { readonly maxBudgetUsd: number; readonly cwd: string };
   readonly pluginDownloadDir: string;
+  readonly skillsPluginDir: string;
 }
 
 /**
@@ -41,6 +45,7 @@ export function loadClaudeSettings(source: RawEnvironment): ClaudeSettings {
     // A folder of nobody's: the test reads no project and writes no transcript.
     modelCheck: { maxBudgetUsd: env.RC_MODEL_CHECK_MAX_BUDGET_USD, cwd: tmpdir() },
     pluginDownloadDir: env.RC_PLUGIN_DOWNLOAD_DIR,
+    skillsPluginDir: env.RC_SKILLS_PLUGIN_DIR,
   };
 }
 

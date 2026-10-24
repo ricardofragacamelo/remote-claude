@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import { ClaudePluginSessionExtensionPaths } from '@adapter/outbound/engines/claude/plugin-session-extension-paths';
+import { SyntheticSkillsPluginBuilder } from '@adapter/outbound/engines/claude/synthetic-skills-plugin.builder';
+import type { SkillSources } from '@application/engines/claude';
 import { UserId } from '@domain/auth';
 import {
   declaredMarketplace,
@@ -10,6 +15,16 @@ import { InMemoryPluginRepository } from '../../../../../support/fakes/in-memory
 
 const USER = UserId.create('auth|plugin-session');
 const NOW = new Date('2026-10-20T12:00:00Z');
+
+/** No user or system skills anywhere — the builder answers `null` for both, touching no disk. */
+const NO_SKILL_SOURCES: SkillSources = {
+  userSkills: () => Promise.resolve([]),
+  systemSkills: () => Promise.resolve([]),
+};
+
+function noSkillsPluginBuilder(): SyntheticSkillsPluginBuilder {
+  return new SyntheticSkillsPluginBuilder(NO_SKILL_SOURCES, '/unused');
+}
 
 describe('ClaudePluginSessionExtensionPaths — plan 13, B-27, S-123', () => {
   it('answers only the enabled plugins’ paths of the caller', async () => {
@@ -36,7 +51,11 @@ describe('ClaudePluginSessionExtensionPaths — plan 13, B-27, S-123', () => {
     );
     await plugins.setEnabled(disabled.id, false, NOW);
 
-    const source = new ClaudePluginSessionExtensionPaths(plugins, new FakeMarketplaceAllowlist());
+    const source = new ClaudePluginSessionExtensionPaths(
+      plugins,
+      new FakeMarketplaceAllowlist(),
+      noSkillsPluginBuilder(),
+    );
     const paths = await source.pathsFor({ userId: USER, engine: 'claude' });
 
     expect(paths).toEqual(['/one']);
@@ -55,7 +74,11 @@ describe('ClaudePluginSessionExtensionPaths — plan 13, B-27, S-123', () => {
       NOW,
     );
 
-    const source = new ClaudePluginSessionExtensionPaths(plugins, new FakeMarketplaceAllowlist());
+    const source = new ClaudePluginSessionExtensionPaths(
+      plugins,
+      new FakeMarketplaceAllowlist(),
+      noSkillsPluginBuilder(),
+    );
     expect(await source.pathsFor({ userId: USER, engine: 'codex' })).toEqual([]);
   });
 
@@ -63,6 +86,7 @@ describe('ClaudePluginSessionExtensionPaths — plan 13, B-27, S-123', () => {
     const source = new ClaudePluginSessionExtensionPaths(
       new InMemoryPluginRepository(),
       new FakeMarketplaceAllowlist(),
+      noSkillsPluginBuilder(),
     );
     expect(await source.pathsFor({ userId: USER, engine: 'claude' })).toEqual([]);
   });
@@ -82,7 +106,11 @@ describe('ClaudePluginSessionExtensionPaths — plan 13, B-27, S-123', () => {
       );
       const marketplaces = new FakeMarketplaceAllowlist([declaredMarketplace('acme')]);
 
-      const source = new ClaudePluginSessionExtensionPaths(plugins, marketplaces);
+      const source = new ClaudePluginSessionExtensionPaths(
+        plugins,
+        marketplaces,
+        noSkillsPluginBuilder(),
+      );
       expect(await source.pathsFor({ userId: USER, engine: 'claude' })).toEqual(['/mp/one']);
     });
 
@@ -99,9 +127,55 @@ describe('ClaudePluginSessionExtensionPaths — plan 13, B-27, S-123', () => {
         NOW,
       );
       const marketplaces = new FakeMarketplaceAllowlist([declaredMarketplace('acme')]);
-      const source = new ClaudePluginSessionExtensionPaths(plugins, marketplaces);
+      const source = new ClaudePluginSessionExtensionPaths(
+        plugins,
+        marketplaces,
+        noSkillsPluginBuilder(),
+      );
 
       marketplaces.set([]); // the same effect a SIGHUP reload has on the allowlist in memory
+
+      expect(await source.pathsFor({ userId: USER, engine: 'claude' })).toEqual([]);
+    });
+  });
+
+  describe('the synthetic skills plugins — plan 13, B-35', () => {
+    it('appends both synthetic plugin paths after the ordinary ones, when there is something to expose', async () => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'rc-skills-plugin-ext-'));
+      const realSources: SkillSources = {
+        userSkills: () =>
+          Promise.resolve([{ name: 'u', absolutePath: path.join(dir, 'u'), mtimeMs: 1 }]),
+        systemSkills: () =>
+          Promise.resolve([{ name: 's', absolutePath: path.join(dir, 's'), mtimeMs: 1 }]),
+      };
+      mkdirSync(path.join(dir, 'u'), { recursive: true });
+      writeFileSync(path.join(dir, 'u', 'SKILL.md'), '---\nname: u\n---\n', 'utf8');
+      mkdirSync(path.join(dir, 's'), { recursive: true });
+      writeFileSync(path.join(dir, 's', 'SKILL.md'), '---\nname: s\n---\n', 'utf8');
+      const pluginsBaseDir = mkdtempSync(path.join(tmpdir(), 'rc-skills-plugin-base-'));
+
+      const source = new ClaudePluginSessionExtensionPaths(
+        new InMemoryPluginRepository(),
+        new FakeMarketplaceAllowlist(),
+        new SyntheticSkillsPluginBuilder(realSources, pluginsBaseDir),
+      );
+
+      const paths = await source.pathsFor({ userId: USER, engine: 'claude' });
+
+      expect(paths).toHaveLength(2);
+      expect(paths.some((p) => p.endsWith('remote-claude-user'))).toBe(true);
+      expect(paths.some((p) => p.endsWith('remote-claude-system'))).toBe(true);
+
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(pluginsBaseDir, { recursive: true, force: true });
+    });
+
+    it('appends neither synthetic path when neither origin has a skill to expose (S-172)', async () => {
+      const source = new ClaudePluginSessionExtensionPaths(
+        new InMemoryPluginRepository(),
+        new FakeMarketplaceAllowlist(),
+        noSkillsPluginBuilder(),
+      );
 
       expect(await source.pathsFor({ userId: USER, engine: 'claude' })).toEqual([]);
     });

@@ -8,7 +8,9 @@ import type {
 } from '@application/session';
 import { MARKETPLACE_ALLOWLIST_SOURCE } from '@application/workspace';
 import type { MarketplaceAllowlistSource } from '@application/workspace';
+import { effectiveClaudeConfigDir } from './claude-config-dir';
 import { CLAUDE_ENGINE } from './claude-engine';
+import type { SyntheticSkillsPluginBuilder } from './synthetic-skills-plugin.builder';
 
 /**
  * `session` asking the Claude extension which plugin directories a new session opens with (plan 13,
@@ -29,12 +31,19 @@ import { CLAUDE_ENGINE } from './claude-engine';
  * very same `MarketplaceAllowlistSource` a `SIGHUP` reload updates, so a marketplace removed from
  * the file stops composing into any *new* session from that reload onward, with no event to listen
  * for: this is simply what the list already answers on the next ask.
+ *
+ * The two synthetic skills plugins (plan 13, B-35; D-20) are added **unconditionally** — every
+ * Claude session of every user gets `remote-claude-user` and `remote-claude-system`, regardless of
+ * what the Skills screen's preferences say: a preference narrows the `skills` option of the session
+ * (B-34), never whether the plugin directory itself loads. A build with nothing to expose answers no
+ * path at all (`pluginPath: null`, S-172), so an empty origin never adds a useless empty plugin.
  */
 @Injectable()
 export class ClaudePluginSessionExtensionPaths implements SessionExtensionPathsSource {
   constructor(
     @Inject(PLUGIN_REPOSITORY) private readonly plugins: PluginRepository,
     @Inject(MARKETPLACE_ALLOWLIST_SOURCE) private readonly marketplaces: MarketplaceAllowlistSource,
+    private readonly skillsPlugins: SyntheticSkillsPluginBuilder,
   ) {}
 
   async pathsFor(request: SessionExtensionPathsRequest): Promise<readonly string[]> {
@@ -42,8 +51,14 @@ export class ClaudePluginSessionExtensionPaths implements SessionExtensionPathsS
       return [];
     }
 
-    const stored = await this.plugins.listFor(request.userId);
-    return stored
+    const configDir = effectiveClaudeConfigDir().path;
+    const [stored, userSkills, systemSkills] = await Promise.all([
+      this.plugins.listFor(request.userId),
+      this.skillsPlugins.userPlugin(request.userId, configDir),
+      this.skillsPlugins.systemPlugin(request.userId, configDir),
+    ]);
+
+    const pluginPaths = stored
       .filter((plugin) => plugin.enabled)
       .filter(
         (plugin) =>
@@ -51,5 +66,11 @@ export class ClaudePluginSessionExtensionPaths implements SessionExtensionPathsS
           (plugin.marketplace !== null && this.marketplaces.find(plugin.marketplace) !== null),
       )
       .map((plugin) => plugin.path);
+
+    const skillsPaths = [userSkills.pluginPath, systemSkills.pluginPath].filter(
+      (path): path is string => path !== null,
+    );
+
+    return [...pluginPaths, ...skillsPaths];
   }
 }
