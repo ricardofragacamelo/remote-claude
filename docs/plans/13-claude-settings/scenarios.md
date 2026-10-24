@@ -268,14 +268,14 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-163 | a mesma preferência gravada duas vezes não muda nada nem grava segundo evento | idem | unit | — | B-34 | ⬜ |
 | S-164 | ligar a origem Usuário ou Sistema grava `engine.skillSourceToggled`, com o motor no payload, antes do efeito; desligar skill não vai para a trilha | eq | integração | — | B-34 | ⬜ |
 | S-165 | uma skill de `~/.claude/skills` carrega pelo plugin sintético e aparece com o selo Usuário | eq | integração | — | B-35 | ⬜ |
-| S-166 | o plugin sintético expõe só `skills/`, com `skipMcpDiscovery: true` — nenhum hook, agent, comando ou servidor MCP | eq | unit | — | B-35 | ⬜ |
+| S-166 | o plugin sintético expõe só `skills/`, com `skipMcpDiscovery: true` — nenhum hook, agent, comando ou servidor MCP | eq | unit | — | B-35 | ✅ |
 | S-167 | skill de usuário que declara hook no frontmatter não é carregada, e aparece com o motivo — o hook nunca ativa | err | integração | — | B-35 | ⬜ |
 | S-168 | com uma `allow` em `~/.claude/settings.json`, o `canUseTool` continua sendo chamado com o plugin sintético ligado — regressão da D-11 do plano 01 | err | integração | — | B-35 | ⬜ |
-| S-169 | symlink em `~/.claude/skills` que aponta para fora do home é recusado | err | integração | — | B-35 | ⬜ |
-| S-170 | fontes sem mudança reusam o plugin; digest diferente o reconstrói; versão nova do CLI invalida | idem | integração | — | B-35 | ⬜ |
-| S-171 | dois `session.start` do mesmo usuário ao mesmo tempo constroem o plugin uma vez, e nenhum vê diretório pela metade | conc | integração | — | B-35 | ⬜ |
+| S-169 | symlink em `~/.claude/skills` que aponta para fora do home é recusado | err | integração | — | B-35 | ✅ |
+| S-170 | fontes sem mudança reusam o plugin; digest diferente o reconstrói; versão nova do CLI invalida | idem | integração | — | B-35 | ✅ |
+| S-171 | dois `session.start` do mesmo usuário ao mesmo tempo constroem o plugin uma vez, e nenhum vê diretório pela metade | conc | integração | — | B-35 | ✅ |
 | S-172 | diretório de skills do usuário ausente ou vazio → origem vazia explicada, e a sessão abre | fron | integração | — | B-35 | ⬜ |
-| S-173 | o plugin sintético de um usuário nunca entra na sessão de outro | err | unit | — | B-35 | ⬜ |
+| S-173 | o plugin sintético de um usuário nunca entra na sessão de outro | err | unit | — | B-35 | ✅ |
 | S-174 | com a política de shell inline ligada, o bloco `!` de uma skill vira o marcador, e a ajuda diz isso | est | integração | — | B-35 | ⬜ |
 | S-175 | subagent com `permissionMode`, `tools` amplos ou `mcpServers` no frontmatter aparece sinalizado, com a explicação | err | unit | — | B-36 | ✅ |
 | S-176 | criar subagent pelo modelo grava `.claude/agents/<nome>.md` e ele aparece em `supportedAgents()` na sessão seguinte | est | integração | — | B-36 | ⬜ |

@@ -111,7 +111,7 @@ por `plugin:nome` — nenhuma some em silêncio. "Nova skill": nome validado, mo
 em `.claude/skills/<nome>/SKILL.md`, aberto no editor; `reloadSkills()` na sessão viva a faz aparecer.
 Cenários S-154…S-164.
 
-### B-35 — O plugin sintético das skills de usuário e de sistema 🔲
+### B-35 — O plugin sintético das skills de usuário e de sistema ✅
 
 A decisão do usuário ([D-20](decisions.md#d-20--skills-de-projeto-usuário-e-sistema)): carregar skills do
 projeto, do usuário e do sistema, **sem** ampliar `settingSources` — o escopo `user` traria junto as
