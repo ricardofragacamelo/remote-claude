@@ -12,6 +12,11 @@ import 'package:remote_claude/l10n/generated/app_localizations.dart';
 ///
 /// Shown rather than kept for a report: this is somebody's own money, spent by a process they
 /// started from a phone, and it should not take a dashboard to find out.
+///
+/// A turn that did not end in [TurnOutcome.completed] says so instead of the line above — its own
+/// `usage` and `durationMs` are what the engine reports for that outcome, which a crash may leave
+/// zeroed, and a line that showed them next to a real-looking cost would read as an answer nobody
+/// gave (plan 27, B-10).
 class TurnLine extends StatelessWidget {
   const TurnLine({required this.turn, super.key});
 
@@ -20,6 +25,11 @@ class TurnLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+
+    if (turn.outcome != TurnOutcome.completed) {
+      return _Line(_outcomeTextOf(l10n, turn.outcome));
+    }
+
     final String seconds = (turn.durationMs / 1000).toStringAsFixed(1);
     final String? cost = turn.costUsd;
     final String locale = Localizations.localeOf(context).toLanguageTag();
@@ -33,6 +43,14 @@ class TurnLine extends StatelessWidget {
     return _Line('$base · $tokens');
   }
 }
+
+/// The words of a turn's outcome, when it is not [TurnOutcome.completed].
+String _outcomeTextOf(AppLocalizations l10n, TurnOutcome outcome) => switch (outcome) {
+  TurnOutcome.completed => '',
+  TurnOutcome.limitReached => l10n.sessionTurnOutcomeLimitReached,
+  TurnOutcome.budgetExceeded => l10n.sessionTurnOutcomeBudgetExceeded,
+  TurnOutcome.failed => l10n.sessionTurnOutcomeFailed,
+};
 
 /// The input, output and cache tokens of [turn], as the web's `TurnRow` joins them — `null` when the
 /// engine reported none at all (plan 26, B-17, S-61, S-62). A field it did not report, or sent as

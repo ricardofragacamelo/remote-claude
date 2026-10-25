@@ -135,7 +135,7 @@ describe('the usage of a turn, in canonical names — plan 28, S-85', () => {
 });
 
 describe('the turn guard of the contract — plan 28, S-86', () => {
-  const turn = { turnId: 'r-1', durationMs: 1_000 };
+  const turn = { turnId: 'r-1', durationMs: 1_000, outcome: 'completed' };
 
   it('accepts a turn with no cost, as an engine that reports none sends it', () => {
     expect(isTurnCompletedPayload({ ...turn, usage: { inputTokens: 1 } })).toBe(true);
@@ -152,6 +152,10 @@ describe('the turn guard of the contract — plan 28, S-86', () => {
   it('refuses a turn without a usage, or with a negative count', () => {
     expect(isTurnCompletedPayload(turn)).toBe(false);
     expect(isTurnCompletedPayload({ ...turn, usage: { outputTokens: -1 } })).toBe(false);
+  });
+
+  it('refuses a turn without an outcome — S-32…S-34', () => {
+    expect(isTurnCompletedPayload({ turnId: 'r-1', durationMs: 1_000, usage: {} })).toBe(false);
   });
 });
 

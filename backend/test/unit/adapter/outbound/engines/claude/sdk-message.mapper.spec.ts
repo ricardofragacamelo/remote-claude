@@ -324,7 +324,90 @@ describe('the SDK message mapper', () => {
         // A string and not a number: money through a float rounds where nobody looks.
         costUsd: '0.012346',
         durationMs: 1234,
+        outcome: 'completed',
       });
+    });
+
+    it.each([
+      ['error_max_turns', 'limitReached'],
+      ['error_max_budget_usd', 'budgetExceeded'],
+      ['error_during_execution', 'failed'],
+      ['error_max_structured_output_retries', 'failed'],
+      ['a subtype this build has never seen', 'failed'],
+    ])(
+      'reads a result of subtype %s as outcome %s, never the SDK\'s own name — S-32…S-34',
+      (subtype, outcome) => {
+        const mapped = toEvents(
+          message({
+            type: 'result',
+            subtype,
+            uuid: 'r-1',
+            duration_ms: 0,
+            total_cost_usd: 0.05,
+            usage: {},
+            errors: ['boom'],
+          }),
+        );
+
+        expect(mapped.events[0]?.payload).toMatchObject({ outcome });
+        expect(JSON.stringify(mapped.events)).not.toContain(subtype);
+      },
+    );
+
+    it('charges a turn only its own spend, never the whole conversation\'s running total — S-163, plan 16 D-02', () => {
+      const mapper = new SdkMessageMapper('');
+
+      const first = mapper.read(
+        message({
+          type: 'result',
+          subtype: 'success',
+          uuid: 'r-1',
+          duration_ms: 1,
+          total_cost_usd: 10.08,
+          usage: {},
+        }),
+      );
+      const second = mapper.read(
+        message({
+          type: 'result',
+          subtype: 'success',
+          uuid: 'r-2',
+          duration_ms: 1,
+          total_cost_usd: 10.1,
+          usage: {},
+        }),
+      );
+
+      expect(first.events[0]?.payload).toMatchObject({ costUsd: '10.080000' });
+      expect(second.events[0]?.payload).toMatchObject({ costUsd: '0.020000' });
+    });
+
+    it('charges the whole figure when the running total dropped — a `/clear`, or a crash — rather than a negative turn', () => {
+      const mapper = new SdkMessageMapper('');
+
+      mapper.read(
+        message({
+          type: 'result',
+          subtype: 'success',
+          uuid: 'r-1',
+          duration_ms: 1,
+          total_cost_usd: 10.08,
+          usage: {},
+        }),
+      );
+      const after = mapper.read(
+        message({
+          type: 'result',
+          subtype: 'error_during_execution',
+          uuid: 'r-2',
+          duration_ms: 0,
+          total_cost_usd: 0,
+          usage: {},
+          errors: ['crashed'],
+        }),
+      );
+
+      expect(after.events[0]?.payload).toMatchObject({ costUsd: '0.000000', outcome: 'failed' });
     });
 
     it('reads an API retry as a status change rather than an error', () => {

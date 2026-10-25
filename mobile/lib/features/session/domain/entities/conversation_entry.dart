@@ -318,11 +318,17 @@ class ToolExecution extends ConversationEntry {
   ];
 }
 
+/// How a turn ended — never the engine's own name for it (ADR-025). Only [completed] is a turn
+/// that ran to the end; the other three still carry whatever the engine reports for them, which a
+/// crash may leave zeroed (plan 27, B-10).
+enum TurnOutcome { completed, limitReached, budgetExceeded, failed }
+
 /// What a finished turn cost — the line that closes it in the conversation.
 class TurnSummary extends ConversationEntry {
   const TurnSummary({
     required this.turnId,
     required this.durationMs,
+    this.outcome = TurnOutcome.completed,
     this.costUsd,
     this.inputTokens,
     this.outputTokens,
@@ -333,6 +339,10 @@ class TurnSummary extends ConversationEntry {
   });
 
   final String turnId;
+
+  /// Defaults to [TurnOutcome.completed]: a frame from a backend before this field existed never
+  /// sent a failed-looking turn at all, so the one before it reads the same way it always did.
+  final TurnOutcome outcome;
 
   /// A string, not a double: money that goes through a binary float stops adding up. `null` when
   /// the engine reports no cost (plan 28, B-29) — which is not zero: zero is `"0.000000"`.
@@ -359,6 +369,7 @@ class TurnSummary extends ConversationEntry {
   @override
   List<Object?> get props => <Object?>[
     turnId,
+    outcome,
     costUsd,
     durationMs,
     inputTokens,

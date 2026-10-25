@@ -359,6 +359,7 @@ String turnCompleted({
   int durationMs = 1200,
   String sessionId = 'session-1',
   Map<String, Object?> usage = const <String, Object?>{'inputTokens': 10, 'outputTokens': 20},
+  String outcome = 'completed',
 }) => frame(
   kind: 'event',
   type: 'turn.completed',
@@ -369,6 +370,7 @@ String turnCompleted({
     'usage': usage,
     'costUsd': ?costUsd,
     'durationMs': durationMs,
+    'outcome': outcome,
   },
 );
 

@@ -1242,6 +1242,8 @@ export interface TurnCompletedPayloadUsage {
 /** A turn finished. It is what closes the turn in the UI and what carries what it used and, when the engine says, what it cost. */
 export interface TurnCompletedPayload {
   readonly turnId: string;
+  /** How the turn ended — never the engine's own name for it (ADR-025). `completed` is the only one `usage`/`costUsd` describe a turn that actually ran to the end; the other three still carry whatever the engine reports for them, which a crash may leave zeroed. A subtype the adapter does not know is `failed`. */
+  readonly outcome: 'completed' | 'limitReached' | 'budgetExceeded' | 'failed';
   /** Who sent the prompt this turn answered. */
   readonly promptedBy?: string;
   /** What the turn used, in our names (plan 28, B-29) — each count present only when the engine reports it; an empty object when it reports none. */
@@ -4481,6 +4483,7 @@ export function isTurnCompletedPayload(value: unknown): value is TurnCompletedPa
 
   return [
     typeof record['turnId'] === 'string',
+    typeof record['outcome'] === 'string',
     isTurnCompletedPayloadUsage(record['usage']),
     typeof record['durationMs'] === 'number',
   ].every(Boolean);

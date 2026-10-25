@@ -85,7 +85,7 @@
     },
     "status": {
       "starting": "Iniciando",
-      "idle": "Parada",
+      "idle": "Ociosa",
       "thinking": "Pensando",
       "running": "Executando uma ferramenta",
       "waitingPermission": "Esperando você",
@@ -1933,7 +1933,12 @@
       "inputTokens": "{{count}} de entrada",
       "outputTokens": "{{count}} de saída",
       "cacheTokens": "{{count}} de cache",
-      "noTokens": "sem contagem de tokens"
+      "noTokens": "sem contagem de tokens",
+      "outcome": {
+        "limitReached": "O turno não terminou: limite de turnos atingido",
+        "budgetExceeded": "O turno não terminou: orçamento da sessão esgotado",
+        "failed": "O turno falhou, sem resposta"
+      }
     },
     "compacted": {
       "label": "A conversa foi compactada",

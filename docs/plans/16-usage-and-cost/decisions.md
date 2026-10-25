@@ -70,6 +70,20 @@ absorver o gasto de lá — o acumulado maior que o esperado em mais que o `usag
 como `baselineUnknown` também. Gap a medir na B-02, com fixtures reais: retomada in-place, fork de
 conversa externa e `/clear`.
 
+**Implementação parcial, fora do ciclo deste plano (2026-10-25):** o sintoma de D-02 — turnos de uma
+conversa retomada somando o acumulado bruto do `query()`, não o gasto do turno — apareceu em uso real
+(uma sessão de horas, `sicredi-clm-pd`) e foi corrigido em `SdkMessageMapper.turnCostOf()`
+(`backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts`): uma linha de base **em
+memória, por instância do mapper** (uma por sessão viva do processo atual), nunca persistida. Cobre
+exatamente a opção (a) para o **segundo turno em diante de um processo vivo**; não cobre: o primeiro
+turno de uma retomada (continua cobrando o acumulado inteiro, como sempre foi — sem base conhecida
+entre reinícios do backend), a distinção `reset`/`zeroed` desta decisão (aqui as duas colapsam: um
+acumulado menor que o anterior cobra o valor absoluto, sem marcar qual dos dois motivos foi), e
+`baselineUnknown`/fork de conversa externa (D-02 continua 🔲 por isso). Sem matriz de cenários
+própria — os testes que existem (`sdk-message.mapper.spec.ts`) cobrem o delta normal e o caso do
+acumulado caindo, não as fixtures reais de retomada/fork que a B-02 pede. **`pnpm verify`/`verify:full`
+não foram rodados** para esta mudança — só `tsc`, `eslint` e os testes unitários do arquivo tocado.
+
 ### D-03 — representação do dinheiro
 
 Um turno curto de Haiku custa frações de milésimo de dólar; um mês de Opus, centenas. Float soma

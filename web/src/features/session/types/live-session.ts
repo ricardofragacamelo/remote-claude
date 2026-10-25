@@ -1,4 +1,4 @@
-import type { TurnCompletedPayloadUsage } from '@remote-claude/contracts';
+import type { TurnCompletedPayload, TurnCompletedPayloadUsage } from '@remote-claude/contracts';
 
 import type { QuestionAnswer, QuestionInteraction } from '@/features/permission';
 import type { ToolCall } from '@/shared/lib/tool-call';
@@ -175,9 +175,17 @@ export interface QueuedPrompt {
  */
 export type TurnUsage = TurnCompletedPayloadUsage;
 
+/**
+ * How a turn ended — never the engine's own name for it (ADR-025). Only `completed` is a turn that
+ * ran to the end; the other three still carry whatever the engine reports, which a crash may leave
+ * zeroed (plan 27, B-10).
+ */
+export type TurnOutcome = TurnCompletedPayload['outcome'];
+
 /** What a finished turn cost. */
 export interface TurnSummary {
   readonly turnId: string;
+  readonly outcome: TurnOutcome;
 
   /** In US dollars, as text — `null` when the engine reports no cost (S-86); zero is zero (S-87). */
   readonly costUsd: string | null;

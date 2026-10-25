@@ -6,10 +6,15 @@
   "x-kind": "event",
   "x-type": "turn.completed",
   "type": "object",
-  "required": ["turnId", "usage", "durationMs"],
+  "required": ["turnId", "usage", "durationMs", "outcome"],
   "properties": {
     "turnId": {
       "type": "string"
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["completed", "limitReached", "budgetExceeded", "failed"],
+      "description": "How the turn ended — never the engine's own name for it (ADR-025). `completed` is the only one `usage`/`costUsd` describe a turn that actually ran to the end; the other three still carry whatever the engine reports for them, which a crash may leave zeroed. A subtype the adapter does not know is `failed`."
     },
     "promptedBy": {
       "type": "string",

@@ -144,6 +144,36 @@ void main() {
     },
   );
 
+  testWidgets(
+    'S-163, plan 27 B-10 · a turn that did not complete says so, never its cost or tokens',
+    (WidgetTester tester) async {
+      await tester.pumpApp(
+        const ConversationView(
+          conversation: Conversation(
+            entries: <ConversationEntry>[
+              TurnSummary(
+                turnId: 'turn-1',
+                durationMs: 0,
+                costUsd: '10.080000',
+                outcome: TurnOutcome.failed,
+              ),
+              TurnSummary(
+                turnId: 'turn-2',
+                durationMs: 500,
+                outcome: TurnOutcome.limitReached,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text(l10n.sessionTurnOutcomeFailed), findsOneWidget);
+      expect(find.text(l10n.sessionTurnOutcomeLimitReached), findsOneWidget);
+      expect(find.textContaining('10,08'), findsNothing);
+      expect(find.textContaining('10.08'), findsNothing);
+    },
+  );
+
   testWidgets('a header scrolls with the conversation, above its first entry', (
     WidgetTester tester,
   ) async {

@@ -197,6 +197,7 @@ describe('the rows of the system', () => {
         <TurnRow
           turn={{
             turnId: 'turn-1',
+            outcome: 'completed',
             costUsd: '0.0123',
             durationMs: 4200,
             usage: {
@@ -222,6 +223,26 @@ describe('the rows of the system', () => {
     expect(
       screen.getByText(t('sessions.rewound.failed', { restored: 2, kept: 1, failed: 1 })),
     ).toBeInTheDocument();
+  });
+
+  it('says a turn failed instead of its cost and tokens, which a crash may leave meaningless — S-163, plan 27 B-10', () => {
+    vi.useRealTimers();
+    render(
+      <ul>
+        <TurnRow
+          turn={{
+            turnId: 'turn-1',
+            outcome: 'failed',
+            costUsd: '10.080000',
+            durationMs: 0,
+            usage: null,
+          }}
+        />
+      </ul>,
+    );
+
+    expect(screen.getByText(t('sessions.turn.outcome.failed'))).toBeInTheDocument();
+    expect(screen.queryByText(/10,08|10\.08/)).toBeNull();
   });
 
   it('keeps the partial replay a strip of one line, and the search bar pinned at the top — S-79, S-80', () => {

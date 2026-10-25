@@ -487,6 +487,7 @@ describe('the live session store', () => {
 
     expect(store().lastTurn).toEqual({
       turnId: 'turn-1',
+      outcome: 'completed',
       costUsd: null,
       durationMs: 1,
       usage: null,
@@ -505,6 +506,7 @@ describe('the live session store', () => {
 
     expect(store().lastTurn).toEqual({
       turnId: 'turn-1',
+      outcome: 'completed',
       costUsd: '0.0123',
       durationMs: 2_400,
       usage: null,

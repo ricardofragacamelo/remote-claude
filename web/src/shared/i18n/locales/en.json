@@ -1933,7 +1933,12 @@
       "inputTokens": "{{count}} in",
       "outputTokens": "{{count}} out",
       "cacheTokens": "{{count}} cache",
-      "noTokens": "no token count"
+      "noTokens": "no token count",
+      "outcome": {
+        "limitReached": "The turn did not finish: turn limit reached",
+        "budgetExceeded": "The turn did not finish: the session's budget ran out",
+        "failed": "The turn failed, with no answer"
+      }
     },
     "compacted": {
       "label": "The conversation was compacted",

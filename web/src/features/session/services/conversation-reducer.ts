@@ -16,6 +16,7 @@ import type {
   TimelineEntry,
   ToolExecution,
   ToolStatus,
+  TurnOutcome,
   TurnSummary,
   TurnUsage,
 } from '../types/live-session';
@@ -574,10 +575,32 @@ function usageOf(payload: Readonly<Record<string, unknown>>): TurnUsage | null {
   return counts.length === 0 ? null : (Object.fromEntries(counts) as TurnUsage);
 }
 
+/** The outcomes the contract names — a value this build does not recognise reads as `failed`:
+ * an unlabelled failure is still the truth, where a guess at its label would not be. */
+const TURN_OUTCOMES: ReadonlySet<string> = new Set<TurnOutcome>([
+  'completed',
+  'limitReached',
+  'budgetExceeded',
+  'failed',
+]);
+
+function turnOutcomeOf(payload: Readonly<Record<string, unknown>>): TurnOutcome {
+  const outcome = payload['outcome'];
+
+  // Absent entirely: a build of the backend from before this field existed, which never sent a
+  // failed-looking turn.completed at all — read the same way it always was, not as a failure that
+  // was never one.
+  if (outcome === undefined) {
+    return 'completed';
+  }
+
+  return typeof outcome === 'string' && TURN_OUTCOMES.has(outcome) ? (outcome as TurnOutcome) : 'failed';
+}
+
 /**
- * The end of a turn: what it cost — when the engine says (S-86) —, how long it took, the tokens —
- * kept **once per turn**, so the cost of the session never counts a turn the replay delivered twice
- * (S-99).
+ * The end of a turn: how it ended, what it cost — when the engine says (S-86) —, how long it took,
+ * the tokens — kept **once per turn**, so the cost of the session never counts a turn the replay
+ * delivered twice (S-99).
  */
 function applyTurn(state: Conversation, payload: Readonly<Record<string, unknown>>): Conversation {
   const turnId = readText(payload, 'turnId');
@@ -589,6 +612,7 @@ function applyTurn(state: Conversation, payload: Readonly<Record<string, unknown
 
   const turn: TurnSummary = {
     turnId,
+    outcome: turnOutcomeOf(payload),
     costUsd: readText(payload, 'costUsd'),
     durationMs,
     usage: usageOf(payload),

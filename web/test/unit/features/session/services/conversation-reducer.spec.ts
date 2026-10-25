@@ -323,6 +323,7 @@ describe('the conversation reducer', () => {
       const state = fold(
         frame('turn.completed', {
           turnId: 'turn-1',
+          outcome: 'completed',
           costUsd: '0.0123',
           durationMs: 2400,
           usage: {
@@ -338,6 +339,7 @@ describe('the conversation reducer', () => {
 
       expect(state.lastTurn).toEqual({
         turnId: 'turn-1',
+        outcome: 'completed',
         costUsd: '0.0123',
         durationMs: 2400,
         usage: {
@@ -381,9 +383,17 @@ describe('the conversation reducer', () => {
     });
 
     it('keeps a turn with no cost, its cost unknown and not zero — plan 28, S-86', () => {
-      const state = fold(frame('turn.completed', { turnId: 'a', durationMs: 1, usage: {} }));
+      const state = fold(
+        frame('turn.completed', { turnId: 'a', outcome: 'completed', durationMs: 1, usage: {} }),
+      );
 
-      expect(state.lastTurn).toEqual({ turnId: 'a', costUsd: null, durationMs: 1, usage: null });
+      expect(state.lastTurn).toEqual({
+        turnId: 'a',
+        outcome: 'completed',
+        costUsd: null,
+        durationMs: 1,
+        usage: null,
+      });
       expect(state.timeline).toEqual([{ kind: 'turn', id: 'a' }]);
     });
 
@@ -398,6 +408,29 @@ describe('the conversation reducer', () => {
     it('ignores a turn missing its id or its duration', () => {
       expect(fold(frame('turn.completed', { durationMs: 1 }))).toBe(SILENT);
       expect(fold(frame('turn.completed', { turnId: 'a', costUsd: '1' }))).toBe(SILENT);
+    });
+
+    it.each(['limitReached', 'budgetExceeded', 'failed'])(
+      'reads the outcome %s, never the engine\'s own name for it — S-163, plan 27 B-10',
+      (outcome) => {
+        const state = fold(frame('turn.completed', { turnId: 'a', durationMs: 1, outcome }));
+
+        expect(state.lastTurn?.outcome).toBe(outcome);
+      },
+    );
+
+    it('reads an outcome this build does not know as failed, never as a silent success', () => {
+      const state = fold(
+        frame('turn.completed', { turnId: 'a', durationMs: 1, outcome: 'error_during_execution' }),
+      );
+
+      expect(state.lastTurn?.outcome).toBe('failed');
+    });
+
+    it('reads a turn with no outcome at all as completed — a backend from before this field existed', () => {
+      const state = fold(frame('turn.completed', { turnId: 'a', durationMs: 1 }));
+
+      expect(state.lastTurn?.outcome).toBe('completed');
     });
 
     it('counts a turn the replay delivers twice once — S-99', () => {
@@ -415,6 +448,7 @@ describe('the conversation reducer', () => {
     it('sums in millionths, so the cost of the session never drifts', () => {
       const turns = ['0.1', '0.2', 'not money'].map((costUsd, index) => ({
         turnId: String(index),
+        outcome: 'completed' as const,
         costUsd,
         durationMs: 0,
         usage: null,
@@ -427,6 +461,7 @@ describe('the conversation reducer', () => {
     it('adds nothing for a turn whose engine reports no cost — plan 28, S-86', () => {
       const turns = ['0.1', null].map((costUsd, index) => ({
         turnId: String(index),
+        outcome: 'completed' as const,
         costUsd,
         durationMs: 0,
         usage: null,

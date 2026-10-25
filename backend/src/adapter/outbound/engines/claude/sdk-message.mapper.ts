@@ -4,6 +4,7 @@ import { canonicalToolPayload } from '@application/session';
 import type { SessionEvent } from '@application/session';
 import type {
   MessageCompletedPayloadContentItem,
+  TurnCompletedPayload,
   TurnCompletedPayloadUsage,
 } from '@remote-claude/contracts';
 import type { TaskItem } from '@domain/engine';
@@ -52,11 +53,35 @@ export class SdkMessageMapper {
   /** The agent's task list, followed call by call (plan 28, B-22). */
   readonly tasks = new TaskListTracker();
 
+  /**
+   * The cumulative spend the last `result` of this session reported — `total_cost_usd` is the
+   * running total of the whole `query()`, across every turn, never one turn's own (plan 16, D-02).
+   * {@link turnCostOf} is the delta from it, which is what a turn actually cost.
+   */
+  private lastCumulativeCostUsd = 0;
+
   /** @param folder the session's folder — what the paths of a tool's label are relative to */
   constructor(readonly folder: string) {}
 
   read(message: SDKMessage): MappedMessage {
     return toEvents(message, this);
+  }
+
+  /**
+   * [total]'s own spend since the last turn of this session — never the raw cumulative figure the
+   * SDK reports. A figure **lower** than what was last seen is not a negative turn: it is `/clear`
+   * mid-session, or a resumed session whose transcript already paid for the total once — either
+   * way, nothing of it belongs to an earlier turn of this process, so the whole of it is this one's.
+   *
+   * The first turn of a fresh process has nothing to subtract from, so it is charged the whole
+   * figure — exactly a resumed conversation's own carried-over cost, charged again here. A full fix
+   * needs a baseline kept **per conversation**, past this process's own lifetime (plan 16, D-02,
+   * not done); this is the in-memory, one-process slice of it.
+   */
+  turnCostOf(total: number): number {
+    const delta = total - this.lastCumulativeCostUsd;
+    this.lastCumulativeCostUsd = total;
+    return delta >= 0 ? delta : total;
   }
 
   /** Remembers, or forgets, which message the next fragments belong to. */
@@ -98,7 +123,7 @@ function toEvents(message: SDKMessage, mapper: SdkMessageMapper): MappedMessage 
       });
 
     case 'result':
-      return fromResult(message);
+      return fromResult(message, mapper);
 
     case 'rate_limit_event':
       // Deliberately nothing on the wire. It is a notice, not a transition: the session is alive
@@ -517,18 +542,42 @@ export function resultText(content: unknown): string {
     .join('');
 }
 
-/** The end of a turn, with what it used and what it cost. */
-function fromResult(message: Extract<SDKMessage, { type: 'result' }>): MappedMessage {
+/** The end of a turn, with what it used, what it cost, and whether it finished or crashed. */
+function fromResult(
+  message: Extract<SDKMessage, { type: 'result' }>,
+  mapper: SdkMessageMapper,
+): MappedMessage {
   return events({
     type: 'turn.completed',
     payload: {
       turnId: message.uuid,
       usage: usageOf(message.usage),
       // A string and not a number: money through a float is money that rounds where nobody looks.
-      costUsd: message.total_cost_usd.toFixed(6),
+      costUsd: mapper.turnCostOf(message.total_cost_usd).toFixed(6),
       durationMs: message.duration_ms,
+      outcome: outcomeOf(message),
     },
   });
+}
+
+/**
+ * How a `result` ended, in the three names the UI knows plus the one that catches the rest — never
+ * the engine's own subtype (ADR-025, plan 27, B-10). A subtype this build does not recognise is
+ * `failed`: an unlabelled failure is still the truth, where a guess at its label would not be.
+ */
+function outcomeOf(
+  message: Extract<SDKMessage, { type: 'result' }>,
+): TurnCompletedPayload['outcome'] {
+  switch (message.subtype) {
+    case 'success':
+      return 'completed';
+    case 'error_max_turns':
+      return 'limitReached';
+    case 'error_max_budget_usd':
+      return 'budgetExceeded';
+    default:
+      return 'failed';
+  }
 }
 
 /**

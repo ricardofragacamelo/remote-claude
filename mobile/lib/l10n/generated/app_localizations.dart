@@ -2385,6 +2385,24 @@ abstract class AppLocalizations {
   /// **'no token count'**
   String get sessionTurnNoTokens;
 
+  /// A turn.completed whose outcome is limitReached (plan 27, B-10)
+  ///
+  /// In en, this message translates to:
+  /// **'The turn did not finish: turn limit reached'**
+  String get sessionTurnOutcomeLimitReached;
+
+  /// A turn.completed whose outcome is budgetExceeded (plan 27, B-10)
+  ///
+  /// In en, this message translates to:
+  /// **'The turn did not finish: the session\'s budget ran out'**
+  String get sessionTurnOutcomeBudgetExceeded;
+
+  /// A turn.completed whose outcome is failed, or one this build does not recognise (plan 27, B-10)
+  ///
+  /// In en, this message translates to:
+  /// **'The turn failed, with no answer'**
+  String get sessionTurnOutcomeFailed;
+
   /// Line where the conversation was compacted on request
   ///
   /// In en, this message translates to:

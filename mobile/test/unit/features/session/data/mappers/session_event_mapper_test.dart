@@ -322,6 +322,45 @@ void main() {
     });
   });
 
+  group('how a turn ended — S-163, plan 27 B-10', () {
+    const Map<String, TurnOutcome> known = <String, TurnOutcome>{
+      'completed': TurnOutcome.completed,
+      'limitReached': TurnOutcome.limitReached,
+      'budgetExceeded': TurnOutcome.budgetExceeded,
+      'failed': TurnOutcome.failed,
+    };
+
+    test('reads each outcome the contract names, never the engine\'s own subtype', () {
+      known.forEach((String raw, TurnOutcome expected) {
+        final TurnFinished turn = read(turnCompleted(seq: 1, outcome: raw))! as TurnFinished;
+        expect(turn.turn.outcome, expected, reason: raw);
+      });
+    });
+
+    test('reads an outcome this build does not know as failed, never as a silent success', () {
+      final TurnFinished turn =
+          read(turnCompleted(seq: 1, outcome: 'error_during_execution'))! as TurnFinished;
+
+      expect(turn.turn.outcome, TurnOutcome.failed);
+    });
+
+    test('reads a turn with no outcome at all as completed — a backend from before this field existed', () {
+      final TurnFinished turn =
+          read(
+                frame(
+                  kind: 'event',
+                  type: 'turn.completed',
+                  sessionId: 'session-1',
+                  seq: 1,
+                  payload: <String, Object?>{'turnId': 'turn-1', 'durationMs': 1},
+                ),
+              )!
+              as TurnFinished;
+
+      expect(turn.turn.outcome, TurnOutcome.completed);
+    });
+  });
+
   group('plan 26, B-17 · the usage of a turn', () {
     test('S-61 · reads every field the engine reported, cache included', () {
       final TurnFinished turn =

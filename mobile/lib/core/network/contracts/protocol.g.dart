@@ -5769,6 +5769,7 @@ bool turnCompletedPayloadUsageLimitsHold(Map<String, Object?> json) {
 class TurnCompletedPayload {
   const TurnCompletedPayload({
     required this.turnId,
+    required this.outcome,
     this.promptedBy,
     required this.usage,
     this.costUsd,
@@ -5778,6 +5779,7 @@ class TurnCompletedPayload {
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory TurnCompletedPayload.fromJson(Map<String, Object?> json) => TurnCompletedPayload(
         turnId: json['turnId']! as String,
+        outcome: json['outcome']! as String,
         promptedBy: json['promptedBy'] as String?,
         usage: TurnCompletedPayloadUsage.fromJson(json['usage']! as Map<String, Object?>),
         costUsd: json['costUsd'] as String?,
@@ -5785,6 +5787,9 @@ class TurnCompletedPayload {
       );
 
   final String turnId;
+
+  /// How the turn ended — never the engine's own name for it (ADR-025). `completed` is the only one `usage`/`costUsd` describe a turn that actually ran to the end; the other three still carry whatever the engine reports for them, which a crash may leave zeroed. A subtype the adapter does not know is `failed`.
+  final String outcome;
 
   /// Who sent the prompt this turn answered.
   final String? promptedBy;
@@ -5801,6 +5806,7 @@ class TurnCompletedPayload {
   Map<String, Object?> toJson() {
     final Map<String, Object?> json = <String, Object?>{
       'turnId': turnId,
+      'outcome': outcome,
       'usage': usage.toJson(),
       'durationMs': durationMs,
     };

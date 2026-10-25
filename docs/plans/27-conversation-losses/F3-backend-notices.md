@@ -58,6 +58,19 @@ O `permission_denied` passa a fechar a tool com `status: 'denied'` e o motivo, e
 `tool_result` de erro dá hoje. A correlação é pelo `tool_use_id`, e a ordem entre os dois não muda o
 resultado. Cenários S-32…S-36.
 
+**Implementação parcial, fora do ciclo deste plano (2026-10-25):** só a primeira metade — o `outcome`
+canônico de `turn.completed` — foi feita, em `fromResult()`/`outcomeOf()`
+(`backend/src/adapter/outbound/engines/claude/sdk-message.mapper.ts`), com `TurnRow`/`TurnLine`
+mostrando uma linha própria (não o resumo de custo/tokens) para todo turno que não seja `completed`,
+no web e no mobile. Diferenças do desenho acima: `outcome` ficou **dentro** de `turn.completed`, sem
+um `turn.failed` separado — então não há `errors[]` cortado nem texto do porquê, só o `outcome` em si;
+um subtipo que o adapter não conhece vira `failed` puro, sem `reason: 'other'` (o campo `reason` não
+existe nesta versão). O `permission_denied` → `status: 'denied'` da tool **não foi tocado** — segue
+exatamente como descrito acima, ainda 🔲. Cenários S-32…S-34 cobertos por teste unitário no mapper
+(`sdk-message.mapper.spec.ts`) e no reducer/mapper do web e do mobile; S-35 e S-36 (a tool negada)
+continuam sem cobertura, por não terem sido tocados. **`pnpm verify`/`verify:full` não foram rodados**
+para esta mudança — só `tsc`, `eslint` e os testes unitários dos arquivos tocados, nos três lados.
+
 ### B-11 — A mensagem sintética e o eco 🔲
 
 O [§5](../../discovery/09-perdas-do-backend-na-conversa.md#5-perdas-dentro-da-mensagem-de-usuário),

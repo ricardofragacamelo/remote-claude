@@ -391,6 +391,24 @@ SessionTask? _taskOf(Object? entry) {
       : SessionTask(id: id, title: title, status: status, activeTitle: _text(entry, 'activeTitle'));
 }
 
+/// How the contract names an outcome, to the enum of it — never the engine's own subtype
+/// (ADR-025). A value this build does not recognise reads as [TurnOutcome.failed]: an unlabelled
+/// failure is still the truth, where a guess at its label would not be.
+const Map<String, TurnOutcome> _turnOutcomes = <String, TurnOutcome>{
+  'completed': TurnOutcome.completed,
+  'limitReached': TurnOutcome.limitReached,
+  'budgetExceeded': TurnOutcome.budgetExceeded,
+  'failed': TurnOutcome.failed,
+};
+
+/// The outcome of a `turn.completed` — absent entirely, it is [TurnOutcome.completed]: a backend
+/// from before this field existed never sent a failed-looking turn at all, so one with no outcome
+/// reads the same way it always did, not as a failure that was never one.
+TurnOutcome _turnOutcome(Map<String, Object?> payload) {
+  final String? outcome = _text(payload, 'outcome');
+  return outcome == null ? TurnOutcome.completed : _turnOutcomes[outcome] ?? TurnOutcome.failed;
+}
+
 SessionEvent _turn(_Frame frame) {
   final String? turnId = _text(frame.payload, 'turnId');
   final String? costUsd = _text(frame.payload, 'costUsd');
@@ -409,6 +427,7 @@ SessionEvent _turn(_Frame frame) {
     frame.seq,
     TurnSummary(
       turnId: turnId,
+      outcome: _turnOutcome(frame.payload),
       costUsd: costUsd,
       durationMs: durationMs,
       inputTokens: _int(tokens, 'inputTokens'),

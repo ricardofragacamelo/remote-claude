@@ -1382,6 +1382,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionTurnNoTokens => 'no token count';
 
   @override
+  String get sessionTurnOutcomeLimitReached => 'The turn did not finish: turn limit reached';
+
+  @override
+  String get sessionTurnOutcomeBudgetExceeded =>
+      'The turn did not finish: the session\'s budget ran out';
+
+  @override
+  String get sessionTurnOutcomeFailed => 'The turn failed, with no answer';
+
+  @override
   String get sessionCompactedManual => 'Compacted on request: what came before is a summary now';
 
   @override

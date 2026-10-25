@@ -1387,6 +1387,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionTurnNoTokens => 'sem contagem de tokens';
 
   @override
+  String get sessionTurnOutcomeLimitReached => 'O turno não terminou: limite de turnos atingido';
+
+  @override
+  String get sessionTurnOutcomeBudgetExceeded =>
+      'O turno não terminou: orçamento da sessão esgotado';
+
+  @override
+  String get sessionTurnOutcomeFailed => 'O turno falhou, sem resposta';
+
+  @override
   String get sessionCompactedManual => 'Compactada a pedido: o que veio antes agora é um resumo';
 
   @override
@@ -2395,7 +2405,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get liveStatusStarting => 'Iniciando';
 
   @override
-  String get liveStatusIdle => 'Parada';
+  String get liveStatusIdle => 'Ociosa';
 
   @override
   String get liveStatusThinking => 'Pensando';

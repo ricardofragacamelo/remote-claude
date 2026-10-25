@@ -1,4 +1,4 @@
-import { Archive, Receipt, Undo2 } from 'lucide-react';
+import { Archive, Receipt, TriangleAlert, Undo2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -75,10 +75,22 @@ function tokensOf(usage: TurnUsage | null, locale: string, t: TFunction): string
  * reader's language (plan 08, B-23, S-97). It says what the engine reported and nothing else: no
  * cost from an engine that reports none (plan 28, S-86) — and a cost of zero as zero (S-87) —, and a
  * turn with no count says so, never `NaN` (S-98).
+ *
+ * A turn that did not end in `completed` says so instead of the summary above — its own `usage` and
+ * `durationMs` are what the engine reports for that outcome, which a crash may leave zeroed, and a
+ * row that showed them next to a real-looking cost would read as an answer nobody gave (plan 27,
+ * B-10).
  */
 export function TurnRow({ turn }: { readonly turn: TurnSummary }): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
+
+  if (turn.outcome !== 'completed') {
+    return (
+      <SystemRow icon={TriangleAlert} text={t(`sessions.turn.outcome.${turn.outcome}`)} />
+    );
+  }
+
   const cost =
     turn.costUsd === null
       ? []
