@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
+import { settingsAddress } from '../fixtures/agent-settings';
 import { callApi } from '../fixtures/api';
 import { openSignedIn } from '../fixtures/auth';
 import type { AuthenticatedUser } from '../fixtures/auth';
@@ -52,15 +53,6 @@ test.use({ viewport: { width: 1920, height: 1080 } });
 
 const suite = workbenchSuite(settings.user);
 const opened = sessionsOpened(suite.user);
-
-/** The address of the agent settings screen, for Claude, with the section and the folder of a test. */
-function settingsAddress(section: string, folder?: string): string {
-  const search = new URLSearchParams({ section });
-  if (folder !== undefined) {
-    search.set('folder', folder);
-  }
-  return `/settings/agents/claude?${search.toString()}`;
-}
 
 /** The form of one scope of defaults — "Your default" or "The default of …" — by its heading. */
 function formOf(page: Page, heading: string): Locator {

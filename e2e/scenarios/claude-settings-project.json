@@ -1,0 +1,11 @@
+{
+  "id": "13·S-192…S-194",
+  "title": "a project's own configuration: a slash command written from the template reaches the panel's own menu, a folder that falls outside the allowlist shows the translated refusal with a way back, and a fixture user skill shows its own badge",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "commandName": "release-notes",
+    "command": "/release-notes",
+    "refused": "This installation does not allow",
+    "userSkillName": "fixture-user-skill"
+  }
+}
