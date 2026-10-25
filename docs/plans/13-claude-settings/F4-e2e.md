@@ -34,7 +34,7 @@ tempo do [plano 14](../14-audit-explained/README.md) se já existir); conferir n
 de recarregar, que o valor do segredo nunca volta; abrir sessão, desligar o servidor pela tela e ver o
 indicador da sessão mudar. Cenários S-187…S-189.
 
-### B-43 — E2E: `.mcp.json` e tool MCP 🔲
+### B-43 — E2E: `.mcp.json` e tool MCP ✅
 
 Pasta com `.mcp.json` de fixture: aparece pendente; aprovar; a sessão nova tem o servidor; alterar o
 arquivo põe a entrada em "alterado" e a sessão seguinte não o tem. O SDK roteirizado emite um

@@ -298,8 +298,8 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-187 | adicionar servidor MCP pelo segundo passo e vê-lo na trilha | eq | e2e | — | B-42 | ✅ |
 | S-188 | o segredo nunca volta inteiro — nem na resposta, nem na tela, nem depois de recarregar | err | e2e | — | B-42 | ✅ |
 | S-189 | desligar um servidor com sessão viva muda o indicador da sessão | est | e2e | — | B-42 | ✅ |
-| S-190 | `.mcp.json` pendente → aprovar → sessão nova com o servidor; alterar o arquivo → pendente de novo | est | e2e | — | B-43 | ⬜ |
-| S-191 | tool MCP pede permissão pelo card; negar → não roda | est | e2e | — | B-43 | ⬜ |
+| S-190 | `.mcp.json` pendente → aprovar → sessão nova com o servidor; alterar o arquivo → pendente de novo | est | e2e | — | B-43 | ✅ |
+| S-191 | tool MCP pede permissão pelo card; negar → não roda | est | e2e | — | B-43 | ✅ |
 | S-192 | criar slash command pelo modelo e usá-lo no menu do painel | eq | e2e | — | B-44 | ⬜ |
 | S-193 | pasta que saiu da allowlist mostra a recusa traduzida, com caminho de volta | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-44 | ⬜ |
 | S-194 | uma skill de usuário aparece com o selo, e desligar a origem pela tela a tira do `/` do painel | est | e2e | — | B-44 | ⬜ |
