@@ -959,8 +959,14 @@
   "historyExternalNote": "This conversation began outside this app. Resuming it here continues it under a new id: the editor or terminal it came from will not see the answers given here.",
   "@historyExternalNote": { "description": "Said before resuming a conversation begun elsewhere (D-04)" },
 
+  "historyExternalNoteTitle": "Started outside this app",
+  "@historyExternalNoteTitle": { "description": "Collapsed line that opens historyExternalNote in a sheet" },
+
   "historyActiveElsewhereNote": "Something else wrote this conversation a moment ago — the editor or a terminal may have it open. Continuing it here makes a copy, and the two will diverge.",
   "@historyActiveElsewhereNote": { "description": "Said while the conversation's activity is activeElsewhere (plan 22, B-26); the same text as the web's history.screen.activeElsewhereNote" },
+
+  "historyActiveElsewhereNoteTitle": "Written elsewhere a moment ago",
+  "@historyActiveElsewhereNoteTitle": { "description": "Collapsed line that opens historyActiveElsewhereNote in a sheet" },
 
   "historyFollowWorking": "Working in another client…",
   "@historyFollowWorking": { "description": "The followed conversation seems to have a turn running in another client — an inference (plan 22, D-12)" },
@@ -1884,6 +1890,8 @@
   "@fileViewerAgentWaiting": {"description": "A question waits in the session the viewer was opened from; {agent} is the display name of the engine", "placeholders": {"agent": {"type": "String"}, "count": {"type": "int"}}},
   "fileViewerBackToSession": "Back to the session",
   "@fileViewerBackToSession": {"description": "Goes to the card of the question"},
+  "fileViewerBackToSessions": "Back to the sessions list",
+  "@fileViewerBackToSessions": {"description": "Goes to the folder screen the file viewer was opened under, bypassing the file tree (S-104)"},
   "fileViewerImage": "Image {name}",
   "@fileViewerImage": {"description": "What a screen reader says of an image of the folder", "placeholders": {"name": {"type": "String"}}},
   "markdownPreview": "Show the preview",

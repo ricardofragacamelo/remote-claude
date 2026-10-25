@@ -481,7 +481,11 @@
 
   "historyExternalNote": "Esta conversa começou fora deste app. Retomá-la aqui a continua com um novo id: o editor ou o terminal de onde ela veio não verá as respostas dadas aqui.",
 
+  "historyExternalNoteTitle": "Começou fora deste app",
+
   "historyActiveElsewhereNote": "Outro processo escreveu nesta conversa há pouco — o editor ou um terminal pode estar com ela aberta. Continuar aqui cria uma cópia, e as duas vão divergir.",
+
+  "historyActiveElsewhereNoteTitle": "Escrita em outro lugar há pouco",
 
   "historyFollowWorking": "Trabalhando em outro cliente…",
 
@@ -958,6 +962,7 @@
   "fileViewerBack": "Voltar",
   "fileViewerAgentWaiting": "{count, plural, =1{O {agent} está esperando sua resposta} other{O {agent} está esperando {count} respostas}}",
   "fileViewerBackToSession": "Voltar à sessão",
+  "fileViewerBackToSessions": "Voltar para a lista de sessões",
   "fileViewerImage": "Imagem {name}",
   "markdownPreview": "Ver a prévia",
   "markdownSource": "Ver a fonte",

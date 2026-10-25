@@ -1875,11 +1875,23 @@ abstract class AppLocalizations {
   /// **'This conversation began outside this app. Resuming it here continues it under a new id: the editor or terminal it came from will not see the answers given here.'**
   String get historyExternalNote;
 
+  /// Collapsed line that opens historyExternalNote in a sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Started outside this app'**
+  String get historyExternalNoteTitle;
+
   /// Said while the conversation's activity is activeElsewhere (plan 22, B-26); the same text as the web's history.screen.activeElsewhereNote
   ///
   /// In en, this message translates to:
   /// **'Something else wrote this conversation a moment ago — the editor or a terminal may have it open. Continuing it here makes a copy, and the two will diverge.'**
   String get historyActiveElsewhereNote;
+
+  /// Collapsed line that opens historyActiveElsewhereNote in a sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Written elsewhere a moment ago'**
+  String get historyActiveElsewhereNoteTitle;
 
   /// The followed conversation seems to have a turn running in another client — an inference (plan 22, D-12)
   ///
@@ -4400,6 +4412,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back to the session'**
   String get fileViewerBackToSession;
+
+  /// Goes to the folder screen the file viewer was opened under, bypassing the file tree (S-104)
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the sessions list'**
+  String get fileViewerBackToSessions;
 
   /// What a screen reader says of an image of the folder
   ///

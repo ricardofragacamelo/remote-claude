@@ -146,7 +146,35 @@ void main() {
       expect(find.byType(Image), findsNothing);
     });
 
-    testWidgets('S-83 · a wide table scrolls in its own box, and the page does not', (
+    testWidgets('S-83 · wrap off — a wide table scrolls in its own box, and the page does not', (
+      WidgetTester tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(360, 640)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final String header = List<String>.generate(14, (int i) => 'column $i').join(' | ');
+      final String rule = List<String>.filled(14, '---').join('|');
+      final String row = List<String>.generate(14, (int i) => 'value $i').join(' | ');
+      markdown('wide.md', '| $header |\n|$rule|\n| $row |\n');
+      await pumpViewer(tester, 'wide.md');
+      await tester.tap(find.byTooltip(l10n.fileViewerMenu));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.fileViewerWrap));
+      await tester.pumpAndSettle();
+
+      final Finder box = find.ancestor(
+        of: find.byType(Table),
+        matching: find.byWidgetPredicate(
+          (Widget w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal,
+        ),
+      );
+      expect(box, findsOneWidget);
+      expect(tester.getSize(find.byType(Table)).width, greaterThan(360));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('S-103 · wrap on (the default) — a wide table reflows instead of scrolling', (
       WidgetTester tester,
     ) async {
       tester.view
@@ -159,14 +187,16 @@ void main() {
       markdown('wide.md', '| $header |\n|$rule|\n| $row |\n');
       await pumpViewer(tester, 'wide.md');
 
-      final Finder box = find.ancestor(
-        of: find.byType(Table),
-        matching: find.byWidgetPredicate(
-          (Widget w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal,
+      expect(
+        find.ancestor(
+          of: find.byType(Table),
+          matching: find.byWidgetPredicate(
+            (Widget w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal,
+          ),
         ),
+        findsNothing,
       );
-      expect(box, findsOneWidget);
-      expect(tester.getSize(find.byType(Table)).width, greaterThan(360));
+      expect(tester.getSize(find.byType(Table)).width, lessThanOrEqualTo(360));
       expect(tester.takeException(), isNull);
     });
 

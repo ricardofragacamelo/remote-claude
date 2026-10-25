@@ -139,12 +139,16 @@ class _FilesPanelState extends ConsumerState<FilesPanel> {
 
     _opening = true;
     try {
-      // The panel steps aside: "back" — and "back to the session" — lands on the screen itself,
-      // with its cards in reach; the level stays where it was, for the next time it opens (D-33).
       final Future<void> opened = context.push<void>(
         viewerRouteFor(widget.folder, file.path, sessionId: widget.sessionId),
       );
-      Scaffold.maybeOf(context)?.closeEndDrawer();
+      // The session's cards need the panel out of the way while a turn waits on an answer, so
+      // "back" lands on the screen itself, with the level kept for the next time it opens (D-33).
+      // The folder screen has nothing under it to cover, so its tree stays open and is there again
+      // when "back" returns to it.
+      if (widget.sessionId != null) {
+        Scaffold.maybeOf(context)?.closeEndDrawer();
+      }
       await opened;
     } finally {
       _opening = false;

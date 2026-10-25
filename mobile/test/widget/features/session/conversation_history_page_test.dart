@@ -411,14 +411,14 @@ void main() {
     ) async {
       await pumpHistory(tester, page: latest(beganElsewhere: true));
 
-      expect(find.text(l10n.historyExternalNote), findsOneWidget);
+      expect(find.text(l10n.historyExternalNoteTitle), findsOneWidget);
       await leave(tester);
     });
 
     testWidgets('a conversation of ours needs no such note', (WidgetTester tester) async {
       await pumpHistory(tester);
 
-      expect(find.text(l10n.historyExternalNote), findsNothing);
+      expect(find.text(l10n.historyExternalNoteTitle), findsNothing);
       await leave(tester);
     });
   });
@@ -460,13 +460,13 @@ void main() {
     ) async {
       await pumpFollowed(tester, page: latest(activity: ConversationActivity.activeElsewhere));
 
-      expect(find.text(l10n.historyActiveElsewhereNote), findsOneWidget);
+      expect(find.text(l10n.historyActiveElsewhereNoteTitle), findsOneWidget);
 
       await arrive(tester, appendedOf(1, activity: ConversationActivity.idle));
-      expect(find.text(l10n.historyActiveElsewhereNote), findsNothing);
+      expect(find.text(l10n.historyActiveElsewhereNoteTitle), findsNothing);
 
       await arrive(tester, appendedOf(2));
-      expect(find.text(l10n.historyActiveElsewhereNote), findsOneWidget);
+      expect(find.text(l10n.historyActiveElsewhereNoteTitle), findsOneWidget);
       await leave(tester);
     });
 

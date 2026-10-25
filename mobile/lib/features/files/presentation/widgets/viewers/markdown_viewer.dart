@@ -25,6 +25,7 @@ class MarkdownViewer extends StatefulWidget {
     required this.folder,
     required this.path,
     required this.content,
+    required this.wrap,
     super.key,
     this.sessionId,
   });
@@ -33,6 +34,10 @@ class MarkdownViewer extends StatefulWidget {
   final String path;
   final String content;
   final String? sessionId;
+
+  /// Whether a wide table reflows to the screen instead of scrolling sideways on its own (S-83) —
+  /// the same "Quebra de linha" choice the viewer's raw text makes.
+  final bool wrap;
 
   @override
   State<MarkdownViewer> createState() => _MarkdownViewerState();
@@ -57,6 +62,7 @@ class _MarkdownViewerState extends State<MarkdownViewer> {
         child: SafeMarkdown(
           data: widget.content,
           from: widget.path,
+          wrap: widget.wrap,
           onRelativeLink: (String path, {String? anchor, int? line}) => unawaited(
             context.push<void>(viewerRouteFor(widget.folder, path, sessionId: widget.sessionId)),
           ),

@@ -14,6 +14,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:remote_claude/core/navigation/page_observer.dart';
+import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/byte_size.dart';
 import 'package:remote_claude/core/widgets/loading_view.dart';
@@ -95,6 +96,11 @@ class _FileViewerPageState extends ConsumerState<FileViewerPage>
       title: widget.path.split('/').last,
       subtitle: widget.path,
       actions: <Widget>[
+        IconButton(
+          tooltip: AppLocalizations.of(context).fileViewerBackToSessions,
+          icon: const Icon(Icons.folder_open),
+          onPressed: () => context.go(folderRouteFor(widget.folder)),
+        ),
         if (_kind == ViewerKind.markdown) _sourceToggle(AppLocalizations.of(context)),
         IconButton(
           tooltip: AppLocalizations.of(context).filesDownload,
@@ -227,6 +233,7 @@ class _TextBody extends _FileBody {
                   folder: folder,
                   path: path,
                   content: document.content,
+                  wrap: ref.watch(wrapSettingProvider),
                   sessionId: sessionId,
                 )
               : TextViewer(

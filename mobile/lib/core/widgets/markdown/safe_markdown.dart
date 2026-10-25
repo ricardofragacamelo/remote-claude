@@ -31,6 +31,7 @@ class SafeMarkdown extends StatelessWidget {
     this.codeBuilder,
     this.fileLinkOf,
     this.shrinkWrap = false,
+    this.wrap = false,
     super.key,
   });
 
@@ -41,6 +42,11 @@ class SafeMarkdown extends StatelessWidget {
   /// conversation, say) — rather than scrolling on its own, the default, for a whole page of its
   /// own (the file preview).
   final bool shrinkWrap;
+
+  /// Whether a table reflows to the viewport instead of scrolling sideways on its own (S-83): its
+  /// columns share the available width and a cell's text wraps, the same choice the file viewer's
+  /// "Quebra de linha" makes for its raw text.
+  final bool wrap;
 
   /// Where [data] itself lives, for a link or image relative to it — `''` when it lives nowhere a
   /// relative link could resolve against (a chat message, say).
@@ -92,9 +98,10 @@ class SafeMarkdown extends StatelessWidget {
             ),
           },
         },
-        styleSheet: MarkdownStyleSheet.fromTheme(
-          theme,
-        ).copyWith(tableColumnWidth: const IntrinsicColumnWidth(), code: identifierStyle(context)),
+        styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+          tableColumnWidth: wrap ? const FlexColumnWidth() : const IntrinsicColumnWidth(),
+          code: identifierStyle(context),
+        ),
         onTapLink: (String text, String? href, String title) =>
             unawaited(_handleLink(context, href ?? '')),
         imageBuilder: (Uri uri, String? title, String? alt) => _image(context, uri.toString(), alt),

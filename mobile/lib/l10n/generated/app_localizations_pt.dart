@@ -1074,8 +1074,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'Esta conversa começou fora deste app. Retomá-la aqui a continua com um novo id: o editor ou o terminal de onde ela veio não verá as respostas dadas aqui.';
 
   @override
+  String get historyExternalNoteTitle => 'Começou fora deste app';
+
+  @override
   String get historyActiveElsewhereNote =>
       'Outro processo escreveu nesta conversa há pouco — o editor ou um terminal pode estar com ela aberta. Continuar aqui cria uma cópia, e as duas vão divergir.';
+
+  @override
+  String get historyActiveElsewhereNoteTitle => 'Escrita em outro lugar há pouco';
 
   @override
   String get historyFollowWorking => 'Trabalhando em outro cliente…';
@@ -2602,6 +2608,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get fileViewerBackToSession => 'Voltar à sessão';
+
+  @override
+  String get fileViewerBackToSessions => 'Voltar para a lista de sessões';
 
   @override
   String fileViewerImage(String name) {

@@ -118,6 +118,7 @@ void main() {
         ),
         marker(draftRoute, 'draft'),
         marker('/sessions/:sessionId', 'session'),
+        marker(fileViewerRoute, 'viewer'),
         GoRoute(
           path: historyRoute,
           builder: (BuildContext context, GoRouterState state) =>
@@ -331,6 +332,28 @@ void main() {
 
         expect(
           find.descendant(of: find.byType(Drawer), matching: find.text('a.md')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'S-105 · opening a file leaves the panel as it was: back finds it open, at the same level',
+      (WidgetTester tester) async {
+        await pumpFolder(tester);
+        await tester.tap(find.byTooltip(l10n.filesPanelOpen));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('README.md'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('viewer'), findsOneWidget);
+
+        GoRouter.of(tester.element(find.textContaining('viewer'))).pop();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(Drawer), findsOneWidget);
+        expect(
+          find.descendant(of: find.byType(Drawer), matching: find.text('README.md')),
           findsOneWidget,
         );
       },

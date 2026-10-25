@@ -202,10 +202,25 @@ class _ResumeBar extends ConsumerWidget {
         if (notFollowed != null) FailureLine(failure: notFollowed),
         // The promise is editor → phone, and only that: a conversation that began elsewhere goes
         // on under a new id, and the editor will never see what is said here. The screen says so
-        // before anybody resumes it, not after (D-04).
-        if (board.beganElsewhere) NoteLine(l10n.historyExternalNote),
+        // before anybody resumes it, not after (D-04). One line, open on tap, so the bar does not
+        // push the button off screen (S-101).
+        if (board.beganElsewhere)
+          MessageStrip(
+            message: BannerMessage(
+              icon: Icons.info_outline,
+              title: l10n.historyExternalNoteTitle,
+              body: l10n.historyExternalNote,
+            ),
+          ),
         if (board.isActiveElsewhere)
-          Semantics(liveRegion: true, child: NoteLine(l10n.historyActiveElsewhereNote)),
+          MessageStrip(
+            message: BannerMessage(
+              icon: Icons.warning_amber_outlined,
+              title: l10n.historyActiveElsewhereNoteTitle,
+              body: l10n.historyActiveElsewhereNote,
+              emphasis: true,
+            ),
+          ),
         // Disabled with the reason said out loud, never disabled in silence.
         if (!connected) NoteLine(l10n.historyResumeOffline),
         if (resume.wasNotSent) NoteLine(l10n.historyResumeNotSent),
