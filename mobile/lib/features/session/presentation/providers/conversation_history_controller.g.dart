@@ -37,7 +37,7 @@ final class ConversationHistoryControllerProvider
   /// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
   ConversationHistoryControllerProvider._({
     required ConversationHistoryControllerFamily super.from,
-    required ConversationKey super.argument,
+    required (ConversationKey, String?) super.argument,
   }) : super(
          retry: null,
          name: r'conversationHistoryControllerProvider',
@@ -53,7 +53,7 @@ final class ConversationHistoryControllerProvider
   String toString() {
     return r'conversationHistoryControllerProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -71,7 +71,7 @@ final class ConversationHistoryControllerProvider
   }
 }
 
-String _$conversationHistoryControllerHash() => r'74c5ca4da1d7da60ef55e96c45348e99a783658a';
+String _$conversationHistoryControllerHash() => r'b00e8abe25569982c82587190b5da894af5528d8';
 
 /// The history of one conversation, keyed by it.
 ///
@@ -88,7 +88,7 @@ final class ConversationHistoryControllerFamily extends $Family
           AsyncValue<HistoryBoard>,
           HistoryBoard,
           FutureOr<HistoryBoard>,
-          ConversationKey
+          (ConversationKey, String?)
         > {
   ConversationHistoryControllerFamily._()
     : super(
@@ -107,8 +107,8 @@ final class ConversationHistoryControllerFamily extends $Family
   /// comes back and when the socket does — always from the last entry it has, so nothing is missed and
   /// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
 
-  ConversationHistoryControllerProvider call(ConversationKey conversation) =>
-      ConversationHistoryControllerProvider._(argument: conversation, from: this);
+  ConversationHistoryControllerProvider call(ConversationKey conversation, String? workspacePath) =>
+      ConversationHistoryControllerProvider._(argument: (conversation, workspacePath), from: this);
 
   @override
   String toString() => r'conversationHistoryControllerProvider';
@@ -123,10 +123,11 @@ final class ConversationHistoryControllerFamily extends $Family
 /// nothing comes twice (docs/architecture/mobile/04-ui.md, plan 22 · F4).
 
 abstract class _$ConversationHistoryController extends $AsyncNotifier<HistoryBoard> {
-  late final _$args = ref.$arg as ConversationKey;
-  ConversationKey get conversation => _$args;
+  late final _$args = ref.$arg as (ConversationKey, String?);
+  ConversationKey get conversation => _$args.$1;
+  String? get workspacePath => _$args.$2;
 
-  FutureOr<HistoryBoard> build(ConversationKey conversation);
+  FutureOr<HistoryBoard> build(ConversationKey conversation, String? workspacePath);
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
@@ -139,6 +140,6 @@ abstract class _$ConversationHistoryController extends $AsyncNotifier<HistoryBoa
               Object?,
               Object?
             >;
-    return element.handleCreate(ref, () => build(_$args));
+    return element.handleCreate(ref, () => build(_$args.$1, _$args.$2));
   }
 }

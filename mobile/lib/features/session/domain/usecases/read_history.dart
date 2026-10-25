@@ -12,6 +12,9 @@ class ReadHistory {
   final HistoryRepository _history;
 
   /// The latest messages of [conversation], or the page before [cursor].
-  Future<HistoryPage> call(ConversationKey conversation, {String? cursor}) =>
-      _history.page(conversation, cursor: cursor);
+  ///
+  /// [workspacePath] is the folder the caller already believes the conversation runs in, when it
+  /// knows one (S-163).
+  Future<HistoryPage> call(ConversationKey conversation, {String? cursor, String? workspacePath}) =>
+      _history.page(conversation, cursor: cursor, workspacePath: workspacePath);
 }

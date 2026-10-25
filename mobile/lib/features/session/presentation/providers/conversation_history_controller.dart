@@ -168,10 +168,15 @@ class ConversationHistoryController extends _$ConversationHistoryController {
   /// The socket is ready.
   bool _connected = false;
 
+  /// The folder the route already said the conversation runs in, when it did — carried on every
+  /// read of it, never just the first (S-163).
+  String? _workspacePath;
+
   @override
-  Future<HistoryBoard> build(ConversationKey conversation) async {
+  Future<HistoryBoard> build(ConversationKey conversation, String? workspacePath) async {
     _keepForAWhile();
     _pageRead = false;
+    _workspacePath = workspacePath;
     _follow = ref.watch(followTranscriptProvider);
 
     final StreamSubscription<FollowUpdate> updates = _follow.updates.listen(_onUpdate);
@@ -186,7 +191,10 @@ class ConversationHistoryController extends _$ConversationHistoryController {
       fireImmediately: true,
     );
 
-    final HistoryPage page = await ref.watch(readHistoryProvider)(conversation);
+    final HistoryPage page = await ref.watch(readHistoryProvider)(
+      conversation,
+      workspacePath: workspacePath,
+    );
     _read(page);
     return HistoryBoard.from(page);
   }
@@ -211,7 +219,11 @@ class ConversationHistoryController extends _$ConversationHistoryController {
     );
 
     try {
-      final HistoryPage page = await ref.read(readHistoryProvider)(conversation, cursor: cursor);
+      final HistoryPage page = await ref.read(readHistoryProvider)(
+        conversation,
+        cursor: cursor,
+        workspacePath: _workspacePath,
+      );
 
       _settle(
         (HistoryBoard now) => now.copyWith(
@@ -274,7 +286,9 @@ class ConversationHistoryController extends _$ConversationHistoryController {
     _pageRead = false;
 
     final AsyncValue<HistoryBoard> next = await AsyncValue.guard<HistoryBoard>(
-      () async => HistoryBoard.from(await ref.read(readHistoryProvider)(conversation)),
+      () async => HistoryBoard.from(
+        await ref.read(readHistoryProvider)(conversation, workspacePath: _workspacePath),
+      ),
     );
 
     if (!ref.mounted) {

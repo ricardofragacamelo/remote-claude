@@ -18,11 +18,15 @@ class _Api implements HistoryApiDataSource {
   _Api(this.body);
 
   final Object? body;
-  final List<(ConversationKey, String?)> asked = <(ConversationKey, String?)>[];
+  final List<(ConversationKey, String?, String?)> asked = <(ConversationKey, String?, String?)>[];
 
   @override
-  Future<Object?> messages(ConversationKey conversation, {String? cursor}) async {
-    asked.add((conversation, cursor));
+  Future<Object?> messages(
+    ConversationKey conversation, {
+    String? cursor,
+    String? workspacePath,
+  }) async {
+    asked.add((conversation, cursor, workspacePath));
     return body;
   }
 }
@@ -42,10 +46,20 @@ void main() {
       api,
     ).page(conversationOf('conv-1'), cursor: 'm5');
 
-    expect(api.asked.single, (conversationOf('conv-1'), 'm5'));
+    expect(api.asked.single, (conversationOf('conv-1'), 'm5', null));
     expect(page.conversation, conversationOf('conv-1'));
     expect(page.events.single, isA<MessageFinished>());
     expect(page.nextCursor, 'm0');
+  });
+
+  test('carries the folder it already knows, as a hint — S-163', () async {
+    final _Api api = _Api(body);
+
+    await HistoryRepositoryImpl(
+      api,
+    ).page(conversationOf('conv-1'), workspacePath: '/home/someone/project');
+
+    expect(api.asked.single, (conversationOf('conv-1'), null, '/home/someone/project'));
   });
 
   test('the parse is the injected one, so where it runs is a decision, not an accident', () async {
@@ -76,6 +90,6 @@ void main() {
 
     await ReadHistory(HistoryRepositoryImpl(api))(conversationOf('conv-1'), cursor: 'm2');
 
-    expect(api.asked.single, (conversationOf('conv-1'), 'm2'));
+    expect(api.asked.single, (conversationOf('conv-1'), 'm2', null));
   });
 }

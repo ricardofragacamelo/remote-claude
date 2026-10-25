@@ -122,7 +122,7 @@ void main() {
   });
 
   ConversationHistoryControllerProvider provider() =>
-      conversationHistoryControllerProvider(conversationOf('conv-1'));
+      conversationHistoryControllerProvider(conversationOf('conv-1'), null);
 
   ProviderSubscription<AsyncValue<HistoryBoard>> hold() {
     final ProviderSubscription<AsyncValue<HistoryBoard>> held = container.listen(
@@ -247,6 +247,7 @@ void main() {
       final ProviderContainer local = ProviderContainer(overrides: overrides());
       final ConversationHistoryControllerProvider watched = conversationHistoryControllerProvider(
         conversationOf('conv-1'),
+        null,
       );
 
       local.listen(watched, (Object? previous, Object? next) {}).close();

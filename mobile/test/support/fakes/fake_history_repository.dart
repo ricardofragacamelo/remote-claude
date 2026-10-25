@@ -25,7 +25,11 @@ class FakeHistoryRepository implements HistoryRepository {
   void answer(HistoryPage page, {String? cursor}) => _pages[(page.conversation, cursor)] = page;
 
   @override
-  Future<HistoryPage> page(ConversationKey conversation, {String? cursor}) async {
+  Future<HistoryPage> page(
+    ConversationKey conversation, {
+    String? cursor,
+    String? workspacePath,
+  }) async {
     reads.add((conversation, cursor));
     await gate?.future;
 

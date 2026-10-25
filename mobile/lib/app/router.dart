@@ -189,8 +189,10 @@ GoRouter buildRouter(Ref ref) {
           GoRoute(
             path: ':engine/:conversationId',
             name: 'history-conversation',
-            builder: (BuildContext context, GoRouterState state) =>
-                ConversationHistoryPage(conversation: _conversationOf(state)),
+            builder: (BuildContext context, GoRouterState state) => ConversationHistoryPage(
+              conversation: _conversationOf(state),
+              workspacePath: state.uri.queryParameters[workspacePathParameter],
+            ),
           ),
         ],
       ),

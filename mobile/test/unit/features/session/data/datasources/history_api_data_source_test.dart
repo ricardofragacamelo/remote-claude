@@ -41,6 +41,14 @@ void main() {
     expect(http.adapter.requests.single.uri.queryParameters, <String, String>{'cursor': 'msg-9'});
   });
 
+  test('sends the folder it already knows, as a hint — never on its own — S-163', () async {
+    await source().messages(conversationOf('c-1'), workspacePath: '/home/someone/project');
+
+    expect(http.adapter.requests.single.uri.queryParameters, <String, String>{
+      'workspacePath': '/home/someone/project',
+    });
+  });
+
   test('both edges are logged by the client, and what was said never is', () async {
     http.adapter.body =
         '{"session":{"conversation":{"engine":"engine-a","id":"c-1"}},"events":[{"type":"message.completed",'

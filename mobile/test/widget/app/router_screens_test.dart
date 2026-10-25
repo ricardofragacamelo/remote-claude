@@ -240,6 +240,12 @@ void main() {
       tester.widget<ConversationHistoryPage>(find.byType(ConversationHistoryPage)).conversation,
       conversationOf('conv/7'),
     );
+    // The route already carries it, as a hint for a transcript too heavy for the engine to find a
+    // folder of by id alone (S-163).
+    expect(
+      tester.widget<ConversationHistoryPage>(find.byType(ConversationHistoryPage)).workspacePath,
+      '/home/someone/project',
+    );
     // Nested, so "back" lands on the conversations of the same folder.
     expect(
       tester

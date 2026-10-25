@@ -27,8 +27,14 @@ class HistoryRepositoryImpl implements HistoryRepository {
   final HistoryParser _parse;
 
   @override
-  Future<HistoryPage> page(ConversationKey conversation, {String? cursor}) async {
-    final HistoryPage? page = await _parse(await _api.messages(conversation, cursor: cursor));
+  Future<HistoryPage> page(
+    ConversationKey conversation, {
+    String? cursor,
+    String? workspacePath,
+  }) async {
+    final HistoryPage? page = await _parse(
+      await _api.messages(conversation, cursor: cursor, workspacePath: workspacePath),
+    );
 
     // An answer that does not say which conversation it is a page of is not one this build can
     // show — and the screen still owes the person a sentence, so it becomes a failure.

@@ -38,10 +38,14 @@ import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The history of one conversation.
 class ConversationHistoryPage extends ConsumerStatefulWidget {
-  const ConversationHistoryPage({required this.conversation, super.key});
+  const ConversationHistoryPage({required this.conversation, super.key, this.workspacePath});
 
   /// Which conversation — its engine and its id. It comes from the route, never from a provider.
   final ConversationKey conversation;
+
+  /// The folder the route already said the conversation runs in, when it did — a hint for a
+  /// transcript too large for the engine's own id-only lookup to resolve a folder from (S-163).
+  final String? workspacePath;
 
   @override
   ConsumerState<ConversationHistoryPage> createState() => _ConversationHistoryPageState();
@@ -56,7 +60,12 @@ class _ConversationHistoryPageState extends ConsumerState<ConversationHistoryPag
     super.initState();
     _lifecycle = AppLifecycleListener(
       onStateChange: (AppLifecycleState lifecycle) => ref
-          .read(conversationHistoryControllerProvider(widget.conversation).notifier)
+          .read(
+            conversationHistoryControllerProvider(
+              widget.conversation,
+              widget.workspacePath,
+            ).notifier,
+          )
           .lifecycleChanged(lifecycle),
     );
   }
@@ -73,6 +82,7 @@ class _ConversationHistoryPageState extends ConsumerState<ConversationHistoryPag
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ConversationHistoryControllerProvider provider = conversationHistoryControllerProvider(
       conversation,
+      widget.workspacePath,
     );
     final AsyncValue<HistoryBoard> value = ref.watch(provider);
     final HistoryBoard? board = value.value;
