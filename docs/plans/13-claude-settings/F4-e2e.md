@@ -50,7 +50,7 @@ aparecem só leitura; uma skill de usuário de fixture aparece com o selo Usuár
 tira do `/` do painel; pasta que saiu da allowlist mostra a recusa traduzida com caminho de volta.
 Cenários S-192…S-194.
 
-### B-45 — E2E: usabilidade e acessibilidade 🔲
+### B-45 — E2E: usabilidade e acessibilidade ✅
 
 axe sem violação nas sete seções (as do núcleo — modelos e padrões, MCP — e as da extensão do Claude); o fluxo de adicionar servidor inteiro pelo teclado; viewport de
 celular sem scroll horizontal, com a navegação de seções virando seletor; a gaveta de ajuda abre, está

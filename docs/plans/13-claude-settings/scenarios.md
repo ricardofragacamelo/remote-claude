@@ -303,7 +303,7 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-192 | criar slash command pelo modelo e usá-lo no menu do painel | eq | e2e | — | B-44 | ✅ |
 | S-193 | pasta que saiu da allowlist mostra a recusa traduzida, com caminho de volta | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-44 | ✅ |
 | S-194 | uma skill de usuário aparece com o selo, e desligar a origem pela tela a tira do `/` do painel | est | e2e | — | B-44 | ✅ |
-| S-195 | axe sem violação, teclado de ponta a ponta e viewport de celular sem scroll horizontal nas sete seções; com o motor de teste do plano 28, sem `mcp` e sem extensão, só as seções do núcleo que ele anuncia aparecem | eq | e2e | — | B-45 | ⬜ |
+| S-195 | axe sem violação, teclado de ponta a ponta e viewport de celular sem scroll horizontal nas sete seções; com o motor de teste do plano 28, sem `mcp` e sem extensão, só as seções do núcleo que ele anuncia aparecem | eq | e2e | — | B-45 | ✅ |
 | S-196 | `smoke-live`: modelos e conta reais, servidor de fixture conectado, tool MCP real passando pelo `canUseTool` | eq | e2e | — | B-46 | ⬜ |
 | S-197 | `smoke-live`: skill de usuário real carrega pelo plugin sintético, a `allow` de `~/.claude/settings.json` continua sem dispensar o `canUseTool`, e a política de shell inline vale como a D-21 decidiu | err | e2e | — | B-46 | ⬜ |
 | S-198 | `smoke-live`: subagent de projeto com `permissionMode: acceptEdits` não escreve sem o `canUseTool` — ou o resultado medido vira aviso na tela e risco aberto | est | e2e | — | B-46 | ⬜ |
