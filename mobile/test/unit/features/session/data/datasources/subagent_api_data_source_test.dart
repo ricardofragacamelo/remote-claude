@@ -38,6 +38,15 @@ void main() {
     expect(http.adapter.requests.single.uri.queryParameters['cursor'], '42');
   });
 
+  test('sends the folder it already knows, as a hint — S-163', () async {
+    await source().messages(conversation, 'agent-1', workspacePath: '/home/someone/project');
+
+    expect(
+      http.adapter.requests.single.uri.queryParameters['workspacePath'],
+      '/home/someone/project',
+    );
+  });
+
   test('a failure of the route arrives as a Failure, never an exception', () async {
     http.adapter
       ..status = 404

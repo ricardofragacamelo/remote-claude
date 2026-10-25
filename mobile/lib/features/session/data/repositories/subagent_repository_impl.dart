@@ -19,7 +19,10 @@ class SubagentRepositoryImpl implements SubagentRepository {
     ConversationKey conversation,
     String toolUseId, {
     String? cursor,
+    String? workspacePath,
   }) async =>
-      subagentPageFrom(await _api.messages(conversation, toolUseId, cursor: cursor)) ??
+      subagentPageFrom(
+        await _api.messages(conversation, toolUseId, cursor: cursor, workspacePath: workspacePath),
+      ) ??
       (throw const UnexpectedFailure(traceId: unknownTraceId));
 }

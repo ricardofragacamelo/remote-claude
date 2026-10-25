@@ -14,11 +14,17 @@ const ConversationKey conversation = ConversationKey(engine: 'claude', id: 'c1')
 /// Answers whatever the test set, and remembers who asked.
 class _ScriptedApi implements SubagentApiDataSource {
   Object? body;
-  final List<(ConversationKey, String, String?)> asked = <(ConversationKey, String, String?)>[];
+  final List<(ConversationKey, String, String?, String?)> asked =
+      <(ConversationKey, String, String?, String?)>[];
 
   @override
-  Future<Object?> messages(ConversationKey conversation, String toolUseId, {String? cursor}) async {
-    asked.add((conversation, toolUseId, cursor));
+  Future<Object?> messages(
+    ConversationKey conversation,
+    String toolUseId, {
+    String? cursor,
+    String? workspacePath,
+  }) async {
+    asked.add((conversation, toolUseId, cursor, workspacePath));
     return body;
   }
 }
@@ -49,9 +55,21 @@ void main() {
 
       expect(page.events, hasLength(1));
       expect(page.events.single, isA<MessageFinished>());
-      expect(api.asked, <(ConversationKey, String, String?)>[(conversation, 'agent-1', null)]);
+      expect(api.asked, <(ConversationKey, String, String?, String?)>[
+        (conversation, 'agent-1', null, null),
+      ]);
     },
   );
+
+  test('carries the folder it already knows, as a hint — S-163', () async {
+    api.body = <String, Object?>{'events': <Object?>[], 'nextCursor': null};
+
+    await SubagentRepositoryImpl(
+      api,
+    ).page(conversation, 'agent-1', workspacePath: '/home/someone/project');
+
+    expect(api.asked.single, (conversation, 'agent-1', null, '/home/someone/project'));
+  });
 
   test('a body this build cannot read is a failure, not a crash', () async {
     api.body = 'nope';

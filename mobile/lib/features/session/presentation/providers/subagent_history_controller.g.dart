@@ -19,7 +19,7 @@ final class SubagentHistoryControllerProvider
   /// The messages of [toolUseId]'s own subagent, in [conversation].
   SubagentHistoryControllerProvider._({
     required SubagentHistoryControllerFamily super.from,
-    required (ConversationKey, String) super.argument,
+    required (ConversationKey, String, String?) super.argument,
   }) : super(
          retry: _neverRetry,
          name: r'subagentHistoryControllerProvider',
@@ -53,7 +53,7 @@ final class SubagentHistoryControllerProvider
   }
 }
 
-String _$subagentHistoryControllerHash() => r'bb7fa1988a897aaef49e84c305d94481dc95342b';
+String _$subagentHistoryControllerHash() => r'b02ff0a65368e7bd72a95b3539d32fa1baa40736';
 
 /// The messages of [toolUseId]'s own subagent, in [conversation].
 
@@ -64,7 +64,7 @@ final class SubagentHistoryControllerFamily extends $Family
           AsyncValue<SubagentPage>,
           SubagentPage,
           FutureOr<SubagentPage>,
-          (ConversationKey, String)
+          (ConversationKey, String, String?)
         > {
   SubagentHistoryControllerFamily._()
     : super(
@@ -77,8 +77,14 @@ final class SubagentHistoryControllerFamily extends $Family
 
   /// The messages of [toolUseId]'s own subagent, in [conversation].
 
-  SubagentHistoryControllerProvider call(ConversationKey conversation, String toolUseId) =>
-      SubagentHistoryControllerProvider._(argument: (conversation, toolUseId), from: this);
+  SubagentHistoryControllerProvider call(
+    ConversationKey conversation,
+    String toolUseId,
+    String? workspacePath,
+  ) => SubagentHistoryControllerProvider._(
+    argument: (conversation, toolUseId, workspacePath),
+    from: this,
+  );
 
   @override
   String toString() => r'subagentHistoryControllerProvider';
@@ -87,11 +93,16 @@ final class SubagentHistoryControllerFamily extends $Family
 /// The messages of [toolUseId]'s own subagent, in [conversation].
 
 abstract class _$SubagentHistoryController extends $AsyncNotifier<SubagentPage> {
-  late final _$args = ref.$arg as (ConversationKey, String);
+  late final _$args = ref.$arg as (ConversationKey, String, String?);
   ConversationKey get conversation => _$args.$1;
   String get toolUseId => _$args.$2;
+  String? get workspacePath => _$args.$3;
 
-  FutureOr<SubagentPage> build(ConversationKey conversation, String toolUseId);
+  FutureOr<SubagentPage> build(
+    ConversationKey conversation,
+    String toolUseId,
+    String? workspacePath,
+  );
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
@@ -104,6 +115,6 @@ abstract class _$SubagentHistoryController extends $AsyncNotifier<SubagentPage> 
               Object?,
               Object?
             >;
-    return element.handleCreate(ref, () => build(_$args.$1, _$args.$2));
+    return element.handleCreate(ref, () => build(_$args.$1, _$args.$2, _$args.$3));
   }
 }

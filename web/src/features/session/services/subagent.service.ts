@@ -17,15 +17,22 @@ export interface SubagentPage {
  * B-21): the main transcript holds the tool and its result, and the subagent's own messages are kept
  * apart.
  *
+ * @param workspaceHint the folder the caller already believes the conversation runs in — a
+ *   transcript heavy enough can push the line the engine reads a folder from out of its own id-only
+ *   lookup; this is never trusted on its own, only used to ask the right folder first (S-163)
  * @throws {import('@/shared/api/errors').AppError} `NOT_FOUND` for a subagent the conversation does
  *   not have, or a conversation the caller does not read (S-91)
  */
 export async function fetchSubagentPage(
   conversation: ConversationRef,
   toolUseId: string,
+  workspaceHint?: string,
 ): Promise<SubagentPage> {
+  const path = transcriptPath(conversation, 'subagents', toolUseId, 'messages');
   const body = await api.get<Unchecked<SubagentPagePayload>>(
-    transcriptPath(conversation, 'subagents', toolUseId, 'messages'),
+    workspaceHint === undefined
+      ? path
+      : `${path}?workspacePath=${encodeURIComponent(workspaceHint)}`,
   );
 
   return {

@@ -25,4 +25,14 @@ describe('reading what a subagent said — plan 08 B-21', () => {
       nextCursor: null,
     });
   });
+
+  it('sends the folder it already knows, as a hint — S-163', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ events: [], nextCursor: null });
+
+    await fetchSubagentPage({ engine: 'claude', id: 'c' }, 't', '/srv/projects/app');
+
+    expect(get).toHaveBeenCalledWith(
+      '/transcripts/claude/c/subagents/t/messages?workspacePath=%2Fsrv%2Fprojects%2Fapp',
+    );
+  });
 });

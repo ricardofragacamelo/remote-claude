@@ -27,6 +27,7 @@ class FakeSubagentRepository implements SubagentRepository {
     ConversationKey conversation,
     String toolUseId, {
     String? cursor,
+    String? workspacePath,
   }) async {
     reads.add((conversation, toolUseId));
     await gate?.future;

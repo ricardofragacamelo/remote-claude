@@ -25,12 +25,16 @@ export function useSubagentHistory(
   conversation: ConversationRef | null,
   toolUseId: string,
   enabled: boolean,
+  folder?: string,
 ): SubagentHistory {
   const query = useQuery<Conversation, AppError>({
     queryKey: ['subagent', conversation === null ? null : conversationKey(conversation), toolUseId],
     queryFn:
       enabled && conversation !== null
-        ? async () => conversationFrom((await fetchSubagentPage(conversation, toolUseId)).events)
+        ? async () =>
+            conversationFrom(
+              (await fetchSubagentPage(conversation, toolUseId, folder)).events,
+            )
         : skipToken,
   });
 

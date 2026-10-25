@@ -567,7 +567,9 @@ describe('the conversation of the panel', () => {
       await user.click(await screen.findByRole('button', { name: /look around/ }));
 
       expect(await screen.findByText('From the store.', {}, SLOW)).toBeInTheDocument();
-      expect(get).toHaveBeenCalledWith('/transcripts/claude/conv-1/subagents/a1/messages');
+      expect(get).toHaveBeenCalledWith(
+        '/transcripts/claude/conv-1/subagents/a1/messages?workspacePath=%2Fsrv%2Fprojects%2Fapp',
+      );
     });
 
     it('says the history has nothing of a subagent that said nothing', async () => {

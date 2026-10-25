@@ -541,7 +541,7 @@ class _SubagentHistoryView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<SubagentPage> result = ref.watch(
-      subagentHistoryControllerProvider(conversation, toolUseId),
+      subagentHistoryControllerProvider(conversation, toolUseId, folder.isEmpty ? null : folder),
     );
     final AppLocalizations l10n = AppLocalizations.of(context);
 
@@ -553,8 +553,15 @@ class _SubagentHistoryView extends ConsumerWidget {
             Text(l10n.sessionSubagentLoading, style: Theme.of(context).textTheme.bodySmall),
         error: (Object error, StackTrace _) => RetryLine(
           message: failureText(context, asFailure(error)),
-          onRetry: () =>
-              ref.read(subagentHistoryControllerProvider(conversation, toolUseId).notifier).retry(),
+          onRetry: () => ref
+              .read(
+                subagentHistoryControllerProvider(
+                  conversation,
+                  toolUseId,
+                  folder.isEmpty ? null : folder,
+                ).notifier,
+              )
+              .retry(),
         ),
         data: (SubagentPage page) {
           final Conversation read = const Conversation().withHistory(page.events);

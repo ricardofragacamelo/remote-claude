@@ -18,8 +18,15 @@ Duration? _neverRetry(int retryCount, Object error) => null;
 @Riverpod(retry: _neverRetry)
 class SubagentHistoryController extends _$SubagentHistoryController {
   @override
-  Future<SubagentPage> build(ConversationKey conversation, String toolUseId) =>
-      ref.watch(readSubagentMessagesProvider)(conversation, toolUseId);
+  Future<SubagentPage> build(
+    ConversationKey conversation,
+    String toolUseId,
+    String? workspacePath,
+  ) => ref.watch(readSubagentMessagesProvider)(
+    conversation,
+    toolUseId,
+    workspacePath: workspacePath,
+  );
 
   /// Asks again, after it did not arrive.
   void retry() => ref.invalidateSelf();

@@ -11,6 +11,12 @@ class ReadSubagentMessages {
 
   final SubagentRepository _subagents;
 
-  Future<SubagentPage> call(ConversationKey conversation, String toolUseId, {String? cursor}) =>
-      _subagents.page(conversation, toolUseId, cursor: cursor);
+  /// [workspacePath] is the folder the caller already believes the conversation runs in, when it
+  /// knows one (S-163).
+  Future<SubagentPage> call(
+    ConversationKey conversation,
+    String toolUseId, {
+    String? cursor,
+    String? workspacePath,
+  }) => _subagents.page(conversation, toolUseId, cursor: cursor, workspacePath: workspacePath);
 }

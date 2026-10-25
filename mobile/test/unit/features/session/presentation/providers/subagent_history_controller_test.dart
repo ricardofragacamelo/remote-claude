@@ -35,7 +35,7 @@ void main() {
     repo.pages['agent-1'] = const SubagentPage(events: <SessionEvent>[]);
 
     final SubagentPage page = await container.read(
-      subagentHistoryControllerProvider(conversation, 'agent-1').future,
+      subagentHistoryControllerProvider(conversation, 'agent-1', null).future,
     );
 
     expect(page.events, isEmpty);
@@ -47,15 +47,15 @@ void main() {
     repo.failure = const NetworkFailure(traceId: 't');
 
     await expectLater(
-      container.read(subagentHistoryControllerProvider(conversation, 'agent-1').future),
+      container.read(subagentHistoryControllerProvider(conversation, 'agent-1', null).future),
       throwsA(isA<NetworkFailure>()),
     );
 
     repo.failure = null;
     repo.pages['agent-1'] = const SubagentPage(events: <SessionEvent>[]);
-    container.read(subagentHistoryControllerProvider(conversation, 'agent-1').notifier).retry();
+    container.read(subagentHistoryControllerProvider(conversation, 'agent-1', null).notifier).retry();
 
-    await container.read(subagentHistoryControllerProvider(conversation, 'agent-1').future);
+    await container.read(subagentHistoryControllerProvider(conversation, 'agent-1', null).future);
     expect(repo.reads, hasLength(2));
   });
 }
