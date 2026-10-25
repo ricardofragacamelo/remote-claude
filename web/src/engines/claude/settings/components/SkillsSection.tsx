@@ -134,8 +134,8 @@ export function SkillsSection({
   location,
   onLocation,
 }: SectionBodyProps): React.JSX.Element {
-  const { t } = useTranslation();
   const folder = location.folder;
+  const { t } = useTranslation();
   const data = useSkills(folder);
   const preferences = useSkillPreferences(folder);
   const mutations = useSkillMutations(folder);

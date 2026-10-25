@@ -5,6 +5,7 @@ import { callApi } from '../fixtures/api';
 import { openSignedIn } from '../fixtures/auth';
 import { mcpIndicatorButton } from '../fixtures/claude-panel';
 import { sessionsOpened, workbenchSuite } from '../fixtures/folder-tree';
+import { mcpSettingsAddress } from '../fixtures/project-mcp';
 import { openFromDraft, workbenchAddress } from '../fixtures/workbench';
 import { scenario } from '../scenarios';
 
@@ -40,11 +41,6 @@ test.use({ viewport: { width: 1920, height: 1080 } });
 
 const suite = workbenchSuite(mcp.user);
 const opened = sessionsOpened(suite.user);
-
-/** The address of the MCP servers section of the agent settings, for Claude, in one folder. */
-function mcpSettingsAddress(folder: string): string {
-  return `/settings/agents/claude?${new URLSearchParams({ section: 'mcp', folder }).toString()}`;
-}
 
 /** The server this spec added, from the store's own list — `undefined` once removed. */
 async function storedServer(): Promise<{ id: string; name: string } | undefined> {

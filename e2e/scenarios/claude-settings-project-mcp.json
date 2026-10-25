@@ -1,0 +1,10 @@
+{
+  "id": "13·S-190…S-191",
+  "title": "a project's own .mcp.json goes pending → approved → changed, and a call of its tool asks by its kind, denied without running",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "serverName": "fixture",
+    "toolLabel": "fixture · echo",
+    "nativeToolName": "mcp__fixture__echo"
+  }
+}

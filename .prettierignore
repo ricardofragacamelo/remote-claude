@@ -22,3 +22,6 @@ packages/contracts/src/protocol.ts
 # The backend's own runtime cache (see .gitignore) — a `pnpm dev` left running regenerates it
 # between one gate 1 and the next, and none of it is source this product owns the style of.
 backend/.data/
+
+# gitleaks' own config format — Prettier has no TOML parser (plan 13, B-43).
+*.toml

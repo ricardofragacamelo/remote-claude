@@ -1,0 +1,16 @@
+title = "remote-claude gitleaks config"
+
+# The default ruleset, extended rather than replaced — this file exists only to name the handful of
+# values this product writes into its own e2e fixtures on purpose, reviewed as fake. Nothing here
+# weakens detection of anything else (plan 13, B-43; docs/architecture/shared/09-code-quality.md).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fixture secrets the suite writes on purpose, to prove a real one never comes back — never a credential of anything real"
+regexes = [
+  # e2e/scenarios/claude-settings-mcp.json — plan 13, B-42 (D-19's fixture MCP server's own env var,
+  # round-tripped through `POST /engines/claude/mcp-servers` to prove it never appears in the
+  # response, the trail or the screen; S-188).
+  '''e2e-b42-s3cret-5f3a9c''',
+]

@@ -20,10 +20,13 @@ import { fail, hint, info, line, ok, title } from './lib/ui.mjs';
 
 const IMAGE = 'zricethezav/gitleaks:v8.18.4';
 
+/** The repo's own config — the default ruleset, plus the fixture values it writes on purpose. */
+const CONFIG_ARGS = ['--config', '.gitleaks.toml'];
+
 const staged = process.argv.includes('--staged');
 const scanArgs = staged
-  ? ['protect', '--staged', '--no-banner', '--redact', '--verbose']
-  : ['detect', '--no-banner', '--redact', '--verbose'];
+  ? ['protect', '--staged', '--no-banner', '--redact', '--verbose', ...CONFIG_ARGS]
+  : ['detect', '--no-banner', '--redact', '--verbose', ...CONFIG_ARGS];
 
 /**
  * @returns {{ command: string, args: string[] } | null}
