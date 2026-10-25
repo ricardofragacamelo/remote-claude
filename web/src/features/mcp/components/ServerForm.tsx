@@ -1,4 +1,6 @@
+import { useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { RefObject } from 'react';
 
 import type { FieldIssue } from '../lib/mcp-validation';
 import { TRANSPORT_KEYS } from '../lib/status-words';
@@ -86,6 +88,28 @@ function secretRows(
   ));
 }
 
+/**
+ * Moves the keyboard to the row a "+" button just revealed (plan 13, B-45, S-195): without this, the
+ * new row is inserted **before** that same button in the DOM, so a keyboard walking forward from it
+ * skips straight past the row it just added, to whatever follows the group — found tabbing the whole
+ * wizard by keyboard alone, never suspected from a mouse. Never on the form's first mount: a server
+ * being edited starts with rows of its own already there, and those keep the dialog's own initial
+ * focus (Radix's, on the "Name" field) rather than stealing it.
+ */
+function useFocusNewRow(container: RefObject<HTMLDivElement | null>, count: number): void {
+  const mounted = useRef(false);
+  const previous = useRef(count);
+
+  useLayoutEffect(() => {
+    if (mounted.current && count > previous.current) {
+      const names = container.current?.querySelectorAll<HTMLInputElement>('[data-secret-name]');
+      names?.[names.length - 1]?.focus();
+    }
+    mounted.current = true;
+    previous.current = count;
+  }, [container, count]);
+}
+
 /** The rows of `env` or `headers`, their "add a row" button, and the field's own issue. */
 function VariableGroup({
   heading,
@@ -106,8 +130,11 @@ function VariableGroup({
   readonly issue: FieldIssue | undefined;
   onChange(next: readonly McpSecretFieldDraft[]): void;
 }): React.JSX.Element {
+  const container = useRef<HTMLDivElement>(null);
+  useFocusNewRow(container, rows.length);
+
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={container} className="flex flex-col gap-2">
       <span className="text-ui-sm">{heading}</span>
       {secretRows(rows, existingSecretNames, nameLabel, valueLabel, onChange)}
       <button

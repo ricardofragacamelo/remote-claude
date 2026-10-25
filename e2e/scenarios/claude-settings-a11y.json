@@ -1,0 +1,21 @@
+{
+  "id": "13·S-195",
+  "title": "axe finds no violation in the seven sections of the agent settings screen, the \"Add server\" wizard completes by keyboard alone, a phone keeps no horizontal scroll with the section navigation as a selector and a translated help drawer whose \"learn more\" lands on the right field, and the neutral test engine shows only its own core section",
+  "user": { "username": "dev", "password": "dev" },
+  "expect": {
+    "tags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+    "sections": [
+      { "id": "account", "heading": "Account" },
+      { "id": "installation", "heading": "Installation" },
+      { "id": "models", "heading": "Models and defaults" },
+      { "id": "mcp", "heading": "MCP servers" },
+      { "id": "plugins", "heading": "Plugins" },
+      { "id": "skills", "heading": "Skills" },
+      { "id": "project", "heading": "Project" }
+    ],
+    "phone": { "width": 360, "height": 740 },
+    "serverName": "e2e-b45-keyboard-server",
+    "engineId": "test",
+    "agentName": "Test agent"
+  }
+}

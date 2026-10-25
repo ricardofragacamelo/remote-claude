@@ -5,7 +5,7 @@ import { callApi } from '../fixtures/api';
 import { openSignedIn } from '../fixtures/auth';
 import { mcpIndicatorButton } from '../fixtures/claude-panel';
 import { sessionsOpened, workbenchSuite } from '../fixtures/folder-tree';
-import { mcpSettingsAddress } from '../fixtures/project-mcp';
+import { mcpSettingsAddress, removeMcpServerNamed, serverCreated } from '../fixtures/project-mcp';
 import { openFromDraft, workbenchAddress } from '../fixtures/workbench';
 import { scenario } from '../scenarios';
 
@@ -41,25 +41,6 @@ test.use({ viewport: { width: 1920, height: 1080 } });
 
 const suite = workbenchSuite(mcp.user);
 const opened = sessionsOpened(suite.user);
-
-/** The server this spec added, from the store's own list — `undefined` once removed. */
-async function storedServer(): Promise<{ id: string; name: string } | undefined> {
-  const response = await callApi(suite.user(), '/engines/claude/mcp-servers');
-  expect(response.status).toBe(200);
-  const body = (await response.json()) as { servers: readonly { id: string; name: string }[] };
-  return body.servers.find((server) => server.name === expected.serverName);
-}
-
-/** Leaves no server of this spec's own behind, whether or not the test reached its end cleanly. */
-async function removeStoredServer(): Promise<void> {
-  const server = await storedServer();
-  if (server !== undefined) {
-    const response = await callApi(suite.user(), `/engines/claude/mcp-servers/${server.id}`, {
-      method: 'DELETE',
-    });
-    expect([204, 404]).toContain(response.status);
-  }
-}
 
 /** Opens the "Add server" wizard and fills its first step with a stdio server carrying a secret. */
 async function fillServerForm(page: Page): Promise<void> {
@@ -97,7 +78,7 @@ async function expectSecretNeverShown(page: Page): Promise<void> {
 test(`${mcp.id} — ${mcp.title}`, async ({ page, browser }) => {
   const tree = suite.tree();
   // Defensive: a previous run interrupted mid-test would otherwise collide on the server's name.
-  await removeStoredServer();
+  await removeMcpServerNamed(suite.user(), expected.serverName);
 
   let watching: Awaited<ReturnType<typeof browser.newContext>> | undefined;
 
@@ -110,14 +91,9 @@ test(`${mcp.id} — ${mcp.title}`, async ({ page, browser }) => {
     await expect(dialog.getByRole('button', { name: 'Confirm', exact: true })).toBeVisible();
 
     // The confirmed write, over the network: the secret's value is never in the body (S-188).
-    const [created] = await Promise.all([
-      page.waitForResponse(
-        (response) =>
-          response.url().endsWith('/engines/claude/mcp-servers') &&
-          response.request().method() === 'POST',
-      ),
+    const created = await serverCreated(page, () =>
       dialog.getByRole('button', { name: 'Confirm', exact: true }).click(),
-    ]);
+    );
     expect(created.status()).toBe(201);
     expect(await created.text()).not.toContain(expected.secretValue);
 
@@ -159,6 +135,6 @@ test(`${mcp.id} — ${mcp.title}`, async ({ page, browser }) => {
     await expect(mcpIndicatorButton(liveSession, 0, 1)).toBeVisible();
   } finally {
     await watching?.close();
-    await removeStoredServer();
+    await removeMcpServerNamed(suite.user(), expected.serverName);
   }
 });

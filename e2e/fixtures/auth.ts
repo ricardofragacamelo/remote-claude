@@ -57,15 +57,18 @@ export async function submitCredentials(page: Page, user: ScenarioUser): Promise
  *
  * @param path the route with its search, as a person would paste it
  * @param webUrl the web to open it on — the main one, unless a scenario needs the limits stack's
+ * @param signInLabel the button's own text — translated, for a context opened in another locale
+ *   ([vertical-slice.spec.ts](../specs/vertical-slice.spec.ts)'s own "Entrar", plan 13, B-45)
  */
 export async function openSignedIn(
   page: Page,
   user: ScenarioUser,
   path: string,
   webUrl: string = environment.webUrl,
+  signInLabel = 'Sign in',
 ): Promise<void> {
   await page.goto(`${webUrl}${path}`);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: signInLabel }).click();
   await page.waitForURL(`${environment.keycloakUrl}/**`);
   await submitCredentials(page, user);
   await page.waitForURL(`${webUrl}${path}`);

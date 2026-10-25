@@ -51,6 +51,7 @@ export function SecretField({
         {nameLabel}
         <input
           id={`${id}-name`}
+          data-secret-name
           className={INPUT}
           value={name}
           onChange={(event) => {

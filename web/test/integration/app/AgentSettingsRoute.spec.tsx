@@ -8,6 +8,7 @@ import * as authService from '@/features/auth/services/auth.service';
 import { api } from '@/shared/api/api';
 import { mountApp } from '../../support/app';
 import { translator } from '../../support/render';
+import { aViewport } from '../../support/viewport';
 
 const t = translator('en');
 const session = {
@@ -26,6 +27,7 @@ describe("an engine's settings, a screen of its own — plan 13, B-09; plan 28, 
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('opens the section and the folder the link names, its place lit in the navigation — S-15', async () => {
@@ -110,5 +112,34 @@ describe("an engine's settings, a screen of its own — plan 13, B-09; plan 28, 
       }),
     ).toBeVisible();
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('becomes a selector under md, with no "Sections of …" navigation landmark — S-195', async () => {
+    aViewport('phone');
+    const user = userEvent.setup();
+    const app = mountApp('/settings/agents/claude?section=account');
+    const pick = (title: string): string => t('agentSettings.sections.pick', { section: title });
+
+    const trigger = await screen.findByRole('button', {
+      name: pick(t('engines.claude.account.title')),
+    });
+    expect(trigger).toBeVisible();
+    expect(
+      screen.queryByRole('navigation', {
+        name: t('agentSettings.sections.label', { engine: 'claude' }),
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(trigger);
+    await user.click(
+      await screen.findByRole('menuitemradio', { name: t('engines.claude.skills.title') }),
+    );
+
+    await waitFor(() => {
+      expect(app.search()).toEqual({ section: 'skills' });
+    });
+    expect(
+      await screen.findByRole('button', { name: pick(t('engines.claude.skills.title')) }),
+    ).toBeVisible();
   });
 });

@@ -2454,7 +2454,8 @@
       "mcpSecretsBody": "The values of environment variables and headers — like the value behind GITHUB_TOKEN — are never shown back to you after you save them, never included in the response of this screen, and never written to the audit trail. Only their names are kept, so you always know which secrets a server needs without this product ever holding, logging or returning what they are."
     },
     "sections": {
-      "label": "Sections of {{agent}} settings"
+      "label": "Sections of {{agent}} settings",
+      "pick": "Section: {{section}}"
     },
     "models": {
       "title": "Models and defaults",

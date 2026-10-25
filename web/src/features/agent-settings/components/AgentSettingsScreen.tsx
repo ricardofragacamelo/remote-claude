@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
 import { useEngineCapabilities } from '@/features/session';
+import { SectionSelector } from '@/shared/components/SectionSelector';
 import { SectionTabs } from '@/shared/components/SectionTabs';
+import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
 import { useRegistry } from '@/shared/hooks/useRegistry';
 import {
   agentSettingsSections,
@@ -10,6 +12,7 @@ import {
   sectionsForEngine,
 } from '../store/agent-settings-sections';
 import type { AgentSettingsLocation } from '../types/location';
+import type { AgentSettingsSection } from '../types/section';
 
 export interface AgentSettingsScreenProps {
   /** The engine whose settings these are — the segment of the address (`$engine`). */
@@ -34,12 +37,14 @@ export function AgentSettingsScreen({
   onLocation,
 }: AgentSettingsScreenProps): React.JSX.Element {
   const { t } = useTranslation();
+  const desktop = useIsDesktop();
   const capabilities = useEngineCapabilities(engine);
   const entries = sectionsForCapabilities(
     sectionsForEngine(useRegistry(agentSettingsSections), engine),
     capabilities,
   );
   const active = sectionFor(entries, location.section);
+  const label = (entry: AgentSettingsSection): string => t(entry.titleKey, { engine });
 
   const go = (section: string): void => {
     onLocation({ ...location, section });
@@ -47,16 +52,28 @@ export function AgentSettingsScreen({
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:gap-6">
-      <nav aria-label={t('agentSettings.sections.label', { engine })} className="md:w-56">
-        <SectionTabs
-          entries={entries}
-          active={active}
-          label={(entry) => t(entry.titleKey, { engine })}
-          onSelect={(entry) => {
-            go(entry.id);
-          }}
-        />
-      </nav>
+      <div className="md:w-56">
+        {desktop ? (
+          <nav aria-label={t('agentSettings.sections.label', { engine })}>
+            <SectionTabs
+              entries={entries}
+              active={active}
+              label={label}
+              onSelect={(entry) => {
+                go(entry.id);
+              }}
+            />
+          </nav>
+        ) : (
+          <SectionSelector
+            entries={entries}
+            active={active}
+            pickLabel={(section) => t('agentSettings.sections.pick', { section })}
+            label={label}
+            onSelect={go}
+          />
+        )}
+      </div>
 
       {active !== undefined && (
         <section

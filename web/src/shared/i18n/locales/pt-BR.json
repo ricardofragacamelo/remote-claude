@@ -2454,7 +2454,8 @@
       "mcpSecretsBody": "Os valores de variáveis de ambiente e cabeçalhos — como o valor por trás de GITHUB_TOKEN — nunca voltam a aparecer depois de salvos, nunca entram na resposta desta tela, e nunca são gravados na trilha. Só os nomes ficam guardados, para você sempre saber quais segredos um servidor precisa sem este produto jamais guardar, logar ou devolver o que eles são."
     },
     "sections": {
-      "label": "Seções da configuração do {{agent}}"
+      "label": "Seções da configuração do {{agent}}",
+      "pick": "Seção: {{section}}"
     },
     "models": {
       "title": "Modelos e padrões",

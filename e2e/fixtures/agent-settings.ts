@@ -5,11 +5,15 @@
  * same three lines, never copied byte for byte into a second spec, which is exactly what the
  * duplication gate (`pnpm lint:dup`) is for (the same reason `mcpSettingsAddress` lives in
  * `project-mcp.ts`, one section earlier).
+ *
+ * `engine` defaults to `'claude'` — every spec of this plan but one: B-45's own proof that the
+ * screen is the core's, not Claude's, opens the test engine of [28 · F7](../../docs/plans/28-agent-neutral-core/F7-e2e.md)
+ * at this same address with `'test'` instead (S-195).
  */
-export function settingsAddress(section: string, folder?: string): string {
+export function settingsAddress(section: string, folder?: string, engine = 'claude'): string {
   const search = new URLSearchParams({ section });
   if (folder !== undefined) {
     search.set('folder', folder);
   }
-  return `/settings/agents/claude?${search.toString()}`;
+  return `/settings/agents/${engine}?${search.toString()}`;
 }
