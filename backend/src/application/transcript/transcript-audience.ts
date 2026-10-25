@@ -28,11 +28,26 @@ export interface TranscriptActivitySettings {
 type Allowlist = ReturnType<WorkspaceAllowlistSource['current']>;
 
 /**
+ * How many conversations' folders [TranscriptAudience.resolved] remembers, once found — so a
+ * follow, a subagent or a tool's output never has to rediscover what a listing or a read already
+ * found for the same conversation (S-163). The oldest goes when a new one would not fit; a few
+ * hundred is far more than the conversations open at once in an installation this size.
+ */
+const RESOLVED_FOLDER_CAPACITY = 500;
+
+/**
  * Who sees a conversation, and what it is doing for them — the one fence the listing and the reader
  * share: a conversation that would not be **listed** for a caller is not **read** by them either
  * (S-04), and both say it is live here, active elsewhere or idle the same way (plan 08, B-08).
  */
 export class TranscriptAudience {
+  /**
+   * Every conversation's folder this instance has ever seen resolved, by its key — populated by
+   * every listing and every successful resolution, read by the next one that cannot resolve its
+   * own (S-163). See {@link resolved}.
+   */
+  private readonly resolvedFolders = new Map<string, string>();
+
   constructor(
     private readonly allowlist: WorkspaceAllowlistSource,
     private readonly origins: TranscriptOriginSource,
@@ -54,6 +69,10 @@ export class TranscriptAudience {
   ): Promise<ListedTranscript[]> {
     const openers = await this.origins.openersOf(sessions.map((session) => session.id));
     const now = this.activity.clock.now().getTime();
+
+    sessions.forEach((session) => {
+      this.remember(session);
+    });
 
     return sessions.flatMap((session): ListedTranscript[] => {
       const origin = transcriptOriginFor(session, {
@@ -78,11 +97,12 @@ export class TranscriptAudience {
    * enough — a prompt's embedded image, say — can push the line that names it out of the window the
    * engine scans, and an id-only read then answers with no folder at all, which the fence reads as
    * "not addressable" even though the same conversation still lists correctly wherever its folder is
-   * already known (S-163). `hint` is never trusted on its own — it only changes which directory is
-   * listed first, and the usual fence runs on the folder the listing itself reports, exactly as
-   * without one. A root of the allowlist is tried only when an exact root of the installation happens
-   * to be the conversation's own folder; a caller who already knows that folder — because it just
-   * listed or is following the conversation — should say so with `hint` instead.
+   * already known (S-163). Tried in order: a folder this instance has already resolved for the same
+   * conversation (by a listing, or by another read of it); then `hint`, never trusted on its own —
+   * it only changes which directory is listed first, and the usual fence runs on the folder the
+   * listing itself reports, exactly as without one; then every root of the allowlist, in case one of
+   * them happens to be the conversation's own folder exactly. A caller who already knows the folder
+   * — because it just listed it, or is following the conversation — should say so with `hint`.
    */
   async resolved(
     store: Pick<TranscriptStore, 'list'>,
@@ -91,7 +111,13 @@ export class TranscriptAudience {
     hint: string | null = null,
   ): Promise<TranscriptSession> {
     if (session.cwd !== null) {
+      this.remember(session);
       return session;
+    }
+
+    const known = this.resolvedFolders.get(session.id.key);
+    if (known !== undefined) {
+      return { ...session, cwd: known };
     }
 
     const roots = [
@@ -105,11 +131,34 @@ export class TranscriptAudience {
       );
 
       if (found !== undefined) {
+        this.remember(found);
         return found;
       }
     }
 
     return session;
+  }
+
+  /**
+   * Keeps [session]'s folder for {@link resolved} to find later, bumping it to the front of the
+   * remembered set — the oldest goes when it would grow past {@link RESOLVED_FOLDER_CAPACITY}.
+   * Nothing to remember when the engine did not say a folder.
+   */
+  private remember(session: TranscriptSession): void {
+    if (session.cwd === null) {
+      return;
+    }
+
+    this.resolvedFolders.delete(session.id.key);
+    this.resolvedFolders.set(session.id.key, session.cwd);
+
+    if (this.resolvedFolders.size > RESOLVED_FOLDER_CAPACITY) {
+      const oldest = this.resolvedFolders.keys().next().value;
+
+      if (oldest !== undefined) {
+        this.resolvedFolders.delete(oldest);
+      }
+    }
   }
 
   /**

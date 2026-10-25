@@ -476,7 +476,9 @@ class LiveSessionController extends _$LiveSessionController {
     _publish();
 
     try {
-      final HistoryPage page = await ref.read(readHistoryProvider)(conversation);
+      final HistoryPage page = await ref.read(
+        readHistoryProvider,
+      )(conversation, workspacePath: _live.facts.workspacePath);
 
       if (_isCurrent(reading)) {
         _history = page.events;

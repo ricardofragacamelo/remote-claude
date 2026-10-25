@@ -132,7 +132,12 @@ export function useLiveSession(sessionId: string | null): LiveSession {
   // screen is not, so coming back sends nothing on the wire (plan 06, S-181).
   useLiveSessionAttachment(sessionId);
 
-  const history = useHistoryUnderStream(store, state.historyFrom, state.conversation);
+  const history = useHistoryUnderStream(
+    store,
+    state.historyFrom,
+    state.conversation,
+    state.workspacePath ?? undefined,
+  );
   const { error: promptError, expect: expectRefusal } = useCommandRefusal();
 
   const drive = useCallback(
@@ -220,6 +225,7 @@ function useHistoryUnderStream(
   store: LiveSessionStore,
   from: ConversationRef | null,
   conversation: ConversationRef | null,
+  folder?: string,
 ): HistoryStatus {
   const [attempt, setAttempt] = useState(0);
   const [failure, setFailure] = useState<HistoryFailure | null>(null);
@@ -231,7 +237,7 @@ function useHistoryUnderStream(
 
     let current = true;
 
-    void fetchHistoryPage(from, null)
+    void fetchHistoryPage(from, null, folder)
       .then((page) => {
         if (current) {
           store.getState().hydrate(from, page.events);
@@ -246,7 +252,7 @@ function useHistoryUnderStream(
     return () => {
       current = false;
     };
-  }, [store, from, attempt]);
+  }, [store, from, attempt, folder]);
 
   const failed =
     failure !== null && sameConversation(failure.from, from) && failure.attempt === attempt;
