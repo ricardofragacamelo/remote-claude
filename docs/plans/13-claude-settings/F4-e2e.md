@@ -42,7 +42,7 @@ arquivo põe a entrada em "alterado" e a sessão seguinte não o tem. O SDK rote
 `label` que o backend montou (`fixture · echo`) e o risco destrutivo, sem que o web leia o nome nativo; negar → a
 tool não roda, e a trilha tem o registro e a negação. Cenários S-190, S-191.
 
-### B-44 — E2E: configuração de projeto 🔲
+### B-44 — E2E: configuração de projeto ✅
 
 Criar um slash command pelo modelo inicial, salvar no editor e usá-lo no menu do painel; um subagent de
 fixture com `permissionMode` no frontmatter aparece sinalizado; hooks do `.claude/settings.json`
