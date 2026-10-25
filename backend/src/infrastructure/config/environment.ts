@@ -113,8 +113,16 @@ export const environmentSchema = z.object({
   RC_WS_MAX_FRAMES_PER_SECOND: z.coerce.number().int().min(1),
   RC_WS_MAX_FRAME_BYTES: z.coerce.number().int().min(1_024),
   RC_WS_MAX_ATTACHED_SESSIONS: z.coerce.number().int().min(1),
-  RC_SESSION_MAX_TURNS: z.coerce.number().int().min(1),
-  RC_SESSION_MAX_BUDGET_USD: z.coerce.number().positive(),
+  // `0` is a deliberate sentinel for "no ceiling" — a session may run forever, at whatever it
+  // costs — and is the only zero this schema accepts for a limit, stated once here rather than
+  // read as an absence: a missing variable still refuses the boot, same as any other.
+  RC_SESSION_MAX_TURNS: z.coerce.number().int().min(0),
+  RC_SESSION_MAX_BUDGET_USD: z.coerce.number().min(0),
+  // Compacts the conversation on its own as the context fills, the same choice the CLI's own
+  // interactive terminal and the VS Code extension make by default. `0` is the sentinel for the
+  // engine's own window — stated, never left to an SDK default this build does not pin.
+  RC_SESSION_AUTO_COMPACT_ENABLED: z.enum(['true', 'false']),
+  RC_SESSION_AUTO_COMPACT_WINDOW: z.coerce.number().int().min(0),
   // The coding agents this installation drives, by name, comma-separated — every registered one when
   // empty — and the one a session opens on when the client names none (plan 28, B-09). A name no
   // adapter registers refuses the boot, in the composition that knows the adapters.
@@ -300,7 +308,12 @@ export interface AppConfig {
 
     /** How long a session may sit with nothing happening before it is closed (D-02). */
     readonly idleTtlMs: number;
-    readonly limits: { readonly maxBudgetUsd: number; readonly maxTurns: number };
+    readonly limits: {
+      readonly maxBudgetUsd: number;
+      readonly maxTurns: number;
+      readonly autoCompactEnabled: boolean;
+      readonly autoCompactWindow: number;
+    };
 
     /**
      * What a session opens with when nobody chose: the model of each engine that configures one
@@ -516,6 +529,8 @@ export function loadConfig(
       limits: {
         maxBudgetUsd: env.RC_SESSION_MAX_BUDGET_USD,
         maxTurns: env.RC_SESSION_MAX_TURNS,
+        autoCompactEnabled: env.RC_SESSION_AUTO_COMPACT_ENABLED === 'true',
+        autoCompactWindow: env.RC_SESSION_AUTO_COMPACT_WINDOW,
       },
       defaults: {
         models: Object.fromEntries(models),

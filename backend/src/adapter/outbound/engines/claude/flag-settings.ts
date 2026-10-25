@@ -13,15 +13,29 @@ import type { Settings } from '@anthropic-ai/claude-agent-sdk';
  *   the start without losing the hooks, which `applyFlagSettings` mid-session does lose (§10.3);
  * - `disableSkillShellExecution` — always `true`: the `!` blocks of a skill or a slash command run on
  *   expansion with no `canUseTool` and no `PreToolUse`, and `managedSettings` was measured not to stop
- *   them; this does, for every source (plan 13, D-21, D-24).
+ *   them; this does, for every source (plan 13, D-21, D-24);
+ * - `autoCompactEnabled`, `autoCompactWindow` — whether the conversation compacts itself as the
+ *   context fills, and the window that is measured against; from configuration, never a client,
+ *   same as the two above.
  */
-export const FLAG_SETTINGS_KEYS = ['outputStyle', 'disableSkillShellExecution'] as const;
+export const FLAG_SETTINGS_KEYS = [
+  'outputStyle',
+  'disableSkillShellExecution',
+  'autoCompactEnabled',
+  'autoCompactWindow',
+] as const;
 
 export type FlagSettingsKey = (typeof FLAG_SETTINGS_KEYS)[number];
 
 /** What a session may choose for the flag layer. The rest is not a choice. */
 export interface FlagSettingsInput {
   readonly outputStyle?: string | null;
+
+  /** Compacts the conversation on its own as the context fills — absent leaves the SDK's own. */
+  readonly autoCompactEnabled?: boolean;
+
+  /** The context window auto-compact measures against, in tokens — absent, or `0`, for the SDK's own. */
+  readonly autoCompactWindow?: number;
 }
 
 /** Raised when something other than this builder's keys would reach the flag layer. */
@@ -45,6 +59,12 @@ export function flagSettings(input: FlagSettingsInput = {}): Settings {
   return {
     disableSkillShellExecution: true,
     ...(input.outputStyle == null ? {} : { outputStyle: input.outputStyle }),
+    ...(input.autoCompactEnabled === undefined
+      ? {}
+      : { autoCompactEnabled: input.autoCompactEnabled }),
+    ...(input.autoCompactWindow === undefined || input.autoCompactWindow === 0
+      ? {}
+      : { autoCompactWindow: input.autoCompactWindow }),
   };
 }
 

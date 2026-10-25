@@ -143,6 +143,8 @@ export function testEnvironment(
   process.env['RC_WS_MAX_ATTACHED_SESSIONS'] = '16';
   process.env['RC_SESSION_MAX_TURNS'] = '100';
   process.env['RC_SESSION_MAX_BUDGET_USD'] = '10';
+  process.env['RC_SESSION_AUTO_COMPACT_ENABLED'] = 'true';
+  process.env['RC_SESSION_AUTO_COMPACT_WINDOW'] = '0';
   process.env['RC_MODEL_CHECK_MAX_BUDGET_USD'] = '0.05';
   process.env['RC_SESSION_DEFAULT_MODEL'] = 'claude-sonnet-5';
   process.env['RC_PLUGIN_DOWNLOAD_DIR'] = mkdtempSync(path.join(tmpdir(), 'rc-claude-plugins-'));

@@ -79,7 +79,7 @@ function runner(
       },
       journal,
       permissions: gate,
-      limits: { maxBudgetUsd: 10, maxTurns: 100 },
+      limits: { maxBudgetUsd: 10, maxTurns: 100, autoCompactEnabled: true, autoCompactWindow: 0 },
       clock: new FixedClock(now),
       scheduler: extra.scheduler ?? new ManualScheduler(),
       bundledCliVersion:
@@ -395,7 +395,7 @@ describe('SessionRunner', () => {
           recorder: failing,
           journal: new RecordingJournal(),
           permissions: new StubPermissionGate(),
-          limits: { maxBudgetUsd: 10, maxTurns: 100 },
+          limits: { maxBudgetUsd: 10, maxTurns: 100, autoCompactEnabled: true, autoCompactWindow: 0 },
           clock: new FixedClock(now),
           scheduler: new ManualScheduler(),
           bundledCliVersion: '2.1.277',

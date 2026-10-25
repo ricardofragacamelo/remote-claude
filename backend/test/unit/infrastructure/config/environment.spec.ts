@@ -37,6 +37,8 @@ const complete: RawEnvironment = {
   RC_WS_MAX_ATTACHED_SESSIONS: '16',
   RC_SESSION_MAX_TURNS: '100',
   RC_SESSION_MAX_BUDGET_USD: '10',
+  RC_SESSION_AUTO_COMPACT_ENABLED: 'true',
+  RC_SESSION_AUTO_COMPACT_WINDOW: '0',
   RC_MODEL_CHECK_MAX_BUDGET_USD: '0.05',
   RC_SESSION_DEFAULT_MODEL: 'claude-sonnet-5',
   RC_PLUGIN_DOWNLOAD_DIR: '/var/lib/remote-claude/claude-plugins',
@@ -116,7 +118,12 @@ describe('loadConfig', () => {
       session: {
         capacity: { floor: 1, ceiling: 10, memoryFraction: 0.5, perSessionBytes: 268_435_456 },
         idleTtlMs: 1_800_000,
-        limits: { maxBudgetUsd: 10, maxTurns: 100 },
+        limits: {
+          maxBudgetUsd: 10,
+          maxTurns: 100,
+          autoCompactEnabled: true,
+          autoCompactWindow: 0,
+        },
         defaults: { models: { claude: 'claude-sonnet-5' }, permissionMode: 'ask' },
       },
       engines: { enabled: [], default: null },
@@ -223,6 +230,8 @@ describe('loadConfig', () => {
     'RC_WS_MAX_ATTACHED_SESSIONS',
     'RC_SESSION_MAX_TURNS',
     'RC_SESSION_MAX_BUDGET_USD',
+    'RC_SESSION_AUTO_COMPACT_ENABLED',
+    'RC_SESSION_AUTO_COMPACT_WINDOW',
     'RC_SESSION_DEFAULT_PERMISSION_MODE',
     'RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS',
     'RC_PERMISSION_RULE_MAX_LIFETIME_MS',
@@ -316,6 +325,25 @@ describe('loadConfig', () => {
     ).toThrow(/must be one of ask, acceptEdits, readOnly, allowAll/i);
   });
 
+  it('reads `0` as the sentinel for no ceiling, on turns and on budget alike', () => {
+    const config = loadConfig(
+      withChange({ RC_SESSION_MAX_TURNS: '0', RC_SESSION_MAX_BUDGET_USD: '0' }),
+    );
+
+    expect(config.session.limits.maxTurns).toBe(0);
+    expect(config.session.limits.maxBudgetUsd).toBe(0);
+  });
+
+  it.each([
+    ['true', true],
+    ['false', false],
+  ])('reads auto-compact as %s', (raw, expected) => {
+    expect(
+      loadConfig(withChange({ RC_SESSION_AUTO_COMPACT_ENABLED: raw })).session.limits
+        .autoCompactEnabled,
+    ).toBe(expected);
+  });
+
   it.each([
     ['NODE_ENV', 'staging'],
     ['LOG_LEVEL', 'verbose'],
@@ -337,8 +365,11 @@ describe('loadConfig', () => {
     ['RC_WS_MAX_FRAMES_PER_SECOND', '0'],
     ['RC_WS_MAX_FRAME_BYTES', '1023'],
     ['RC_WS_MAX_ATTACHED_SESSIONS', '0'],
-    ['RC_SESSION_MAX_TURNS', '0'],
-    ['RC_SESSION_MAX_BUDGET_USD', '0'],
+    // `0` is the deliberate sentinel for "no ceiling" here — only a negative number is nonsense.
+    ['RC_SESSION_MAX_TURNS', '-1'],
+    ['RC_SESSION_MAX_BUDGET_USD', '-1'],
+    ['RC_SESSION_AUTO_COMPACT_ENABLED', 'yes'],
+    ['RC_SESSION_AUTO_COMPACT_WINDOW', '-1'],
     ['RC_SESSION_DEFAULT_PERMISSION_MODE', 'yolo'],
     // Never honoured, so not carried over as anything else (plan 28, B-26).
     ['RC_SESSION_DEFAULT_PERMISSION_MODE', 'bypassPermissions'],

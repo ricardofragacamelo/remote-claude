@@ -275,6 +275,25 @@ centavos; (d) fica velho no instante em que outra sessão gasta. As regras:
 - o teto por sessão (`RC_SESSION_MAX_BUDGET_USD`) continua como rede rígida, e a ajuda explica a
   diferença.
 
+**Implementação parcial, fora do ciclo deste plano (2026-10-25):** a rede rígida acima deixou de ter
+piso obrigatório. `RC_SESSION_MAX_BUDGET_USD` e `RC_SESSION_MAX_TURNS`
+(`backend/src/infrastructure/config/environment.ts`, `sdk-options.factory.ts`) aceitam `0` como
+sentinela explícito de "sem teto" — a opção do SDK correspondente simplesmente não é enviada — e o
+padrão do `.env`/`.env.example` deste repositório passou a ser `0` para os dois, por pedido do
+usuário (uma sessão de horas bateu no teto de US$ 10 no meio do trabalho). A variável continua
+obrigatória (sem o valor, o boot recusa, como antes); só o `0` passou a ser um valor válido em vez de
+recusado. Nenhuma trilha nova, nenhum aviso de aproximação do teto — isso é o D-11/D-12 acima, ainda
+🔲.
+
+Na mesma mudança, duas variáveis novas, sem decisão formal própria por não terem gap a decidir —
+`RC_SESSION_AUTO_COMPACT_ENABLED` (`true` por padrão) e `RC_SESSION_AUTO_COMPACT_WINDOW` (`0` =
+janela do próprio motor): ligam `autoCompactEnabled`/`autoCompactWindow` do SDK pela mesma camada de
+flags que já leva `outputStyle` (`flag-settings.ts`), igualando o comportamento ao padrão do CLI
+interativo e da extensão do VS Code — pedido do mesmo usuário, mesma sessão.
+
+**`pnpm verify`/`verify:full` não foram rodados** para nenhuma das duas mudanças acima — só `tsc`,
+`eslint` e os testes unitários dos arquivos tocados.
+
 ### D-13 — mudança de orçamento na trilha
 
 Opções: (a) mudanças de orçamento em `audit_events`; (b) só log; (c) trilha também para cada recusa

@@ -5,13 +5,25 @@ import type { EffortLevel, PermissionMode } from '@domain/session';
 import type { WorkspacePath } from '@domain/workspace';
 import { flagSettings } from './flag-settings';
 
-/** Limits the installation puts on a session. Numbers, from configuration — never from a client. */
+/**
+ * Limits the installation puts on a session. Numbers, from configuration — never from a client.
+ *
+ * `0` is the configured sentinel for "no ceiling" ([plan 16, D-02](../../../../../docs/plans/16-usage-and-cost/decisions.md#d-02--linha-de-base-na-retomada-e-os-resets-do-acumulado)):
+ * the SDK option it would set is left out entirely rather than passed as `0`, which the SDK itself
+ * would read as "stop immediately" — the opposite of what the sentinel means here.
+ */
 export interface SessionLimits {
-  /** Spend ceiling for one `query()` call, in US dollars. */
+  /** Spend ceiling for one `query()` call, in US dollars — `0` for none. */
   readonly maxBudgetUsd: number;
 
-  /** How many turns one session may run before the SDK stops it. */
+  /** How many turns one session may run before the SDK stops it — `0` for no ceiling. */
   readonly maxTurns: number;
+
+  /** Compacts the conversation on its own as the context fills — the CLI and VS Code's own default. */
+  readonly autoCompactEnabled: boolean;
+
+  /** The context window auto-compact measures against, in tokens — `0` for the engine's own. */
+  readonly autoCompactWindow: number;
 }
 
 /** What the factory needs in order to describe a session to the SDK. */
@@ -149,10 +161,16 @@ export function buildSdkOptions(input: SdkOptionsInput): Options {
 
     // The flag layer, from its builder: the shell inline of skills and slash commands off — it runs
     // with no `canUseTool` and no `PreToolUse`, measured — and the output style when one was chosen.
-    settings: flagSettings({ outputStyle: input.outputStyle ?? null }),
+    settings: flagSettings({
+      outputStyle: input.outputStyle ?? null,
+      autoCompactEnabled: input.limits.autoCompactEnabled,
+      autoCompactWindow: input.limits.autoCompactWindow,
+    }),
 
-    maxBudgetUsd: input.limits.maxBudgetUsd,
-    maxTurns: input.limits.maxTurns,
+    // `0` is configured to mean no ceiling — left out rather than passed as `0`, which the SDK
+    // reads as "stop at once".
+    ...(input.limits.maxBudgetUsd === 0 ? {} : { maxBudgetUsd: input.limits.maxBudgetUsd }),
+    ...(input.limits.maxTurns === 0 ? {} : { maxTurns: input.limits.maxTurns }),
     abortController: input.abortController,
     // The task list (plan 08, D-25): since CLI 2.1.268 it is offered only to models up to Opus 4.7,
     // and this turns it on for every model. Which tool keeps it — `TodoWrite` or the `Task*` — is

@@ -128,7 +128,7 @@ describe('the recorded fixtures of the Agent SDK', () => {
             recorder: { record: () => Promise.resolve() },
             journal: new RecordingJournal(),
             permissions: new StubPermissionGate(),
-            limits: { maxBudgetUsd: 10, maxTurns: 100 },
+            limits: { maxBudgetUsd: 10, maxTurns: 100, autoCompactEnabled: true, autoCompactWindow: 0 },
             clock: new FixedClock(new Date('2026-09-26T12:00:00.000Z')),
             scheduler: new ManualScheduler(),
             bundledCliVersion: fixture.sdkVersion,

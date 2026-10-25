@@ -14,7 +14,7 @@ const input = (overrides: Partial<SdkOptionsInput> = {}): SdkOptionsInput => ({
   permissionMode: 'ask',
   conversation: { claudeSessionId: NEW, resumedFrom: null },
   pluginPaths: [],
-  limits: { maxBudgetUsd: 10, maxTurns: 100 },
+  limits: { maxBudgetUsd: 10, maxTurns: 100, autoCompactEnabled: true, autoCompactWindow: 0 },
   abortController: new AbortController(),
   environment: { PATH: '/usr/bin', REMOTE_CLAUDE_OWNER: 'remote-claude-backend' },
   onStderr: () => undefined,
@@ -76,9 +76,13 @@ describe('buildSdkOptions', () => {
   });
 
   it('switches the shell inline off, and carries the output style a default chose — plan 13, D-24', () => {
-    expect(buildSdkOptions(input()).settings).toEqual({ disableSkillShellExecution: true });
+    expect(buildSdkOptions(input()).settings).toEqual({
+      disableSkillShellExecution: true,
+      autoCompactEnabled: true,
+    });
     expect(buildSdkOptions(input({ outputStyle: 'Explanatory' })).settings).toEqual({
       disableSkillShellExecution: true,
+      autoCompactEnabled: true,
       outputStyle: 'Explanatory',
     });
   });
@@ -100,10 +104,52 @@ describe('buildSdkOptions', () => {
   });
 
   it('carries the configured limits', () => {
-    const options = buildSdkOptions(input({ limits: { maxBudgetUsd: 3, maxTurns: 7 } }));
+    const options = buildSdkOptions(
+      input({
+        limits: { maxBudgetUsd: 3, maxTurns: 7, autoCompactEnabled: true, autoCompactWindow: 0 },
+      }),
+    );
 
     expect(options.maxBudgetUsd).toBe(3);
     expect(options.maxTurns).toBe(7);
+  });
+
+  it('leaves the ceiling out of the options rather than passing `0` — the SDK reads a `0` as stop at once', () => {
+    const options = buildSdkOptions(
+      input({
+        limits: { maxBudgetUsd: 0, maxTurns: 0, autoCompactEnabled: true, autoCompactWindow: 0 },
+      }),
+    );
+
+    expect(options.maxBudgetUsd).toBeUndefined();
+    expect(options.maxTurns).toBeUndefined();
+  });
+
+  it('carries auto-compact — on, with a window, from configuration, never a client', () => {
+    const options = buildSdkOptions(
+      input({
+        limits: { maxBudgetUsd: 0, maxTurns: 0, autoCompactEnabled: true, autoCompactWindow: 50_000 },
+      }),
+    );
+
+    expect(options.settings).toEqual({
+      disableSkillShellExecution: true,
+      autoCompactEnabled: true,
+      autoCompactWindow: 50_000,
+    });
+  });
+
+  it('leaves the window out when it is `0` — the engine\'s own, never guessed here', () => {
+    const options = buildSdkOptions(
+      input({
+        limits: { maxBudgetUsd: 0, maxTurns: 0, autoCompactEnabled: false, autoCompactWindow: 0 },
+      }),
+    );
+
+    expect(options.settings).toEqual({
+      disableSkillShellExecution: true,
+      autoCompactEnabled: false,
+    });
   });
 
   it('carries the abort controller, so the session can be torn down', () => {
