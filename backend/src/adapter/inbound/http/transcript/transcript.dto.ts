@@ -72,10 +72,20 @@ export const engineSchema = z.string().regex(ENGINE);
  */
 export const subagentToolSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
 
-/** What `GET /transcripts/:engine/:id/messages` may be asked. The cursor is a message id. */
+/**
+ * What `GET /transcripts/:engine/:id/messages` may be asked. The cursor is a message id.
+ *
+ * `workspacePath` is optional and never authorises anything by itself — the allowlist fence runs on
+ * the folder the engine reports, exactly as it does without it. It is a hint for the one case the
+ * engine's own id-only lookup cannot resolve a folder from: a transcript heavy enough (a prompt's
+ * embedded image, say) to push the line that names it out of the window the engine scans (S-163). A
+ * caller who already knows where a conversation runs — because it was just listed, or followed — may
+ * say so; one who does not may leave it out, exactly as before.
+ */
 export const readTranscriptSchema = z.object({
   cursor: z.string().regex(OPAQUE_ID).optional(),
   limit,
+  workspacePath: z.string().min(1).max(4096).optional(),
 });
 
 export type ReadTranscriptQueryDto = z.infer<typeof readTranscriptSchema>;

@@ -313,12 +313,20 @@ export class FollowTranscriptUseCase {
   }
 
   private async lookNow(followed: Followed): Promise<void> {
-    const session = await this.store.find(followed.id);
+    const found = await this.store.find(followed.id);
 
-    if (session === null) {
+    if (found === null) {
       this.resetEvery(followed, 'gone');
       return;
     }
+
+    // Whoever is still watching — the folder a conversation ran in does not depend on which one it
+    // is resolved for (S-163), and a followed conversation never lacks a subscriber at this point.
+    const representative = [...followed.subscribers][0]?.userId;
+    const session =
+      representative === undefined
+        ? found
+        : await this.audience.resolved(this.store, found, representative);
 
     const read = followed.entries === null || followed.version !== session.lastModified;
 

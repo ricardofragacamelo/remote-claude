@@ -32,16 +32,24 @@ export function transcriptPath(conversation: ConversationRef, ...rest: readonly 
  * thrown over — one malformed entry should cost the person that entry, not the page.
  *
  * @param cursor the `nextCursor` of the page after this one, or `null` for the latest messages
+ * @param workspaceHint the folder the caller already believes the conversation runs in — a
+ *   transcript heavy enough can push the line the engine reads a folder from out of its own id-only
+ *   lookup; this is never trusted on its own, only used to ask the right folder first (S-163)
  * @throws {import('@/shared/api/errors').AppError} `NOT_FOUND` for a conversation that does not
  *   exist or is not the caller's, `AGENT_UNAVAILABLE` / `AGENT_TIMEOUT` when the engine failed
  */
 export async function fetchHistoryPage(
   conversation: ConversationRef,
   cursor: string | null,
+  workspaceHint?: string,
 ): Promise<HistoryPage> {
   const path = transcriptPath(conversation, 'messages');
+  const params = [
+    cursor === null ? null : `cursor=${encodeURIComponent(cursor)}`,
+    workspaceHint === undefined ? null : `workspacePath=${encodeURIComponent(workspaceHint)}`,
+  ].filter((param) => param !== null);
   const body = await api.get<Unchecked<TranscriptPagePayload>>(
-    cursor === null ? path : `${path}?cursor=${encodeURIComponent(cursor)}`,
+    params.length === 0 ? path : `${path}?${params.join('&')}`,
   );
 
   const summary = toConversationSummary(body.session);

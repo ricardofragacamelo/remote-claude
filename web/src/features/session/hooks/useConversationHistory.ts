@@ -124,14 +124,17 @@ function extended(
  * stream uses (B-03). An earlier page goes **before** everything and what is followed **after**, so
  * reading one while the other arrives neither loses nor repeats a block (S-82).
  */
-export function useConversationHistory(conversationRef: ConversationRef): ConversationHistory {
+export function useConversationHistory(
+  conversationRef: ConversationRef,
+  folder?: string,
+): ConversationHistory {
   const client = useQueryClient();
   // Read by its two strings, never by the object: one read again is a new object of the same one.
   const { engine, id } = conversationRef;
   const key = useMemo(() => conversationKey({ engine, id }), [engine, id]);
   const history = usePagedQuery({
     queryKey: historyKeys.pages({ engine, id }),
-    fetchPage: (cursor) => fetchHistoryPage({ engine, id }, cursor),
+    fetchPage: (cursor) => fetchHistoryPage({ engine, id }, cursor, folder),
     nextCursor: (page) => page.nextCursor,
     refetchOnWindowFocus: false,
   });

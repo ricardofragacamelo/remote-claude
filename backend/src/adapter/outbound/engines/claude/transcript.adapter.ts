@@ -321,9 +321,11 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
   /** Everything the SDK holds of a conversation's main chain, in one call. */
   private readWhole(session: TranscriptSession): Promise<SessionMessage[]> {
     const claudeSessionId = session.id.id;
+    const dir = session.cwd ?? undefined;
+    const options = dir === undefined ? {} : { dir };
 
     return this.call('read messages', { claudeSessionId }, () =>
-      this.sdk.getSessionMessages(claudeSessionId),
+      this.sdk.getSessionMessages(claudeSessionId, options),
     );
   }
 

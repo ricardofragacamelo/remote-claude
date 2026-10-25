@@ -143,6 +143,7 @@ export class TranscriptController {
       sessionId,
       before: query.cursor ?? null,
       limit: query.limit ?? DEFAULT_PAGE_SIZE,
+      workspaceHint: query.workspacePath ?? null,
     });
 
     return toTranscriptPageDto(page);
@@ -160,6 +161,7 @@ export class TranscriptController {
       toolUseId,
       before: query.cursor ?? null,
       limit: query.limit ?? DEFAULT_PAGE_SIZE,
+      workspaceHint: query.workspacePath ?? null,
     });
 
     return toSubagentPageDto(page);

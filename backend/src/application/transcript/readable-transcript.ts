@@ -13,6 +13,9 @@ import type { ListedTranscript, TranscriptAudience } from './transcript-audience
  * opened by them either, and the answer is the one an absent id gets (S-04). Every read of plan 22 goes
  * through here, so the routes and the follower cannot fence differently.
  *
+ * @param workspaceHint the folder the caller already believes the conversation runs in — tried
+ *   before the allowlist's own roots when the engine cannot say by id alone (S-163); `null` when the
+ *   caller does not know
  * @throws {TranscriptNotFoundError} no such transcript, or not one this caller may read
  */
 export async function readableTranscript(
@@ -20,8 +23,11 @@ export async function readableTranscript(
   audience: TranscriptAudience,
   sessionId: ConversationRef,
   userId: UserId,
+  workspaceHint: string | null = null,
 ): Promise<ListedTranscript> {
-  const session = await store.find(sessionId);
+  const found = await store.find(sessionId);
+  const session =
+    found === null ? null : await audience.resolved(store, found, userId, workspaceHint);
   const [shown] = session === null ? [] : await audience.shown([session], userId);
 
   if (shown === undefined) {

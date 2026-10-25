@@ -40,6 +40,26 @@ describe('fetchHistoryPage — plan 04, B-07', () => {
     expect(get).toHaveBeenCalledWith(`/transcripts/${ENGINE}/${OURS}/messages?cursor=a%2Fb%20c`);
   });
 
+  it('sends the folder it already knows, as a hint, never on its own — S-163', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue(aHistoryPage([]));
+
+    await fetchHistoryPage(REF, null, '/srv/projects/app');
+
+    expect(get).toHaveBeenCalledWith(
+      `/transcripts/${ENGINE}/${OURS}/messages?workspacePath=%2Fsrv%2Fprojects%2Fapp`,
+    );
+  });
+
+  it('sends the cursor and the folder together, the cursor first', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue(aHistoryPage([]));
+
+    await fetchHistoryPage(REF, 'a/b c', '/srv/projects/app');
+
+    expect(get).toHaveBeenCalledWith(
+      `/transcripts/${ENGINE}/${OURS}/messages?cursor=a%2Fb%20c&workspacePath=%2Fsrv%2Fprojects%2Fapp`,
+    );
+  });
+
   it('answers the conversation, its events and the cursor of the page before', async () => {
     vi.spyOn(api, 'get').mockResolvedValue(aHistoryPage([said('m1', 'hi')], { nextCursor: 'm0' }));
 

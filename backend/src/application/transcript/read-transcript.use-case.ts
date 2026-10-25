@@ -16,6 +16,12 @@ export interface ReadTranscriptQuery {
   readonly before: string | null;
 
   readonly limit: number;
+
+  /**
+   * The folder the caller already believes the conversation runs in, when it knows one — `null`
+   * otherwise. See {@link readableTranscript}.
+   */
+  readonly workspaceHint?: string | null;
 }
 
 /** A page of a conversation, and the conversation it is a page of. */
@@ -87,6 +93,12 @@ export class ReadTranscriptUseCase {
 
   /** The conversation, when it exists and this caller may read it — the same answer otherwise. */
   private visible(query: ReadTranscriptQuery): Promise<ListedTranscript> {
-    return readableTranscript(this.store, this.audience, query.sessionId, query.userId);
+    return readableTranscript(
+      this.store,
+      this.audience,
+      query.sessionId,
+      query.userId,
+      query.workspaceHint ?? null,
+    );
   }
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { FollowTranscriptUseCase } from '@application/transcript';
+import { FollowTranscriptUseCase, TranscriptAudience } from '@application/transcript';
 import type {
   FollowObserver,
   FollowResetReason,
@@ -18,7 +18,7 @@ import {
 import { ConversationRef } from '@domain/engine';
 import type { TranscriptMessage, TranscriptSession } from '@domain/transcript';
 import { WorkspacePath } from '@domain/workspace';
-import { OWNER } from '../../../support/builders/workspace.builder';
+import { aWorkspace, anAllowlist, OWNER } from '../../../support/builders/workspace.builder';
 import {
   aTranscriptAudience,
   aTranscriptSession,
@@ -348,6 +348,33 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
     await tick();
 
     expect(sink.frames.at(-1)).toMatchObject({ kind: 'reset', reason: 'gone' });
+  });
+
+  it('keeps following a conversation whose folder a look could not name by id alone — S-163', async () => {
+    store = new InMemoryTranscriptStore()
+      .add('/srv/projects/app', session(1), someMessages(1))
+      .obscureCwd(conversationId(1));
+    follower = new FollowTranscriptUseCase(
+      store,
+      new TranscriptAudience(
+        { current: () => anAllowlist([aWorkspace({ root: '/srv/projects/app' })]) },
+        origins,
+        { liveSessionOf: () => live },
+        { clock, activeWindowMs: 120_000 },
+      ),
+      scheduler,
+      new SequentialIds(),
+      settings,
+      observer,
+      noQuestionRecords(),
+    );
+
+    const { sink } = await follow();
+    write(someMessages(2));
+    await tick();
+
+    expect(sink.frames.some((frame) => frame.kind === 'reset')).toBe(false);
+    expect(sink.messageIds).toContain('m2');
   });
 
   it('lets a connection follow four, and refuses the fifth — S-61', async () => {

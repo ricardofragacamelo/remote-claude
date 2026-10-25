@@ -798,7 +798,14 @@ estender ao HTTP.
   `session` oferece; o `transcript` não importa o registro. O cursor é keyset sobre `(lastModified, sessionId)` descendente: conversa escrita
   entre duas páginas sobe, acima da janela já lida — não repete, e não faz pular nenhuma.
 - **HTTP — `GET /transcripts/:engine/:id/messages`** (Bearer; e `GET /transcripts/:sessionId/messages`, a rota do protocolo anterior, até a F7 do plano 28 — a mesma página, do motor padrão). `cursor` (id de mensagem) e `limit`
-  de 1 a 100 (default 25), **pela cauda**.
+  de 1 a 100 (default 25), **pela cauda**. `workspacePath` é opcional e nunca autoriza nada por si —
+  é a pasta que o chamador já acredita ser a da conversa (porque acabou de listá-la, ou está a
+  seguindo), usada só para saber **onde perguntar ao motor pelo id** quando ele sozinho não sabe
+  dizer: uma transcrição pesada o bastante (uma imagem embutida no prompt, por exemplo) empurra a
+  linha que nomeia a pasta para fora da janela que o motor varre, e a pasta some mesmo a conversa
+  continuando listável normalmente de onde ela já é conhecida (S-163). Sem o parâmetro, o
+  comportamento é o de sempre. O mesmo vale para `GET
+  /transcripts/:engine/:id/subagents/:toolUseId/messages`.
 
   | Status | Quando |
   |---|---|

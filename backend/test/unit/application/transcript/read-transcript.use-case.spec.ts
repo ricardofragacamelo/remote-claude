@@ -6,7 +6,7 @@ import { SessionId } from '@domain/session';
 import { TranscriptCursorStaleError, TranscriptNotFoundError } from '@domain/transcript';
 import { ConversationRef } from '@domain/engine';
 import { WorkspacePath } from '@domain/workspace';
-import { anAllowlist, OWNER } from '../../../support/builders/workspace.builder';
+import { aWorkspace, anAllowlist, OWNER } from '../../../support/builders/workspace.builder';
 import {
   aTranscriptSession,
   conversationId,
@@ -114,6 +114,83 @@ describe('ReadTranscriptUseCase', () => {
     store.add('/srv/elsewhere', aTranscriptSession({ id: 1, cwd: '/srv/elsewhere' }));
 
     await expect(read()).rejects.toThrow(TranscriptNotFoundError);
+  });
+
+  it('opens a conversation whose folder the engine could not name by id alone, a root of the allowlist being it — S-163', async () => {
+    store
+      .add('/srv/projects/app', aTranscriptSession({ id: 1 }), someMessages(3))
+      .obscureCwd(conversationId(1));
+
+    const { session, page } = await new ReadTranscriptUseCase(
+      store,
+      new TranscriptAudience(
+        { current: () => anAllowlist([aWorkspace({ root: '/srv/projects/app' })]) },
+        origins,
+        { liveSessionOf: () => null },
+        { clock: new FixedClock(new Date(1_758_800_000_000 + 1_000)), activeWindowMs: 120_000 },
+      ),
+      noQuestionRecords(),
+    ).execute({
+      userId: owner,
+      sessionId: ConversationRef.create('claude', conversationId(1)),
+      before: null,
+      limit: 2,
+    });
+
+    expect(session.cwd).toBe('/srv/projects/app');
+    expect(page.items.map(({ id }) => id)).toEqual(['m2', 'm3']);
+  });
+
+  it('opens a conversation under a broad root of the allowlist, by the folder the caller already knew — S-163', async () => {
+    // `/srv/projects` is a root this installation allows, but it is not the conversation's own
+    // folder — a project nested under it, as a root of this app usually is in practice. Only the
+    // caller's own hint, not the allowlist, can say which folder to list.
+    store
+      .add('/srv/projects/app', aTranscriptSession({ id: 1 }), someMessages(3))
+      .obscureCwd(conversationId(1));
+
+    const { session } = await new ReadTranscriptUseCase(
+      store,
+      new TranscriptAudience(
+        { current: () => anAllowlist([aWorkspace({ root: '/srv/projects' })]) },
+        origins,
+        { liveSessionOf: () => null },
+        { clock: new FixedClock(new Date(1_758_800_000_000 + 1_000)), activeWindowMs: 120_000 },
+      ),
+      noQuestionRecords(),
+    ).execute({
+      userId: owner,
+      sessionId: ConversationRef.create('claude', conversationId(1)),
+      before: null,
+      limit: 2,
+      workspaceHint: '/srv/projects/app',
+    });
+
+    expect(session.cwd).toBe('/srv/projects/app');
+  });
+
+  it('still answers not found under a broad root, with no hint of the folder — S-163', async () => {
+    store
+      .add('/srv/projects/app', aTranscriptSession({ id: 1 }), someMessages(3))
+      .obscureCwd(conversationId(1));
+
+    await expect(
+      new ReadTranscriptUseCase(
+        store,
+        new TranscriptAudience(
+          { current: () => anAllowlist([aWorkspace({ root: '/srv/projects' })]) },
+          origins,
+          { liveSessionOf: () => null },
+          { clock: new FixedClock(new Date(1_758_800_000_000 + 1_000)), activeWindowMs: 120_000 },
+        ),
+        noQuestionRecords(),
+      ).execute({
+        userId: owner,
+        sessionId: ConversationRef.create('claude', conversationId(1)),
+        before: null,
+        limit: 2,
+      }),
+    ).rejects.toThrow(TranscriptNotFoundError);
   });
 
   it('reports NOT_FOUND with its own key', async () => {

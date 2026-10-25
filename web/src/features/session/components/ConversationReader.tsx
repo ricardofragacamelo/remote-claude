@@ -26,6 +26,11 @@ import { Skeleton } from '@/shared/components/ui/skeleton';
 import { useStableConversation } from '@/shared/hooks/useStableConversation';
 import type { ConversationRef } from '@/shared/lib/conversation';
 
+/** `folder`, or `undefined` for the one default that means "none" — never sent as a hint. */
+function hintOf(folder: string): string | undefined {
+  return folder === '' ? undefined : folder;
+}
+
 export interface ConversationReaderProps {
   /** The conversation the panel reads — its engine, and its id in that engine's store. */
   readonly conversation: ConversationRef;
@@ -75,7 +80,7 @@ export function ConversationReader({
 }: ConversationReaderProps): React.JSX.Element {
   const { t } = useTranslation();
   const read = useStableConversation(asked);
-  const history = useConversationHistory(read);
+  const history = useConversationHistory(read, hintOf(folder));
   const { summary, conversation } = history;
   const keeper = useScrollKeeper(folder, conversationTabKey(read));
   const title =

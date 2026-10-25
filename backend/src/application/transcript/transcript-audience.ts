@@ -8,6 +8,7 @@ import type {
 } from '@domain/transcript';
 import type { WorkspaceAllowlistSource } from '@application/workspace';
 import type { LiveConversationSource } from './ports/live-conversation.source';
+import type { TranscriptStore } from './ports/transcript-store.port';
 import type { TranscriptOriginSource } from './ports/transcript-origin.source';
 
 /** A conversation as its caller sees it: what the engine said, where it came from, what it is doing. */
@@ -67,6 +68,48 @@ export class TranscriptAudience {
 
       return [this.withActivity({ ...session, origin }, userId, now)];
     });
+  }
+
+  /**
+   * [session], with its folder found by listing [hint] and then every root [userId] may use, when
+   * the engine could not say it by id alone.
+   *
+   * The engine normally reads a conversation's folder straight from its id, but a transcript heavy
+   * enough — a prompt's embedded image, say — can push the line that names it out of the window the
+   * engine scans, and an id-only read then answers with no folder at all, which the fence reads as
+   * "not addressable" even though the same conversation still lists correctly wherever its folder is
+   * already known (S-163). `hint` is never trusted on its own — it only changes which directory is
+   * listed first, and the usual fence runs on the folder the listing itself reports, exactly as
+   * without one. A root of the allowlist is tried only when an exact root of the installation happens
+   * to be the conversation's own folder; a caller who already knows that folder — because it just
+   * listed or is following the conversation — should say so with `hint` instead.
+   */
+  async resolved(
+    store: Pick<TranscriptStore, 'list'>,
+    session: TranscriptSession,
+    userId: UserId,
+    hint: string | null = null,
+  ): Promise<TranscriptSession> {
+    if (session.cwd !== null) {
+      return session;
+    }
+
+    const roots = [
+      ...(hint === null ? [] : [hint]),
+      ...this.allowlist.current().for(userId).map((workspace) => workspace.root.value),
+    ];
+
+    for (const root of roots) {
+      const found = (await store.list(root)).find(
+        (candidate) => candidate.id.key === session.id.key,
+      );
+
+      if (found !== undefined) {
+        return found;
+      }
+    }
+
+    return session;
   }
 
   /**

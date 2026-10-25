@@ -95,6 +95,47 @@ describe('the routes of the history — plan 28, B-12', () => {
     expect(asked).toEqual(Array.from({ length: 4 }, () => `claude:${ID}`));
   });
 
+  it('forwards the folder of the query as the use case\'s hint of the conversation — S-163', async () => {
+    const hints: (string | null | undefined)[] = [];
+    const page = {
+      session: {
+        ...aTranscriptSession({ id: 1 }),
+        origin: 'ours' as const,
+        activity: { activity: 'idle', liveSessionId: null, writtenAgoSeconds: 1 },
+      },
+      page: { items: [], next: null },
+      lastMessageId: null,
+    };
+    const reading = {
+      execute: ({ workspaceHint }: { workspaceHint?: string | null }) => {
+        hints.push(workspaceHint);
+        return Promise.resolve(page);
+      },
+      subagent: ({ workspaceHint }: { workspaceHint?: string | null }) => {
+        hints.push(workspaceHint);
+        return Promise.resolve({ items: [], next: null });
+      },
+    } as unknown as ReadTranscriptUseCase;
+    const controller = new TranscriptController(
+      {} as ListTranscriptsUseCase,
+      reading,
+      {} as ReadToolResultUseCase,
+      {} as ReadPromptImageUseCase,
+      new TranscriptStoreRegistry([new InMemoryTranscriptStore()], 'claude'),
+    );
+
+    await controller.read('claude', ID, { workspacePath: '/home/ricardocamelo/app' }, user);
+    await controller.readSubagent(
+      'claude',
+      ID,
+      'toolu_1',
+      { workspacePath: '/home/ricardocamelo/app' },
+      user,
+    );
+
+    expect(hints).toEqual(['/home/ricardocamelo/app', '/home/ricardocamelo/app']);
+  });
+
   it('lists the conversations of a folder, with the cursor of the next page', async () => {
     const { controller } = aController();
 

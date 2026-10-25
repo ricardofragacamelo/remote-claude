@@ -211,7 +211,9 @@ describe('a conversation followed while it is read', () => {
       expect(await screen.findByText('after the rewind')).toBeInTheDocument();
       expect(screen.queryByText('rewound away')).toBeNull();
       expect(get).toHaveBeenCalledTimes(2);
-      expect(get).toHaveBeenLastCalledWith(`/transcripts/claude/${EDITOR}/messages`);
+      expect(get).toHaveBeenLastCalledWith(
+        `/transcripts/claude/${EDITOR}/messages?workspacePath=%2Ff`,
+      );
       await waitFor(() => {
         expect(follow.follows()).toHaveLength(2);
       });

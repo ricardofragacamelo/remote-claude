@@ -56,7 +56,20 @@ export class InMemoryTranscriptStore implements EngineTranscriptStore {
 
   find(id: ConversationRef): Promise<TranscriptSession | null> {
     const session = [...this.byDirectory.values()].flat().find((each) => each.id.equals(id));
-    return Promise.resolve(session ?? null);
+    if (session === undefined) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(this.unknownCwd.has(session.id.id) ? { ...session, cwd: null } : session);
+  }
+
+  /** Ids a transcript the engine cannot resolve a folder for by id alone — `list` still can, the way
+   * a transcript too large for the real SDK's id-only lookup to find a `cwd` line in still lists
+   * correctly under the root it ran in (S-163). */
+  private readonly unknownCwd = new Set<string>();
+
+  obscureCwd(sessionId: string): this {
+    this.unknownCwd.add(sessionId);
+    return this;
   }
 
   private readonly subagentsByTool = new Map<string, readonly TranscriptMessage[]>();

@@ -4,7 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useConversationHistory } from '@/features/session/hooks/useConversationHistory';
 import { conversationFrom } from '@/features/session/services/live-session.service';
 import { api } from '@/shared/api/api';
-import { aHistoryPage, conversationRef, OURS, said } from '../../../../support/history';
+import { aHistoryPage, conversationRef, ENGINE, OURS, said } from '../../../../support/history';
 import { providers } from '../../../../support/render';
 
 afterEach(() => {
@@ -51,6 +51,19 @@ describe('useConversationHistory with what is followed', () => {
       expect(view.result.current.base).toBe('u-41');
     });
     expect(view.result.current.lastMessageId).toBe('u-41');
+  });
+
+  it('asks the first page with the folder it already knows, as a hint — S-163', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue(aPage([said('m1', 'hi')], 'u-41'));
+    renderHook(() => useConversationHistory(conversationRef(OURS), '/srv/projects/app'), {
+      wrapper: providers(),
+    });
+
+    await waitFor(() => {
+      expect(get).toHaveBeenCalledWith(
+        `/transcripts/${ENGINE}/${OURS}/messages?workspacePath=%2Fsrv%2Fprojects%2Fapp`,
+      );
+    });
   });
 
   it('folds pages and updates by the one reducer: the same as reading it all again — S-77', async () => {
