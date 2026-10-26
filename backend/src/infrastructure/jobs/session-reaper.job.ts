@@ -62,8 +62,19 @@ export class SessionReaperJob extends PeriodicJob {
     }
   }
 
-  protected cadence(): JobCadence {
-    const intervalMs = reaperIntervalFor(this.config.session.idleTtlMs);
+  protected cadence(): JobCadence | null {
+    const idleTtlMs = this.config.session.idleTtlMs;
+
+    if (idleTtlMs === null) {
+      this.logger.warn(
+        { op: 'session.reap', layer: 'infrastructure', module: 'session' },
+        'the idle-session reaper is off: a session only closes when somebody closes it or the ' +
+          'backend shuts down',
+      );
+      return null;
+    }
+
+    const intervalMs = reaperIntervalFor(idleTtlMs);
     return { firstDelayMs: intervalMs, intervalMs };
   }
 

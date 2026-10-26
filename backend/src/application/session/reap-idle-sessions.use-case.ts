@@ -14,19 +14,27 @@ import type { SessionRegistry } from './session-registry';
  *
  * Every candidate is chosen and marked closed in the same turn of the event loop, so a command
  * cannot slip in between "this one is idle" and "this one is closing".
+ *
+ * `ttlMs` is `null` when the reaper is switched off: nothing is ever idle enough to reap, and a
+ * session then only ends when somebody closes it or the backend shuts down.
  */
 export class ReapIdleSessionsUseCase {
   constructor(
     private readonly registry: SessionRegistry,
     private readonly ender: SessionEnder,
     private readonly clock: Clock,
-    private readonly ttlMs: number,
+    private readonly ttlMs: number | null,
   ) {}
 
   /** @returns how many sessions were put away */
   async execute(): Promise<number> {
+    if (this.ttlMs === null) {
+      return 0;
+    }
+
+    const ttlMs = this.ttlMs;
     const now = this.clock.now();
-    const idle = this.registry.all().filter((live) => live.session.isIdleFor(this.ttlMs, now));
+    const idle = this.registry.all().filter((live) => live.session.isIdleFor(ttlMs, now));
 
     // `allSettled`: one subprocess that fails to close must not keep the others alive. The ender
     // has already forgotten it either way.

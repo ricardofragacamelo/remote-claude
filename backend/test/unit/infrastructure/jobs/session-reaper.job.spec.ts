@@ -90,4 +90,42 @@ describe('SessionReaperJob — B-02', () => {
     expect(logger.withOp('session.reap')).toHaveLength(1);
     expect(scheduler.armed).toBe(1);
   });
+
+  describe('switched off — D-02', () => {
+    const off = { session: { idleTtlMs: null } } as unknown as AppConfig;
+
+    function anOffJob(): SessionReaperJob {
+      const session = aSession();
+      session.moveTo('idle');
+      const { registry } = aRegistry([session], 10, clock);
+      const ender = new SessionEnder(registry, new RecordingBroadcaster());
+
+      return new SessionReaperJob(
+        new ReapIdleSessionsUseCase(registry, ender, clock, null),
+        off,
+        scheduler,
+        logger.logger,
+      );
+    }
+
+    it('arms nothing', () => {
+      anOffJob().onApplicationBootstrap();
+
+      expect(scheduler.delays).toEqual([]);
+    });
+
+    it('says at boot, in warn, that a session only closes by hand or at shutdown', () => {
+      anOffJob().onApplicationBootstrap();
+
+      expect(logger.withOp('session.reap')).toMatchObject([
+        { level: 'warn', msg: expect.stringContaining('backend shuts down') },
+      ]);
+    });
+
+    it('closes nothing, even asked to sweep directly', async () => {
+      clock.advance(TTL_MS);
+
+      expect(await anOffJob().sweep()).toBe(0);
+    });
+  });
 });

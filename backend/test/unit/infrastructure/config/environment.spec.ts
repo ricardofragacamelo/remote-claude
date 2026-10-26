@@ -7,6 +7,7 @@ import { ConfigurationError } from '@remote-claude/config';
 import {
   AUDIT_PURGE_MIN_INTERVAL_MS,
   RULE_LIFETIME_CEILING_MS,
+  SESSION_IDLE_TTL_FLOOR_MS,
   loadConfig,
   loadDatabaseConfig,
 } from '@infra/config/environment';
@@ -654,6 +655,30 @@ describe('loadConfig', () => {
         loadConfig(withChange({ RC_AUDIT_PURGE_INTERVAL_MS: String(AUDIT_PURGE_MIN_INTERVAL_MS) }))
           .audit.purgeIntervalMs,
       ).toBe(60_000);
+    });
+  });
+
+  describe('the idle-session reaper — D-02', () => {
+    it('switches the reaper off only with the literal word', () => {
+      expect(loadConfig(withChange({ RC_SESSION_IDLE_TTL_MS: 'off' })).session.idleTtlMs).toBeNull();
+    });
+
+    // Switched off by configuration, never by accident: a zero or an empty value is a mistake,
+    // and a mistake stops the boot instead of quietly ending every subprocess's reclaim.
+    it.each(['0', '', 'OFF', 'false', String(SESSION_IDLE_TTL_FLOOR_MS - 1), '-1'])(
+      'refuses a TTL of "%s"',
+      (value) => {
+        expect(() => loadConfig(withChange({ RC_SESSION_IDLE_TTL_MS: value }))).toThrow(
+          ConfigurationError,
+        );
+      },
+    );
+
+    it('accepts the shortest TTL there is', () => {
+      expect(
+        loadConfig(withChange({ RC_SESSION_IDLE_TTL_MS: String(SESSION_IDLE_TTL_FLOOR_MS) }))
+          .session.idleTtlMs,
+      ).toBe(1_000);
     });
   });
 

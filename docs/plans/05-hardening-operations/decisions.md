@@ -25,6 +25,17 @@ Um ponto não é negociável: **esperar permissão não é ociosidade** — ence
 exatamente o fluxo que o produto existe para servir (S-05). O que falta é o prazo, e se ele
 conta do último evento ou da última ação humana.
 
+**Implementação parcial, fora do ciclo deste plano (2026-10-25):** `RC_SESSION_IDLE_TTL_MS`
+agora aceita o literal `off`, que desliga o `SessionReaperJob` inteiro — uma sessão só fecha por
+ação humana ou por desligamento do backend, o mesmo regime que `RC_AUDIT_PURGE_INTERVAL_MS` já
+tinha. Motivo: um comando em background (`pnpm verify:full`, por exemplo) que continua rodando
+depois que o próprio turno terminou não conta como atividade — a sessão volta a `idle` e o
+reaper a encerra (e o subprocesso do comando junto) antes dos 30 min originais, mesmo com
+trabalho de verdade em andamento. `pnpm verify`/`verify:full` não foram rodados para esta
+mudança; os testes unitários tocados (`environment.spec.ts`, `reap-idle-sessions.use-case` via
+`session-reaper.job.spec.ts`) e o backend inteiro (`pnpm --filter backend test:unit`) passam, com
+lint e typecheck limpos.
+
 ### D-09 — quando tentar de novo
 
 Nasceu do ciclo 32 do [plano 02](../02-mobile-approval/progress.md): uma falha pontual do provedor

@@ -59,6 +59,20 @@ const purgeInterval = z.union([
 export const SESSION_IDLE_TTL_FLOOR_MS = 1_000;
 
 /**
+ * `off`, or how long a session may sit idle before the reaper closes it.
+ *
+ * Switching it off is the literal word, like the purge job's: a session then only ends when
+ * somebody closes it or the backend shuts down — nothing ever reclaims the subprocess on its own.
+ * A background command still running when the agent's own turn has already ended (a long
+ * `pnpm verify:full`, say) does not count as activity, which is exactly the case the switch exists
+ * for (D-02).
+ */
+const sessionIdleTtl = z.union([
+  z.literal('off'),
+  z.coerce.number().int().min(SESSION_IDLE_TTL_FLOOR_MS),
+]);
+
+/**
  * `off`, or where the process writes its pid.
  *
  * The development stack turns it on so `pnpm allowlist` can find the running backend and send it
@@ -109,7 +123,7 @@ export const environmentSchema = z.object({
   RC_SESSION_MIN_CONCURRENT: z.coerce.number().int().min(1).max(100),
   RC_SESSION_MEMORY_FRACTION: z.coerce.number().positive().max(1),
   RC_SESSION_MEMORY_MB: z.coerce.number().int().min(64),
-  RC_SESSION_IDLE_TTL_MS: z.coerce.number().int().min(SESSION_IDLE_TTL_FLOOR_MS),
+  RC_SESSION_IDLE_TTL_MS: sessionIdleTtl,
   RC_WS_MAX_FRAMES_PER_SECOND: z.coerce.number().int().min(1),
   RC_WS_MAX_FRAME_BYTES: z.coerce.number().int().min(1_024),
   RC_WS_MAX_ATTACHED_SESSIONS: z.coerce.number().int().min(1),
@@ -306,8 +320,11 @@ export interface AppConfig {
       readonly perSessionBytes: number;
     };
 
-    /** How long a session may sit with nothing happening before it is closed (D-02). */
-    readonly idleTtlMs: number;
+    /**
+     * How long a session may sit with nothing happening before it is closed — `null` when the
+     * reaper is switched off (D-02).
+     */
+    readonly idleTtlMs: number | null;
     readonly limits: {
       readonly maxBudgetUsd: number;
       readonly maxTurns: number;
@@ -525,7 +542,7 @@ export function loadConfig(
         memoryFraction: env.RC_SESSION_MEMORY_FRACTION,
         perSessionBytes: env.RC_SESSION_MEMORY_MB * 1024 * 1024,
       },
-      idleTtlMs: env.RC_SESSION_IDLE_TTL_MS,
+      idleTtlMs: env.RC_SESSION_IDLE_TTL_MS === 'off' ? null : env.RC_SESSION_IDLE_TTL_MS,
       limits: {
         maxBudgetUsd: env.RC_SESSION_MAX_BUDGET_USD,
         maxTurns: env.RC_SESSION_MAX_TURNS,
