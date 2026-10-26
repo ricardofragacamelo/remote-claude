@@ -63,6 +63,8 @@ export {
   SKILL_NAME_MAX_LENGTH,
   SKILL_NAME_PATTERN,
 } from './entities/skill.entity';
+export { rateLimitWindowOf, rateLimitWindowsFromUsageProbe } from './usage/rate-limit-window';
+export type { RateLimitStatus, RateLimitWindow } from './usage/rate-limit-window';
 export type { ProjectSkillView, SkillOrigin, SkillUnloadedReason } from './entities/skill.entity';
 export { digestOfSkillSources } from './services/skill-source-digest';
 export type { SkillSourceFingerprint } from './services/skill-source-digest';

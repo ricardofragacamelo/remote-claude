@@ -2,6 +2,7 @@
 export const claudeEngineKeys = {
   all: ['engines', 'claude'] as const,
   account: () => [...claudeEngineKeys.all, 'account'] as const,
+  rateLimits: () => [...claudeEngineKeys.all, 'usage', 'rate-limits'] as const,
   installation: () => [...claudeEngineKeys.all, 'installation'] as const,
   outputStyle: (folder: string | undefined) =>
     [...claudeEngineKeys.all, 'output-style', folder ?? ''] as const,

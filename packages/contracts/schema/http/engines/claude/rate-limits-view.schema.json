@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/engines/claude/rate-limits-view.json",
+  "title": "RateLimitsView",
+  "description": "`GET /engines/claude/usage/rate-limits`: the rate-limit windows of the account the Claude CLI is signed in to, each as it was last observed on the stream (plan 16, D-09). The account is the machine's, shared by every user of this installation — never real-time: a window with no reading yet is simply absent from the list.",
+  "x-kind": "http",
+  "x-type": "engines.claude.usage.rateLimits",
+  "x-route": [{ "method": "GET", "path": "/engines/claude/usage/rate-limits" }],
+  "type": "object",
+  "required": ["windows"],
+  "properties": {
+    "windows": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "required": ["kind", "status", "utilizationPercent", "resetsAt", "observedAt"],
+        "properties": {
+          "kind": { "type": "string" },
+          "status": { "type": "string", "enum": ["allowed", "allowedWarning", "rejected"] },
+          "utilizationPercent": { "type": "integer", "minimum": 0, "x-nullable": true },
+          "resetsAt": { "type": "string", "x-nullable": true },
+          "observedAt": { "type": "string" },
+          "displayName": {
+            "type": "string",
+            "description": "The server's own label for a per-model window (`\"Fable\"`, say) — absent for every other window, which a client already has a translation for by `kind`."
+          }
+        }
+      }
+    }
+  }
+}

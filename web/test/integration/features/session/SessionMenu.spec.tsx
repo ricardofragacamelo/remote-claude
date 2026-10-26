@@ -18,7 +18,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** A session as the header reads it — idle, connected, this browser's, with no turn yet. */
+/** A session as the header reads it — idle, connected, with no turn yet. */
 function aSession(overrides: Partial<SessionHeaderState> = {}): SessionHeaderState {
   return {
     sessionId: SESSION,
@@ -26,7 +26,6 @@ function aSession(overrides: Partial<SessionHeaderState> = {}): SessionHeaderSta
     connection: 'ready',
     costUsd: '0',
     turns: 0,
-    isOwner: true,
     ended: false,
     conversation: { engine: 'claude', id: 'conv-1' },
     close: vi.fn(),
@@ -178,16 +177,6 @@ describe('the menu of the session — plan 09, B-17', () => {
     });
   });
 
-  it('keeps ending from whoever did not open the session, and says why — S-40', async () => {
-    const { menu } = await opened(aSession({ isOwner: false }));
-
-    const end = within(menu).getByRole('menuitem', {
-      name: new RegExp(t('session.controls.close')),
-    });
-    expect(end).toHaveAttribute('aria-disabled', 'true');
-    expect(end).toHaveTextContent(t('session.controls.closeNotOwner'));
-  });
-
   it('offers no end of a session that already ended', async () => {
     const { menu } = await opened(aSession({ ended: true }));
 
@@ -284,7 +273,7 @@ describe('the menu of the session — plan 09, B-17', () => {
   });
 
   it('has no accessibility violation, open', async () => {
-    const { menu } = await opened(aSession({ isOwner: false }));
+    const { menu } = await opened(aSession());
 
     expect(await axe(menu)).toHaveNoViolations();
   });

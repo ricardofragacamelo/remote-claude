@@ -162,21 +162,14 @@ function SessionItems({
   return (
     <>
       <DropdownMenuItem
-        disabled={!session.isOwner || session.ended}
+        disabled={session.ended}
         onSelect={() => {
           onOpen('close');
         }}
         className="flex items-start gap-2 text-destructive"
       >
         <Power className="mt-0.5 size-4" aria-hidden />
-        <span className="flex flex-col">
-          <span>{t('session.controls.close')}</span>
-          {!session.isOwner && (
-            <span className="text-ui-xs text-muted-foreground">
-              {t('session.controls.closeNotOwner')}
-            </span>
-          )}
-        </span>
+        <span>{t('session.controls.close')}</span>
       </DropdownMenuItem>
       <DropdownMenuItem
         disabled={conversation === null}

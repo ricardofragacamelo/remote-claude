@@ -124,6 +124,7 @@ describe('AgentSdkClaudeSessionAdapter', () => {
       new RecordingLogger().logger,
       new SequentialUuids(),
       INSTALLATION,
+      { observe: () => undefined, current: () => [] },
     );
 
   it('describes itself without spawning anything — plan 28, B-10, S-30', async () => {
@@ -170,6 +171,7 @@ describe('AgentSdkClaudeSessionAdapter', () => {
       new RecordingLogger().logger,
       { next: () => 'not-a-uuid' },
       INSTALLATION,
+      { observe: () => undefined, current: () => [] },
     );
 
     expect(() => adapter.newConversation()).toThrow('not a UUID');
@@ -207,6 +209,7 @@ describe('AgentSdkClaudeSessionAdapter', () => {
       new RecordingLogger().logger,
       new SequentialUuids(),
       INSTALLATION,
+      { observe: () => undefined, current: () => [] },
     );
 
     const handle = await adapter.start({

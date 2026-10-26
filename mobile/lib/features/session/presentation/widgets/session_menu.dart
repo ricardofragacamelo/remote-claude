@@ -1,5 +1,5 @@
 /// The menu of the session — the `⋯` of the bar (plan 10, B-16): what is done to the whole session,
-/// and seldom. End it — its owner's alone, and asked first (09 · D-10) —, undo what it wrote, copy
+/// and seldom. End it — asked first (09 · D-10) —, undo what it wrote, copy
 /// its id, the conversations of its folder — which left the bar for the files' panel (plan 25,
 /// D-02) —; and what is the screen's: the permission rules and the help. In the draft, there is no
 /// session yet, and only the screen's two are there (S-51).
@@ -19,7 +19,6 @@ import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/widgets/message_strip.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/presentation/providers/live_session_controller.dart';
-import 'package:remote_claude/features/session/presentation/providers/owned_sessions.dart';
 import 'package:remote_claude/features/session/presentation/widgets/rewind_sheet.dart';
 import 'package:remote_claude/features/session/presentation/widgets/session_help.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
@@ -199,7 +198,9 @@ class _CopyIdItem extends ConsumerWidget {
   }
 }
 
-/// "End session": its owner's alone, and only while it runs — otherwise off, saying why (S-50).
+/// "End session": only while it runs — any of this account's own devices may, the backend's
+/// ownership is by user, never by device or connection (05 · "Autorização por connection") —
+/// otherwise off, saying why (S-50).
 class _EndItem extends ConsumerWidget {
   const _EndItem({required this.sessionId, required this.onEnd});
 
@@ -209,7 +210,6 @@ class _EndItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final bool owned = ref.watch(ownedSessionsProvider).contains(sessionId);
     final bool ended =
         ref.watch(
           liveSessionControllerProvider(
@@ -217,18 +217,13 @@ class _EndItem extends ConsumerWidget {
           ).select((LiveSession live) => live.conversation.status),
         ) ==
         SessionStatus.closed;
-    final String? why = ended
-        ? l10n.sessionMenuEndEnded
-        : owned
-        ? null
-        : l10n.sessionMenuEndNotOwner;
     final Color danger = Theme.of(context).colorScheme.error;
 
     return ListTile(
-      enabled: why == null,
-      leading: Icon(Icons.power_settings_new, color: why == null ? danger : null),
-      title: Text(l10n.sessionMenuEnd, style: why == null ? TextStyle(color: danger) : null),
-      subtitle: why == null ? null : Text(why),
+      enabled: !ended,
+      leading: Icon(Icons.power_settings_new, color: ended ? null : danger),
+      title: Text(l10n.sessionMenuEnd, style: ended ? null : TextStyle(color: danger)),
+      subtitle: ended ? Text(l10n.sessionMenuEndEnded) : null,
       onTap: onEnd,
     );
   }

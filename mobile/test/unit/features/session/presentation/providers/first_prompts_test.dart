@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:remote_claude/features/session/domain/repositories/session_repository.dart';
 import 'package:remote_claude/features/session/presentation/providers/first_prompts.dart';
-import 'package:remote_claude/features/session/presentation/providers/owned_sessions.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
 import '../../../../../support/fakes/fake_session_repository.dart';
@@ -55,13 +54,5 @@ void main() {
     prompts().send('s-2', 'go on', remembersEffort: false);
 
     expect(container.read(firstPromptsProvider), isEmpty);
-  });
-
-  test('every session sent a first prompt from here is this app’s to end — once in the list', () {
-    prompts().send('s-1', 'hello');
-    prompts().send('s-2', 'go on', remembersEffort: false);
-    container.read(ownedSessionsProvider.notifier).claim('s-1');
-
-    expect(container.read(ownedSessionsProvider), <String>{'s-1', 's-2'});
   });
 }

@@ -126,8 +126,7 @@
       "send": "Send"
     },
     "controls": {
-      "close": "End session",
-      "closeNotOwner": "Only the browser that opened this session can end it."
+      "close": "End session"
     },
     "history": {
       "loading": "Loading the earlier part of this conversation…",
@@ -2648,6 +2647,8 @@
         "accountBody": "Every session of every person on this machine spends the same Claude account — the one the CLI of the machine signed in to. The screen shows the provider, the plan, the organization and the e-mail, and of where the credential comes from only its name, never a token.",
         "checkHeading": "The test of the connection",
         "checkBody": "One turn of the model with a fixed sentence and no tool: it says whether Claude answers here, how long it took and what it cost. It is the only thing on this screen that spends quota, and it runs only when you click.",
+        "usageHeading": "Usage",
+        "usageBody": "The rate-limit windows of the account every session of this machine spends — the same account the account section names. Each bar is the CLI's own last reading, never real-time: the screen says when it was last seen, and a machine where no session has run yet has nothing to show.",
         "outputStyleHeading": "Output style",
         "outputStyleBody": "How Claude writes its answers — concise, explanatory, a style of the project. A style that no longer exists falls back to the installation’s.",
         "pluginWhatHeading": "What a plugin can bring",
@@ -2687,6 +2688,31 @@
         "tokenSource": "Where the token comes from",
         "apiKeySource": "Where the API key comes from",
         "notSaid": "not said"
+      },
+      "usage": {
+        "title": "Usage",
+        "purpose": "The account's rate-limit windows, as the CLI last reported them.",
+        "refresh": "Read the windows again",
+        "loading": "Reading the account's rate limits",
+        "noneTitle": "No reading yet",
+        "noneBody": "This backend has not seen a rate-limit reading since it started. Open a session, and the windows appear here once the CLI reports one.",
+        "resetsAt": "Resets {{when}}",
+        "lastSeen": "Seen {{when}}",
+        "noReading": "no reading",
+        "status": {
+          "allowed": "OK",
+          "allowedWarning": "Near the limit",
+          "rejected": "At the limit"
+        },
+        "window": {
+          "fiveHour": "Session (5 h)",
+          "sevenDay": "Weekly (7 days)",
+          "sevenDayOpus": "Weekly — Opus",
+          "sevenDaySonnet": "Weekly — Sonnet",
+          "sevenDayOverageIncluded": "Weekly — overage included",
+          "sevenDayOauthApps": "Weekly — connected apps",
+          "overage": "Overage"
+        }
       },
       "installation": {
         "title": "Installation",

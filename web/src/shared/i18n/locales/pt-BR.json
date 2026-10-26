@@ -126,8 +126,7 @@
       "send": "Enviar"
     },
     "controls": {
-      "close": "Encerrar sessão",
-      "closeNotOwner": "Só o navegador que abriu esta sessão pode encerrá-la."
+      "close": "Encerrar sessão"
     },
     "history": {
       "loading": "Carregando a parte anterior desta conversa…",
@@ -2648,6 +2647,8 @@
         "accountBody": "Toda sessão de toda pessoa nesta máquina gasta a mesma conta do Claude — a que o CLI da máquina logou. A tela mostra o provedor, o plano, a organização e o e-mail, e da origem da credencial só o nome, nunca um token.",
         "checkHeading": "O teste de conexão",
         "checkBody": "Um turno do modelo com uma frase fixa e nenhuma tool: diz se o Claude responde aqui, quanto demorou e quanto custou. É a única coisa desta tela que gasta cota, e só roda quando você clica.",
+        "usageHeading": "Uso",
+        "usageBody": "As janelas de limite de uso da conta que toda sessão desta máquina gasta — a mesma conta que a seção de conta nomeia. Cada barra é a última leitura do próprio CLI, nunca em tempo real: a tela diz quando foi vista por último, e uma máquina onde nenhuma sessão rodou ainda não tem nada para mostrar.",
         "outputStyleHeading": "Output style",
         "outputStyleBody": "Como o Claude escreve as respostas — conciso, explicativo, um estilo do projeto. Um estilo que não existe mais cai no da instalação.",
         "pluginWhatHeading": "O que um plugin pode trazer",
@@ -2687,6 +2688,31 @@
         "tokenSource": "De onde vem o token",
         "apiKeySource": "De onde vem a chave de API",
         "notSaid": "não informado"
+      },
+      "usage": {
+        "title": "Uso",
+        "purpose": "As janelas de limite de uso da conta, como o CLI informou por último.",
+        "refresh": "Ler as janelas de novo",
+        "loading": "Lendo os limites de uso da conta",
+        "noneTitle": "Nenhuma leitura ainda",
+        "noneBody": "Este backend ainda não viu uma leitura de limite de uso desde que começou. Abra uma sessão, e as janelas aparecem aqui assim que o CLI informar uma.",
+        "resetsAt": "Reinicia {{when}}",
+        "lastSeen": "Visto {{when}}",
+        "noReading": "sem leitura",
+        "status": {
+          "allowed": "OK",
+          "allowedWarning": "Perto do limite",
+          "rejected": "No limite"
+        },
+        "window": {
+          "fiveHour": "Sessão (5 h)",
+          "sevenDay": "Semanal (7 dias)",
+          "sevenDayOpus": "Semanal — Opus",
+          "sevenDaySonnet": "Semanal — Sonnet",
+          "sevenDayOverageIncluded": "Semanal — excedente incluído",
+          "sevenDayOauthApps": "Semanal — apps conectados",
+          "overage": "Excedente"
+        }
       },
       "installation": {
         "title": "Instalação",

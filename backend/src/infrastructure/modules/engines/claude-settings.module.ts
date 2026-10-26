@@ -19,6 +19,9 @@ import {
 import { ClaudePluginManifestReader } from '@adapter/outbound/engines/claude/plugin-manifest.reader';
 import { ClaudeProjectConfigFileReader } from '@adapter/outbound/engines/claude/project-config-file.reader';
 import { RegistryLiveLoadedState } from '@adapter/outbound/engines/claude/registry-live-loaded-state';
+import { sharedRateLimitStore } from '@adapter/outbound/engines/claude/rate-limit-store';
+import { AgentSdkUsageProbe } from '@adapter/outbound/engines/claude/usage-probe.adapter';
+import { EphemeralClaude } from '@adapter/outbound/engines/claude/ephemeral-claude';
 import { FOLDER_ACCESS } from '@application/agent-settings';
 import type { FolderAccess } from '@application/agent-settings';
 import { RecordAuditEventUseCase } from '@application/audit';
@@ -43,11 +46,13 @@ import {
   PreviewLocalPluginUseCase,
   PROJECT_CONFIG_SOURCE,
   PROJECT_SKILL_FILES,
+  RATE_LIMIT_STORE,
   ReadAccountUseCase,
   ReadInstallationUseCase,
   ReadOutputStyleUseCase,
   ReadProjectConfigUseCase,
   ReadProjectSkillsUseCase,
+  ReadRateLimitsUseCase,
   ReadSkillPreferencesUseCase,
   RemovePluginUseCase,
   SaveOutputStyleUseCase,
@@ -55,6 +60,7 @@ import {
   SetPluginEnabledUseCase,
   SKILL_PLUGIN_CANDIDATES,
   SKILL_PREFERENCES_REPOSITORY,
+  USAGE_PROBE,
 } from '@application/engines/claude';
 import type {
   InstallationFacts,
@@ -67,7 +73,9 @@ import type {
   PluginRepository,
   ProjectConfigDependencies,
   ProjectSkillFiles,
+  RateLimitStore,
   SkillDependencies,
+  UsageProbe,
   SkillPluginCandidates,
   SkillPreferencesRepository,
 } from '@application/engines/claude';
@@ -75,6 +83,7 @@ import { CLOCK, ID_GENERATOR } from '@application/shared';
 import { MARKETPLACE_ALLOWLIST_SOURCE } from '@application/workspace';
 import type { MarketplaceAllowlistSource } from '@application/workspace';
 import type { Clock, IdGenerator } from '@domain/shared';
+import { LOGGER, type Logger } from '@shared/logging/logger';
 import { AgentSettingsModule } from '../agent-settings.module';
 import { AuditModule } from '../audit.module';
 import { AuthModule } from '../auth.module';
@@ -336,6 +345,22 @@ const SKILL_DEPENDENCIES = Symbol('SkillDependencies');
       provide: SaveSkillPreferencesUseCase,
       inject: [SKILL_DEPENDENCIES],
       useFactory: (deps: SkillDependencies) => new SaveSkillPreferencesUseCase(deps),
+    },
+    // Shared with the session module's own `RATE_LIMIT_STORE` provider through the same
+    // module-scope singleton (see `rate-limit-store.ts`) — the two modules never import one
+    // another, and this is the one piece of state that cannot be built twice.
+    { provide: RATE_LIMIT_STORE, useValue: sharedRateLimitStore },
+    {
+      provide: USAGE_PROBE,
+      inject: [EphemeralClaude, CLOCK, LOGGER],
+      useFactory: (claude: EphemeralClaude, clock: Clock, logger: Logger) =>
+        new AgentSdkUsageProbe(claude, clock, logger),
+    },
+    {
+      provide: ReadRateLimitsUseCase,
+      inject: [RATE_LIMIT_STORE, USAGE_PROBE, FOLDER_ACCESS, CLOCK],
+      useFactory: (store: RateLimitStore, probe: UsageProbe, folders: FolderAccess, clock: Clock) =>
+        new ReadRateLimitsUseCase(store, probe, folders, clock),
     },
   ],
 })

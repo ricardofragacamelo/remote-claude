@@ -8,24 +8,15 @@ part of 'first_prompts.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Every session sent a first prompt from here was opened here, and is claimed as this app's
-/// ([OwnedSessions]).
-///
 /// The effort each session opened here started with, by session. A session absent from it was not
 /// opened here, and its effort is not known.
 
 @ProviderFor(FirstPrompts)
 final firstPromptsProvider = FirstPromptsProvider._();
 
-/// Every session sent a first prompt from here was opened here, and is claimed as this app's
-/// ([OwnedSessions]).
-///
 /// The effort each session opened here started with, by session. A session absent from it was not
 /// opened here, and its effort is not known.
 final class FirstPromptsProvider extends $NotifierProvider<FirstPrompts, Map<String, String?>> {
-  /// Every session sent a first prompt from here was opened here, and is claimed as this app's
-  /// ([OwnedSessions]).
-  ///
   /// The effort each session opened here started with, by session. A session absent from it was not
   /// opened here, and its effort is not known.
   FirstPromptsProvider._()
@@ -55,11 +46,8 @@ final class FirstPromptsProvider extends $NotifierProvider<FirstPrompts, Map<Str
   }
 }
 
-String _$firstPromptsHash() => r'7924f4ed5935f88d7113031c38e9e56c332bc0a1';
+String _$firstPromptsHash() => r'933a019becfe9754301968fe30c9a9bf3fc1762b';
 
-/// Every session sent a first prompt from here was opened here, and is claimed as this app's
-/// ([OwnedSessions]).
-///
 /// The effort each session opened here started with, by session. A session absent from it was not
 /// opened here, and its effort is not known.
 

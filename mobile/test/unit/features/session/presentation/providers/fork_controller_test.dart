@@ -9,7 +9,6 @@ import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 import 'package:remote_claude/features/session/domain/repositories/session_repository.dart';
 import 'package:remote_claude/features/session/presentation/providers/fork_controller.dart';
-import 'package:remote_claude/features/session/presentation/providers/owned_sessions.dart';
 import 'package:remote_claude/features/session/presentation/providers/resume_controller.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 
@@ -75,28 +74,24 @@ void main() {
     expect(read(container).isPending, isTrue);
   });
 
-  test(
-    'S-81 · its session opened: the text goes there first, the app owns it, the screen moves',
-    () async {
-      final ProviderContainer container = build();
-      fork(container);
+  test('S-81 · its session opened: the text goes there first, the screen moves', () async {
+    final ProviderContainer container = build();
+    fork(container);
 
-      sessions
-        ..emit(arrivalOf(sessionStarted(sessionId: 'other', correlationId: 'command-9')))
-        ..emit(arrivalOf(sessionStarted(sessionId: 'session-2', correlationId: 'command-1')));
-      await settle();
+    sessions
+      ..emit(arrivalOf(sessionStarted(sessionId: 'other', correlationId: 'command-9')))
+      ..emit(arrivalOf(sessionStarted(sessionId: 'session-2', correlationId: 'command-1')));
+    await settle();
 
-      expect(read(container), const ResumeState(sessionId: 'session-2'));
-      expect(sessions.commands.last.$2, <String, Object?>{
-        'sessionId': 'session-2',
-        'text': 'fix it properly',
-      });
-      expect(container.read(ownedSessionsProvider), contains('session-2'));
+    expect(read(container), const ResumeState(sessionId: 'session-2'));
+    expect(sessions.commands.last.$2, <String, Object?>{
+      'sessionId': 'session-2',
+      'text': 'fix it properly',
+    });
 
-      container.read(forkControllerProvider('session-1').notifier).acknowledge();
-      expect(read(container), const ResumeState());
-    },
-  );
+    container.read(forkControllerProvider('session-1').notifier).acknowledge();
+    expect(read(container), const ResumeState());
+  });
 
   test('S-82 · a point that is not a prompt is refused, and the next fork may go', () async {
     final ProviderContainer container = build();

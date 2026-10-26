@@ -742,7 +742,6 @@
   "sessionMenuCopyFailed": "Não foi possível copiar o id. Selecione e copie à mão: {sessionId}",
   "sessionMenuHelp": "Ajuda sobre esta tela",
   "sessionMenuEnd": "Encerrar sessão",
-  "sessionMenuEndNotOwner": "Só o app que abriu esta sessão pode encerrá-la.",
   "sessionMenuEndEnded": "A sessão já terminou.",
   "sessionCloseTitle": "Encerrar esta sessão?",
   "sessionCloseDescription": "O {agent} para nesta máquina. O que ele escreveu fica no disco, mas o desfazer das alterações de arquivo vai embora com a sessão. A conversa fica no histórico e pode ser retomada.",
@@ -1014,5 +1013,28 @@
   "auditResolvedByPerson": "Decidido por alguém",
   "auditResolvedByNamed": "Decidido por {who}",
   "auditResolvedFrom": "De {place}",
-  "auditResolvedByNamedFrom": "Decidido por {who}, de {place}"
+  "auditResolvedByNamedFrom": "Decidido por {who}, de {place}",
+
+  "agentScreenOpen": "{agent}",
+  "agentScreenTitle": "{agent}",
+  "agentScreenEmptyTitle": "Nada aqui ainda",
+  "agentScreenEmptyBody": "Esta instalação não tem nada próprio para mostrar aqui.",
+
+  "claudeUsageTitle": "Uso",
+  "claudeUsageLoading": "Lendo o uso da conta",
+  "claudeUsageEmptyTitle": "Nenhuma leitura ainda",
+  "claudeUsageEmptyBody": "Este backend ainda não viu uma leitura de limite de uso desde que começou. Abra uma sessão, e as janelas aparecem aqui assim que o CLI informar uma.",
+  "claudeUsageStatusAllowed": "OK",
+  "claudeUsageStatusAllowedWarning": "Perto do limite",
+  "claudeUsageStatusRejected": "No limite",
+  "claudeUsageNoReading": "sem leitura",
+  "claudeUsageResetsAt": "Reinicia {when}",
+  "claudeUsageSeenAt": "Visto {when}",
+  "claudeUsageWindowFiveHour": "Sessão (5 h)",
+  "claudeUsageWindowSevenDay": "Semanal (7 dias)",
+  "claudeUsageWindowSevenDayOpus": "Semanal — Opus",
+  "claudeUsageWindowSevenDaySonnet": "Semanal — Sonnet",
+  "claudeUsageWindowSevenDayOverageIncluded": "Semanal — excedente incluído",
+  "claudeUsageWindowSevenDayOauthApps": "Semanal — apps conectados",
+  "claudeUsageWindowOverage": "Excedente"
 }

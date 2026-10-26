@@ -1,6 +1,8 @@
-/// The app's ring of engine extensions, empty on purpose (plan 28, B-40, D-15; S-116): nothing is
-/// written into `lib/engines/`, the composition registers nothing, and no file of the core reaches
-/// for either — so the empty folder changes nothing the app builds.
+/// The app's ring of engine extensions (plan 28, B-40, D-15; S-116; plan 16, D-09): a screen of one
+/// engine only now exists — Claude's usage screen — so `lib/engines/` holds its code and
+/// `app/engines.dart` imports it. What this test guards is **isolation**, not emptiness: nothing
+/// outside the composition reaches into `engines/` directly, and nothing outside `main()` reaches
+/// for the composition itself.
 @TestOn('vm')
 library;
 
@@ -31,26 +33,32 @@ List<String> dartFilesUnder(String path) {
 }
 
 void main() {
-  test('S-116 · lib/engines/ holds no code: the app has no screen of one engine only', () {
+  test('S-116 · an engine lives under lib/engines/, never loose in the app', () {
     expect(Directory('lib/engines').existsSync(), isTrue);
-    expect(dartFilesUnder('lib/engines'), isEmpty);
+    expect(dartFilesUnder('lib/engines'), isNotEmpty);
   });
 
-  test('S-116 · the composition registers nothing beyond the core: it imports nothing', () {
-    final List<String> lines = File('lib/app/engines.dart').readAsLinesSync();
-
-    expect(lines.where((String line) => line.startsWith('import ')), isEmpty);
-    expect(lines.where((String line) => line.isNotEmpty && !line.startsWith('///')), <String>[
-      'library;',
-    ]);
-  });
-
-  test('S-116 · no file of the app imports an extension or the composition of them', () {
+  test('S-116 · only app/engines.dart reaches into an extension from outside engines/', () {
     final List<String> reaching = <String>[
       for (final String path in dartFilesUnder('lib'))
-        if (File(path).readAsStringSync().contains(
-          RegExp(r"import 'package:remote_claude/(engines/|app/engines\.dart)"),
-        ))
+        if (path != 'lib/app/engines.dart' &&
+            !path.startsWith('lib/engines/') &&
+            File(
+              path,
+            ).readAsStringSync().contains(RegExp(r"import 'package:remote_claude/engines/")))
+          path,
+    ];
+
+    expect(reaching, isEmpty);
+  });
+
+  test('S-116 · only main() reaches for the composition of the extensions', () {
+    final List<String> reaching = <String>[
+      for (final String path in dartFilesUnder('lib'))
+        if (path != 'lib/main.dart' &&
+            File(path).readAsStringSync().contains(
+              RegExp(r"import 'package:remote_claude/app/engines\.dart"),
+            ))
           path,
     ];
 

@@ -12,6 +12,7 @@ import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/navigation/deep_link_controller.dart';
 import 'package:remote_claude/core/navigation/page_observer.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
+import 'package:remote_claude/core/widgets/agent_screen.dart';
 import 'package:remote_claude/features/audit/audit.dart';
 import 'package:remote_claude/features/auth/auth.dart';
 import 'package:remote_claude/features/connection/connection.dart';
@@ -170,6 +171,11 @@ GoRouter buildRouter(Ref ref) {
         path: diagnosticsRoute,
         name: 'diagnostics',
         builder: (BuildContext context, GoRouterState state) => const DiagnosticsPage(),
+      ),
+      GoRoute(
+        path: agentRoute,
+        name: 'agent',
+        builder: (BuildContext context, GoRouterState state) => const AgentPage(),
       ),
       GoRoute(
         path: rulesRoute,

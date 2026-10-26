@@ -35,6 +35,8 @@ import type {
   SlashCommand,
 } from '@domain/session';
 import type { ClaudeInitialization } from '@domain/engines/claude';
+import { rateLimitWindowOf } from '@domain/engines/claude';
+import type { RateLimitStore } from '@application/engines/claude';
 import type { Logger } from '@shared/logging/logger';
 import { currentTraceId, runWithTrace } from '@shared/logging/trace-context';
 import { withinDeadline } from './deadline';
@@ -85,6 +87,9 @@ export interface SessionRunnerDeps {
    */
   readonly bundledCliVersion: string | null;
   readonly logger: Logger;
+
+  /** Where a `rate_limit_event` of this session's stream is kept, for the usage screen (D-09). */
+  readonly rateLimits: RateLimitStore;
 }
 
 /**
@@ -580,6 +585,7 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
     }
 
     this.noteVersion(message);
+    this.noteRateLimit(message);
 
     if (isForkRefusal(message)) {
       // The point an edit-and-resend forks from was refused, and it would be refused again: said
@@ -622,6 +628,22 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
     }
 
     this.reportedVersion = reported;
+  }
+
+  /**
+   * Keeps the account's rate-limit windows up to date for the usage screen (plan 16, D-09) — a side
+   * observation, never a contract event: {@link SdkMessageMapper} drops `rate_limit_event` from the
+   * stream on purpose, because it is a notice and not a transition the client should see.
+   */
+  private noteRateLimit(message: SDKMessage): void {
+    if (message.type !== 'rate_limit_event') {
+      return;
+    }
+
+    const window = rateLimitWindowOf(message.rate_limit_info, this.deps.clock.now());
+    if (window !== null) {
+      this.deps.rateLimits.observe(window);
+    }
   }
 
   /**

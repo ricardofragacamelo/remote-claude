@@ -1,11 +1,10 @@
 /// The bar of the session screen (plan 10, F3): the title, the status chip and its sheet, the
-/// history of the folder, and the `⋯` menu — ending the session asked first and its owner's alone,
-/// the undo, the rules, the help and the id — with nothing of the loose icons that were there.
+/// history of the folder, and the `⋯` menu — ending the session asked first, the undo, the rules,
+/// the help and the id — with nothing of the loose icons that were there.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -14,7 +13,6 @@ import 'package:remote_claude/core/logging/log_context.dart';
 import 'package:remote_claude/core/logging/logger_provider.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/widgets/agent_names.dart';
-import 'package:remote_claude/features/session/presentation/providers/owned_sessions.dart';
 import 'package:remote_claude/features/session/presentation/widgets/session_help.dart';
 import 'package:remote_claude/features/session/session.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
@@ -39,9 +37,6 @@ void main() {
     screen.sessions.emit(arrivalOf(raw));
     await tester.pumpAndSettle();
   }
-
-  ProviderContainer container(WidgetTester tester) =>
-      ProviderScope.containerOf(tester.element(find.byType(SessionPage)));
 
   /// The clipboard of the platform, answering as [answer] says, and what it was given.
   List<String> clipboard(WidgetTester tester, {bool refuses = false}) {
@@ -263,11 +258,10 @@ void main() {
   });
 
   group('the menu — B-16', () {
-    testWidgets('S-49 · its owner ends it: asked first, the focus on keeping it, one close', (
+    testWidgets('S-49 · ends it: asked first, the focus on keeping it, one close', (
       WidgetTester tester,
     ) async {
       await screen.pump(tester);
-      container(tester).read(ownedSessionsProvider.notifier).claim('session-1');
       await openMenu(tester);
 
       await tester.tap(find.text(l10n.sessionMenuEnd));
@@ -292,7 +286,6 @@ void main() {
 
     testWidgets('S-49 · keeping it running sends nothing', (WidgetTester tester) async {
       await screen.pump(tester);
-      container(tester).read(ownedSessionsProvider.notifier).claim('session-1');
       await openMenu(tester);
       await tester.tap(find.text(l10n.sessionMenuEnd));
       await tester.pumpAndSettle();
@@ -304,28 +297,10 @@ void main() {
       expect(screen.sessions.commands, isEmpty);
     });
 
-    testWidgets('S-50 · not its owner: "End session" is off, and says why', (
-      WidgetTester tester,
-    ) async {
-      await screen.pump(tester);
-      await openMenu(tester);
-
-      final ListTile end = tester.widget<ListTile>(
-        find.widgetWithText(ListTile, l10n.sessionMenuEnd),
-      );
-      expect(end.enabled, isFalse);
-      expect(find.text(l10n.sessionMenuEndNotOwner), findsOneWidget);
-
-      await tester.tap(find.text(l10n.sessionMenuEnd), warnIfMissed: false);
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.sessionCloseTitle), findsNothing);
-    });
-
     testWidgets('a session that ended has nothing left to end, and says so', (
       WidgetTester tester,
     ) async {
       await screen.pump(tester);
-      container(tester).read(ownedSessionsProvider.notifier).claim('session-1');
       await emit(tester, sessionClosed(seq: 2));
       await openMenu(tester);
 
@@ -429,7 +404,6 @@ void main() {
     testWidgets('S-49 · confirmed, and the close arrives while the question leaves: the session '
         'stays on screen, ended', (WidgetTester tester) async {
       await screen.pump(tester, routed: true);
-      container(tester).read(ownedSessionsProvider.notifier).claim('session-1');
       await openMenu(tester);
       await tester.tap(find.text(l10n.sessionMenuEnd));
       await tester.pumpAndSettle();
@@ -450,7 +424,6 @@ void main() {
       WidgetTester tester,
     ) async {
       await screen.pump(tester);
-      container(tester).read(ownedSessionsProvider.notifier).claim('session-1');
       await openMenu(tester);
       await tester.tap(find.text(l10n.sessionMenuEnd));
       await tester.pumpAndSettle();

@@ -13,6 +13,17 @@ export function accountSectionHelp(t: TFunction): readonly HelpExtra[] {
   ];
 }
 
+/** The help of "Uso" — the account's rate-limit windows, and why they are never real-time (plan 16, D-09). */
+export function usageSectionHelp(t: TFunction): readonly HelpExtra[] {
+  return [
+    {
+      id: 'claude-usage',
+      heading: t('engines.claude.help.usageHeading'),
+      body: t('engines.claude.help.usageBody'),
+    },
+  ];
+}
+
 /** The help of "Instalação" — what the test of the connection spends, before it runs (plan 13, B-17). */
 export function installationSectionHelp(t: TFunction): readonly HelpExtra[] {
   return [

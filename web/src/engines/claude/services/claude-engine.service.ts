@@ -1,12 +1,18 @@
 import { api, withFolder } from '@/shared/api';
 import type { ClaudeAccount, ClaudeInstallation, ModelCheckOutcome } from '../types/installation';
 import type { OutputStyleView } from '../types/output-style';
+import type { RateLimitsView } from '../types/rate-limits';
 
 /** `GET /engines/claude/account` — `refresh` reads the account again instead of the minute it is kept. */
 export function fetchAccount(refresh = false): Promise<ClaudeAccount> {
   return api.get<ClaudeAccount>(
     refresh ? '/engines/claude/account?refresh=true' : '/engines/claude/account',
   );
+}
+
+/** `GET /engines/claude/usage/rate-limits` — the account's windows, as the CLI last reported them. */
+export function fetchRateLimits(): Promise<RateLimitsView> {
+  return api.get<RateLimitsView>('/engines/claude/usage/rate-limits');
 }
 
 /** `GET /engines/claude/installation` — never fails because the CLI did not answer. */

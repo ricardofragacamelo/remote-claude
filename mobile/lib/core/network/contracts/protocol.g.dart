@@ -7759,6 +7759,98 @@ bool projectConfigViewPayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+class RateLimitsViewPayloadWindowsItem {
+  const RateLimitsViewPayloadWindowsItem({
+    required this.kind,
+    required this.status,
+    required this.utilizationPercent,
+    required this.resetsAt,
+    required this.observedAt,
+    this.displayName,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory RateLimitsViewPayloadWindowsItem.fromJson(Map<String, Object?> json) => RateLimitsViewPayloadWindowsItem(
+        kind: json['kind']! as String,
+        status: json['status']! as String,
+        utilizationPercent: json['utilizationPercent'] as int?,
+        resetsAt: json['resetsAt'] as String?,
+        observedAt: json['observedAt']! as String,
+        displayName: json['displayName'] as String?,
+      );
+
+  final String kind;
+
+  final String status;
+
+  final int? utilizationPercent;
+
+  final String? resetsAt;
+
+  final String observedAt;
+
+  /// The server's own label for a per-model window (`"Fable"`, say) — absent for every other window, which a client already has a translation for by `kind`.
+  final String? displayName;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kind': kind,
+      'status': status,
+      'utilizationPercent': utilizationPercent,
+      'resetsAt': resetsAt,
+      'observedAt': observedAt,
+    };
+
+    if (displayName != null) {
+      json['displayName'] = displayName;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [RateLimitsViewPayloadWindowsItem].
+bool rateLimitsViewPayloadWindowsItemLimitsHold(Map<String, Object?> json) {
+  if (json['utilizationPercent'] is int && (json['utilizationPercent']! as int) < 0) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `GET /engines/claude/usage/rate-limits`: the rate-limit windows of the account the Claude CLI is signed in to, each as it was last observed on the stream (plan 16, D-09). The account is the machine's, shared by every user of this installation — never real-time: a window with no reading yet is simply absent from the list.
+class RateLimitsViewPayload {
+  const RateLimitsViewPayload({
+    required this.windows,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory RateLimitsViewPayload.fromJson(Map<String, Object?> json) => RateLimitsViewPayload(
+        windows: (json['windows']! as List<Object?>).map((item) => RateLimitsViewPayloadWindowsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<RateLimitsViewPayloadWindowsItem> windows;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'windows': windows.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [RateLimitsViewPayload].
+bool rateLimitsViewPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['windows'] is List<Object?> && (json['windows']! as List<Object?>).length > 16) {
+    return false;
+  }
+
+  return true;
+}
+
 class ClaudeSkillListPayloadSkillsItem {
   const ClaudeSkillListPayloadSkillsItem({
     required this.name,

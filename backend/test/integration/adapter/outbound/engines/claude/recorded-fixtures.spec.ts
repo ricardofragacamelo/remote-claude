@@ -133,6 +133,7 @@ describe('the recorded fixtures of the Agent SDK', () => {
             scheduler: new ManualScheduler(),
             bundledCliVersion: fixture.sdkVersion,
             logger: new RecordingLogger().logger,
+            rateLimits: { observe: () => undefined, current: () => [] },
           },
         );
 

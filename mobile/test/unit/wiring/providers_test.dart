@@ -296,6 +296,7 @@ void main() {
       connectionRoute,
       workspacesRoute,
       diagnosticsRoute,
+      agentRoute,
       rulesRoute,
       auditTrailRoute,
       historyRoute,

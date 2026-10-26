@@ -4,7 +4,6 @@ import { act, renderHook } from '@testing-library/react';
 import { forgetLiveSessions } from '@/features/session';
 import { useSessionHeader } from '@/features/session/hooks/useSessionHeader';
 import { liveSessionStoreOf } from '@/features/session/store/live-session.store';
-import { useOwnedSessionsStore } from '@/features/session/store/owned-sessions.store';
 import type { Envelope } from '@remote-claude/contracts';
 import { aLiveSocket, hubEvent } from '../../../../support/live-socket';
 import type { LiveSocket } from '../../../../support/live-socket';
@@ -21,7 +20,6 @@ beforeEach(() => {
 afterEach(() => {
   live.close();
   forgetLiveSessions();
-  useOwnedSessionsStore.setState({ owned: [] });
 });
 
 /** What the stream says of the session, as the screen of the session lays it in the store. */
@@ -53,13 +51,11 @@ describe('the session, as the header of the panel reads it — plan 09, B-17, B-
     expect(result.current.connection).toBe('ready');
   });
 
-  it('knows it ended, and whose it is', () => {
-    useOwnedSessionsStore.getState().claim(SESSION);
+  it('knows it ended', () => {
     const { result } = renderHook(() => useSessionHeader(SESSION));
 
     streams(hubEvent(SESSION, 'session.closed', 1, { sessionId: SESSION, reason: 'completed' }));
 
-    expect(result.current.isOwner).toBe(true);
     expect(result.current.ended).toBe(true);
   });
 

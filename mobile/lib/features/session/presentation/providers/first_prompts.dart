@@ -7,15 +7,11 @@
 /// session was opened with — which the server never says again (08 · D-16).
 library;
 
-import 'package:remote_claude/features/session/presentation/providers/owned_sessions.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'first_prompts.g.dart';
 
-/// Every session sent a first prompt from here was opened here, and is claimed as this app's
-/// ([OwnedSessions]).
-///
 /// The effort each session opened here started with, by session. A session absent from it was not
 /// opened here, and its effort is not known.
 @Riverpod(keepAlive: true)
@@ -31,8 +27,6 @@ class FirstPrompts extends _$FirstPrompts {
   /// @returns whether it left. When it did not — the socket went between the start and the prompt —
   ///   the text waits for the session's box, so what was meant is never lost.
   bool send(String sessionId, String text, {String? effort, bool remembersEffort = true}) {
-    ref.read(ownedSessionsProvider.notifier).claim(sessionId);
-
     if (remembersEffort) {
       state = <String, String?>{...state, sessionId: effort};
     }

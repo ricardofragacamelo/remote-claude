@@ -85,6 +85,7 @@ function runner(
       bundledCliVersion:
         extra.bundledCliVersion === undefined ? '2.1.277' : extra.bundledCliVersion,
       logger: log.logger,
+      rateLimits: { observe: () => undefined, current: () => [] },
     },
   );
 
@@ -400,6 +401,7 @@ describe('SessionRunner', () => {
           scheduler: new ManualScheduler(),
           bundledCliVersion: '2.1.277',
           logger: refused.log.logger,
+          rateLimits: { observe: () => undefined, current: () => [] },
         },
       );
 

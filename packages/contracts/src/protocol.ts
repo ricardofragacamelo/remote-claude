@@ -1648,6 +1648,21 @@ export interface ProjectConfigViewPayload {
   readonly issues: readonly ProjectConfigViewPayloadIssuesItem[];
 }
 
+export interface RateLimitsViewPayloadWindowsItem {
+  readonly kind: string;
+  readonly status: 'allowed' | 'allowedWarning' | 'rejected';
+  readonly utilizationPercent: number | null;
+  readonly resetsAt: string | null;
+  readonly observedAt: string;
+  /** The server's own label for a per-model window (`"Fable"`, say) — absent for every other window, which a client already has a translation for by `kind`. */
+  readonly displayName?: string;
+}
+
+/** `GET /engines/claude/usage/rate-limits`: the rate-limit windows of the account the Claude CLI is signed in to, each as it was last observed on the stream (plan 16, D-09). The account is the machine's, shared by every user of this installation — never real-time: a window with no reading yet is simply absent from the list. */
+export interface RateLimitsViewPayload {
+  readonly windows: readonly RateLimitsViewPayloadWindowsItem[];
+}
+
 export interface ClaudeSkillListPayloadSkillsItem {
   readonly name: string;
   readonly origin: 'project' | 'user' | 'system';
@@ -2388,6 +2403,16 @@ export const PROJECT_CONFIG_VIEW_PAYLOAD_LIMITS = {
   hooks: { maxItems: 10000 },
   permissions: { maxItems: 10000 },
   issues: { maxItems: 10000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link RateLimitsViewPayloadWindowsItem}. */
+export const RATE_LIMITS_VIEW_PAYLOAD_WINDOWS_ITEM_LIMITS = {
+  utilizationPercent: { minimum: 0 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link RateLimitsViewPayload}. */
+export const RATE_LIMITS_VIEW_PAYLOAD_LIMITS = {
+  windows: { maxItems: 16 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link ClaudeSkillListPayload}. */
@@ -5328,6 +5353,42 @@ export function isProjectConfigViewPayload(value: unknown): value is ProjectConf
     withinMaxItems(record['hooks'], 10000),
     withinMaxItems(record['permissions'], 10000),
     withinMaxItems(record['issues'], 10000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link RateLimitsViewPayloadWindowsItem}. Unknown fields are accepted.
+ */
+export function isRateLimitsViewPayloadWindowsItem(value: unknown): value is RateLimitsViewPayloadWindowsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['kind'] === 'string',
+    typeof record['status'] === 'string',
+    nullOr(record['utilizationPercent'], typeof record['utilizationPercent'] === 'number'),
+    nullOr(record['resetsAt'], typeof record['resetsAt'] === 'string'),
+    typeof record['observedAt'] === 'string',
+    atLeast(record['utilizationPercent'], 0),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link RateLimitsViewPayload}. Unknown fields are accepted.
+ */
+export function isRateLimitsViewPayload(value: unknown): value is RateLimitsViewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['windows']),
+    withinMaxItems(record['windows'], 16),
   ].every(Boolean);
 }
 

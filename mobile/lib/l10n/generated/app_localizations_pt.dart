@@ -1822,9 +1822,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionMenuEnd => 'Encerrar sessão';
 
   @override
-  String get sessionMenuEndNotOwner => 'Só o app que abriu esta sessão pode encerrá-la.';
-
-  @override
   String get sessionMenuEndEnded => 'A sessão já terminou.';
 
   @override
@@ -2802,4 +2799,76 @@ class AppLocalizationsPt extends AppLocalizations {
   String auditResolvedByNamedFrom(String who, String place) {
     return 'Decidido por $who, de $place';
   }
+
+  @override
+  String agentScreenOpen(String agent) {
+    return '$agent';
+  }
+
+  @override
+  String agentScreenTitle(String agent) {
+    return '$agent';
+  }
+
+  @override
+  String get agentScreenEmptyTitle => 'Nada aqui ainda';
+
+  @override
+  String get agentScreenEmptyBody => 'Esta instalação não tem nada próprio para mostrar aqui.';
+
+  @override
+  String get claudeUsageTitle => 'Uso';
+
+  @override
+  String get claudeUsageLoading => 'Lendo o uso da conta';
+
+  @override
+  String get claudeUsageEmptyTitle => 'Nenhuma leitura ainda';
+
+  @override
+  String get claudeUsageEmptyBody =>
+      'Este backend ainda não viu uma leitura de limite de uso desde que começou. Abra uma sessão, e as janelas aparecem aqui assim que o CLI informar uma.';
+
+  @override
+  String get claudeUsageStatusAllowed => 'OK';
+
+  @override
+  String get claudeUsageStatusAllowedWarning => 'Perto do limite';
+
+  @override
+  String get claudeUsageStatusRejected => 'No limite';
+
+  @override
+  String get claudeUsageNoReading => 'sem leitura';
+
+  @override
+  String claudeUsageResetsAt(String when) {
+    return 'Reinicia $when';
+  }
+
+  @override
+  String claudeUsageSeenAt(String when) {
+    return 'Visto $when';
+  }
+
+  @override
+  String get claudeUsageWindowFiveHour => 'Sessão (5 h)';
+
+  @override
+  String get claudeUsageWindowSevenDay => 'Semanal (7 dias)';
+
+  @override
+  String get claudeUsageWindowSevenDayOpus => 'Semanal — Opus';
+
+  @override
+  String get claudeUsageWindowSevenDaySonnet => 'Semanal — Sonnet';
+
+  @override
+  String get claudeUsageWindowSevenDayOverageIncluded => 'Semanal — excedente incluído';
+
+  @override
+  String get claudeUsageWindowSevenDayOauthApps => 'Semanal — apps conectados';
+
+  @override
+  String get claudeUsageWindowOverage => 'Excedente';
 }

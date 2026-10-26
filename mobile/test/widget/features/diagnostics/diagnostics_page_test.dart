@@ -74,6 +74,10 @@ void main() {
           path: '/diagnostics',
           builder: (BuildContext context, GoRouterState state) => const DiagnosticsPage(),
         ),
+        GoRoute(
+          path: '/agent',
+          builder: (BuildContext context, GoRouterState state) => const Text('the agent screen'),
+        ),
       ],
       initialLocation: '/diagnostics',
       overrides: overrides,
@@ -126,6 +130,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(logger.level, Level.INFO);
+  });
+
+  testWidgets('the engine\'s own screen is one tap away', (WidgetTester tester) async {
+    await pumpDiagnostics(tester, overrides());
+
+    await tester.tap(find.byTooltip(l10n.agentScreenOpen(l10n.engineNameFallback)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('the agent screen'), findsOneWidget);
   });
 
   testWidgets('a development build is always at debug, and the switch says so', (

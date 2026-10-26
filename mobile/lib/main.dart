@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:remote_claude/app/app.dart';
 import 'package:remote_claude/app/bootstrap.dart';
+import 'package:remote_claude/app/engines.dart';
 import 'package:remote_claude/app/lifecycle.dart';
 import 'package:remote_claude/core/config/app_config.dart';
 import 'package:remote_claude/core/config/connection_choice.dart';
@@ -30,6 +31,7 @@ Future<void> main() async {
   );
 
   installErrorHandlers(logger);
+  registerEngines();
 
   // The address the phone was told to use, before anything talks to the server (plan 10, D-18).
   final ConnectionChoice? saved = await ConnectionStore(

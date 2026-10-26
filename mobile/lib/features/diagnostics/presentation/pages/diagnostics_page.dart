@@ -16,6 +16,7 @@ import 'package:remote_claude/core/config/app_config_provider.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/network/credentials_provider.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/connection_line.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
@@ -36,6 +37,13 @@ class DiagnosticsPage extends StatelessWidget {
         tooltip: AppLocalizations.of(context).sessionPingTitle,
         icon: const Icon(Icons.swap_vert),
         onPressed: () => unawaited(context.push(pingRoute)),
+      ),
+      // The engine's own screen (plan 28, D-15) — reached from here rather than from the folders
+      // home, which already keeps five actions at the accessibility guideline's own budget (S-150).
+      IconButton(
+        tooltip: AppLocalizations.of(context).agentScreenOpen(agentNameIn(context)),
+        icon: const Icon(Icons.insights_outlined),
+        onPressed: () => unawaited(context.push(agentRoute)),
       ),
     ],
     body: const SingleChildScrollView(child: _Diagnostics()),

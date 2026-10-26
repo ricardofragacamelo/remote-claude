@@ -110,3 +110,8 @@ export {
   skillPreferencesView,
 } from './skill.use-cases';
 export type { SkillDependencies, SkillPreferencesView } from './skill.use-cases';
+export { RATE_LIMIT_STORE } from './usage/ports/rate-limit-store.port';
+export type { RateLimitStore } from './usage/ports/rate-limit-store.port';
+export { USAGE_PROBE } from './usage/ports/usage-probe.port';
+export type { UsageProbe } from './usage/ports/usage-probe.port';
+export { ReadRateLimitsUseCase } from './usage/read-rate-limits.use-case';

@@ -27,3 +27,25 @@ export function agoFrom(iso: string, now: Date, locale: string): string {
 
   return ago(Number.isNaN(at) ? 0 : (now.getTime() - at) / 1_000, locale);
 }
+
+/**
+ * How long until something happens, in the reader's language — "in 3 h", "em 3 h".
+ *
+ * The mirror of {@link ago}: a moment already past reads as now, for the same reason — the clocks
+ * of two machines disagree, and a negative "until" about a reset that already happened is the
+ * screen being wrong.
+ */
+export function until(seconds: number, locale: string): string {
+  const remaining = Math.max(0, Math.floor(seconds));
+  const format = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
+  const [unit, size] = UNITS.find(([, inUnit]) => remaining >= inUnit) ?? ['second', 1];
+
+  return format.format(Math.floor(remaining / size), unit);
+}
+
+/** How long until an ISO instant, by `now` — the same words as {@link until}. */
+export function untilFrom(iso: string, now: Date, locale: string): string {
+  const at = Date.parse(iso);
+
+  return until(Number.isNaN(at) ? 0 : (at - now.getTime()) / 1_000, locale);
+}

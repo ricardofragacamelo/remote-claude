@@ -7,6 +7,7 @@ import type {
   ReadInstallationUseCase,
   ReadOutputStyleUseCase,
   ReadProjectConfigUseCase,
+  ReadRateLimitsUseCase,
   SaveOutputStyleUseCase,
 } from '@application/engines/claude';
 import type { ModelCheckOutcome } from '@application/engines/claude';
@@ -30,6 +31,7 @@ const controllerWith = (
     { execute: NOT_USED } as unknown as ReadOutputStyleUseCase,
     { execute: NOT_USED } as unknown as SaveOutputStyleUseCase,
     (overrides.projectConfig ?? { execute: NOT_USED }) as ReadProjectConfigUseCase,
+    { execute: NOT_USED } as unknown as ReadRateLimitsUseCase,
   );
 
 describe('POST /engines/claude/diagnostics/model-check — the wire form of a result nobody spent anything on', () => {

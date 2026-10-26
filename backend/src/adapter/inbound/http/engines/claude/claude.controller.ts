@@ -17,6 +17,7 @@ import type {
   ModelCheckOutcomePayload,
   OutputStyleViewPayload,
   ProjectConfigViewPayload,
+  RateLimitsViewPayload,
 } from '@remote-claude/contracts';
 
 import {
@@ -25,9 +26,11 @@ import {
   ReadInstallationUseCase,
   ReadOutputStyleUseCase,
   ReadProjectConfigUseCase,
+  ReadRateLimitsUseCase,
   SaveOutputStyleUseCase,
 } from '@application/engines/claude';
 import type { InstallationView, ModelCheckOutcome } from '@application/engines/claude';
+import type { RateLimitWindow } from '@domain/engines/claude';
 import type { UserId } from '@domain/auth';
 import { ZodPipe } from '@shared/validation/zod.pipe';
 import { BearerAuthGuard, CurrentUser } from '../../auth/bearer.guard';
@@ -72,6 +75,7 @@ export class ClaudeController {
     @Inject(ReadOutputStyleUseCase) private readonly readStyle: ReadOutputStyleUseCase,
     @Inject(SaveOutputStyleUseCase) private readonly saveStyle: SaveOutputStyleUseCase,
     @Inject(ReadProjectConfigUseCase) private readonly projectConfig: ReadProjectConfigUseCase,
+    @Inject(ReadRateLimitsUseCase) private readonly rateLimits: ReadRateLimitsUseCase,
   ) {}
 
   @Get('engines/claude/account')
@@ -137,6 +141,29 @@ export class ClaudeController {
   ): Promise<ProjectConfigViewPayload> {
     return this.projectConfig.execute(userId, query.folder);
   }
+
+  /**
+   * `GET /engines/claude/usage/rate-limits` — shown to every authenticated user, with no folder:
+   * the account is the machine's, shared by every session (plan 16, D-09). `userId` picks the
+   * caller's own first root only to spawn the on-demand probe when nothing has pushed a reading
+   * yet — the windows it answers are never scoped to that user.
+   */
+  @Get('engines/claude/usage/rate-limits')
+  async readRateLimits(@CurrentUser() userId: UserId): Promise<RateLimitsViewPayload> {
+    return { windows: (await this.rateLimits.execute(userId)).map(toRateLimitWindowDto) };
+  }
+}
+
+/** A rate-limit window on the wire — `resetsAt`/`observedAt` as ISO 8601, never a `Date`. */
+function toRateLimitWindowDto(window: RateLimitWindow): RateLimitsViewPayload['windows'][number] {
+  return {
+    kind: window.kind,
+    status: window.status,
+    utilizationPercent: window.utilizationPercent,
+    resetsAt: window.resetsAt === null ? null : window.resetsAt.toISOString(),
+    observedAt: window.observedAt.toISOString(),
+    ...(window.displayName === undefined ? {} : { displayName: window.displayName }),
+  };
 }
 
 /**

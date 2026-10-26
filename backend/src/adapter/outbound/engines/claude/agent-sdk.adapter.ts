@@ -29,6 +29,8 @@ import type { ClaudeInstallation } from './claude-installation';
 import { BUNDLED_CLI_VERSION } from './cli-version';
 import { QUERY_FACTORY } from './query.factory';
 import type { QueryFactory } from './query.factory';
+import { RATE_LIMIT_STORE } from '@application/engines/claude';
+import type { RateLimitStore } from '@application/engines/claude';
 import { SESSION_LIMITS } from './session-limits';
 import type { SessionLimits } from './sdk-options.factory';
 import { SessionRunner } from './session-runner';
@@ -74,6 +76,7 @@ export class AgentSdkClaudeSessionAdapter implements AgentEnginePort {
     @Inject(CLAUDE_CONVERSATION_IDS) private readonly conversationIds: IdGenerator,
     // The CLI and the SDK as the files that pin them say, read once — what the "About" screen lists.
     @Inject(CLAUDE_INSTALLATION) private readonly installation: ClaudeInstallation,
+    @Inject(RATE_LIMIT_STORE) private readonly rateLimits: RateLimitStore,
   ) {}
 
   /**
@@ -118,6 +121,7 @@ export class AgentSdkClaudeSessionAdapter implements AgentEnginePort {
       scheduler: this.scheduler,
       bundledCliVersion: this.cliVersion,
       logger: this.logger,
+      rateLimits: this.rateLimits,
     });
 
     // Synchronous, and the signature is still a promise: spawning is synchronous today and the

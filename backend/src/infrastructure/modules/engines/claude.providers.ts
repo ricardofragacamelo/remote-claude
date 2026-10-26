@@ -13,9 +13,11 @@ import {
 } from '@application/session';
 import type { SessionBroadcaster } from '@application/session';
 import type { EngineToolClassifier } from '@application/engine';
+import { RATE_LIMIT_STORE } from '@application/engines/claude';
 import { AgentSdkClaudeSessionAdapter } from '@adapter/outbound/engines/claude/agent-sdk.adapter';
 import { CLAUDE_ENGINE } from '@adapter/outbound/engines/claude/claude-engine';
 import { PermissionBridge } from '@adapter/outbound/engines/claude/permission-bridge';
+import { sharedRateLimitStore } from '@adapter/outbound/engines/claude/rate-limit-store';
 import { SESSION_LIMITS } from '@adapter/outbound/engines/claude/session-limits';
 import { claudeMcpEngineDialect } from '@adapter/outbound/engines/claude/mcp-engine-dialect';
 import { AgentSdkMcpServerConnectionTest } from '@adapter/outbound/engines/claude/mcp-server-connection-test.adapter';
@@ -78,6 +80,10 @@ export const claudeSessionProviders: readonly Provider[] = [
   // The same bridge lets the loop go when a request is settled: the consumer of
   // `permission.resolved` asks the port, and never knows the engine behind it (plan 28, B-34).
   { provide: AGENT_LOOP_RELEASE, useExisting: PermissionBridge },
+  // The one store of this process, shared with `ClaudeSettingsModule`'s own `RATE_LIMIT_STORE`
+  // provider through the same module-scope singleton (see `rate-limit-store.ts`) — the two modules
+  // never import one another, and this is the one piece of state that cannot be built twice.
+  { provide: RATE_LIMIT_STORE, useValue: sharedRateLimitStore },
   AgentSdkClaudeSessionAdapter,
 ];
 

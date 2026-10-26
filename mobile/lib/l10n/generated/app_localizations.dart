@@ -3096,12 +3096,6 @@ abstract class AppLocalizations {
   /// Why ending the session is not offered
   ///
   /// In en, this message translates to:
-  /// **'Only the app that opened this session can end it.'**
-  String get sessionMenuEndNotOwner;
-
-  /// Why ending the session is not offered
-  ///
-  /// In en, this message translates to:
   /// **'The session has already ended.'**
   String get sessionMenuEndEnded;
 
@@ -4730,6 +4724,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Decided by {who}, from {place}'**
   String auditResolvedByNamedFrom(String who, String place);
+
+  /// Tooltip of the button that opens the engine's own screen; {agent} is the display name of the engine
+  ///
+  /// In en, this message translates to:
+  /// **'{agent}'**
+  String agentScreenOpen(String agent);
+
+  /// Title of the engine's own screen; {agent} is the display name of the engine
+  ///
+  /// In en, this message translates to:
+  /// **'{agent}'**
+  String agentScreenTitle(String agent);
+
+  /// This build's engine registered nothing to show
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get agentScreenEmptyTitle;
+
+  /// This build's engine registered nothing to show
+  ///
+  /// In en, this message translates to:
+  /// **'This installation has nothing of its own to show here.'**
+  String get agentScreenEmptyBody;
+
+  /// Title of the Claude usage screen
+  ///
+  /// In en, this message translates to:
+  /// **'Usage'**
+  String get claudeUsageTitle;
+
+  /// Loading label of the Claude usage screen
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the account\'s usage'**
+  String get claudeUsageLoading;
+
+  /// No rate-limit window has been observed yet
+  ///
+  /// In en, this message translates to:
+  /// **'No reading yet'**
+  String get claudeUsageEmptyTitle;
+
+  /// No rate-limit window has been observed yet
+  ///
+  /// In en, this message translates to:
+  /// **'This backend has not seen a rate-limit reading since it started. Open a session, and the windows appear here once the CLI reports one.'**
+  String get claudeUsageEmptyBody;
+
+  /// A rate-limit window well under its limit
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get claudeUsageStatusAllowed;
+
+  /// A rate-limit window close to its limit
+  ///
+  /// In en, this message translates to:
+  /// **'Near the limit'**
+  String get claudeUsageStatusAllowedWarning;
+
+  /// A rate-limit window at or over its limit
+  ///
+  /// In en, this message translates to:
+  /// **'At the limit'**
+  String get claudeUsageStatusRejected;
+
+  /// A rate-limit window with no utilization reported yet
+  ///
+  /// In en, this message translates to:
+  /// **'no reading'**
+  String get claudeUsageNoReading;
+
+  /// When a rate-limit window resets; {when} is an already-formatted date and time
+  ///
+  /// In en, this message translates to:
+  /// **'Resets {when}'**
+  String claudeUsageResetsAt(String when);
+
+  /// When a rate-limit window was last observed; {when} is an already-formatted date and time
+  ///
+  /// In en, this message translates to:
+  /// **'Seen {when}'**
+  String claudeUsageSeenAt(String when);
+
+  /// The 5-hour rate-limit window
+  ///
+  /// In en, this message translates to:
+  /// **'Session (5 h)'**
+  String get claudeUsageWindowFiveHour;
+
+  /// The 7-day rate-limit window
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly (7 days)'**
+  String get claudeUsageWindowSevenDay;
+
+  /// The 7-day, Opus-only rate-limit window
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly — Opus'**
+  String get claudeUsageWindowSevenDayOpus;
+
+  /// The 7-day, Sonnet-only rate-limit window
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly — Sonnet'**
+  String get claudeUsageWindowSevenDaySonnet;
+
+  /// The 7-day rate-limit window that already includes overage
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly — overage included'**
+  String get claudeUsageWindowSevenDayOverageIncluded;
+
+  /// The 7-day, connected-apps rate-limit window
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly — connected apps'**
+  String get claudeUsageWindowSevenDayOauthApps;
+
+  /// The overage rate-limit window
+  ///
+  /// In en, this message translates to:
+  /// **'Overage'**
+  String get claudeUsageWindowOverage;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

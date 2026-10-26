@@ -8,7 +8,6 @@ import type { ConversationRef } from '@/shared/lib/conversation';
 import { sessionCostOf } from '../services/conversation-reducer';
 import { closeSession } from '../services/live-session.service';
 import { liveSessionStoreOf } from '../store/live-session.store';
-import { useOwnedSessionsStore } from '../store/owned-sessions.store';
 import type { SessionStatus } from '../types/live-session';
 
 /** What the header of the panel says of the session on screen, and the one thing it does to it. */
@@ -20,9 +19,6 @@ export interface SessionHeaderState {
   /** What the session has cost since it opened, as the contract writes money, and over how many turns. */
   readonly costUsd: string;
   readonly turns: number;
-
-  /** Whether this browser opened it — only its owner may end it. */
-  readonly isOwner: boolean;
   readonly ended: boolean;
 
   /** The conversation it is, once known — what exporting reads, and what "copy id" copies. */
@@ -34,9 +30,10 @@ export interface SessionHeaderState {
 
 /**
  * The session of the tab on screen, read for the header of the panel (plan 09, B-17, B-18): its
- * status, what it cost, whether it is this browser's, and the way to end it. It only **reads** the
- * store the conversation fills — the screen of the session is what attaches and loads the history,
- * so nothing here is asked of the backend twice.
+ * status, what it cost, and the way to end it — any of this account's own devices may, the backend's
+ * ownership is by user, never by device or connection (05 · "Autorização por connection"). It only
+ * **reads** the store the conversation fills — the screen of the session is what attaches and loads
+ * the history, so nothing here is asked of the backend twice.
  */
 export function useSessionHeader(sessionId: string): SessionHeaderState {
   const store = liveSessionStoreOf(sessionId);
@@ -44,7 +41,6 @@ export function useSessionHeader(sessionId: string): SessionHeaderState {
   const turns = useStore(store, (state) => state.turns);
   const ended = useStore(store, (state) => state.ending !== null);
   const conversation = useStore(store, (state) => state.conversation);
-  const isOwner = useOwnedSessionsStore((state) => state.owned.includes(sessionId));
   const connection = useConnectionStatus();
   const closed = useRef(false);
 
@@ -54,7 +50,6 @@ export function useSessionHeader(sessionId: string): SessionHeaderState {
     connection,
     costUsd: sessionCostOf(turns),
     turns: turns.length,
-    isOwner,
     ended,
     conversation,
     close: useCallback(() => {

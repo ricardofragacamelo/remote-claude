@@ -1,4 +1,4 @@
-import { Blocks, Bot, FolderCog, Puzzle, Wrench } from 'lucide-react';
+import { Blocks, Bot, FolderCog, Gauge, Puzzle, Wrench } from 'lucide-react';
 
 import { commandHosts } from '@/app/command-hosts';
 import { NAVIGATION_POSITIONS, globalNavigation } from '@/app/global-navigation';
@@ -12,6 +12,7 @@ import { sensitiveFiles } from '@/shared/lib/sensitive-files';
 import { AccountSection } from './components/AccountSection';
 import { ClaudeShortcuts } from './components/ClaudeShortcuts';
 import { InstallationSection } from './components/InstallationSection';
+import { UsageSection } from './components/UsageSection';
 import { useOutputStyle } from './hooks/useOutputStyle';
 import {
   accountSectionHelp,
@@ -20,6 +21,7 @@ import {
   pluginsSectionHelp,
   projectSectionHelp,
   skillsSectionHelp,
+  usageSectionHelp,
 } from './lib/claude-engine-help';
 import { PluginsSection, ProjectSection, SkillsSection } from './settings';
 
@@ -48,6 +50,16 @@ export function registerClaudeEngine(): () => void {
       purposeKey: 'engines.claude.account.purpose',
       Body: AccountSection,
       help: accountSectionHelp,
+    }),
+    agentSettingsSections.register({
+      id: 'usage',
+      engine: ENGINE,
+      position: 150,
+      icon: Gauge,
+      titleKey: 'engines.claude.usage.title',
+      purposeKey: 'engines.claude.usage.purpose',
+      Body: UsageSection,
+      help: usageSectionHelp,
     }),
     agentSettingsSections.register({
       id: 'installation',

@@ -56,9 +56,6 @@ export interface LiveSession extends Conversation {
   /** What is on screen is only what the ring buffer still held. The UI says so. */
   readonly isPartial: boolean;
 
-  /** Whether this browser opened the session, which is what decides who may close it. */
-  readonly isOwner: boolean;
-
   /** The part of the conversation the ring buffer does not hold. */
   readonly history: HistoryStatus;
 
@@ -97,10 +94,11 @@ export interface LiveSession extends Conversation {
  * ([D-10](../../../../../docs/plans/01-live-session/decisions.md)).
  */
 export function useLiveSession(sessionId: string | null): LiveSession {
-  // A session this browser opened is one it may close. Anything else it may only watch, and the
-  // control says so rather than disappearing — hiding an authorisation rule makes it look like a
-  // bug the first time somebody hits it. Kept in a store, because the screen that opened it is
-  // usually not this one.
+  // Whether this browser was present for the session from `session.started`/`session.attached`:
+  // the ring buffer of one it only joined later holds nothing from before that, and `isPartial`
+  // says so. Kept in a store, because the screen that attached is usually not this one (the start
+  // screen, or the history screen resuming a conversation). Any of this account's own devices may
+  // **close** a session regardless of this — the backend's ownership is by user, never by device.
   const owned = useOwnedSessionsStore((store) => store.owned);
   const connection = useConnectionStatus();
 
@@ -165,7 +163,6 @@ export function useLiveSession(sessionId: string | null): LiveSession {
     taskList: state.taskList,
     capabilities: state.capabilities,
     isPartial: state.isPartial,
-    isOwner: sessionId !== null && owned.includes(sessionId),
     history,
     promptError,
     prompt: useCallback(
