@@ -11,7 +11,7 @@ o [progresso geral](../progress.md). Não os mantenha à mão.
 ## Estado atual
 
 **Fase corrente:** nenhuma — o plano está **concluído** (F0…F7). A F7 fechou em 2026-10-17, com o `pnpm verify` verde no ciclo 37 (a F6, no ciclo 31; a F5, no 22; a F4, no 19; a F3, no 17; a F2, no 14; a F1, no 10; a F0, no 2). O plano foi fechado em 2026-10-18 com `pnpm verify` verde, mas **sem** um `pnpm verify:full` limpo — ver D-51 e o ciclo 38: cinco tentativas, cada uma falhando num portão diferente por pressão de recursos da máquina (processos órfãos, swap quase saturada), nunca por um achado da B-47. Decisão explícita do usuário; pendência de rodar o `verify:full` completo numa máquina sem essa pressão.
-**Última atualização:** 2026-10-18
+**Última atualização:** 2026-10-26
 **Bloqueios:** nenhum. Este plano **bloqueava** o 26 (F2…F7), o 13 (F2…F4), o 27, o 14, o 15, o 16 e o 18 ([índice dos planos](../README.md#ordem-de-execução)) — todos liberados com a conclusão. Nenhuma decisão aberta: as 18 da criação foram decididas em 2026-10-10, três contra a recomendação (D-09, D-10, D-11); três achadas na execução (D-47…D-49), uma na F7 (D-50) e uma no fechamento do plano (D-51) — ver [decisions.md](decisions.md)
 
 ```
@@ -49,7 +49,7 @@ F7 ████████████████████ 100%   ✅ concl
 
 | | Total | ⬜ | 🟡 | ✅ | ⛔ |
 |---|---|---|---|---|---|
-| [Matriz](scenarios.md) | 136 | 18 | 1 | 117 | 0 |
+| [Matriz](scenarios.md) | 136 | 17 | 1 | 118 | 0 |
 
 ---
 

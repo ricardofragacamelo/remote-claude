@@ -31,6 +31,24 @@ Valem para o plano inteiro.
 | D-20 | A granularidade e as fases do baseline | — | B-05 | 2026-10-10 · **por arquivo e termo, com a contagem**, e não por linha: uma edição que move linhas não mexe no baseline, e o portão reprova tanto a ocorrência a mais quanto a entrada acima do código. A fase de cada entrada é a **última** fase que a toca: o adapter do Claude sai na F1 (muda de pasta); nome de ferramenta e input cru na F2; tarefas, pergunta e plano na F3; modos, uso e blocos na F4; a gramática de regra na F5; nomes, comentários e i18n na F6 (B-36…B-41); e na F7 o que a janela de `v-1` mantém (os schemas, os adapters de entrada que emitem o formato antigo, o esquema do banco e os repositórios com `claude_session_id`). Uma fase anterior que tira ocorrências encolhe a contagem. Decidido na execução da B-05 | ✅ |
 | D-21 | O que o vocabulário deixa de fora | — | B-04 | 2026-10-10 · os modos `default`, `plan` e `auto` do CLI **não** entram: são palavras genéricas, e `plan` também é um `kind` canônico (F3). Os valores do enum de modos do contrato são conferidos pelo teste de schema da F4. O termo `todos` só é lido em identificador, string de código e chave (`kinds`), porque também é palavra do português nos comentários, nas âncoras e nas traduções. As chaves de i18n que levam o nome da ferramenta (`permission.tool.Bash`) entram como literal. Decidido na execução da B-04 | ✅ |
 
+### D-15 — o `engines/` deixou de nascer vazio
+
+**Implementação parcial, fora do ciclo deste plano (2026-10-26):** o `Resultado` acima — "vazio, com o
+lint" — descreve `mobile/lib/engines/` só até esta data. O [plano 16](../16-usage-and-cost/README.md)
+foi adiantado fora do próprio ciclo (ver sua [D-09](../16-usage-and-cost/decisions.md#d-09--limites-de-uso-da-conta-fonte-transporte-e-quem-vê)),
+e a tela de uso do Claude passou a ser a primeira tela de um motor só que o app tem: `mobile/lib/engines/claude/usage/`
+ganhou código, `mobile/lib/app/engines.dart` passou a importar a extensão e a registrar o corpo da
+tela num slot novo (`mobile/lib/core/widgets/agent_screen.dart`), e `main()` passou a chamar
+`registerEngines()` antes do primeiro frame — nada disso existia quando esta decisão fechou.
+
+O que a decisão realmente protegia continua de pé: `engines/` só fala com `app/engines.dart`; nenhum
+arquivo de `core/` ou de `features/` importa `engines/` nem a composição (`core_cannot_import_engines`,
+`features_cannot_import_engines`, `engines_are_isolated` do `import_lint`, mais um teste próprio —
+`test/unit/app/engines_test.dart`, reescrito nesta mesma mudança para verificar o isolamento em vez da
+vacuidade, já que vacuidade deixou de ser verdade). O lint continua recusando o import de fora da
+composição; o que mudou foi só o conteúdo de dentro do anel. `pnpm verify`/`verify:full` não foram
+rodados — ver a nota da D-09 do plano 16, que lista exatamente o que rodou.
+
 ## F1 — Porta de motor e conversa
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |

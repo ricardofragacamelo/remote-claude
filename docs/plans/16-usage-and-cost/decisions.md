@@ -213,6 +213,37 @@ guardado com o instante da observação (sobrevive a reinício); a tela mostra "
 nunca finge tempo real. Sem evento WS novo — evita mudar o contrato nas três pontas por um painel.
 Plano 05 recebe nota de que a exposição saiu daqui.
 
+**Implementação parcial, fora do ciclo deste plano (2026-10-26):** a tela de uso do Claude foi pedida
+direto, no web e no mobile, sem passar pelo ciclo deste plano — por isso só a parte de limites de uso
+(este D-09) saiu; nada do resto da F1 (custo por turno, agregações, export, orçamentos da F3).
+
+Fonte (a) foi seguida — e estendida: o `rate_limit_event` ao vivo continua a única fonte que dá o
+`status` categórico (`allowed`/`allowed_warning`/`rejected`), mas só atualiza uma janela havendo
+sessão aberta; por isso foi somada uma segunda fonte que esta decisão **não recomendou, e chega a
+descartar no texto acima** — a API experimental
+(`usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET`), por um probe efêmero (o mesmo
+mecanismo do probe de instalação), com cache de 30 s e deduplicação de chamadas concorrentes —
+pedido explícito do usuário, depois de notar que a tela não mostrava nada sem uma sessão viva. Essa
+fonte trouxe de graça as janelas por modelo (`model_scoped`, ex. "Fable") e o overage, que o
+`rate_limit_event` nunca carregou.
+
+Transporte (a) — `GET /engines/claude/usage/rate-limits` — e visibilidade (a) — todo usuário
+autenticado — seguidos à risca. **Não seguido:** o estado não sobrevive a reinício — é um mapa em
+memória (`InMemoryRateLimitStore`,
+`backend/src/adapter/outbound/engines/claude/rate-limit-store.ts`), nunca a tabela
+`claude_rate_limits`/migration que a B-11 descreve. Nenhuma relação com o tipo de assinatura ou com
+uma futura `GET /engines/claude/account` do plano 13: a B-11 previa `applicable: false` quando a
+conta não tem limite de plano — não implementado, uma conta sem leitura simplesmente não mostra a
+janela, sem dizer por quê.
+
+Sem matriz de cenários própria — os únicos testes são os que o código ganhou ad hoc:
+`rate-limit-window.spec.ts` e `read-rate-limits.use-case.spec.ts` no backend, mais os do mapeador e
+da tela no web e no mobile (commit `96aff81`). `pnpm verify`/`verify:full` não foram rodados — só
+`tsc`, `eslint` e os testes unitários tocados no backend e no web, `dart analyze`/`format`/o
+`import_lint` e os testes do Flutter no mobile, e `pnpm i18n:check` nas três pontas. D-09 continua
+🔲 por isso: a fonte (b), que a decisão rejeitava, entrou pela porta dos fundos sem que a decisão
+tenha sido revista para admiti-la — revisão pendente para quando este plano começar de verdade.
+
 ### D-10 — formato, teto e trilha do export
 
 Opções: (a) CSV, com teto e recusa acima dele; (b) CSV em stream sem teto; (c) CSV e JSON. O gap é

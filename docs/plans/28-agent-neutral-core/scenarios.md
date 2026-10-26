@@ -298,7 +298,7 @@ Semente: a [discovery §12](../../discovery/10-nucleo-canonico-e-agentes-isolado
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
 | S-115 | o texto do app diz o `displayName` do motor, nas duas línguas | eq | unit | — | B-40 | ⬜ |
-| S-116 | o `engines/` vazio do app não muda o build, e o lint continua reprovando o import | fron | unit | — | B-40 | ⬜ |
+| S-116 | só `app/engines.dart` importa uma extensão, e só `main()` importa a composição — vale vazio (como nasceu) ou com código (como passou a ter, pelo plano 16, D-09, em 2026-10-26) | fron | unit | — | B-40 | ✅ |
 
 ## O que sobra — B-41, B-42
 

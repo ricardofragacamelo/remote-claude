@@ -84,7 +84,7 @@ controle que o próprio cliente desabilita, com o motivo.
 | S-37 | o cabeçalho é uma faixa: abas, nova conversa, histórico, alterações e `⋯`; a linha de ícones solta não existe | eq | unit | — | B-16 | ✅ |
 | S-38 | o status mostra conectado, reconectando, rodando e encerrado por cor **e** texto no tooltip, com o id da sessão | eq | unit | — | B-18 | ✅ |
 | S-39 | dono: encerrar pede confirmação; confirmar manda um `session.close`, mesmo com dois cliques; cancelar não manda nada | idem | integração | — | B-17 | ✅ |
-| S-40 | quem não é dono: "Encerrar" desabilitado, dizendo por quê | err | unit | — | B-17 | ✅ |
+| S-40 | corrigido em 2026-10-26 (progress.md): não existe "quem não é dono" — a autorização de `session.close` é por conta, não por navegador; "Encerrar" nunca fica desabilitado por isso | err | unit | — | B-17 | ✅ |
 | S-41 | o menu tem exportar, desfazer, notificações, regras, ajuda e copiar o id, e cada item faz o que o controle antigo fazia; no rascunho, só o que vale sem sessão | eq | integração | — | B-17 | ✅ |
 | S-42 | notificações negadas pelo navegador: o item diz como devolver, e nenhuma linha solta aparece no cabeçalho | err | unit | — | B-17 | ✅ |
 | S-43 | o custo da sessão aparece onde a D-11 manda; sessão sem turno não mostra "$0" | fron | unit | — | B-18 | ✅ |

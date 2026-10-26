@@ -94,8 +94,8 @@ app desabilita, com o motivo.
 | S-46 | a `AppBar` tem título, status (cor e texto), histórico e `⋯`; os ícones de interromper, desfazer e encerrar e o texto de status do topo não existem | eq | integração | — | B-15 | ✅ |
 | S-47 | tocar no status abre a folha com o estado, o id (com copiar) e o custo; sessão sem turno não mostra "$0" | fron | integração | — | B-15 | ✅ |
 | S-48 | o histórico abre a lista de conversas da pasta; voltar devolve a sessão com a rolagem e o texto da caixa | est | integração | — | B-15 | ✅ |
-| S-49 | dono: encerrar pede confirmação, com o foco em cancelar; confirmar manda um `session.close`, mesmo com dois toques; cancelar não manda nada | idem | integração | — | B-16 | ✅ |
-| S-50 | quem não é dono: "Encerrar" desabilitado, dizendo por quê | err | integração | — | B-16 | ✅ |
+| S-49 | encerrar pede confirmação, com o foco em cancelar; confirmar manda um `session.close`, mesmo com dois toques; cancelar não manda nada | idem | integração | — | B-16 | ✅ |
+| S-50 | corrigido em 2026-10-26 (progress.md): não existe "quem não é dono" — a autorização de `session.close` é por conta, não por aparelho; "Encerrar" nunca fica desabilitado por isso | err | integração | — | B-16 | ✅ |
 | S-51 | o menu tem desfazer (o `rewind_sheet`), regras, ajuda e copiar id; no rascunho, só regras e ajuda | eq | integração | — | B-16 | ✅ |
 | S-52 | a sessão é encerrada por outro cliente com o diálogo de encerrar aberto: o diálogo fecha, a faixa de encerrada aparece, e nada é enviado | conc | integração | — | B-16 | ✅ |
 | S-53 | a ajuda descreve a barra, o menu, o status, o indicador, o card inline, a pílula, as tarefas e as ações da mensagem, sem literal | eq | integração | — | B-17 | ✅ |

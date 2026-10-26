@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-10-25
+**Última atualização:** 2026-10-26
 
 ```
 00-bootstrap                  ████████████████████ 100%   ✅ concluído
@@ -84,8 +84,8 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [25 — Navegador de arquivos no app](25-mobile-file-browser/README.md) | 8/8 | 32/32 | 153/153 | 34/34 | ✅ |
 | [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 8/8 | 26/26 | 78/78 | 35/35 | ✅ |
 | [27 — Perdas da conversa](27-conversation-losses/README.md) | 0/8 | 0/28 | 0/107 | 3/14 | 🔲 |
-| [28 — Agent neutral core](28-agent-neutral-core/README.md) | 8/8 | 48/48 | 117/136 | 51/51 | ✅ |
-| **Total** | **131/177** | **707/977** | **2710/3970** | **510/602** | 🔄 |
+| [28 — Agent neutral core](28-agent-neutral-core/README.md) | 8/8 | 48/48 | 118/136 | 51/51 | ✅ |
+| **Total** | **131/177** | **707/977** | **2711/3970** | **510/602** | 🔄 |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
