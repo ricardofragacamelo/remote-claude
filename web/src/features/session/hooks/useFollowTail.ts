@@ -50,6 +50,15 @@ export function useFollowTail(
 ): TailControl {
   const following = useRef(false);
 
+  // Set right before this hook moves the scroller itself, cleared by the `scroll` event that
+  // follows — so that event, an echo of a move nobody asked for, never reads as the person
+  // leaving the end (S-163). The browser dispatches it asynchronously, often after a *second*
+  // resize has already grown the content further — `scrollHeight` by then is ahead of the
+  // `scrollTop` this same echo is about, and the gap between them looks exactly like a scroll up
+  // that never happened. One flag is enough: a programmatic move and the event it produces always
+  // come in that order, never interleaved with another move of ours in between.
+  const programmatic = useRef(false);
+
   // Whether the end is in view, for the screen to draw — what the ref holds, for the next render. It
   // starts again with each new content, from where that content was left.
   const [tracked, setTracked] = useState(() => ({ keeper, following: startsFollowing(keeper) }));
@@ -57,6 +66,11 @@ export function useFollowTail(
   if (tracked.keeper !== keeper) {
     setTracked({ keeper, following: startsFollowing(keeper) });
   }
+
+  const moveTo = (element: HTMLElement, top: number): void => {
+    programmatic.current = true;
+    scrollTo(element, top);
+  };
 
   useLayoutEffect(() => {
     const element = scroller.current;
@@ -67,7 +81,7 @@ export function useFollowTail(
 
     const memory = keeper?.read();
     following.current = keeper !== null && (memory?.following ?? true);
-    scrollTo(element, following.current ? element.scrollHeight : (memory?.top ?? 0));
+    moveTo(element, following.current ? element.scrollHeight : (memory?.top ?? 0));
   }, [scroller, keeper]);
 
   useEffect(() => {
@@ -78,6 +92,11 @@ export function useFollowTail(
     }
 
     const onScroll = (): void => {
+      if (programmatic.current) {
+        programmatic.current = false;
+        return;
+      }
+
       const now = atEnd(element);
       following.current = now;
       setTracked((before) => (before.following === now ? before : { ...before, following: now }));
@@ -85,7 +104,7 @@ export function useFollowTail(
     };
     const onResize = (): void => {
       if (following.current) {
-        scrollTo(element, element.scrollHeight);
+        moveTo(element, element.scrollHeight);
       }
     };
     const observer = new ResizeObserver(onResize);
@@ -113,7 +132,7 @@ export function useFollowTail(
 
       following.current = true;
       setTracked((before) => ({ ...before, following: true }));
-      scrollTo(element, element.scrollHeight);
+      moveTo(element, element.scrollHeight);
       keeper.write({ top: element.scrollTop, following: true });
     },
   };

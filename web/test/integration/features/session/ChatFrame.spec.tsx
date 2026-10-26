@@ -111,6 +111,9 @@ describe('the frame of the panel — plan 09, F1', () => {
     live.receive(hubEvent(SESSION, 'message.delta', 2, { messageId: 'm1', delta: ' two' }));
     grew();
     expect(scroller.scrollTop).toBe(1_000);
+    // The echo a real browser would dispatch for the move above — jsdom never does on its own,
+    // and the hook ignores it either way so it is never read as the person leaving the end (S-163).
+    scroller.dispatchEvent(new Event('scroll'));
 
     scroller.scrollTop = 100;
     scroller.dispatchEvent(new Event('scroll'));

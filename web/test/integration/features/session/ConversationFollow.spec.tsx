@@ -447,6 +447,9 @@ describe('a conversation followed while it is read', () => {
       const { container } = await followed();
       const sizes = { scrollHeight: 1_000, clientHeight: 200 };
       const scroller = theScroller(container, sizes);
+      // The echo a real browser would dispatch for the mount's own move to the end — jsdom never
+      // fires it on its own, and the hook ignores it either way (S-163).
+      fireEvent.scroll(scroller);
       scroller.scrollTop = 800;
       fireEvent.scroll(scroller);
 
@@ -463,6 +466,9 @@ describe('a conversation followed while it is read', () => {
       const { container } = await followed();
       const sizes = { scrollHeight: 1_000, clientHeight: 200 };
       const scroller = theScroller(container, sizes);
+      // The echo a real browser would dispatch for the mount's own move to the end — jsdom never
+      // fires it on its own, and the hook ignores it either way (S-163).
+      fireEvent.scroll(scroller);
       scroller.scrollTop = 100;
       fireEvent.scroll(scroller);
 
@@ -495,6 +501,8 @@ describe('a conversation followed while it is read', () => {
 
       expect(scroller.scrollTop).toBe(1_600);
       expect(screen.queryByRole('button', { name: GO_TO_END })).toBeNull();
+      // The echo of the click's own move to the end (S-163).
+      fireEvent.scroll(scroller);
 
       // Up again, and one more: one, said as one.
       scroller.scrollTop = 200;
@@ -514,6 +522,8 @@ describe('a conversation followed while it is read', () => {
       const { container } = mount();
       await screen.findByText('third');
       const scroller = theScroller(container, { scrollHeight: 1_000, clientHeight: 200 });
+      // The echo a real browser would dispatch for the mount's own move to the end (S-163).
+      fireEvent.scroll(scroller);
       scroller.scrollTop = 0;
       fireEvent.scroll(scroller);
 
