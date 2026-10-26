@@ -9,6 +9,7 @@ import {
   findEnvReads,
   interpolatedVariables,
   readVariables,
+  renderEnvironmentDoc,
   undeclaredReads,
 } from '../../scripts/lib/env-example.mjs';
 
@@ -129,6 +130,12 @@ describe('.env.example', () => {
     );
 
     expect(suspicious).toEqual([]);
+  });
+
+  it('keeps the generated catalogue in sync — run `pnpm env:docs` after editing it', () => {
+    const docPath = path.join(repoRoot, 'docs/architecture/shared/13-environment-variables.md');
+
+    expect(fs.readFileSync(docPath, 'utf8')).toBe(renderEnvironmentDoc(example));
   });
 
   it('still refuses a credential that merely looks like configuration', () => {

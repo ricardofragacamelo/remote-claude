@@ -22,6 +22,8 @@
     "plan": "node scripts/plan.mjs",
     "contracts:generate": "node scripts/contracts.mjs",
     "contracts:check": "node scripts/contracts.mjs --check",
+    "env:docs": "node scripts/env-docs.mjs",
+    "env:docs:check": "node scripts/env-docs.mjs --check",
     "fixtures:record": "node scripts/record-agent-sdk-fixtures.mjs",
     "fixtures:conversation-parity": "pnpm --filter backend run fixtures:conversation-parity",
     "transcript:follow-bench": "node scripts/transcript-follow-bench.mjs",

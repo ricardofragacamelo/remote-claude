@@ -115,7 +115,9 @@ pnpm db migrate           # exige a stack de pé
 ```
 
 Variável de ambiente faltando **impede o processo de subir** — de propósito. Nunca há default
-silencioso.
+silencioso. Catálogo legível de cada uma, com explicação, em
+[docs/architecture/shared/13-environment-variables.md](docs/architecture/shared/13-environment-variables.md)
+— gerado de `.env.example` por `pnpm env:docs`, nunca editado à mão.
 
 ### Dia a dia
 
@@ -438,6 +440,8 @@ então este portão é o único que o protege.
 | Comando | Faz |
 |---|---|
 | `pnpm docs:check` | link quebrado, âncora inexistente, documento fora do índice |
+| `pnpm env:docs` | regenera o catálogo de variáveis de ambiente a partir de `.env.example` |
+| `pnpm env:docs:check` | falha se o catálogo estiver fora de sincronia com `.env.example` |
 | `pnpm plan new <nome>` | cria pasta de plano no formato normativo, já indexada e no progresso geral |
 | `pnpm plan new <nome> --at <nn>` | cria o plano no meio da sequência: os planos de `<nn>` em diante sobem um número, com pastas e referências explícitas reescritas no repositório; lista as linhas que precisam de leitura (número solto, história de renumeração) |
 | `pnpm plan progress [<plano>]` | recalcula os contadores do `progress.md` do plano — de todos, sem argumento — **e** do progresso geral, os estados das fases no `README.md` de cada plano e a lista de decisões em aberto; falha quando o texto escrito à mão contradiz os contadores (ver [docs/plans](docs/plans/README.md)) |

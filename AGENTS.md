@@ -102,6 +102,10 @@ Leia os dois no **início** da tarefa, não no fim.
     cru fora de `engines/<motor>/`, nas três pontas. O cliente desenha pelo `kind`, e o contrato
     é nosso. Verificado por `pnpm neutral:check` (portão 11, com um baseline que só encolhe) e
     pelo lint de arquitetura. Ver [12-engines](docs/architecture/shared/12-engines.md).
+13. **Variável de ambiente nova documenta nos dois lugares.** Comentário explicando o que faz
+    acima dela em `.env.example` **e** entrada no catálogo gerado
+    [13-environment-variables.md](docs/architecture/shared/13-environment-variables.md),
+    regenerado com `pnpm env:docs` e commitado junto. Verificado por `pnpm test:unit` (raiz).
 
 ---
 
@@ -171,3 +175,5 @@ abaixo tem o seu próprio roteador interno.
 - Nome de provedor de identidade (`auth0`, SDK proprietário) fora da configuração.
 - Token em `localStorage`, em query string, ou em log.
 - Novo endpoint ou evento WS sem atualizar o documento de contrato.
+- Variável de ambiente nova sem comentário em `.env.example`, ou commitada sem rodar
+  `pnpm env:docs` antes.

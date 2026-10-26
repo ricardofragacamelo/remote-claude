@@ -24,6 +24,7 @@ Voltar para o [índice geral](../README.md).
 | 10 | [Definition of Done](10-definition-of-done.md) | **Antes de considerar qualquer tarefa concluída.** Leia no início da tarefa, não no fim. |
 | 11 | [Protocolo de validação](11-validation-protocol.md) | **Ao planejar uma fase/task** (a matriz de cenários é parte do plano) e **ao executar a validação**. O `10` diz o que; o `11` diz como. |
 | 12 | [Motores de agente](12-engines.md) | Vai mexer em algo que só um agente de código tem (tela, ferramenta, modo, configuração), ou em como o núcleo fica neutro: os três anéis, o `kind`, as capacidades, o portão de neutralidade. |
+| 13 | [Variáveis de ambiente](13-environment-variables.md) | Vai adicionar ou mudar uma variável de ambiente, ou só precisa saber o que uma faz. Gerado de `.env.example` — não edite à mão. |
 
 ---
 

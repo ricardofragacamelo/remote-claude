@@ -820,13 +820,16 @@ describe('the live history', () => {
 
 describe('the canonical turn (plan 28, B-29)', () => {
   it('takes a turn with no cost and no usage — an engine that reports neither (S-86)', () => {
-    expect(isTurnCompletedPayload({ turnId: 't', usage: {}, durationMs: 5 })).toBe(true);
+    expect(
+      isTurnCompletedPayload({ turnId: 't', outcome: 'completed', usage: {}, durationMs: 5 }),
+    ).toBe(true);
   });
 
   it('takes the canonical counts and a cost of zero', () => {
     expect(
       isTurnCompletedPayload({
         turnId: 't',
+        outcome: 'completed',
         usage: { inputTokens: 3, outputTokens: 4, cacheReadTokens: 0, webSearches: 1 },
         costUsd: '0.000000',
         durationMs: 5,

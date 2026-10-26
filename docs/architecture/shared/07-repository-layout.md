@@ -140,7 +140,12 @@ continua sendo verificada pelo `typecheck`, sem transpilação no caminho.
   do watcher que o reinicia — para mandar o `SIGHUP`. O arquivo é gravado pelo próprio app, e o
   script só sinaliza um processo cuja linha de comando roda o `main.ts`: pid reaproveitado pelo
   sistema nunca recebe o sinal.
-- `.env.example` versionado, com **toda** variável e um comentário do que faz.
+- `.env.example` versionado, com **toda** variável e um comentário do que faz — verificado por
+  `pnpm test:unit` (raiz).
+- Toda variável de ambiente nova ou mudada regenera o catálogo legível em
+  [13-environment-variables.md](13-environment-variables.md) com `pnpm env:docs`, e o commit leva
+  os dois juntos. Gerado, nunca editado à mão; `pnpm test:unit` (raiz) falha se ficarem fora de
+  sincronia.
 - `.env` real **nunca** versionado.
 - O backend **não** precisa de credencial do Claude: herda o login do usuário em
   `~/.claude/.credentials.json`. Não crie variável para isso. Ver
