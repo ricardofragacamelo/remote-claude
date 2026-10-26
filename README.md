@@ -318,6 +318,7 @@ Isso não é entregar; é esconder.
 | `node scripts/coverage-gaps.mjs <web\|backend\|mobile> [trecho do caminho] [--from <dir>]` | lê o `coverage/lcov.info` que o último `test:coverage` do módulo deixou e diz, arquivo por arquivo, as linhas, as funções e as linhas com ramo que nenhum teste alcançou — o próximo teste a escrever, nomeado. No `mobile` só há linhas (o lcov do Dart não tem funções nem ramos) e o gerado fica de fora, como no portão; `--from` lê o relatório de uma cópia do módulo — a fase preparada fora da árvore enquanto o `pnpm verify` roda. Não roda nada |
 | `cd mobile && flutter test` | unit e widget do app |
 | `pnpm fixtures:record` | grava o stream do Agent SDK **real** como fixture — sob demanda, exige o Claude logado; `--history <cenário>` acrescenta o que o SDK relê daquela execução |
+| `pnpm fixtures:conversation-parity` | regrava as fixtures de `packages/contracts/fixtures/conversation-parity/` (plano 26, B-28) a partir das cinco gravações do plano 26 — o mesmo `SdkMessageMapper` que o backend usa, nunca um mapeamento paralelo que poderia divergir do que vai para produção |
 | `pnpm transcript:follow-bench` | mede, no store de quem roda, o que o seguidor de conversas custa: `getSessionInfo`, a releitura do maior transcript e 4 conversas juntas — só tempo e heap, nunca conteúdo ([22 · B-19](docs/plans/22-live-history/F2-follower.md#b-19--a-medição-)) |
 | `pnpm spike:claude-config [sonda…]` | o spike da B-01 do plano 13: contra o Claude **real**, num `CLAUDE_CONFIG_DIR` isolado com a credencial copiada, o que o `strictMcpConfig` segura, se tool MCP passa pelo `canUseTool`, como o segredo de um servidor chega sem o argv, o custo da sonda, o que o projeto injeta, os blocos `!` e as skills do usuário pelo plugin sintético — sob demanda, gasta poucos turnos ([13 · B-01](docs/plans/13-claude-settings/F0-contract.md#b-01--spike-as-medições-que-mandam-no-desenho-)) |
 | `pnpm spike:conversation-parity [sonda…]` | o spike da B-01 do plano 26: contra o Claude **real**, num `CLAUDE_CONFIG_DIR` isolado com a credencial copiada, a forma das mensagens de que a conversa do app depende — `subagent` (o `parent_tool_use_id` de tudo o que um subagent de projeto emite, ao vivo e no histórico, e o `canUseTool` que sabe de quem é a escrita), `mcp` (o nome de uma tool MCP sem título) e `blocks` (texto, tool e texto numa resposta). `--json <arquivo>` grava os números crus; sob demanda, gasta três turnos pequenos ([26 · B-01](docs/plans/26-mobile-conversation-parity/F0-spike.md#b-01--spike-a-forma-das-mensagens-novas-)) |
@@ -392,7 +393,7 @@ e `functions` não existem para medir nesta ponta. Está registrado no
 | `pnpm lint:arch` | Dependency Rule — import de `@nestjs/*` em `domain/` **quebra o build** |
 | `pnpm lint:dup` | linhas repetidas (`jscpd`), teto de 3 % |
 | `pnpm typecheck` | `tsc --noEmit` strict — sem `any`, sem `dynamic` |
-| `pnpm format` / `format:check` | Prettier e `dart format` |
+| `pnpm format` / `pnpm format:check` | Prettier e `dart format` |
 | `pnpm scan:secrets` | `gitleaks` sobre o repositório; `--staged` só sobre o que está no índice |
 | `pnpm scan:security` | segredo, dependência vulnerável (`pnpm audit` **e** `osv-scanner` sobre `pnpm-lock.yaml` e `mobile/pubspec.lock`, qualquer severidade), padrão inseguro **e as regras do produto** |
 | `node scripts/record-osv-fixtures.mjs` | regrava o que o `osv-scanner` responde para os lockfiles de `test/fixtures/osv/` — depois de trocar a imagem fixada, para a suíte dizer se a leitura ainda vale |
@@ -431,6 +432,7 @@ não faz parte do build e quem esquecer de rodá-la é pego pelo `pnpm verify` n
 | `pnpm contracts:generate` | JSON Schema → tipos TS + código Dart |
 | `pnpm contracts:check` | falha se o gerado estiver fora de sincronia |
 | `pnpm i18n:check` | paridade `en` ↔ `pt-BR`, chave órfã, params que não casam, texto compartilhado web ↔ app que diverge |
+| `pnpm check:contracts-i18n` | os dois acima **e** `render:check` e `neutral:check` (seção [Testes](#testes)) de uma vez — é o que o portão 11 roda |
 
 `contracts:check` cobre **os dois alvos**. O Dart não é importado por ninguém em TypeScript,
 então este portão é o único que o protege.
