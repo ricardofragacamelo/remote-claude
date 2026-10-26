@@ -53,3 +53,8 @@ npm-debug.log*
 # (RC_SKILLS_PLUGIN_DIR, plan 13, F3/B-35) and the downloaded marketplace plugins
 # (RC_PLUGIN_DOWNLOAD_DIR, plan 13, B-47) a running `pnpm dev` regenerates on demand.
 backend/.data/
+
+# Session checkpoints the Agent SDK writes under the backend's own working directory — the same
+# runtime data `/.checkpoints/` above ignores at the repository root, just resolved relative to
+# `backend/` instead.
+backend/.checkpoints/
