@@ -3,7 +3,14 @@ import type { LucideIcon } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import type { TurnSummary, TurnUsage } from '../../types/live-session';
+import type { TurnOutcome, TurnSummary, TurnUsage } from '../../types/live-session';
+
+/** The i18n key of a turn that did not end in `completed` — flat, never nested under `outcome`. */
+const OUTCOME_KEY: Record<Exclude<TurnOutcome, 'completed'>, string> = {
+  limitReached: 'sessions.turn.outcomeLimitReached',
+  budgetExceeded: 'sessions.turn.outcomeBudgetExceeded',
+  failed: 'sessions.turn.outcomeFailed',
+};
 
 /** A number in the reader's language. */
 function formatted(value: number, locale: string, options: Intl.NumberFormatOptions = {}): string {
@@ -86,9 +93,7 @@ export function TurnRow({ turn }: { readonly turn: TurnSummary }): React.JSX.Ele
   const locale = i18n.language;
 
   if (turn.outcome !== 'completed') {
-    return (
-      <SystemRow icon={TriangleAlert} text={t(`sessions.turn.outcome.${turn.outcome}`)} />
-    );
+    return <SystemRow icon={TriangleAlert} text={t(OUTCOME_KEY[turn.outcome])} />;
   }
 
   const cost =

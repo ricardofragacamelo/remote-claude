@@ -58,7 +58,11 @@ describe('the account and installation of Claude over HTTP — plan 28, B-36', (
   const get = (route: string) => http().get(route).set('authorization', `Bearer ${token}`);
 
   it('refuses every route without a valid credential — S-29', async () => {
-    for (const route of ['/engines/claude/account', '/engines/claude/installation']) {
+    for (const route of [
+      '/engines/claude/account',
+      '/engines/claude/installation',
+      '/engines/claude/usage/rate-limits',
+    ]) {
       expect((await http().get(route)).status, route).toBe(401);
     }
     expect((await http().post('/engines/claude/diagnostics/model-check').send({})).status).toBe(
@@ -116,5 +120,23 @@ describe('the account and installation of Claude over HTTP — plan 28, B-36', (
       .set('authorization', `Bearer ${rootless}`);
 
     expect(response.status).toBe(403);
+  });
+
+  it('answers the account’s rate-limit windows, shaped for the wire — plan 16, D-09', async () => {
+    const response = await get('/engines/claude/usage/rate-limits');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ windows: expect.any(Array) });
+  });
+
+  it('answers the rate limits to a user with no root too — they scope only the on-demand probe, never the account shown — D-09', async () => {
+    const rootless = await identity.accessToken({ subject: 'auth|rootless' });
+
+    const response = await http()
+      .get('/engines/claude/usage/rate-limits')
+      .set('authorization', `Bearer ${rootless}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ windows: expect.any(Array) });
   });
 });

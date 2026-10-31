@@ -52,7 +52,11 @@ describe('TranscriptAudience.resolved — a folder remembered once, for every re
     await audience.shown(await store.list('/srv/projects/app'), owner);
     await audience.shown(await store.list('/srv/projects/other'), owner);
 
-    const resolved = await audience.resolved(store, aTranscriptSession({ id: 2, cwd: null }), owner);
+    const resolved = await audience.resolved(
+      store,
+      aTranscriptSession({ id: 2, cwd: null }),
+      owner,
+    );
 
     expect(resolved.cwd).toBe('/srv/projects/other');
   });
@@ -63,5 +67,34 @@ describe('TranscriptAudience.resolved — a folder remembered once, for every re
     const resolved = await audience.resolved(store, unresolved, owner);
 
     expect(resolved.cwd).toBeNull();
+  });
+
+  it('remembers nothing for a conversation shown with no folder of its own, so a later resolve still finds none', async () => {
+    await audience.shown([aTranscriptSession({ id: 1, cwd: null })], owner);
+
+    const resolved = await audience.resolved(
+      store,
+      aTranscriptSession({ id: 1, cwd: null }),
+      owner,
+    );
+
+    expect(resolved.cwd).toBeNull();
+  });
+
+  it('forgets the oldest folder once more conversations than its capacity have been remembered — S-163', async () => {
+    const sessions = Array.from({ length: 501 }, (_, index) =>
+      aTranscriptSession({ id: index, cwd: `/srv/projects/app-${String(index)}` }),
+    );
+    await audience.shown(sessions, owner);
+
+    const oldest = await audience.resolved(store, aTranscriptSession({ id: 0, cwd: null }), owner);
+    const newest = await audience.resolved(
+      store,
+      aTranscriptSession({ id: 500, cwd: null }),
+      owner,
+    );
+
+    expect(oldest.cwd).toBeNull();
+    expect(newest.cwd).toBe('/srv/projects/app-500');
   });
 });

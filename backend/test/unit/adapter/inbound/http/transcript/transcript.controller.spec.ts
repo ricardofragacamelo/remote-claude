@@ -95,7 +95,7 @@ describe('the routes of the history — plan 28, B-12', () => {
     expect(asked).toEqual(Array.from({ length: 4 }, () => `claude:${ID}`));
   });
 
-  it('forwards the folder of the query as the use case\'s hint of the conversation — S-163', async () => {
+  it("forwards the folder of the query as the use case's hint of the conversation — S-163", async () => {
     const hints: (string | null | undefined)[] = [];
     const page = {
       session: {

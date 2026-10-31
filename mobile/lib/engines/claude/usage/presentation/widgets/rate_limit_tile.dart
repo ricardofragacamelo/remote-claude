@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/date_and_time.dart';
+import 'package:remote_claude/core/widgets/screen_context.dart';
 import 'package:remote_claude/engines/claude/usage/domain/entities/rate_limit_window.dart';
 import 'package:remote_claude/engines/claude/usage/presentation/widgets/rate_limit_labels.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
@@ -22,8 +23,8 @@ class RateLimitTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
+    final AppLocalizations l10n = context.l10n;
+    final ThemeData theme = context.theme;
     final int? percent = window.utilizationPercent;
     final DateTime? resetsAt = window.resetsAt;
 
@@ -40,7 +41,7 @@ class RateLimitTile extends StatelessWidget {
               ),
               Text(
                 '${rateLimitStatusLabel(l10n, window.status)} · '
-                '${percent == null ? l10n.claudeUsageNoReading : '$percent%'}',
+                '${percent == null ? l10n.enginesClaudeUsageNoReading : '$percent%'}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -62,7 +63,7 @@ class RateLimitTile extends StatelessWidget {
           if (resetsAt != null) ...<Widget>[
             const SizedBox(height: Tokens.spaceSm),
             Text(
-              l10n.claudeUsageResetsAt(dateAndTime(context, resetsAt)),
+              l10n.enginesClaudeUsageResetsAt(dateAndTime(context, resetsAt)),
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ],

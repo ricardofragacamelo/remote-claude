@@ -1,6 +1,6 @@
 /// The account's rate-limit windows, as the CLI last reported them (plan 16, D-09) — never
 /// real-time, and never per-user: the account is the machine's, shared by every session. Registered
-/// into the app's single agent-screen slot by `app/engines.dart`.
+/// into the app's single agent-screen slot by `app/engines/registration.dart`.
 library;
 
 import 'package:flutter/material.dart';
@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/date_and_time.dart';
 import 'package:remote_claude/core/widgets/loaded_view.dart';
+import 'package:remote_claude/core/widgets/screen_context.dart';
 import 'package:remote_claude/core/widgets/section_heading.dart';
 import 'package:remote_claude/engines/claude/usage/domain/entities/rate_limit_window.dart';
 import 'package:remote_claude/engines/claude/usage/presentation/providers/usage_controller.dart';
@@ -20,20 +21,20 @@ class ClaudeUsageView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
+    final AppLocalizations l10n = context.l10n;
     final UsageController controller = ref.read(usageControllerProvider.notifier);
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          SectionHeading(l10n.claudeUsageTitle),
+          SectionHeading(l10n.enginesClaudeUsageTitle),
           LoadedView<List<RateLimitWindow>>(
             value: ref.watch(usageControllerProvider),
             labels: LoadedLabels(
-              loading: l10n.claudeUsageLoading,
-              emptyTitle: l10n.claudeUsageEmptyTitle,
-              emptyDescription: l10n.claudeUsageEmptyBody,
+              loading: l10n.enginesClaudeUsageLoading,
+              emptyTitle: l10n.enginesClaudeUsageEmptyTitle,
+              emptyDescription: l10n.enginesClaudeUsageEmptyBody,
             ),
             isEmpty: (List<RateLimitWindow> windows) => windows.isEmpty,
             onRetry: controller.retry,
@@ -62,7 +63,7 @@ class _Windows extends StatelessWidget {
       children: <Widget>[
         for (final RateLimitWindow window in ordered) RateLimitTile(window: window),
         Text(
-          l10n.claudeUsageSeenAt(dateAndTime(context, lastSeen)),
+          l10n.enginesClaudeUsageSeenAt(dateAndTime(context, lastSeen)),
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),

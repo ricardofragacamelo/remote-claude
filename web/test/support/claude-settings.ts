@@ -66,6 +66,9 @@ export const INSTALLATION = {
   lastModelCheck: null,
 };
 
+/** The account's rate-limit windows — none observed yet, the state a fresh backend starts in. */
+export const RATE_LIMITS = { windows: [] };
+
 /**
  * `GET /engines`, answered: what the form of the defaults offers — the modes and the levels of
  * effort the engine announces (plan 28, B-27, B-28). Left out of {@link backendAnswers}, so the
@@ -81,6 +84,7 @@ export function backendAnswers(overrides: Record<string, () => Promise<unknown>>
     '/engines/claude/models': () => Promise.resolve({ models: MODELS }),
     '/engines/claude/defaults': () => Promise.resolve(DEFAULTS),
     '/engines/claude/output-style': () => Promise.resolve(OUTPUT_STYLE),
+    '/engines/claude/usage/rate-limits': () => Promise.resolve(RATE_LIMITS),
     '/workspaces/open-folders': () =>
       Promise.resolve({ folders: [{ path: '/srv/app', rootLabel: 'srv', state: 'available' }] }),
     '/workspaces/recent': () => Promise.resolve({ folders: [] }),

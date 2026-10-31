@@ -241,7 +241,7 @@ describe('the rows of the system', () => {
       </ul>,
     );
 
-    expect(screen.getByText(t('sessions.turn.outcome.failed'))).toBeInTheDocument();
+    expect(screen.getByText(t('sessions.turn.outcomeFailed'))).toBeInTheDocument();
     expect(screen.queryByText(/10,08|10\.08/)).toBeNull();
   });
 

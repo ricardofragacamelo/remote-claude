@@ -138,13 +138,7 @@ export class TranscriptController {
     query: ReadTranscriptQueryDto,
     userId: UserId,
   ): Promise<TranscriptPageDto> {
-    const page = await this.reading.execute({
-      userId,
-      sessionId,
-      before: query.cursor ?? null,
-      limit: query.limit ?? DEFAULT_PAGE_SIZE,
-      workspaceHint: query.workspacePath ?? null,
-    });
+    const page = await this.reading.execute({ userId, sessionId, ...paginationOf(query) });
 
     return toTranscriptPageDto(page);
   }
@@ -159,9 +153,7 @@ export class TranscriptController {
       userId,
       sessionId,
       toolUseId,
-      before: query.cursor ?? null,
-      limit: query.limit ?? DEFAULT_PAGE_SIZE,
-      workspaceHint: query.workspacePath ?? null,
+      ...paginationOf(query),
     });
 
     return toSubagentPageDto(page);
@@ -198,4 +190,17 @@ export class TranscriptController {
     response.setHeader('Content-Disposition', 'inline');
     response.end(bytes);
   }
+}
+
+/** The paging fields a page of a conversation and a page of a subagent both read off the same query. */
+function paginationOf(query: ReadTranscriptQueryDto): {
+  before: string | null;
+  limit: number;
+  workspaceHint: string | null;
+} {
+  return {
+    before: query.cursor ?? null,
+    limit: query.limit ?? DEFAULT_PAGE_SIZE,
+    workspaceHint: query.workspacePath ?? null,
+  };
 }

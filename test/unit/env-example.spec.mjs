@@ -8,6 +8,7 @@ import {
   declaredVariables,
   findEnvReads,
   interpolatedVariables,
+  parseEnvExample,
   readVariables,
   renderEnvironmentDoc,
   undeclaredReads,
@@ -61,6 +62,52 @@ describe('undeclaredReads', () => {
     );
 
     expect(missing).toEqual([{ name: 'SECRET_THING', file: 'backend/src/b.ts' }]);
+  });
+});
+
+describe('findEnvReads', () => {
+  it('skips a source directory that does not exist, rather than refusing the walk', () => {
+    expect(findEnvReads(repoRoot, ['backend/src', 'no-such-directory'])).toEqual(
+      findEnvReads(repoRoot, ['backend/src']),
+    );
+  });
+});
+
+describe('parseEnvExample', () => {
+  it('reads a section bare, with no variable of its own', () => {
+    const content = '# --- Empty ---\nJust prose, no declaration below it.\n';
+
+    expect(parseEnvExample(content)).toEqual([{ title: 'Empty', intro: [], variables: [] }]);
+  });
+
+  it('ignores a line that is neither a comment, a declaration nor blank', () => {
+    const content = ['# --- Section ---', 'not a declaration', 'RC_WEB_PORT=5173', ''].join('\n');
+
+    expect(parseEnvExample(content)).toEqual([
+      {
+        title: 'Section',
+        intro: [],
+        variables: [{ name: 'RC_WEB_PORT', value: '5173', description: '' }],
+      },
+    ]);
+  });
+
+  it('reads an empty value as the empty string, never as undefined', () => {
+    const content = '# --- Section ---\nRC_FLAG=\n';
+
+    expect(parseEnvExample(content)[0]?.variables).toEqual([
+      { name: 'RC_FLAG', value: '', description: '' },
+    ]);
+  });
+});
+
+describe('renderEnvironmentDoc', () => {
+  it('renders a section with no variables as its intro alone, with no table', () => {
+    const content = '# --- Empty ---\n# Just prose, no declaration below it.\n\n';
+    const rendered = renderEnvironmentDoc(content);
+
+    expect(rendered).toContain('Just prose, no declaration below it.');
+    expect(rendered).not.toContain('| Variable |');
   });
 });
 

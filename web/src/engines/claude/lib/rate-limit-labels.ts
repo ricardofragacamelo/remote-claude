@@ -3,13 +3,13 @@
  * check sees every key (the same reason `STATUS_KEYS` of the MCP screen is written this way).
  */
 const WINDOW_KEYS: Readonly<Record<string, string>> = {
-  five_hour: 'engines.claude.usage.window.fiveHour',
-  seven_day: 'engines.claude.usage.window.sevenDay',
-  seven_day_opus: 'engines.claude.usage.window.sevenDayOpus',
-  seven_day_sonnet: 'engines.claude.usage.window.sevenDaySonnet',
-  seven_day_overage_included: 'engines.claude.usage.window.sevenDayOverageIncluded',
-  seven_day_oauth_apps: 'engines.claude.usage.window.sevenDayOauthApps',
-  overage: 'engines.claude.usage.window.overage',
+  five_hour: 'engines.claude.usage.windowFiveHour',
+  seven_day: 'engines.claude.usage.windowSevenDay',
+  seven_day_opus: 'engines.claude.usage.windowSevenDayOpus',
+  seven_day_sonnet: 'engines.claude.usage.windowSevenDaySonnet',
+  seven_day_overage_included: 'engines.claude.usage.windowSevenDayOverageIncluded',
+  seven_day_oauth_apps: 'engines.claude.usage.windowSevenDayOauthApps',
+  overage: 'engines.claude.usage.windowOverage',
 };
 
 /**

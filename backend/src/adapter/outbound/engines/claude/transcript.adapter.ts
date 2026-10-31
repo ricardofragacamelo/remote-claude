@@ -210,9 +210,7 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
     session: TranscriptSession,
     toolUseId: string,
   ): Promise<readonly TranscriptMessage[] | null> {
-    const claudeSessionId = session.id.id;
-    const dir = session.cwd ?? undefined;
-    const options = dir === undefined ? {} : { dir };
+    const { claudeSessionId, options } = sdkCallOf(session);
 
     // Cached like the conversation, by the conversation's version: a subagent only grows while the
     // conversation is written, and that moves `lastModified`.
@@ -320,9 +318,7 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
 
   /** Everything the SDK holds of a conversation's main chain, in one call. */
   private readWhole(session: TranscriptSession): Promise<SessionMessage[]> {
-    const claudeSessionId = session.id.id;
-    const dir = session.cwd ?? undefined;
-    const options = dir === undefined ? {} : { dir };
+    const { claudeSessionId, options } = sdkCallOf(session);
 
     return this.call('read messages', { claudeSessionId }, () =>
       this.sdk.getSessionMessages(claudeSessionId, options),
@@ -393,6 +389,16 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
       throw new TranscriptUnavailableError(CLAUDE_ENGINE, operation);
     }
   }
+}
+
+/** What every SDK transcript call needs of a session: its id, and `dir` only when there is a `cwd`. */
+function sdkCallOf(session: TranscriptSession): {
+  claudeSessionId: string;
+  options: { dir?: string };
+} {
+  const claudeSessionId = session.id.id;
+  const dir = session.cwd ?? undefined;
+  return { claudeSessionId, options: dir === undefined ? {} : { dir } };
 }
 
 /**

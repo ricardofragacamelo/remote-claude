@@ -396,7 +396,12 @@ describe('SessionRunner', () => {
           recorder: failing,
           journal: new RecordingJournal(),
           permissions: new StubPermissionGate(),
-          limits: { maxBudgetUsd: 10, maxTurns: 100, autoCompactEnabled: true, autoCompactWindow: 0 },
+          limits: {
+            maxBudgetUsd: 10,
+            maxTurns: 100,
+            autoCompactEnabled: true,
+            autoCompactWindow: 0,
+          },
           clock: new FixedClock(now),
           scheduler: new ManualScheduler(),
           bundledCliVersion: '2.1.277',

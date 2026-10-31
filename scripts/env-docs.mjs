@@ -16,10 +16,11 @@ import path from 'node:path';
 import process from 'node:process';
 
 import { repoRoot } from './lib/paths.mjs';
+import { hasCheckFlag } from './lib/cli.mjs';
 import { renderEnvironmentDoc } from './lib/env-example.mjs';
 import { dim, fail, hint, line, ok, title } from './lib/ui.mjs';
 
-const check = process.argv.includes('--check');
+const check = hasCheckFlag();
 const DOC_PATH = 'docs/architecture/shared/13-environment-variables.md';
 
 function main() {

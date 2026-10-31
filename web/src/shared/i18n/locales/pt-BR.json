@@ -1933,11 +1933,9 @@
       "outputTokens": "{{count}} de saída",
       "cacheTokens": "{{count}} de cache",
       "noTokens": "sem contagem de tokens",
-      "outcome": {
-        "limitReached": "O turno não terminou: limite de turnos atingido",
-        "budgetExceeded": "O turno não terminou: orçamento da sessão esgotado",
-        "failed": "O turno falhou, sem resposta"
-      }
+      "outcomeLimitReached": "O turno não terminou: limite de turnos atingido",
+      "outcomeBudgetExceeded": "O turno não terminou: orçamento da sessão esgotado",
+      "outcomeFailed": "O turno falhou, sem resposta"
     },
     "compacted": {
       "label": "A conversa foi compactada",
@@ -2699,20 +2697,16 @@
         "resetsAt": "Reinicia {{when}}",
         "lastSeen": "Visto {{when}}",
         "noReading": "sem leitura",
-        "status": {
-          "allowed": "OK",
-          "allowedWarning": "Perto do limite",
-          "rejected": "No limite"
-        },
-        "window": {
-          "fiveHour": "Sessão (5 h)",
-          "sevenDay": "Semanal (7 dias)",
-          "sevenDayOpus": "Semanal — Opus",
-          "sevenDaySonnet": "Semanal — Sonnet",
-          "sevenDayOverageIncluded": "Semanal — excedente incluído",
-          "sevenDayOauthApps": "Semanal — apps conectados",
-          "overage": "Excedente"
-        }
+        "statusAllowed": "OK",
+        "statusAllowedWarning": "Perto do limite",
+        "statusRejected": "No limite",
+        "windowFiveHour": "Sessão (5 h)",
+        "windowSevenDay": "Semanal (7 dias)",
+        "windowSevenDayOpus": "Semanal — Opus",
+        "windowSevenDaySonnet": "Semanal — Sonnet",
+        "windowSevenDayOverageIncluded": "Semanal — excedente incluído",
+        "windowSevenDayOauthApps": "Semanal — apps conectados",
+        "windowOverage": "Excedente"
       },
       "installation": {
         "title": "Instalação",

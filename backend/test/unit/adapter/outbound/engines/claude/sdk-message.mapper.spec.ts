@@ -335,7 +335,7 @@ describe('the SDK message mapper', () => {
       ['error_max_structured_output_retries', 'failed'],
       ['a subtype this build has never seen', 'failed'],
     ])(
-      'reads a result of subtype %s as outcome %s, never the SDK\'s own name — S-32…S-34',
+      "reads a result of subtype %s as outcome %s, never the SDK's own name — S-32…S-34",
       (subtype, outcome) => {
         const mapped = toEvents(
           message({
@@ -354,7 +354,7 @@ describe('the SDK message mapper', () => {
       },
     );
 
-    it('charges a turn only its own spend, never the whole conversation\'s running total — S-163, plan 16 D-02', () => {
+    it("charges a turn only its own spend, never the whole conversation's running total — S-163, plan 16 D-02", () => {
       const mapper = new SdkMessageMapper('');
 
       const first = mapper.read(

@@ -13,12 +13,13 @@
 import process from 'node:process';
 
 import { repoRoot } from './lib/paths.mjs';
+import { hasCheckFlag } from './lib/cli.mjs';
 import { ContractError } from './lib/contracts-model.mjs';
 import { drift, targets, write } from './lib/contracts-io.mjs';
 import { checkRoutes } from './lib/contracts-routes.mjs';
 import { dim, fail, hint, line, ok, title } from './lib/ui.mjs';
 
-const check = process.argv.includes('--check');
+const check = hasCheckFlag();
 
 /**
  * The files the schema turns into, or null — already reported — when the schema cannot be read.

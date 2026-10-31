@@ -1,12 +1,9 @@
-import { ChevronsUpDown } from 'lucide-react';
-
 import {
   DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
+import { PickerDropdownContent, PickerDropdownTrigger } from './PickerDropdown';
 import type { SectionTabEntry } from './SectionTabs';
 
 export interface SectionSelectorProps<T extends SectionTabEntry> {
@@ -41,20 +38,16 @@ export function SectionSelector<T extends SectionTabEntry>({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={pickLabel(activeLabel)}
-          className="flex min-h-touch w-full items-center justify-between gap-2 rounded-md border border-border px-3 text-ui"
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            {active !== undefined && <active.icon className="size-4 shrink-0" aria-hidden />}
-            <span className="truncate">{activeLabel}</span>
-          </span>
-          <ChevronsUpDown className="size-4 shrink-0" aria-hidden />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] max-w-sm">
+      <PickerDropdownTrigger
+        ariaLabel={pickLabel(activeLabel)}
+        className="flex min-h-touch w-full items-center justify-between gap-2 rounded-md border border-border px-3 text-ui"
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          {active !== undefined && <active.icon className="size-4 shrink-0" aria-hidden />}
+          <span className="truncate">{activeLabel}</span>
+        </span>
+      </PickerDropdownTrigger>
+      <PickerDropdownContent>
         <DropdownMenuRadioGroup value={active?.id ?? ''} onValueChange={onSelect}>
           {entries.map((entry) => (
             <DropdownMenuRadioItem key={entry.id} value={entry.id}>
@@ -63,7 +56,7 @@ export function SectionSelector<T extends SectionTabEntry>({
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
+      </PickerDropdownContent>
     </DropdownMenu>
   );
 }

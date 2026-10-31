@@ -1,7 +1,7 @@
 /// The one screen an engine extension may add to the app (plan 28, D-15): a single slot, since only
 /// one engine is enabled today — a second, concurrent one would need a list of slots, not this.
 ///
-/// Set once by `app/engines.dart`, the one file allowed to import `engines/` (ADR-025). `core/` and
+/// Set once by `app/engines/registration.dart`, the one file allowed to import `engines/` (ADR-025). `core/` and
 /// `features/` never import an engine, so the shell here says `{agent}` and never a motor's name;
 /// what the slot itself shows is entirely the engine's to decide.
 library;
@@ -12,7 +12,7 @@ import 'package:remote_claude/core/widgets/app_screen.dart';
 import 'package:remote_claude/core/widgets/empty_view.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
-/// What the engine's own screen renders, once registered — `null` until `app/engines.dart` runs,
+/// What the engine's own screen renders, once registered — `null` until `app/engines/registration.dart` runs,
 /// and in a test that never calls it.
 WidgetBuilder? agentScreenBody;
 

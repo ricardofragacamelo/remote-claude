@@ -13,6 +13,7 @@ import type {
 import type { ModelCheckOutcome } from '@application/engines/claude';
 import { UserId } from '@domain/auth';
 import type { ProjectConfigView } from '@domain/engines/claude';
+import type { RateLimitWindow } from '@domain/engines/claude';
 
 const NOT_USED = (): never => {
   throw new Error('not used by this test');
@@ -22,6 +23,7 @@ const controllerWith = (
   overrides: {
     modelCheck?: Partial<CheckModelUseCase>;
     projectConfig?: Partial<ReadProjectConfigUseCase>;
+    rateLimits?: Partial<ReadRateLimitsUseCase>;
   } = {},
 ): ClaudeController =>
   new ClaudeController(
@@ -31,7 +33,7 @@ const controllerWith = (
     { execute: NOT_USED } as unknown as ReadOutputStyleUseCase,
     { execute: NOT_USED } as unknown as SaveOutputStyleUseCase,
     (overrides.projectConfig ?? { execute: NOT_USED }) as ReadProjectConfigUseCase,
-    { execute: NOT_USED } as unknown as ReadRateLimitsUseCase,
+    (overrides.rateLimits ?? { execute: NOT_USED }) as ReadRateLimitsUseCase,
   );
 
 describe('POST /engines/claude/diagnostics/model-check — the wire form of a result nobody spent anything on', () => {
@@ -89,5 +91,67 @@ describe('GET /engines/claude/project-config — plan 13, B-31', () => {
 
     expect(askedFolder).toBe('/srv/app');
     expect(response).toEqual(view);
+  });
+});
+
+describe('GET /engines/claude/usage/rate-limits — plan 16, D-09', () => {
+  it('passes the caller straight to the use case, and carries every window on the wire', async () => {
+    const windows: RateLimitWindow[] = [
+      {
+        kind: 'five_hour',
+        status: 'allowed',
+        utilizationPercent: 8,
+        resetsAt: new Date('2026-11-02T00:00:00.000Z'),
+        observedAt: new Date('2026-10-26T12:00:00.000Z'),
+        displayName: 'Fable',
+      },
+      {
+        kind: 'seven_day',
+        status: 'rejected',
+        utilizationPercent: 100,
+        resetsAt: null,
+        observedAt: new Date('2026-10-26T12:00:00.000Z'),
+      },
+    ];
+    let askedUser: UserId | undefined;
+    const controller = controllerWith({
+      rateLimits: {
+        execute: (userId) => {
+          askedUser = userId;
+          return Promise.resolve(windows);
+        },
+      },
+    });
+
+    const response = await controller.readRateLimits(UserId.create('auth|someone'));
+
+    expect(askedUser).toEqual(UserId.create('auth|someone'));
+    expect(response).toEqual({
+      windows: [
+        {
+          kind: 'five_hour',
+          status: 'allowed',
+          utilizationPercent: 8,
+          resetsAt: '2026-11-02T00:00:00.000Z',
+          observedAt: '2026-10-26T12:00:00.000Z',
+          displayName: 'Fable',
+        },
+        {
+          kind: 'seven_day',
+          status: 'rejected',
+          utilizationPercent: 100,
+          resetsAt: null,
+          observedAt: '2026-10-26T12:00:00.000Z',
+        },
+      ],
+    });
+  });
+
+  it('answers no window when nothing has ever been observed', async () => {
+    const controller = controllerWith({ rateLimits: { execute: () => Promise.resolve([]) } });
+
+    const response = await controller.readRateLimits(UserId.create('auth|someone'));
+
+    expect(response).toEqual({ windows: [] });
   });
 });

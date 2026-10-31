@@ -411,7 +411,7 @@ describe('the conversation reducer', () => {
     });
 
     it.each(['limitReached', 'budgetExceeded', 'failed'])(
-      'reads the outcome %s, never the engine\'s own name for it — S-163, plan 27 B-10',
+      "reads the outcome %s, never the engine's own name for it — S-163, plan 27 B-10",
       (outcome) => {
         const state = fold(frame('turn.completed', { turnId: 'a', durationMs: 1, outcome }));
 

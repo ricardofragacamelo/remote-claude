@@ -1,6 +1,6 @@
 /// The app's ring of engine extensions (plan 28, B-40, D-15; S-116; plan 16, D-09): a screen of one
 /// engine only now exists — Claude's usage screen — so `lib/engines/` holds its code and
-/// `app/engines.dart` imports it. What this test guards is **isolation**, not emptiness: nothing
+/// `app/engines/registration.dart` imports it. What this test guards is **isolation**, not emptiness: nothing
 /// outside the composition reaches into `engines/` directly, and nothing outside `main()` reaches
 /// for the composition itself.
 @TestOn('vm')
@@ -38,26 +38,29 @@ void main() {
     expect(dartFilesUnder('lib/engines'), isNotEmpty);
   });
 
-  test('S-116 · only app/engines.dart reaches into an extension from outside engines/', () {
-    final List<String> reaching = <String>[
-      for (final String path in dartFilesUnder('lib'))
-        if (path != 'lib/app/engines.dart' &&
-            !path.startsWith('lib/engines/') &&
-            File(
-              path,
-            ).readAsStringSync().contains(RegExp(r"import 'package:remote_claude/engines/")))
-          path,
-    ];
+  test(
+    'S-116 · only app/engines/registration.dart reaches into an extension from outside engines/',
+    () {
+      final List<String> reaching = <String>[
+        for (final String path in dartFilesUnder('lib'))
+          if (path != 'lib/app/engines/registration.dart' &&
+              !path.startsWith('lib/engines/') &&
+              File(
+                path,
+              ).readAsStringSync().contains(RegExp(r"import 'package:remote_claude/engines/")))
+            path,
+      ];
 
-    expect(reaching, isEmpty);
-  });
+      expect(reaching, isEmpty);
+    },
+  );
 
   test('S-116 · only main() reaches for the composition of the extensions', () {
     final List<String> reaching = <String>[
       for (final String path in dartFilesUnder('lib'))
         if (path != 'lib/main.dart' &&
             File(path).readAsStringSync().contains(
-              RegExp(r"import 'package:remote_claude/app/engines\.dart"),
+              RegExp(r"import 'package:remote_claude/app/engines/registration\.dart"),
             ))
           path,
     ];

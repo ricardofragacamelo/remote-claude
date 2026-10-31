@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:remote_claude/app/app.dart';
 import 'package:remote_claude/app/bootstrap.dart';
-import 'package:remote_claude/app/engines.dart';
+import 'package:remote_claude/app/engines/registration.dart';
 import 'package:remote_claude/app/lifecycle.dart';
 import 'package:remote_claude/core/config/app_config.dart';
 import 'package:remote_claude/core/config/connection_choice.dart';

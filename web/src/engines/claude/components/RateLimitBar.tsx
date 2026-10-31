@@ -12,6 +12,13 @@ const TONE: Readonly<Record<RateLimitWindow['status'], string>> = {
   rejected: 'bg-destructive',
 };
 
+/** The i18n key of each status — flat, never nested under `status` (plan 28, B-39). */
+const STATUS_KEY: Readonly<Record<RateLimitWindow['status'], string>> = {
+  allowed: 'engines.claude.usage.statusAllowed',
+  allowedWarning: 'engines.claude.usage.statusAllowedWarning',
+  rejected: 'engines.claude.usage.statusRejected',
+};
+
 /** One rate-limit window: its label, a bar at its utilization, and when it resets. */
 export function RateLimitBar({ window }: { readonly window: RateLimitWindow }): React.JSX.Element {
   const { t, i18n } = useTranslation();
@@ -26,7 +33,7 @@ export function RateLimitBar({ window }: { readonly window: RateLimitWindow }): 
       <div className="flex items-center justify-between gap-2 text-ui-sm">
         <span className="font-ui-strong">{label}</span>
         <span className="flex items-center gap-2 text-muted-foreground">
-          <span>{t(`engines.claude.usage.status.${window.status}`)}</span>
+          <span>{t(STATUS_KEY[window.status])}</span>
           <span>
             {percent === null ? t('engines.claude.usage.noReading') : `${String(percent)}%`}
           </span>

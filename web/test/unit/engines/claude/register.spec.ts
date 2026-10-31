@@ -18,7 +18,7 @@ describe('the Claude engine in the places of the core — plan 28, B-36, B-38', 
       .filter((entry) => entry.engine === 'claude')
       .map((entry) => entry.id);
 
-    expect(ids).toEqual(['account', 'installation', 'plugins', 'skills', 'project']);
+    expect(ids).toEqual(['account', 'usage', 'installation', 'plugins', 'skills', 'project']);
   });
 
   it('adds the output style to the core’s defaults form', () => {

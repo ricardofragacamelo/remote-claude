@@ -53,7 +53,9 @@ void main() {
 
     repo.failure = null;
     repo.pages['agent-1'] = const SubagentPage(events: <SessionEvent>[]);
-    container.read(subagentHistoryControllerProvider(conversation, 'agent-1', null).notifier).retry();
+    container
+        .read(subagentHistoryControllerProvider(conversation, 'agent-1', null).notifier)
+        .retry();
 
     await container.read(subagentHistoryControllerProvider(conversation, 'agent-1', null).future);
     expect(repo.reads, hasLength(2));

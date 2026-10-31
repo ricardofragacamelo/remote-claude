@@ -245,6 +245,7 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
     expect(scheduler.armed).toBe(1);
     expect(tabs.map(({ sink }) => sink.messageIds.at(-1))).toEqual(['m4', 'm4', 'm4']);
     expect(follower.followedConversations).toBe(1);
+    expect(follower.subscriptions).toBe(3);
   });
 
   it('resets a follower whose entry the chain lost, and stops — S-55', async () => {
@@ -412,6 +413,18 @@ describe('FollowTranscriptUseCase — plan 22, B-16', () => {
     const second = await follow({ after: 'm1', connection: 'c2' });
 
     expect(second.sink.messageIds).toEqual(first.sink.messageIds);
+  });
+
+  it('does nothing for a look already queued once the conversation was unfollowed first', async () => {
+    const { followId } = await follow();
+    write(someMessages(2));
+    scheduler.fire();
+    const reads = store.reads;
+
+    follower.unfollow('c1', followId);
+    await settle();
+
+    expect(store.reads).toBe(reads);
   });
 
   it('forgets a subscription unfollowed, and one it never had — S-66', async () => {

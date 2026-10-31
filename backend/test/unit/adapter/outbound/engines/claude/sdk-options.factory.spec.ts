@@ -128,7 +128,12 @@ describe('buildSdkOptions', () => {
   it('carries auto-compact — on, with a window, from configuration, never a client', () => {
     const options = buildSdkOptions(
       input({
-        limits: { maxBudgetUsd: 0, maxTurns: 0, autoCompactEnabled: true, autoCompactWindow: 50_000 },
+        limits: {
+          maxBudgetUsd: 0,
+          maxTurns: 0,
+          autoCompactEnabled: true,
+          autoCompactWindow: 50_000,
+        },
       }),
     );
 
@@ -139,7 +144,7 @@ describe('buildSdkOptions', () => {
     });
   });
 
-  it('leaves the window out when it is `0` — the engine\'s own, never guessed here', () => {
+  it("leaves the window out when it is `0` — the engine's own, never guessed here", () => {
     const options = buildSdkOptions(
       input({
         limits: { maxBudgetUsd: 0, maxTurns: 0, autoCompactEnabled: false, autoCompactWindow: 0 },

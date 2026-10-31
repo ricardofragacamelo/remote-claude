@@ -122,4 +122,39 @@ describe('reading the account’s rate limits, with the on-demand probe throttle
 
     expect(await useCase.execute(USER)).toEqual([WINDOW]);
   });
+
+  it('skips its own probe when another call already refreshed the store while this one was still resolving its root', async () => {
+    const store = memoryStore();
+    const probe = countingProbe(() => Promise.resolve([WINDOW]));
+    const clock = new FixedClock(new Date('2026-10-26T12:00:00.000Z'));
+
+    // The first call parks on a root that never resolves on its own — the second runs, probes
+    // and finishes its whole flight (including `SingleFlight` forgetting it ever ran) before the
+    // first is let through, so the first's own `inFlight.run` starts a brand new flight and has to
+    // notice, on its own, that nothing is stale any more — the race the de-duplication test above
+    // never reaches, because both its calls race through together instead of one at a time.
+    const release: { current: (() => void) | null } = { current: null };
+    let askedRoot = 0;
+    const racingFolders: FolderAccess = {
+      ...folders(),
+      firstRoot: () => {
+        askedRoot += 1;
+        if (askedRoot === 1) {
+          return new Promise((resolve) => {
+            release.current = () => resolve(ROOT);
+          });
+        }
+        return Promise.resolve(ROOT);
+      },
+    };
+    const racingUseCase = new ReadRateLimitsUseCase(store, probe, racingFolders, clock);
+
+    const first = racingUseCase.execute(USER);
+    await racingUseCase.execute(USER);
+    expect(release.current).not.toBeNull();
+    release.current?.();
+    await first;
+
+    expect(probe.calls).toHaveLength(1);
+  });
 });

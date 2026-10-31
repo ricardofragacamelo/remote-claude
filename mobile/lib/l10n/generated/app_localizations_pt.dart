@@ -2817,58 +2817,58 @@ class AppLocalizationsPt extends AppLocalizations {
   String get agentScreenEmptyBody => 'Esta instalação não tem nada próprio para mostrar aqui.';
 
   @override
-  String get claudeUsageTitle => 'Uso';
+  String get enginesClaudeUsageTitle => 'Uso';
 
   @override
-  String get claudeUsageLoading => 'Lendo o uso da conta';
+  String get enginesClaudeUsageLoading => 'Lendo o uso da conta';
 
   @override
-  String get claudeUsageEmptyTitle => 'Nenhuma leitura ainda';
+  String get enginesClaudeUsageEmptyTitle => 'Nenhuma leitura ainda';
 
   @override
-  String get claudeUsageEmptyBody =>
+  String get enginesClaudeUsageEmptyBody =>
       'Este backend ainda não viu uma leitura de limite de uso desde que começou. Abra uma sessão, e as janelas aparecem aqui assim que o CLI informar uma.';
 
   @override
-  String get claudeUsageStatusAllowed => 'OK';
+  String get enginesClaudeUsageStatusAllowed => 'OK';
 
   @override
-  String get claudeUsageStatusAllowedWarning => 'Perto do limite';
+  String get enginesClaudeUsageStatusAllowedWarning => 'Perto do limite';
 
   @override
-  String get claudeUsageStatusRejected => 'No limite';
+  String get enginesClaudeUsageStatusRejected => 'No limite';
 
   @override
-  String get claudeUsageNoReading => 'sem leitura';
+  String get enginesClaudeUsageNoReading => 'sem leitura';
 
   @override
-  String claudeUsageResetsAt(String when) {
+  String enginesClaudeUsageResetsAt(String when) {
     return 'Reinicia $when';
   }
 
   @override
-  String claudeUsageSeenAt(String when) {
+  String enginesClaudeUsageSeenAt(String when) {
     return 'Visto $when';
   }
 
   @override
-  String get claudeUsageWindowFiveHour => 'Sessão (5 h)';
+  String get enginesClaudeUsageWindowFiveHour => 'Sessão (5 h)';
 
   @override
-  String get claudeUsageWindowSevenDay => 'Semanal (7 dias)';
+  String get enginesClaudeUsageWindowSevenDay => 'Semanal (7 dias)';
 
   @override
-  String get claudeUsageWindowSevenDayOpus => 'Semanal — Opus';
+  String get enginesClaudeUsageWindowSevenDayOpus => 'Semanal — Opus';
 
   @override
-  String get claudeUsageWindowSevenDaySonnet => 'Semanal — Sonnet';
+  String get enginesClaudeUsageWindowSevenDaySonnet => 'Semanal — Sonnet';
 
   @override
-  String get claudeUsageWindowSevenDayOverageIncluded => 'Semanal — excedente incluído';
+  String get enginesClaudeUsageWindowSevenDayOverageIncluded => 'Semanal — excedente incluído';
 
   @override
-  String get claudeUsageWindowSevenDayOauthApps => 'Semanal — apps conectados';
+  String get enginesClaudeUsageWindowSevenDayOauthApps => 'Semanal — apps conectados';
 
   @override
-  String get claudeUsageWindowOverage => 'Excedente';
+  String get enginesClaudeUsageWindowOverage => 'Excedente';
 }

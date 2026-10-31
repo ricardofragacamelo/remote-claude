@@ -90,6 +90,8 @@ import 'package:remote_claude/features/workspace/data/datasources/workspace_api_
 import 'package:remote_claude/features/workspace/domain/repositories/workspace_repository.dart';
 import 'package:remote_claude/features/workspace/domain/usecases/list_workspaces.dart';
 import 'package:remote_claude/features/workspace/workspace_providers.dart';
+import 'package:remote_claude/engines/claude/usage/domain/repositories/usage_repository.dart';
+import 'package:remote_claude/engines/claude/usage/presentation/providers/usage_providers.dart';
 
 import '../../support/fakes/recording_writer.dart';
 
@@ -253,6 +255,10 @@ void main() {
     expect(container.read(temporaryFilesProvider), isA<AppTemporaryFiles>());
     expect(container.read(downloadFileProvider), isA<DownloadFile>());
     expect(container.read(diagramQueueProvider), isA<DiagramQueue>());
+  });
+
+  test('the Claude engine’s own usage feature assembles end to end', () {
+    expect(container.read(usageRepositoryProvider), isA<UsageRepository>());
   });
 
   test('the workspace feature assembles end to end', () {

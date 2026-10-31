@@ -344,21 +344,24 @@ void main() {
       expect(turn.turn.outcome, TurnOutcome.failed);
     });
 
-    test('reads a turn with no outcome at all as completed — a backend from before this field existed', () {
-      final TurnFinished turn =
-          read(
-                frame(
-                  kind: 'event',
-                  type: 'turn.completed',
-                  sessionId: 'session-1',
-                  seq: 1,
-                  payload: <String, Object?>{'turnId': 'turn-1', 'durationMs': 1},
-                ),
-              )!
-              as TurnFinished;
+    test(
+      'reads a turn with no outcome at all as completed — a backend from before this field existed',
+      () {
+        final TurnFinished turn =
+            read(
+                  frame(
+                    kind: 'event',
+                    type: 'turn.completed',
+                    sessionId: 'session-1',
+                    seq: 1,
+                    payload: <String, Object?>{'turnId': 'turn-1', 'durationMs': 1},
+                  ),
+                )!
+                as TurnFinished;
 
-      expect(turn.turn.outcome, TurnOutcome.completed);
-    });
+        expect(turn.turn.outcome, TurnOutcome.completed);
+      },
+    );
   });
 
   group('plan 26, B-17 · the usage of a turn', () {

@@ -1933,11 +1933,9 @@
       "outputTokens": "{{count}} out",
       "cacheTokens": "{{count}} cache",
       "noTokens": "no token count",
-      "outcome": {
-        "limitReached": "The turn did not finish: turn limit reached",
-        "budgetExceeded": "The turn did not finish: the session's budget ran out",
-        "failed": "The turn failed, with no answer"
-      }
+      "outcomeLimitReached": "The turn did not finish: turn limit reached",
+      "outcomeBudgetExceeded": "The turn did not finish: the session's budget ran out",
+      "outcomeFailed": "The turn failed, with no answer"
     },
     "compacted": {
       "label": "The conversation was compacted",
@@ -2699,20 +2697,16 @@
         "resetsAt": "Resets {{when}}",
         "lastSeen": "Seen {{when}}",
         "noReading": "no reading",
-        "status": {
-          "allowed": "OK",
-          "allowedWarning": "Near the limit",
-          "rejected": "At the limit"
-        },
-        "window": {
-          "fiveHour": "Session (5 h)",
-          "sevenDay": "Weekly (7 days)",
-          "sevenDayOpus": "Weekly — Opus",
-          "sevenDaySonnet": "Weekly — Sonnet",
-          "sevenDayOverageIncluded": "Weekly — overage included",
-          "sevenDayOauthApps": "Weekly — connected apps",
-          "overage": "Overage"
-        }
+        "statusAllowed": "OK",
+        "statusAllowedWarning": "Near the limit",
+        "statusRejected": "At the limit",
+        "windowFiveHour": "Session (5 h)",
+        "windowSevenDay": "Weekly (7 days)",
+        "windowSevenDayOpus": "Weekly — Opus",
+        "windowSevenDaySonnet": "Weekly — Sonnet",
+        "windowSevenDayOverageIncluded": "Weekly — overage included",
+        "windowSevenDayOauthApps": "Weekly — connected apps",
+        "windowOverage": "Overage"
       },
       "installation": {
         "title": "Installation",

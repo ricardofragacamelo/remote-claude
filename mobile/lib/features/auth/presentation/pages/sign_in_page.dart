@@ -13,6 +13,7 @@ import 'package:remote_claude/core/widgets/agent_names.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
 import 'package:remote_claude/core/widgets/error_view.dart';
 import 'package:remote_claude/core/widgets/loading_view.dart';
+import 'package:remote_claude/core/widgets/screen_context.dart';
 import 'package:remote_claude/features/auth/domain/entities/auth_session.dart';
 import 'package:remote_claude/features/auth/presentation/providers/auth_controller.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
@@ -23,8 +24,8 @@ class SignInPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
+    final AppLocalizations l10n = context.l10n;
+    final ThemeData theme = context.theme;
     final AsyncValue<AuthSession?> session = ref.watch(authControllerProvider);
 
     return Scaffold(

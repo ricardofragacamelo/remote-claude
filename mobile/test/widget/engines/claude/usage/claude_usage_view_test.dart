@@ -50,8 +50,8 @@ void main() {
     await pump(tester, pumpOnce: false);
     await tester.pump();
 
-    expect(find.text(l10n.claudeUsageTitle), findsOneWidget);
-    expect(find.text(l10n.claudeUsageLoading), findsOneWidget);
+    expect(find.text(l10n.enginesClaudeUsageTitle), findsOneWidget);
+    expect(find.text(l10n.enginesClaudeUsageLoading), findsOneWidget);
     repo.gate!.complete();
   });
 
@@ -61,7 +61,7 @@ void main() {
     repo.windows = const <RateLimitWindow>[];
     await pump(tester);
 
-    expect(find.text(l10n.claudeUsageEmptyTitle), findsOneWidget);
+    expect(find.text(l10n.enginesClaudeUsageEmptyTitle), findsOneWidget);
   });
 
   testWidgets('a failure says why, with a way to try again', (WidgetTester tester) async {
@@ -75,7 +75,7 @@ void main() {
     await tester.tap(find.text(l10n.commonActionRetry));
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.claudeUsageWindowFiveHour), findsOneWidget);
+    expect(find.text(l10n.enginesClaudeUsageWindowFiveHour), findsOneWidget);
   });
 
   testWidgets('shows every window, by its known label and percent', (WidgetTester tester) async {
@@ -85,8 +85,8 @@ void main() {
     ];
     await pump(tester);
 
-    expect(find.text(l10n.claudeUsageWindowFiveHour), findsOneWidget);
-    expect(find.text(l10n.claudeUsageWindowSevenDay), findsOneWidget);
+    expect(find.text(l10n.enginesClaudeUsageWindowFiveHour), findsOneWidget);
+    expect(find.text(l10n.enginesClaudeUsageWindowSevenDay), findsOneWidget);
     expect(find.textContaining('8%'), findsOneWidget);
     expect(find.textContaining('83%'), findsOneWidget);
   });
@@ -95,7 +95,7 @@ void main() {
     repo.windows = <RateLimitWindow>[_window(utilizationPercent: null)];
     await pump(tester);
 
-    expect(find.textContaining(l10n.claudeUsageNoReading), findsOneWidget);
+    expect(find.textContaining(l10n.enginesClaudeUsageNoReading), findsOneWidget);
   });
 
   testWidgets('a per-model window is shown by the server\'s own label, not a translated one', (

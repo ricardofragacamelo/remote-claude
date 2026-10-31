@@ -157,11 +157,7 @@ void main() {
                 costUsd: '10.080000',
                 outcome: TurnOutcome.failed,
               ),
-              TurnSummary(
-                turnId: 'turn-2',
-                durationMs: 500,
-                outcome: TurnOutcome.limitReached,
-              ),
+              TurnSummary(turnId: 'turn-2', durationMs: 500, outcome: TurnOutcome.limitReached),
             ],
           ),
         ),

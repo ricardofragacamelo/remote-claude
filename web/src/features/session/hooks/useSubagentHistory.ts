@@ -32,9 +32,7 @@ export function useSubagentHistory(
     queryFn:
       enabled && conversation !== null
         ? async () =>
-            conversationFrom(
-              (await fetchSubagentPage(conversation, toolUseId, folder)).events,
-            )
+            conversationFrom((await fetchSubagentPage(conversation, toolUseId, folder)).events)
         : skipToken,
   });
 

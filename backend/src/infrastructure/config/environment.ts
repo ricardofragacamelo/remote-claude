@@ -134,7 +134,7 @@ export const environmentSchema = z.object({
   RC_SESSION_MAX_BUDGET_USD: z.coerce.number().min(0),
   // Compacts the conversation on its own as the context fills, the same choice the CLI's own
   // interactive terminal and the VS Code extension make by default. `0` is the sentinel for the
-  // engine's own window — stated, never left to an SDK default this build does not pin.
+  // engine's own window — stated, never left to the engine's own default this build does not pin.
   RC_SESSION_AUTO_COMPACT_ENABLED: z.enum(['true', 'false']),
   RC_SESSION_AUTO_COMPACT_WINDOW: z.coerce.number().int().min(0),
   // The coding agents this installation drives, by name, comma-separated — every registered one when

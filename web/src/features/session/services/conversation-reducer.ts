@@ -594,7 +594,9 @@ function turnOutcomeOf(payload: Readonly<Record<string, unknown>>): TurnOutcome 
     return 'completed';
   }
 
-  return typeof outcome === 'string' && TURN_OUTCOMES.has(outcome) ? (outcome as TurnOutcome) : 'failed';
+  return typeof outcome === 'string' && TURN_OUTCOMES.has(outcome)
+    ? (outcome as TurnOutcome)
+    : 'failed';
 }
 
 /**

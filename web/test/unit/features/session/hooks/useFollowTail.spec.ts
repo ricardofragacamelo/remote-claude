@@ -98,34 +98,31 @@ describe('the end of the conversation, followed — plan 09, B-05', () => {
     expect(scroller.current.scrollTop).toBe(2_400);
   });
 
-  it(
-    'ignores the echo of its own move, never reading it as the person leaving the end — S-163',
-    () => {
-      const sizes = { scrollHeight: 1_000, clientHeight: 200 };
-      const scroller = { current: aScroller(sizes) };
-      const content = { current: document.createElement('div') };
-      const keeper = aKeeper('session:b');
-      const { result } = renderHook(() => useFollowTail(scroller, content, keeper));
+  it('ignores the echo of its own move, never reading it as the person leaving the end — S-163', () => {
+    const sizes = { scrollHeight: 1_000, clientHeight: 200 };
+    const scroller = { current: aScroller(sizes) };
+    const content = { current: document.createElement('div') };
+    const keeper = aKeeper('session:b');
+    const { result } = renderHook(() => useFollowTail(scroller, content, keeper));
 
-      expect(result.current.following).toBe(true);
+    expect(result.current.following).toBe(true);
 
-      // A second resize lands before the scroll event of the first move's own jump is delivered —
-      // exactly what a fast stream produces. By the time the echo arrives, `scrollTop` is still
-      // where the first move left it, behind the `scrollHeight` the second resize already grew
-      // past — the same shape as a scroll up, though nobody touched the scrollbar.
-      sizes.scrollHeight = 1_400;
-      grew();
-      sizes.scrollHeight = 1_800;
-      fireEvent.scroll(scroller.current);
+    // A second resize lands before the scroll event of the first move's own jump is delivered —
+    // exactly what a fast stream produces. By the time the echo arrives, `scrollTop` is still
+    // where the first move left it, behind the `scrollHeight` the second resize already grew
+    // past — the same shape as a scroll up, though nobody touched the scrollbar.
+    sizes.scrollHeight = 1_400;
+    grew();
+    sizes.scrollHeight = 1_800;
+    fireEvent.scroll(scroller.current);
 
-      expect(result.current.following).toBe(true);
-      expect(keeper.kept).toBeUndefined();
+    expect(result.current.following).toBe(true);
+    expect(keeper.kept).toBeUndefined();
 
-      // Once the second resize is itself observed, it still catches all the way up.
-      grew();
-      expect(scroller.current.scrollTop).toBe(1_800);
-    },
-  );
+    // Once the second resize is itself observed, it still catches all the way up.
+    grew();
+    expect(scroller.current.scrollTop).toBe(1_800);
+  });
 
   it('gives back where the person left it, when it comes back — S-08, S-16', () => {
     const scroller = { current: aScroller({ scrollHeight: 1_000, clientHeight: 200 }) };

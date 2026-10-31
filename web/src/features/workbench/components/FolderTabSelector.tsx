@@ -1,16 +1,14 @@
-import { ChevronsUpDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
   DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
+import { PickerDropdownContent, PickerDropdownTrigger } from '@/shared/components/PickerDropdown';
 import type { FolderTabs } from '../hooks/useFolderTabs';
 import { tabActionsOf } from '../hooks/useTabActions';
 
@@ -32,17 +30,13 @@ export function FolderTabSelector({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={t('workbench.tabs.pick', { name: current.name })}
-          className="flex min-h-touch min-w-0 flex-1 items-center justify-between gap-2 px-3 text-ui"
-        >
-          <span className="truncate">{current.name}</span>
-          <ChevronsUpDown className="size-4 shrink-0" aria-hidden />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] max-w-sm">
+      <PickerDropdownTrigger
+        ariaLabel={t('workbench.tabs.pick', { name: current.name })}
+        className="flex min-h-touch min-w-0 flex-1 items-center justify-between gap-2 px-3 text-ui"
+      >
+        <span className="truncate">{current.name}</span>
+      </PickerDropdownTrigger>
+      <PickerDropdownContent>
         <DropdownMenuLabel>{t('workbench.tabs.label')}</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={control.active}
@@ -66,7 +60,7 @@ export function FolderTabSelector({
             {t(action.labelKey)}
           </DropdownMenuItem>
         ))}
-      </DropdownMenuContent>
+      </PickerDropdownContent>
     </DropdownMenu>
   );
 }

@@ -17,22 +17,22 @@ String rateLimitWindowLabel(AppLocalizations l10n, RateLimitWindow window) {
   }
 
   return switch (window.kind) {
-    'five_hour' => l10n.claudeUsageWindowFiveHour,
-    'seven_day' => l10n.claudeUsageWindowSevenDay,
-    'seven_day_opus' => l10n.claudeUsageWindowSevenDayOpus,
-    'seven_day_sonnet' => l10n.claudeUsageWindowSevenDaySonnet,
-    'seven_day_overage_included' => l10n.claudeUsageWindowSevenDayOverageIncluded,
-    'seven_day_oauth_apps' => l10n.claudeUsageWindowSevenDayOauthApps,
-    'overage' => l10n.claudeUsageWindowOverage,
+    'five_hour' => l10n.enginesClaudeUsageWindowFiveHour,
+    'seven_day' => l10n.enginesClaudeUsageWindowSevenDay,
+    'seven_day_opus' => l10n.enginesClaudeUsageWindowSevenDayOpus,
+    'seven_day_sonnet' => l10n.enginesClaudeUsageWindowSevenDaySonnet,
+    'seven_day_overage_included' => l10n.enginesClaudeUsageWindowSevenDayOverageIncluded,
+    'seven_day_oauth_apps' => l10n.enginesClaudeUsageWindowSevenDayOauthApps,
+    'overage' => l10n.enginesClaudeUsageWindowOverage,
     _ => window.kind,
   };
 }
 
 /// The word for [status], in the reader's language.
 String rateLimitStatusLabel(AppLocalizations l10n, RateLimitStatus status) => switch (status) {
-  RateLimitStatus.allowed => l10n.claudeUsageStatusAllowed,
-  RateLimitStatus.allowedWarning => l10n.claudeUsageStatusAllowedWarning,
-  RateLimitStatus.rejected => l10n.claudeUsageStatusRejected,
+  RateLimitStatus.allowed => l10n.enginesClaudeUsageStatusAllowed,
+  RateLimitStatus.allowedWarning => l10n.enginesClaudeUsageStatusAllowedWarning,
+  RateLimitStatus.rejected => l10n.enginesClaudeUsageStatusRejected,
 };
 
 /// The order the known windows are shown in — an unknown `kind` sorts after all of these, each

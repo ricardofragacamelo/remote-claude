@@ -1,10 +1,10 @@
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { EmptyState } from '@/shared/components/EmptyState';
 import { IconButton } from '@/shared/components/IconButton';
-import { LearnMore } from '@/shared/components/LearnMore';
+import { EmptyState } from '@/shared/components/EmptyState';
 import { LoadStatus } from '@/shared/components/LoadStatus';
+import { LearnMore } from '@/shared/components/LearnMore';
 import { agoFrom } from '@/shared/lib/relative-time';
 import { useRateLimits } from '../hooks/useRateLimits';
 import { orderedByKind } from '../lib/rate-limit-labels';

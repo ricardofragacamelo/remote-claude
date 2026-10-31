@@ -52,7 +52,7 @@ const String rulesRoute = '/rules';
 /// What a person looks at, and switches `debug` on from, when something is not working.
 const String diagnosticsRoute = '/diagnostics';
 
-/// The engine's own screen — neutral (plan 28, D-15): what it shows is registered by `app/engines.dart`,
+/// The engine's own screen — neutral (plan 28, D-15): what it shows is registered by `app/engines/registration.dart`,
 /// the one file of the app that may import `engines/`.
 const String agentRoute = '/agent';
 

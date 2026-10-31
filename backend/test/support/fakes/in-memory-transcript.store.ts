@@ -59,7 +59,9 @@ export class InMemoryTranscriptStore implements EngineTranscriptStore {
     if (session === undefined) {
       return Promise.resolve(null);
     }
-    return Promise.resolve(this.unknownCwd.has(session.id.id) ? { ...session, cwd: null } : session);
+    return Promise.resolve(
+      this.unknownCwd.has(session.id.id) ? { ...session, cwd: null } : session,
+    );
   }
 
   /** Ids a transcript the engine cannot resolve a folder for by id alone — `list` still can, the way

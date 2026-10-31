@@ -122,7 +122,10 @@ export class TranscriptAudience {
 
     const roots = [
       ...(hint === null ? [] : [hint]),
-      ...this.allowlist.current().for(userId).map((workspace) => workspace.root.value),
+      ...this.allowlist
+        .current()
+        .for(userId)
+        .map((workspace) => workspace.root.value),
     ];
 
     for (const root of roots) {

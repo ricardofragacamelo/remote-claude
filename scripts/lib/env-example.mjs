@@ -175,7 +175,10 @@ export function parseEnvExample(content) {
   let pending = [];
 
   function flushAsIntro() {
-    const text = pending.map(uncommented).filter((line) => line !== '').join(' ');
+    const text = pending
+      .map(uncommented)
+      .filter((line) => line !== '')
+      .join(' ');
     if (current !== null && text !== '') {
       current.intro.push(text);
     }
@@ -210,8 +213,13 @@ export function parseEnvExample(content) {
     if (declaration?.[1] !== undefined) {
       current.variables.push({
         name: declaration[1],
-        value: declaration[2] ?? '',
-        description: pending.map(uncommented).filter((line) => line !== '').join(' '),
+        // The regex's capture group always matches (possibly empty), so it is never undefined —
+        // stated for the type checker, which cannot see that from the regex alone.
+        value: /** @type {string} */ (declaration[2]),
+        description: pending
+          .map(uncommented)
+          .filter((line) => line !== '')
+          .join(' '),
       });
       pending = [];
     }

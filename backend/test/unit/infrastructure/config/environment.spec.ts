@@ -660,7 +660,9 @@ describe('loadConfig', () => {
 
   describe('the idle-session reaper — D-02', () => {
     it('switches the reaper off only with the literal word', () => {
-      expect(loadConfig(withChange({ RC_SESSION_IDLE_TTL_MS: 'off' })).session.idleTtlMs).toBeNull();
+      expect(
+        loadConfig(withChange({ RC_SESSION_IDLE_TTL_MS: 'off' })).session.idleTtlMs,
+      ).toBeNull();
     });
 
     // Switched off by configuration, never by accident: a zero or an empty value is a mistake,

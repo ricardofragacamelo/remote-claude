@@ -9,6 +9,7 @@ import 'package:remote_claude/core/error/failure.dart';
 import 'package:remote_claude/core/error/failure_messages.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
 import 'package:remote_claude/core/widgets/content_column.dart';
+import 'package:remote_claude/core/widgets/screen_context.dart';
 import 'package:remote_claude/l10n/generated/app_localizations.dart';
 
 /// The error state of a screen.
@@ -23,8 +24,8 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
+    final AppLocalizations l10n = context.l10n;
+    final ThemeData theme = context.theme;
 
     return ContentColumn(
       children: <Widget>[

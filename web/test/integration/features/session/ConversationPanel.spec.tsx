@@ -43,13 +43,17 @@ function fold(...frames: readonly Envelope[]): ConversationState {
 
 function show(
   conversation: ConversationState,
-  props: { reference?: { engine: string; id: string }; onSearchEverything?: () => void } = {},
+  props: {
+    reference?: { engine: string; id: string };
+    onSearchEverything?: () => void;
+    folder?: string;
+  } = {},
 ) {
   return renderRouted(
     <Conversation
       conversation={conversation}
       isPartial={false}
-      folder={FOLDER}
+      folder={props.folder ?? FOLDER}
       sessionId="s-1"
       reference={props.reference ?? null}
       {...(props.onSearchEverything === undefined
@@ -598,6 +602,29 @@ describe('the conversation of the panel', () => {
       await user.click(screen.getByRole('button', { name: t('common.action.retry') }));
       await waitFor(() => {
         expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThan(calls);
+      });
+    });
+
+    it('says nothing of a subagent whose session carries no reference to read its history from', async () => {
+      const user = userEvent.setup();
+      const get = vi.spyOn(api, 'get');
+      show(fold(opened));
+
+      await user.click(await screen.findByRole('button', { name: /look around/ }));
+
+      expect(await screen.findByText(t('sessions.subagent.nothing'), {}, SLOW)).toBeInTheDocument();
+      expect(get).not.toHaveBeenCalled();
+    });
+
+    it('reads a subagent’s history with no folder, when the conversation itself carries none', async () => {
+      const user = userEvent.setup();
+      const get = vi.spyOn(api, 'get').mockResolvedValue({ events: [] });
+      show(fold(opened), { reference: { engine: 'claude', id: 'conv-1' }, folder: '' });
+
+      await user.click(await screen.findByRole('button', { name: /look around/ }));
+
+      await waitFor(() => {
+        expect(get).toHaveBeenCalledWith('/transcripts/claude/conv-1/subagents/a1/messages');
       });
     });
   });
