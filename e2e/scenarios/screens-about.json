@@ -3,7 +3,7 @@
   "title": "About shows the versions the running backend reads, ready to copy, reached from the manage menu",
   "user": { "username": "dev", "password": "dev" },
   "expect": {
-    "components": ["Web", "Backend", "Agent SDK", "Claude CLI", "Node"],
+    "components": ["Web", "Backend", "Claude Code CLI", "Claude Code library", "Node"],
     "unreadable": "could not be read"
   }
 }

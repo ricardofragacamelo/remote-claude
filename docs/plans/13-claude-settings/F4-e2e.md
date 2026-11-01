@@ -58,7 +58,7 @@ traduzida nos dois idiomas, e o "saiba mais" de um campo leva à seção certa. 
 [28 · F7](../28-agent-neutral-core/F7-e2e.md), que não anuncia `mcp` nem tem extensão, a tela mostra só as seções
 do núcleo que ele anuncia, e nem o indicador de MCP nem as seções do Claude aparecem. Cenário S-195.
 
-### B-46 — `smoke-live` e compatibilidade do app 🔲
+### B-46 — `smoke-live` e compatibilidade do app ✅
 
 No `smoke-live` (`pnpm test:e2e:live`, sob demanda —
 [plano 01 · D-12](../01-live-session/decisions.md#d-12--onde-o-smoke-live-roda)), contra o Claude real e

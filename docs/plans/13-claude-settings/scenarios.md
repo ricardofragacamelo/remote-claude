@@ -304,11 +304,11 @@ catálogo pela [B-06](F0-contract.md)): `MCP_SERVER_NOT_FOUND` (404), `MCP_SERVE
 | S-193 | pasta que saiu da allowlist mostra a recusa traduzida, com caminho de volta | err | e2e | `WORKSPACE_NOT_ALLOWED` | B-44 | ✅ |
 | S-194 | uma skill de usuário aparece com o selo, e desligar a origem pela tela a tira do `/` do painel | est | e2e | — | B-44 | ✅ |
 | S-195 | axe sem violação, teclado de ponta a ponta e viewport de celular sem scroll horizontal nas sete seções; com o motor de teste do plano 28, sem `mcp` e sem extensão, só as seções do núcleo que ele anuncia aparecem | eq | e2e | — | B-45 | ✅ |
-| S-196 | `smoke-live`: modelos e conta reais, servidor de fixture conectado, tool MCP real passando pelo `canUseTool` | eq | e2e | — | B-46 | ⬜ |
-| S-197 | `smoke-live`: skill de usuário real carrega pelo plugin sintético, a `allow` de `~/.claude/settings.json` continua sem dispensar o `canUseTool`, e a política de shell inline vale como a D-21 decidiu | err | e2e | — | B-46 | ⬜ |
-| S-198 | `smoke-live`: subagent de projeto com `permissionMode: acceptEdits` não escreve sem o `canUseTool` — ou o resultado medido vira aviso na tela e risco aberto | est | e2e | — | B-46 | ⬜ |
-| S-199 | `pnpm test:e2e:mobile` verde com os tipos Dart regenerados | eq | e2e | — | B-46 | ⬜ |
-| S-214 | as fixtures deste plano (tool MCP composta, skill de usuário, slash command e subagent de projeto, output style padrão) dão o mesmo conteúdo no web e no app pela paridade do plano 26, e o `render:check` sai verde sem `pending` (D-31) | eq | unit | — | B-46 | ⬜ |
+| S-196 | `smoke-live`: modelos e conta reais, servidor de fixture conectado, tool MCP real passando pelo `canUseTool` | eq | e2e | — | B-46 | ✅ |
+| S-197 | `smoke-live`: skill de usuário real carrega pelo plugin sintético, a `allow` de `~/.claude/settings.json` continua sem dispensar o `canUseTool`, e a política de shell inline vale como a D-21 decidiu | err | e2e | — | B-46 | ✅ |
+| S-198 | `smoke-live`: subagent de projeto com `permissionMode: acceptEdits` não escreve sem o `canUseTool` — ou o resultado medido vira aviso na tela e risco aberto | est | e2e | — | B-46 | ✅ |
+| S-199 | `pnpm test:e2e:mobile` verde com os tipos Dart regenerados | eq | e2e | — | B-46 | ✅ |
+| S-214 | as fixtures deste plano (tool MCP composta, skill de usuário, slash command e subagent de projeto, output style padrão) dão o mesmo conteúdo no web e no app pela paridade do plano 26, e o `render:check` sai verde sem `pending` (D-31) | eq | unit | — | B-46 | ✅ |
 | S-215 | app: com a capacidade `mcp` no `session.started`, `session.mcpStatusChanged` vira o chip da sessão (sem ela, nenhum chip) com o status agregado; ao tocar, a lista com status e erro redigido de cada servidor; nenhuma ação de ligar, desligar ou reconectar no app; a lista inteira substitui a anterior a cada evento (D-32) | eq | widget | — | B-22 | ✅ |
 
 ---

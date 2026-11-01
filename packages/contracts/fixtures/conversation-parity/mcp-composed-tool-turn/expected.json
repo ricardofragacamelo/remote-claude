@@ -1,0 +1,65 @@
+{
+  "entries": [
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "user",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "Call the echo tool of the fixture MCP server with the text parity. Then reply with exactly what it returned, and nothing else."
+        }
+      ]
+    },
+    {
+      "kind": "tool",
+      "owner": null,
+      "toolKind": "other",
+      "label": {
+        "messageKey": "sessions.tool.other",
+        "params": {
+          "name": "ToolSearch"
+        }
+      },
+      "status": "succeeded",
+      "media": []
+    },
+    {
+      "kind": "tool",
+      "owner": null,
+      "toolKind": "mcp",
+      "label": {
+        "messageKey": "sessions.tool.mcp",
+        "params": {
+          "server": "fixture",
+          "tool": "echo"
+        }
+      },
+      "status": "succeeded",
+      "media": []
+    },
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "assistant",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "parity"
+        }
+      ]
+    },
+    {
+      "kind": "turn",
+      "owner": null,
+      "usage": {
+        "inputTokens": 6,
+        "outputTokens": 143,
+        "cacheReadTokens": 43602,
+        "cacheWriteTokens": 3902,
+        "webSearches": 0
+      },
+      "costUsd": "0.065411"
+    }
+  ]
+}

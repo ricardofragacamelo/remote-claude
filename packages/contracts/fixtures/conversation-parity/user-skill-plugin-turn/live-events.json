@@ -1,0 +1,139 @@
+[
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "eb62afdf-4945-4cf4-9208-d3472c34ee99",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "eb62afdf-4945-4cf4-9208-d3472c34ee99:0",
+          "text": "What is my fortune today? Use your fortune skill to answer, and say nothing else."
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CgajfDvZBLtESf2gJtJ22",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "3c54faae-45e4-413c-9b92-65722503d118:0",
+          "toolUseId": "toolu_017uFmZqHoBYMCcnb4QDFMHh"
+        }
+      ]
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+      "kind": "other",
+      "label": {
+        "messageKey": "sessions.tool.other",
+        "params": {
+          "name": "Skill"
+        }
+      },
+      "subject": {},
+      "changes": [],
+      "origin": {
+        "engine": "claude",
+        "native": "Skill"
+      },
+      "rawInput": {
+        "skill": "fixture-user-skills:fixture-fortune"
+      }
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+      "status": "succeeded",
+      "summary": "Launching skill: fixture-user-skills:fixture-fortune"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "615e3e89-adce-4eed-9112-86951a338288",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "615e3e89-adce-4eed-9112-86951a338288:0",
+          "text": "Base directory for this skill: /home/user/projects/remote-claude/e2e/fixtures/user-skills-plugin/skills/fixture-fortune\n\nReply with exactly one short, invented fortune-cookie sentence, in quotes, and nothing else.\n"
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CgajfMrYDjzAEycpDqShE",
+      "delta": "\"A"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CgajfMrYDjzAEycpDqShE",
+      "delta": " door you wal"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CgajfMrYDjzAEycpDqShE",
+      "delta": "ked past tw"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CgajfMrYDjzAEycpDqShE",
+      "delta": "ice will open on"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011CgajfMrYDjzAEycpDqShE",
+      "delta": " the third try.\""
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CgajfMrYDjzAEycpDqShE",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "24011a5f-5bb8-45d6-9c52-f209aaa69a79:0",
+          "text": "\"A door you walked past twice will open on the third try.\""
+        }
+      ]
+    }
+  },
+  {
+    "type": "turn.completed",
+    "payload": {
+      "turnId": "8142f929-11d3-4a77-9774-22f777cd7b06",
+      "usage": {
+        "inputTokens": 4,
+        "outputTokens": 81,
+        "cacheReadTokens": 27725,
+        "cacheWriteTokens": 5930,
+        "webSearches": 0
+      },
+      "costUsd": "0.076173",
+      "durationMs": 3786,
+      "outcome": "completed"
+    }
+  }
+]

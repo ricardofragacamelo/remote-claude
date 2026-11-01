@@ -128,7 +128,9 @@ void main() {
     await openRow(
       tester,
       robot,
-      find.textContaining(app.l10n.sessionToolAgent('writer', 'Write file from-subagent.txt')),
+      find.textContaining(
+        app.l10n.sessionToolAgent('writer', 'Create from-subagent.txt with word parity'),
+      ),
     );
     expect(robot.cardInConversation, findsOneWidget);
     await app.robot(tester).answer(app.l10n.permissionScopeOnce);
@@ -173,7 +175,9 @@ void main() {
     await openRow(
       tester,
       robot,
-      find.textContaining(app.l10n.sessionToolAgent('writer', 'Write file from-subagent.txt')),
+      find.textContaining(
+        app.l10n.sessionToolAgent('writer', 'Create from-subagent.txt with word parity'),
+      ),
     );
     await app.robot(tester).answer(app.l10n.permissionScopeOnce);
     await pumpUntil(
@@ -195,7 +199,9 @@ void main() {
     await openRow(
       tester,
       robot,
-      find.textContaining(app.l10n.sessionToolAgent('writer', 'Write file from-subagent.txt')),
+      find.textContaining(
+        app.l10n.sessionToolAgent('writer', 'Create from-subagent.txt with word parity'),
+      ),
     );
     await robot.seeInConversation(find.textContaining('from-subagent.txt'));
   });

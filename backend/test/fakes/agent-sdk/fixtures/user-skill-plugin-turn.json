@@ -1,0 +1,836 @@
+{
+  "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.",
+  "name": "user-skill-plugin-turn",
+  "why": "plan 13, B-46/D-31 — a skill of the user loaded through the synthetic local plugin (B-35), the same on-disk shape SyntheticSkillsPluginBuilder builds (a manifest, skills/<name>/SKILL.md), never through settingSources",
+  "prompt": "What is my fortune today? Use your fortune skill to answer, and say nothing else.",
+  "options": {
+    "plugins": [
+      {
+        "type": "local",
+        "path": "/home/user/projects/remote-claude/e2e/fixtures/user-skills-plugin",
+        "skipMcpDiscovery": true
+      }
+    ]
+  },
+  "recordedAt": "2026-10-31",
+  "sdkVersion": "0.3.277",
+  "counts": { "messages": 29, "preToolUse": 1, "canUseTool": 0 },
+  "preToolUse": [
+    { "toolName": "Skill", "toolUseId": "toolu_017uFmZqHoBYMCcnb4QDFMHh", "effort": "high" }
+  ],
+  "canUseTool": [],
+  "stderr": [],
+  "history": [
+    {
+      "type": "user",
+      "uuid": "eb62afdf-4945-4cf4-9208-d3472c34ee99",
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "message": {
+        "role": "user",
+        "content": "What is my fortune today? Use your fortune skill to answer, and say nothing else."
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-31T17:48:53.820Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "3c54faae-45e4-413c-9b92-65722503d118",
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CgajfDvZBLtESf2gJtJ22",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+            "name": "Skill",
+            "input": { "skill": "fixture-user-skills:fixture-fortune" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3605,
+          "cache_read_input_tokens": 12060,
+          "output_tokens": 63,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 3605, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "global",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 63,
+              "cache_read_input_tokens": 12060,
+              "cache_creation_input_tokens": 3605,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 3605
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-31T17:48:56.002Z"
+    },
+    {
+      "type": "user",
+      "uuid": "ddb5d4b1-d975-4aa8-9900-a8b65d8c1fe9",
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+            "content": "Launching skill: fixture-user-skills:fixture-fortune"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-31T17:48:56.033Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "24011a5f-5bb8-45d6-9c52-f209aaa69a79",
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CgajfMrYDjzAEycpDqShE",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          { "type": "text", "text": "\"A door you walked past twice will open on the third try.\"" }
+        ],
+        "container": null,
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2325,
+          "cache_read_input_tokens": 15665,
+          "output_tokens": 18,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 2325, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "global",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 18,
+              "cache_read_input_tokens": 15665,
+              "cache_creation_input_tokens": 2325,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2325
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-10-31T17:48:57.549Z"
+    }
+  ],
+  "messages": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/workspace",
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "tools": [
+        "Task",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "ShareOnboardingGuide",
+        "Skill",
+        "TaskStop",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write"
+      ],
+      "mcp_servers": [],
+      "model": "claude-opus-5[1m]",
+      "permissionMode": "default",
+      "slash_commands": [
+        "deep-research",
+        "fixture-user-skills:fixture-fortune",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "advisor",
+        "agents",
+        "auto-mode-setup",
+        "autocompact",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "output-style",
+        "context",
+        "effort",
+        "fast",
+        "heapdump",
+        "init",
+        "mcp",
+        "import",
+        "model",
+        "__remote-workflow",
+        "workflow-launch-exec",
+        "reload-plugins",
+        "reload-skills",
+        "rename",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "skill-doctor",
+        "goal",
+        "design-consent",
+        "design-revoke",
+        "list-agents",
+        "team-onboarding"
+      ],
+      "terminal_slash_commands": ["doctor", "color", "reload-plugins"],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.277",
+      "output_style": "default",
+      "agents": ["claude", "Explore", "general-purpose", "Plan", "statusline-setup"],
+      "skills": [
+        "deep-research",
+        "fixture-user-skills:fixture-fortune",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator"
+      ],
+      "plugins": [
+        {
+          "name": "fixture-user-skills",
+          "path": "/home/user/projects/remote-claude/e2e/fixtures/user-skills-plugin",
+          "source": "fixture-user-skills@inline",
+          "version": "0.0.0"
+        },
+        { "name": "agents-md", "path": "builtin", "source": "agents-md@builtin" }
+      ],
+      "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
+      "analytics_disabled": false,
+      "product_feedback_disabled": false,
+      "uuid": "14874c01-1f5e-45df-9937-da3f2322fe81",
+      "memory_paths": { "auto": "/home/user/.claude/projects/-workspace/memory/" },
+      "messaging_socket_path": "/run/user/1000/cc-socks/1653176.sock",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required"
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "uuid": "4da1cfd9-6f3c-4fb0-a815-44c3b7457ce9"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1793481600,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "out_of_credits",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": { "utilization": 0.09, "resetsAt": 1793481600 },
+          "seven_day": { "utilization": 0.07, "resetsAt": 1793898000 }
+        }
+      },
+      "uuid": "30cc8a85-dd3e-48dc-98bd-e71da66b1e9a",
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CgajfDvZBLtESf2gJtJ22",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 3605,
+            "cache_read_input_tokens": 12060,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 3605 },
+            "output_tokens": 16,
+            "service_tier": "standard",
+            "inference_geo": "global",
+            "speed": "standard"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "1e8b6794-8754-4b67-9a95-d313647fa25e",
+      "ttft_ms": 1312
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+          "name": "Skill",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "b05e4d2d-29a6-45dd-80f8-43771a86a5d0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "b8d22f12-e5bc-4c6f-bcce-00055d93ae7c"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"skill\": \"fixture-" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "dcc3bfd3-26fb-4096-89d2-28a10824f4f1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "user-skills:fixture" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "e33143f5-5392-460e-83f5-9566b4cacd5d"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "-fortune" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "f509ad97-4c4c-4609-ab29-5b7ae4459393"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "58550d21-fa51-410f-bf31-0eeade627052"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CgajfDvZBLtESf2gJtJ22",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+            "name": "Skill",
+            "input": { "skill": "fixture-user-skills:fixture-fortune" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3605,
+          "cache_read_input_tokens": 12060,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 3605 },
+          "output_tokens": 16,
+          "service_tier": "standard",
+          "inference_geo": "global",
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "uuid": "3c54faae-45e4-413c-9b92-65722503d118",
+      "timestamp": "2026-10-31T17:48:56.002Z",
+      "request_id": "req_011CgajfDgfBRjf3XufUqyEZ",
+      "wire_tool_inputs": {
+        "toolu_017uFmZqHoBYMCcnb4QDFMHh": { "skill": "fixture-user-skills:fixture-fortune" }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "7f7358ca-b2a1-498d-ae24-8afb2d1613a1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3605,
+          "cache_read_input_tokens": 12060,
+          "output_tokens": 63,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 63,
+              "cache_read_input_tokens": 12060,
+              "cache_creation_input_tokens": 3605,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 3605
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "d02471fc-bd4a-4610-a5a9-ea3dd39bd2e3"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "19f1c202-f515-4acb-b6bf-2427e03d02ef"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+            "content": "Launching skill: fixture-user-skills:fixture-fortune"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "uuid": "ddb5d4b1-d975-4aa8-9900-a8b65d8c1fe9",
+      "timestamp": "2026-10-31T17:48:56.033Z",
+      "tool_use_result": { "success": true, "commandName": "fixture-user-skills:fixture-fortune" }
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Base directory for this skill: /home/user/projects/remote-claude/e2e/fixtures/user-skills-plugin/skills/fixture-fortune\n\nReply with exactly one short, invented fortune-cookie sentence, in quotes, and nothing else.\n"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "uuid": "615e3e89-adce-4eed-9112-86951a338288",
+      "timestamp": "2026-10-31T17:48:56.030Z",
+      "isSynthetic": true
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "uuid": "82eb8139-1ea4-4720-a5da-595b4f347cc6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011CgajfMrYDjzAEycpDqShE",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 2325,
+            "cache_read_input_tokens": 15665,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2325 },
+            "output_tokens": 2,
+            "service_tier": "standard",
+            "inference_geo": "global",
+            "speed": "standard"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "a3952816-304f-4f7c-9798-236e4f5d0e49",
+      "ttft_ms": 1224
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "135afbc2-a6c9-42bb-a762-daeee3aacc57"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "\"A" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "31fa1720-57ae-4a6e-ae07-b1fff27cfeb7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " door you wal" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "5f5812cc-8842-4265-884f-e1af685b12fa"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ked past tw" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "1497aaa4-2f2c-447d-8554-b619f1632ac9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "ice will open on" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "6bef4e61-5c47-4838-894e-8e28aa958662"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " the third try.\"" }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "ffe46d2a-79df-4f82-9e00-d6cfb922866e"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011CgajfMrYDjzAEycpDqShE",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          { "type": "text", "text": "\"A door you walked past twice will open on the third try.\"" }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2325,
+          "cache_read_input_tokens": 15665,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2325 },
+          "output_tokens": 2,
+          "service_tier": "standard",
+          "inference_geo": "global",
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "uuid": "24011a5f-5bb8-45d6-9c52-f209aaa69a79",
+      "timestamp": "2026-10-31T17:48:57.549Z",
+      "request_id": "req_011CgajfMXwk5dgYkARjLWXX"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "524f1f4a-5adc-418a-a21b-ab2264bc5ce9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2325,
+          "cache_read_input_tokens": 15665,
+          "output_tokens": 18,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 18,
+              "cache_read_input_tokens": 15665,
+              "cache_creation_input_tokens": 2325,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2325
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "51501b42-4c91-4d9c-8e77-596f99947661"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "parent_tool_use_id": null,
+      "uuid": "19fa9747-15b4-4cf9-84d6-76fde6ebd586"
+    },
+    {
+      "duration_api_ms": 4729,
+      "stop_reason": "end_turn",
+      "session_id": "48e24ecb-95e2-4ab0-b6bd-0fa6133ca7f0",
+      "total_cost_usd": 0.0761725,
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 5930,
+        "cache_read_input_tokens": 27725,
+        "output_tokens": 81,
+        "output_tokens_details": { "thinking_tokens": 0 },
+        "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+        "service_tier": "standard",
+        "cache_creation": { "ephemeral_1h_input_tokens": 5930, "ephemeral_5m_input_tokens": 0 },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 18,
+            "cache_read_input_tokens": 15665,
+            "cache_creation_input_tokens": 2325,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2325 },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 910,
+          "outputTokens": 11,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000965,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 4,
+          "outputTokens": 81,
+          "cacheReadInputTokens": 27725,
+          "cacheCreationInputTokens": 5930,
+          "webSearchRequests": 0,
+          "costUSD": 0.0752075,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-opus-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "permission_denials": [],
+      "terminal_reason": "completed",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required",
+      "subagent_stats": {
+        "spawned": 0,
+        "requested": { "background": 0, "foreground": 0, "unset": 0 },
+        "started_in_background": 0,
+        "max_depth": 0,
+        "spawned_by_subagents": 0,
+        "completed": 0,
+        "failed": 0,
+        "killed": { "parent": 0, "user": 0, "system": 0 },
+        "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+        "by_type": {}
+      },
+      "is_error": false,
+      "num_turns": 3,
+      "subtype": "success",
+      "api_error_status": null,
+      "result": "\"A door you walked past twice will open on the third try.\"",
+      "ttft_ms": 2203,
+      "type": "result",
+      "duration_ms": 3786,
+      "uuid": "8142f929-11d3-4a77-9774-22f777cd7b06",
+      "ttft_stream_ms": 1617,
+      "time_to_request_ms": 305,
+      "first_content_frame_ms": 1618,
+      "queued_turn_count": 0,
+      "result_index": 0
+    }
+  ]
+}

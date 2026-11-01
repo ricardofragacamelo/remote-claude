@@ -49,7 +49,7 @@ export function MobileViewBar({ view, onPick }: MobileViewBarProps): React.JSX.E
             type="button"
             aria-pressed={each === view}
             className={cn(
-              'flex min-h-touch flex-col items-center justify-center gap-0.5 text-ui-sm',
+              'flex min-h-touch flex-col items-center justify-center gap-0.5 text-ui-xs',
               each === view ? 'text-foreground' : 'text-muted-foreground',
             )}
             onClick={() => {
@@ -57,7 +57,7 @@ export function MobileViewBar({ view, onPick }: MobileViewBarProps): React.JSX.E
             }}
           >
             <Icon className="size-5" aria-hidden />
-            {t(LABELS[each])}
+            <span className="max-w-full whitespace-nowrap">{t(LABELS[each])}</span>
           </button>
         );
       })}

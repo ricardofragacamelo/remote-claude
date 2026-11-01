@@ -136,7 +136,8 @@
         "webSearches": 0
       },
       "costUsd": "0.075591",
-      "durationMs": 4354
+      "durationMs": 4354,
+      "outcome": "completed"
     }
   }
 ]

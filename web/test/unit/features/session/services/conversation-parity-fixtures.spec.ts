@@ -18,19 +18,27 @@ const FIXTURES_ROOT = path.join(
   'conversation-parity',
 );
 
-/** One thing the neutral content of a fixture names — the shape `expected.json` holds (F6, B-28). */
+/**
+ * One thing the neutral content of a fixture names — the shape `expected.json` holds (F6, B-28).
+ *
+ * `neverInHistory` (plan 13, B-46/D-31) marks an entry the CLI's own transcript never persists
+ * although the live stream carries it — measured on `user-skill-plugin-turn`'s skill-loading
+ * message. Never set on a `turn`, already dropped from history for its own reason.
+ */
 type Entry =
   | {
       readonly kind: 'message';
       readonly owner: string | null;
       readonly author: string;
       readonly blocks: readonly Block[];
+      readonly neverInHistory?: true;
     }
   | {
       readonly kind: 'thinking';
       readonly owner: string | null;
       readonly text: string;
       readonly redacted: boolean;
+      readonly neverInHistory?: true;
     }
   | {
       readonly kind: 'tool';
@@ -39,6 +47,7 @@ type Entry =
       readonly label: ToolLabelKey;
       readonly status: string;
       readonly media: readonly unknown[];
+      readonly neverInHistory?: true;
     }
   | {
       readonly kind: 'turn';
@@ -54,6 +63,8 @@ const FIXTURES = [
   'multi-text-block-turn',
   'explanatory-style-turn',
   'mcp-untitled-tool-turn',
+  'mcp-composed-tool-turn',
+  'user-skill-plugin-turn',
   'subagent-permission-turn',
 ] as const;
 
@@ -152,6 +163,13 @@ function neutralEntriesOf(state: Conversation): Entry[] {
  * same events the app is measured against, so a client that reads one into less — or more — than the
  * other fails here, before a screenshot or an e2e run notices (F6, B-28). Cenários S-82, S-83.
  */
+/** [entry], with the `neverInHistory` marker gone — the reducer's own output never carries it. */
+function withoutHistoryMarker(entry: Entry): Entry {
+  return Object.fromEntries(
+    Object.entries(entry).filter(([key]) => key !== 'neverInHistory'),
+  ) as Entry;
+}
+
 describe('conversation-parity fixtures — plan 26, F6, B-28', () => {
   describe.each(FIXTURES)('%s', (fixture) => {
     const expected = readJson<{ entries: Entry[] }>(fixture, 'expected.json').entries;
@@ -159,12 +177,14 @@ describe('conversation-parity fixtures — plan 26, F6, B-28', () => {
     it('projects the live events into the same content — S-82', () => {
       const live = eventsOf(fixture, 'live-events.json');
 
-      expect(neutralEntriesOf(conversationFrom(live))).toEqual(expected);
+      expect(neutralEntriesOf(conversationFrom(live))).toEqual(expected.map(withoutHistoryMarker));
     });
 
     it('projects the history into the same content, minus what history never carries — S-83', () => {
       const history = eventsOf(fixture, 'history-events.json');
-      const want = expected.filter((entry) => entry.kind !== 'turn' && entry.owner === null);
+      const want = expected
+        .filter((entry) => entry.kind !== 'turn' && entry.owner === null && !entry.neverInHistory)
+        .map(withoutHistoryMarker);
 
       expect(neutralEntriesOf(conversationFrom(history))).toEqual(want);
     });

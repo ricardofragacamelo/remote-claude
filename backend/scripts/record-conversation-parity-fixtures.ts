@@ -35,6 +35,8 @@ const FIXTURES = [
   'multi-text-block-turn',
   'explanatory-style-turn',
   'mcp-untitled-tool-turn',
+  'mcp-composed-tool-turn',
+  'user-skill-plugin-turn',
   'subagent-permission-turn',
 ] as const;
 

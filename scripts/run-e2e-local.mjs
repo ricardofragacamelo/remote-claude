@@ -76,12 +76,14 @@ import {
   giveDeviceBack,
   stopGradleDaemons,
 } from './lib/android-host.mjs';
+import { placed, userConfigFiles } from './lib/claude-config-spike.mjs';
 import { EMULATOR_AVD, androidSdkRoot, waitForBoot, withSdkOnPath } from './lib/emulator.mjs';
 import { run, runAsync } from './lib/exec.mjs';
 import { bringUp, composeRunner, stillPending, STACK_TIMEOUT_MS } from './lib/local-stack.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { findFreePort } from './lib/ports.mjs';
 import { cleanupOnce, kill, onTermination, processAlive, startProc } from './lib/proc.mjs';
+import { copyCredential } from './lib/spike-session.mjs';
 import {
   BACKEND_LOG_FILE,
   E2E_PROJECT_PREFIX,
@@ -129,14 +131,26 @@ const mobile = push || process.argv.includes('--mobile');
 /** Whether the real Claude is behind the backend, rather than a replay of a recorded run. */
 const live = process.argv.includes('--live');
 
+/**
+ * Whether this live run isolates `CLAUDE_CONFIG_DIR` instead of inheriting the developer's own
+ * (plan 13, B-46, S-197): the only way to prove that a permissive user-scope `allow` still never
+ * dispenses `canUseTool`, and that a user skill of a config nobody uses day to day still loads
+ * through the synthetic plugin — neither of which the other `smoke-live` specs can touch without
+ * breaking, since they deliberately run against the real `~/.claude`.
+ */
+const liveIsolated = process.argv.includes('--live-isolated');
+
 /** The flags this script owns. Everything else is handed to Playwright unchanged. */
-const OWN_FLAGS = new Set(['--mobile', '--live', '--push']);
+const OWN_FLAGS = new Set(['--mobile', '--live', '--live-isolated', '--push']);
+
+/** Which Playwright project of `playwright.live.config.ts` this run selects. */
+const liveProject = liveIsolated ? 'smoke-live-isolated' : 'smoke-live';
 
 const playwrightArgs = [
   ...process.argv.slice(2).filter((argument) => !OWN_FLAGS.has(argument)),
-  // The live suite is excluded from the default run by `playwright.config.ts`, so naming it is
-  // the only way to run it — and naming it is deliberate, never accidental.
-  ...(live ? ['smoke-live', '--config', 'playwright.live.config.ts'] : []),
+  // The live suite is excluded from the default run by `playwright.config.ts`, so naming its
+  // project is the only way to run it — and naming it is deliberate, never accidental.
+  ...(live ? ['--project', liveProject, '--config', 'playwright.live.config.ts'] : []),
 ];
 
 /** @type {import('node:child_process').ChildProcess[]} */
@@ -324,7 +338,54 @@ function claimAndBoot() {
  * @returns {string}
  */
 function runLabel() {
-  return `test:e2e${mobile ? ':mobile' : ''}${push ? ':push' : ''}${live ? ':live' : ''}`;
+  return `test:e2e${mobile ? ':mobile' : ''}${push ? ':push' : ''}${live ? ':live' : ''}${liveIsolated ? ':isolated' : ''}`;
+}
+
+/**
+ * A throwaway `CLAUDE_CONFIG_DIR` for the isolated live run: the real credential, copied — the
+ * isolated run still talks to this machine's own Claude, it just never shares a directory with
+ * it —, plus a `settings.json` with a permissive `allow` and a user skill, the same fixture shape
+ * `scripts/claude-config-spike.mjs` (plan 13, B-01) already measured these behaviours against.
+ *
+ * A machine signed in by `CLAUDE_CODE_OAUTH_TOKEN` rather than `claude`'s own login has no
+ * `.credentials.json` to copy — the token still reaches the subprocess through its environment,
+ * so the copy is skipped rather than failing the whole run over a file that was never going to be
+ * there.
+ *
+ * @param {number} port used only to make the directory's name unique to this run
+ * @returns {string} the directory
+ */
+function isolatedClaudeConfigDir(port) {
+  const source = process.env['CLAUDE_CONFIG_DIR'] ?? path.join(os.homedir(), '.claude');
+  const dir = fs.mkdtempSync(
+    path.join(os.tmpdir(), `remote-claude-live-isolated-${String(port)}-`),
+  );
+
+  if (fs.existsSync(path.join(source, '.credentials.json'))) {
+    copyCredential(source, dir);
+  }
+  for (const [target, content] of placed(dir, userConfigFiles())) {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content);
+  }
+
+  return dir;
+}
+
+/**
+ * Where this run's `CLAUDE_CONFIG_DIR` is, for `ephemeralEnvironment`/`e2eDotEnv` — the plain live
+ * run is given none at all, so the CLI and the backend both fall back to the layout the login
+ * actually lives in; the isolated one builds its own, on purpose (S-197); every other run isolates
+ * it to a throwaway directory of its own, the one `ephemeralEnvironment` defaults to.
+ *
+ * @param {number} port
+ * @returns {{ claudeConfigDir?: string | null }}
+ */
+function claudeConfigOf(port) {
+  if (!live) {
+    return {};
+  }
+  return { claudeConfigDir: liveIsolated ? isolatedClaudeConfigDir(port) : null };
 }
 
 /**
@@ -602,10 +663,7 @@ async function main() {
   // The stack inherits PATH and the like, and nothing else of the machine's configuration: the
   // repository `.env` is deliberately not loaded, so the suite cannot pass because of a value
   // that happens to be set on one developer's box.
-  // The live run is given no `CLAUDE_CONFIG_DIR` at all, so the CLI and the backend both fall
-  // back to the layout the login actually lives in. Everything else isolates it, so a test never
-  // edits somebody's `~/.claude.json`.
-  const claudeConfig = live ? { claudeConfigDir: null } : {};
+  const claudeConfig = claudeConfigOf(backend);
 
   const env = {
     ...(mobile ? withSdkOnPath(process.env, sdkRoot) : process.env),

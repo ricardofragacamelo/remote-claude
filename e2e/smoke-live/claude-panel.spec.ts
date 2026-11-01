@@ -10,7 +10,12 @@ import { RED_PNG } from '../fixtures/claude-panel';
 import { environment } from '../fixtures/environment';
 import { startConversation, transcriptOf } from '../fixtures/history';
 import { closedAfterTheRun, connected, workspaceFor } from '../fixtures/live-session';
-import { answeredUntilTheTurnEnds, endedWithEveryMessageKnown } from '../fixtures/live-turns';
+import {
+  answeredUntilTheTurnEnds,
+  blocksOf,
+  endedWithEveryMessageKnown,
+  saidIn,
+} from '../fixtures/live-turns';
 import type { E2eSocket } from '../fixtures/ws';
 import { scenario } from '../scenarios';
 
@@ -106,30 +111,6 @@ async function turn(
   );
 
   return frames;
-}
-
-/** The blocks Claude finished in these frames — of the main conversation, or of a subagent. */
-function blocksOf(
-  frames: readonly Envelope[],
-): { type: string; text?: string; thinking?: string }[] {
-  return frames
-    .filter(
-      (frame) =>
-        frame.type === 'message.completed' &&
-        (frame.payload as { role?: string }).role === 'assistant',
-    )
-    .flatMap(
-      (frame) =>
-        (frame.payload as { content?: { type: string; text?: string; thinking?: string }[] })
-          .content ?? [],
-    );
-}
-
-/** What Claude said, as one string. */
-function saidIn(frames: readonly Envelope[]): string {
-  return blocksOf(frames)
-    .map((block) => block.text ?? '')
-    .join(' ');
 }
 
 /** The `Read`s of the trail of a session, by the file they read. */

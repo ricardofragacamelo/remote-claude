@@ -47,11 +47,18 @@ export const PROMPTS = Object.freeze({
  */
 export function repositoryFiles() {
   return {
+    // The same frontmatter `agentTemplate()` writes for the "new subagent" button
+    // (web/src/engines/claude/settings/lib/artifact-templates.ts), `# model`/`# tools` left
+    // commented as the template leaves them, with only `permissionMode` uncommented — plan 13,
+    // B-46/D-31: the fixture is of a subagent the screen could really have created, not an ad-hoc
+    // one, and D-23's own regression (a wider mode asks again) needs one that actually declares it.
     [`.claude/agents/${WRITER_AGENT}.md`]: [
       '---',
       `name: ${WRITER_AGENT}`,
       'description: Writes exactly one file it is told to write. Use it whenever the main agent delegates a write.',
-      'tools: Write, Read',
+      '# model: sonnet',
+      '# tools: Read, Grep, Glob',
+      'permissionMode: acceptEdits',
       '---',
       '',
       'Before writing, say in one short sentence what you are about to do. Then write exactly the',

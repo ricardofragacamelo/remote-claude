@@ -1,0 +1,79 @@
+[
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "eb62afdf-4945-4cf4-9208-d3472c34ee99",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "eb62afdf-4945-4cf4-9208-d3472c34ee99:0",
+          "text": "What is my fortune today? Use your fortune skill to answer, and say nothing else."
+        }
+      ],
+      "at": "2026-10-31T17:48:53.820Z"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CgajfDvZBLtESf2gJtJ22",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "3c54faae-45e4-413c-9b92-65722503d118:0",
+          "toolUseId": "toolu_017uFmZqHoBYMCcnb4QDFMHh"
+        }
+      ],
+      "at": "2026-10-31T17:48:56.002Z"
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+      "kind": "other",
+      "label": {
+        "messageKey": "sessions.tool.other",
+        "params": {
+          "name": "Skill"
+        }
+      },
+      "subject": {},
+      "changes": [],
+      "origin": {
+        "engine": "claude",
+        "native": "Skill"
+      },
+      "rawInput": {
+        "skill": "fixture-user-skills:fixture-fortune"
+      },
+      "at": "2026-10-31T17:48:56.002Z"
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+      "status": "succeeded",
+      "summary": "Launching skill: fixture-user-skills:fixture-fortune",
+      "at": "2026-10-31T17:48:56.033Z"
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011CgajfMrYDjzAEycpDqShE",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "24011a5f-5bb8-45d6-9c52-f209aaa69a79:0",
+          "text": "\"A door you walked past twice will open on the third try.\""
+        }
+      ],
+      "at": "2026-10-31T17:48:57.549Z"
+    }
+  }
+]

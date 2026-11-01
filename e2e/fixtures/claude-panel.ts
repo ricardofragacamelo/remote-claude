@@ -278,8 +278,10 @@ export function workingIndicator(page: Page): Locator {
 }
 
 /** The pill above the box that says a question waits out of view, and takes the person to it. */
-export function pendingPill(page: Page): Locator {
-  return panelOf(page).getByRole('button', { name: /^Claude is waiting for your answer \(\d+\)$/ });
+export function pendingPill(page: Page, agent: string = DEFAULT_AGENT): Locator {
+  return panelOf(page).getByRole('button', {
+    name: new RegExp(`^${agent} is waiting for your answer \\(\\d+\\)$`),
+  });
 }
 
 /** A thinking that ended, folded — "Thought for 2 s", or "Thought" from the history. */

@@ -1,0 +1,17 @@
+{
+  "id": "13·S-196…S-198",
+  "title": "the real Claude under this plan's own composition: a fixture MCP server connected and its tool asked through canUseTool, its secret absent from the subprocess's own cmdline, and a project subagent whose permissionMode asks again before it writes (D-23)",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "serverName": "smokelivefixture",
+    "secretName": "FIXTURE_SECRET",
+    "echoPrompt": "You have one MCP tool available, from a server named smokelivefixture. Call its echo tool with the text smoke-live-ping, and nothing else. Then reply with the single word: done.",
+    "subagentName": "smokelivewriter",
+    "subagentFile": "---\nname: smokelivewriter\ndescription: Writes the file it is asked to write, with the content it is given.\npermissionMode: acceptEdits\n---\n\nWrite exactly the file you are asked to write, with the content you are given, using the Write tool, and stop.\n",
+    "writeInstruction": "Use the Agent tool with the smokelivewriter subagent to write a file named subagent-wrote.txt with the content done. Do not write it yourself.",
+    "writtenFile": "subagent-wrote.txt"
+  }
+}

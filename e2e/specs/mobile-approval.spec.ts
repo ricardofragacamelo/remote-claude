@@ -109,7 +109,7 @@ test(`${fromThePhone.id} — ${fromThePhone.title}`, async () => {
   // Both are asked; only the phone answers.
   const request = await permissionAsked(mobile);
   await permissionAsked(web);
-  expect(request.payload).toMatchObject({ toolName: expected.toolName });
+  expect(request.payload).toMatchObject({ origin: { native: expected.toolName } });
 
   const requestId = requestIdOf(request);
   mobile.respond(request, { requestId, decision: expected.decision, scope: 'once' });

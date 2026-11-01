@@ -560,7 +560,7 @@ test(`${layout.id} — on a phone with its keyboard open, a question keeps the b
   await expect(
     panelOf(page)
       .getByRole('status')
-      .filter({ hasText: /^Claude is waiting for your answer \(1\)$/ }),
+      .filter({ hasText: /^Claude Code is waiting for your answer \(1\)$/ }),
   ).toHaveCount(1);
   await boxInView(page);
   await expectThePageStill(page);

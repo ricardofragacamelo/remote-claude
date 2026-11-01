@@ -34,9 +34,9 @@ one thing a client must use to put it back in the right place, never which engin
 
 ```ts
 type Entry =
-  | { kind: 'message'; owner: string | null; author: 'user' | 'assistant'; blocks: Block[] }
-  | { kind: 'thinking'; owner: string | null; text: string; redacted: boolean }
-  | { kind: 'tool'; owner: string | null; toolKind: string; label: ToolLabel; status: string; media: unknown[] }
+  | { kind: 'message'; owner: string | null; author: 'user' | 'assistant'; blocks: Block[]; neverInHistory?: true }
+  | { kind: 'thinking'; owner: string | null; text: string; redacted: boolean; neverInHistory?: true }
+  | { kind: 'tool'; owner: string | null; toolKind: string; label: ToolLabel; status: string; media: unknown[]; neverInHistory?: true }
   | { kind: 'turn'; owner: null; usage: TurnCompletedPayloadUsage | null; costUsd: string | null };
 
 type Block = { kind: 'text'; text: string } | { kind: 'image'; mediaType: string; size: number };
@@ -45,12 +45,19 @@ type Block = { kind: 'text'; text: string } | { kind: 'image'; mediaType: string
 A `toolUse` content block of a `message.completed` carries no entry of its own — the matching
 `tool.started`/`tool.completed` pair already is one, at the position it arrives.
 
+`neverInHistory: true` (plan 13, B-46/D-31) marks an entry the CLI's own transcript never
+persists although the live stream carries it — measured on `user-skill-plugin-turn`: the user-role
+message a skill's own loading injects ("Base directory for this skill: …") reaches the live
+conversation but is absent from the recorded history entirely, not merely re-shaped. It is never a
+client's own choice to drop it; both clients are measured against what `history-events.json`
+actually contains, the same as everything else in this file.
+
 ## What each file is checked against
 
 - `live-events.json` → `expected.entries`, whole.
-- `history-events.json` → `expected.entries`, with every `turn` entry dropped, and — only for a
-  fixture with a subagent — every entry whose `owner` is not `null` also dropped (the main thread's
-  history never carries what a subagent said).
+- `history-events.json` → `expected.entries`, with every `turn` entry dropped, every entry marked
+  `neverInHistory` dropped, and — only for a fixture with a subagent — every entry whose `owner` is
+  not `null` also dropped (the main thread's history never carries what a subagent said).
 - `subagent-history-events.json` → the entries of `expected.entries` whose `owner` is that subagent's
   `toolUseId`.
 

@@ -1,0 +1,63 @@
+{
+  "entries": [
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "user",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "What is my fortune today? Use your fortune skill to answer, and say nothing else."
+        }
+      ]
+    },
+    {
+      "kind": "tool",
+      "owner": null,
+      "toolKind": "other",
+      "label": {
+        "messageKey": "sessions.tool.other",
+        "params": {
+          "name": "Skill"
+        }
+      },
+      "status": "succeeded",
+      "media": []
+    },
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "user",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "Base directory for this skill: /home/user/projects/remote-claude/e2e/fixtures/user-skills-plugin/skills/fixture-fortune\n\nReply with exactly one short, invented fortune-cookie sentence, in quotes, and nothing else.\n"
+        }
+      ],
+      "neverInHistory": true
+    },
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "assistant",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "\"A door you walked past twice will open on the third try.\""
+        }
+      ]
+    },
+    {
+      "kind": "turn",
+      "owner": null,
+      "usage": {
+        "inputTokens": 4,
+        "outputTokens": 81,
+        "cacheReadTokens": 27725,
+        "cacheWriteTokens": 5930,
+        "webSearches": 0
+      },
+      "costUsd": "0.076173"
+    }
+  ]
+}

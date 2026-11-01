@@ -131,7 +131,7 @@ test(`${asking.id} — ${asking.title}`, async () => {
   try {
     expect(request.kind).toBe('request');
     expect(request.payload).toMatchObject({
-      toolName: expected.toolName,
+      origin: { native: expected.toolName },
       riskHint: expected.riskHint,
       defaultToNo: true,
     });

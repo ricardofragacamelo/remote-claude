@@ -19,6 +19,8 @@ const List<String> _fixtures = <String>[
   'multi-text-block-turn',
   'explanatory-style-turn',
   'mcp-untitled-tool-turn',
+  'mcp-composed-tool-turn',
+  'user-skill-plugin-turn',
   'subagent-permission-turn',
 ];
 
@@ -129,6 +131,13 @@ List<Map<String, Object?>> _neutralEntriesOf(Conversation conversation) {
   return entries;
 }
 
+/// [entry], with the `neverInHistory` marker gone — the mapper's own output never carries it
+/// (plan 13, B-46/D-31).
+Map<String, Object?> _withoutHistoryMarker(Map<String, Object?> entry) => <String, Object?>{
+  for (final MapEntry<String, Object?> each in entry.entries)
+    if (each.key != 'neverInHistory') each.key: each.value,
+};
+
 void main() {
   for (final String fixture in _fixtures) {
     group(fixture, () {
@@ -141,7 +150,7 @@ void main() {
       test('projects the live events into the same content — S-82', () {
         final Conversation conversation = _conversationOf(_eventsOf(fixture, 'live-events.json'));
 
-        expect(_neutralEntriesOf(conversation), expected);
+        expect(_neutralEntriesOf(conversation), expected.map(_withoutHistoryMarker).toList());
       });
 
       test(
@@ -152,8 +161,12 @@ void main() {
           );
           final List<Map<String, Object?>> want = expected
               .where(
-                (Map<String, Object?> entry) => entry['kind'] != 'turn' && entry['owner'] == null,
+                (Map<String, Object?> entry) =>
+                    entry['kind'] != 'turn' &&
+                    entry['owner'] == null &&
+                    entry['neverInHistory'] != true,
               )
+              .map(_withoutHistoryMarker)
               .toList();
 
           expect(_neutralEntriesOf(conversation), want);

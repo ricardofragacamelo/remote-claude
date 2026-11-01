@@ -50,7 +50,10 @@ describe('the conversation-parity spike — plan 26, B-01', () => {
     const agent = files[`.claude/agents/${WRITER_AGENT}.md`] ?? '';
 
     expect(agent).toContain(`name: ${WRITER_AGENT}`);
-    expect(agent).toContain('tools: Write, Read');
+    // The same frontmatter `agentTemplate()` writes for "new subagent" (plan 13, B-46/D-31), with
+    // only `permissionMode` uncommented — D-23's own regression needs a wider mode to exercise.
+    expect(agent).toContain('# tools: Read, Grep, Glob');
+    expect(agent).toContain('permissionMode: acceptEdits');
     expect(PROMPTS.subagent).toContain(WRITER_AGENT);
     expect(PROMPTS.mcp).toContain('echo');
   });

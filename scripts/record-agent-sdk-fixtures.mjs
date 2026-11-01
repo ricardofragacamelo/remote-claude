@@ -399,19 +399,37 @@ const SCENARIOS = [
     files: {},
     options: {
       strictMcpConfig: true,
-      mcpServers: {
-        [MCP_SERVER]: {
-          type: 'stdio',
-          command: 'node',
-          args: [
-            path.join(repoRoot, 'e2e', 'fixtures', 'mcp-server', 'fixture-mcp-server.mjs'),
-            '--name',
-            MCP_SERVER,
-          ],
-        },
-      },
+      mcpServers: { [MCP_SERVER]: fixtureMcpServerConfig() },
     },
     requires: askedAbout(`mcp__${MCP_SERVER}__echo`),
+  },
+  {
+    name: 'mcp-composed-tool-turn',
+    why: 'plan 13, B-46/D-31 — the same tool, set after the session already started (but before the first prompt, the same order the product itself always uses), through session.setMcpServers() rather than options.mcpServers: how the backend actually composes a server (compose-session-mcp-servers.use-case.ts), not how the plan-26 spike had to fake it before that composition existed',
+    prompts: [{ text: SPIKE_PROMPTS.mcp, before: 'setMcpServers' }],
+    files: {},
+    // `strictMcpConfig` still isolates the session; `mcpServers` starts empty, the same way the
+    // product's own options do, and the one server arrives only through the `before` step above.
+    options: { strictMcpConfig: true, mcpServers: {} },
+    requires: askedAbout(`mcp__${MCP_SERVER}__echo`),
+  },
+  {
+    name: 'user-skill-plugin-turn',
+    why: 'plan 13, B-46/D-31 — a skill of the user loaded through the synthetic local plugin (B-35), the same on-disk shape SyntheticSkillsPluginBuilder builds (a manifest, skills/<name>/SKILL.md), never through settingSources',
+    prompt: 'What is my fortune today? Use your fortune skill to answer, and say nothing else.',
+    files: {},
+    options: {
+      plugins: [
+        {
+          type: 'local',
+          path: path.join(repoRoot, 'e2e', 'fixtures', 'user-skills-plugin'),
+          skipMcpDiscovery: true,
+        },
+      ],
+    },
+    // A skill's own invocation is not gated by `canUseTool` (measured here) — `askedAbout` would
+    // never see it. What the fixture has to prove is that the tool actually ran.
+    requires: calledTool('Skill'),
   },
   {
     name: 'subagent-permission-turn',
@@ -571,10 +589,67 @@ function userMessage(step) {
   };
 }
 
+/**
+ * Whether the stream ever ran a tool named [name] — true even for one the CLI never asks
+ * `canUseTool` about, unlike {@link askedAbout}.
+ *
+ * @param {string} name
+ */
+function calledTool(name) {
+  return (/** @type {unknown[]} */ _consulted, /** @type {unknown[]} */ messages) => {
+    const ran = messages.some((message) => {
+      const content = /** @type {{ message?: { content?: unknown } }} */ (message).message?.content;
+      return (
+        Array.isArray(content) &&
+        content.some(
+          (/** @type {any} */ block) => block?.type === 'tool_use' && block.name === name,
+        )
+      );
+    });
+    return ran ? [] : [`no tool_use named ${name} in the stream`];
+  };
+}
+
+/** The stdio configuration of the fixture MCP server — one server, every scenario that names it. */
+function fixtureMcpServerConfig() {
+  return {
+    type: 'stdio',
+    command: 'node',
+    args: [
+      path.join(repoRoot, 'e2e', 'fixtures', 'mcp-server', 'fixture-mcp-server.mjs'),
+      '--name',
+      MCP_SERVER,
+    ],
+  };
+}
+
 /** Actions a step can ask for on the live query before it is sent. */
 const BEFORE = {
   /** @param {{ applyFlagSettings(settings: unknown): Promise<void> }} session */
   effortLow: (session) => session.applyFlagSettings({ effortLevel: 'low' }),
+  /**
+   * The one path a server reaches a running session (plan 13, B-21, D-02): never in `options`. Waits
+   * for the server to report `connected` before the next step runs — `setMcpServers()` only confirms
+   * the call itself, and a prompt sent before the stdio handshake finishes finds no tool to call.
+   *
+   * @param {{ setMcpServers(servers: Record<string, unknown>): Promise<unknown>, mcpServerStatus(): Promise<{ name: string, status: string }[]> }} session
+   */
+  setMcpServers: async (session) => {
+    await session.setMcpServers({ [MCP_SERVER]: fixtureMcpServerConfig() });
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      const statuses = await session.mcpServerStatus();
+      if (statuses.some((server) => server.name === MCP_SERVER && server.status === 'connected')) {
+        // A short margin past the stdio handshake, for the deferred-tool catalogue `ToolSearch`
+        // reads to catch up — cheap insurance, never the load-bearing fix (that one is `inputOf`
+        // actually waiting for `session()`, below: a `before` run after an idle turn had already
+        // gone by left the catalogue stale for the rest of the run, measured once).
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  },
 };
 
 /**
@@ -697,12 +772,46 @@ async function* inputOf(steps, state, session) {
       await previous[index - 1]?.promise;
     }
     if (step.before !== undefined) {
+      // The very first `next()` of this generator can run inside the SDK's own `query(…)` call,
+      // ahead of the `session = query(…)` assignment that closure reads — measured once, on the
+      // first `before` a scenario ever ran at index 0. A few ticks of waiting cost nothing a human
+      // typing the next prompt wouldn't already cost, and they are never needed past the first step.
+      while (session() === null) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
       await BEFORE[/** @type {keyof typeof BEFORE} */ (step.before)](session());
     }
     state.turn = index;
     state.sent = index + 1;
     yield userMessage(step);
   }
+}
+
+/**
+ * How far a mode the CLI can run a call in reaches without asking anybody — ported from
+ * `backend/src/adapter/outbound/engines/claude/mode-widening.ts` (plain JS has no path alias to
+ * import that `.ts` file directly): a project's subagent can declare a wider `permissionMode` than
+ * its session in its own frontmatter, and the CLI honours it in silence unless the hook answers
+ * `ask` (plan 13, D-23). No recording ever sets a session `permissionMode` of its own, so every
+ * session here runs at the CLI's `default` — the one value this needs to compare against.
+ */
+const MODE_REACH = Object.freeze({
+  plan: 0,
+  dontAsk: 0,
+  default: 1,
+  acceptEdits: 2,
+  auto: 3,
+  bypassPermissions: 4,
+});
+
+/** @param {string | undefined} callMode */
+function widensSessionDefault(callMode) {
+  if (callMode === undefined) {
+    return false;
+  }
+  return (
+    (MODE_REACH[/** @type {keyof typeof MODE_REACH} */ (callMode)] ?? Infinity) > MODE_REACH.default
+  );
 }
 
 /**
@@ -717,7 +826,7 @@ function recordingCallbacks(seen) {
         {
           hooks: [
             /**
-             * @param {{ tool_name?: string, effort?: { level?: string } }} input
+             * @param {{ tool_name?: string, effort?: { level?: string }, permission_mode?: string }} input
              * @param {string | undefined} toolUseId
              */
             (input, toolUseId) => {
@@ -726,6 +835,16 @@ function recordingCallbacks(seen) {
                 toolUseId,
                 ...(input.effort?.level === undefined ? {} : { effort: input.effort.level }),
               });
+              if (widensSessionDefault(input.permission_mode)) {
+                return Promise.resolve({
+                  hookSpecificOutput: {
+                    hookEventName: 'PreToolUse',
+                    permissionDecision: 'ask',
+                    permissionDecisionReason:
+                      'this runs under a wider mode than the session, so it asks',
+                  },
+                });
+              }
               return Promise.resolve({ continue: true });
             },
           ],

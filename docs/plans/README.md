@@ -28,7 +28,7 @@ Voltar para o [índice geral](../architecture/README.md).
 | 10 | [Layout do chat no app](10-mobile-chat-layout/README.md) | ✅ concluído | `pnpm verify:full` **e** `pnpm test:e2e:mobile` saem com código 0 |
 | 11 | [Busca](11-search/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
 | 12 | [Terminal integrado](12-integrated-terminal/README.md) | 🔄 em andamento | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
-| 13 | [Configuração do Claude](13-claude-settings/README.md) | 🔄 em andamento | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
+| 13 | [Configuração do Claude](13-claude-settings/README.md) | ✅ concluído | `pnpm verify:full`, `pnpm test:e2e:mobile` **e** `pnpm test:e2e:live` saem com código 0 |
 | 14 | [Auditoria explicada](14-audit-explained/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |
 | 15 | [Gestão de regras](15-rules-management/README.md) | 🔄 em andamento | `pnpm verify:full` sai com código 0 |
 | 16 | [Uso e custo](16-usage-and-cost/README.md) | 🔲 não iniciado | `pnpm verify:full` sai com código 0 |

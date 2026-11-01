@@ -69,6 +69,30 @@ export async function answeredUntilTheTurnEnds(
   }
 }
 
+/** The blocks Claude finished in these frames — of the main conversation, or of a subagent. */
+export function blocksOf(
+  frames: readonly Envelope[],
+): { type: string; text?: string; thinking?: string }[] {
+  return frames
+    .filter(
+      (frame) =>
+        frame.type === 'message.completed' &&
+        (frame.payload as { role?: string }).role === 'assistant',
+    )
+    .flatMap(
+      (frame) =>
+        (frame.payload as { content?: { type: string; text?: string; thinking?: string }[] })
+          .content ?? [],
+    );
+}
+
+/** What Claude said in these frames, as one string. */
+export function saidIn(frames: readonly Envelope[]): string {
+  return blocksOf(frames)
+    .map((block) => block.text ?? '')
+    .join(' ');
+}
+
 /**
  * Ends a real session and reads **the claim of the suite**: no message of it fell into the unknown
  * branch of the mapper, which logs `unmapped sdk message variant — dropped` and carries on.

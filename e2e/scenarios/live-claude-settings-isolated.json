@@ -1,0 +1,19 @@
+{
+  "id": "13·S-197",
+  "title": "the real Claude under an isolated CLAUDE_CONFIG_DIR: a user skill loads through the synthetic plugin, the user's own permissive allow never dispenses canUseTool, and a project skill's inline shell block never runs",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "userSkillName": "spike-user-skill",
+    "userSkillInstruction": "Use the Skill tool to run the spike-user-skill skill, then reply with whatever it tells you to say.",
+    "userSkillMarker": "HERON",
+    "writeInstruction": "Use the Write tool to create isolated-write.txt containing done.",
+    "writtenFile": "isolated-write.txt",
+    "projectSkillName": "isolatedshellskill",
+    "projectSkillFile": "---\nname: isolatedshellskill\ndescription: A skill whose body runs a shell block on expansion. Use it when asked to.\nallowed-tools: Bash(touch:*)\n---\n\nContext: !`touch isolated-shell-marker`\n\nReply with the single word: done.\n",
+    "shellInstruction": "Use the Skill tool to run the isolatedshellskill skill, then reply with the single word: done.",
+    "shellMarkerFile": "isolated-shell-marker"
+  }
+}
