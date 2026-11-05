@@ -1,7 +1,9 @@
 import type { RecordAuditEventUseCase } from '@application/audit';
+import type { NoticeStore } from '@application/notice';
 import { AgentUnavailableError, hasCapability } from '@domain/engine';
 import type { ConversationRef, EngineCapabilities } from '@domain/engine';
 import type { Clock, IdGenerator } from '@domain/shared';
+import type { SessionNoticePayload } from '@remote-claude/contracts';
 import {
   EffortUnsupportedError,
   forkPointOf,
@@ -153,6 +155,9 @@ export class StartSessionUseCase {
     private readonly configuration: SessionConfigurationSource | null = null,
     private readonly mcpServers: SessionMcpServersSource | null = null,
     private readonly extensionPaths: SessionExtensionPathsSource | null = null,
+    // Where a `session.notice` goes once the engine itself never writes it anywhere durable
+    // (Plan 27, F7, D-15) — `null` only in a caller that never wires one, which never persists.
+    private readonly notices: NoticeStore | null = null,
   ) {}
 
   /**
@@ -571,6 +576,10 @@ export class StartSessionUseCase {
 
     this.broadcaster.publish(session.id, event);
 
+    if (event.type === 'session.notice') {
+      this.persistNotice(session, event.payload);
+    }
+
     if (moved !== null) {
       this.broadcaster.publish(session.id, {
         type: 'session.statusChanged',
@@ -581,6 +590,32 @@ export class StartSessionUseCase {
     if (event.type === 'turn.completed') {
       this.nextPrompt(session);
     }
+  }
+
+  /**
+   * Keeps [payload] outside the engine's own transcript (Plan 27, F7, D-15) — some notices (an
+   * agent hook's own warning, measured) never leave any trace there at all, and without a copy of
+   * our own they are gone the moment the conversation is read back cold.
+   *
+   * Fire-and-forget: [NoticeStore.record] never rejects (its own contract, S-116) — a database
+   * hiccup writing a side copy of a notice is the store's to log and swallow, never this use case's
+   * to catch, which would mean `application/` reaching for a logger of its own (the Dependency Rule).
+   */
+  private persistNotice(session: Session, payload: SessionNoticePayload): void {
+    if (this.notices === null) {
+      return;
+    }
+
+    const conversation = this.registry.conversationOf(session.id)?.ref ?? null;
+
+    if (conversation === null) {
+      return;
+    }
+
+    // No `.catch` here: the port's own contract is that `record` never rejects (its implementation
+    // logs and swallows its own failure — `application/` never reaches for a logger, the
+    // Dependency Rule) — the same trust this file already puts in every other port it calls.
+    void this.notices.record(conversation, payload);
   }
 
   /**

@@ -22,6 +22,7 @@ const List<String> _fixtures = <String>[
   'mcp-composed-tool-turn',
   'user-skill-plugin-turn',
   'subagent-permission-turn',
+  'mcp-media-result-turn',
 ];
 
 const String _root = '../packages/contracts/fixtures/conversation-parity';
@@ -77,6 +78,23 @@ Map<String, Object?> _usageOf(TurnSummary turn) {
 Map<String, Object?>? _blockOf(MessageBlock block) => switch (block) {
   TextBlock(:final String text) => <String, Object?>{'kind': 'text', 'text': text},
   ImageBlock() => <String, Object?>{'kind': 'image'},
+  // None of these fixtures carries one (plan 27, F6 · B-20) — not reached, only exhaustive.
+  UnknownBlock(:final String blockType) => <String, Object?>{
+    'kind': 'unknown',
+    'blockType': blockType,
+  },
+};
+
+/// A tool result's own media (plan 27, F6 · B-22) — the contract's `ToolAttachment`, read as-is.
+Map<String, Object?> _attachmentOf(ToolAttachment attachment) => switch (attachment) {
+  ImageAttachment(:final String? blockId, :final String? mediaType, :final int? size) =>
+    <String, Object?>{'kind': 'image', 'blockId': ?blockId, 'mediaType': ?mediaType, 'size': ?size},
+  LinkAttachment(:final String? uri, :final String? title) => <String, Object?>{
+    'kind': 'link',
+    'uri': ?uri,
+    'title': ?title,
+  },
+  UnknownAttachment(:final String? type) => <String, Object?>{'kind': 'unknown', 'type': ?type},
 };
 
 /// [conversation], as the neutral content both clients are measured against: the flat list of
@@ -112,7 +130,9 @@ List<Map<String, Object?>> _neutralEntriesOf(Conversation conversation) {
           'toolKind': entry.call.kind,
           'label': _labelOf(entry.call.label),
           'status': entry.status.name,
-          'media': const <Object?>[],
+          'media': <Object?>[
+            for (final ToolAttachment each in entry.attachments) _attachmentOf(each),
+          ],
         });
       case TurnSummary():
         entries.add(<String, Object?>{
@@ -121,9 +141,22 @@ List<Map<String, Object?>> _neutralEntriesOf(Conversation conversation) {
           'usage': _usageOf(entry),
           'costUsd': entry.costUsd,
         });
+      case InjectedLine(
+        :final String injectedKind,
+        :final String? name,
+        :final String? parentToolUseId,
+      ):
+        entries.add(<String, Object?>{
+          'kind': 'injected',
+          'owner': parentToolUseId,
+          'injectedKind': injectedKind,
+          'name': name,
+        });
       case CompactionLine():
       case RewoundLine():
       case ReplayGapLine():
+      // None of these fixtures carries one (plan 27, F6 · B-19/B-20) — not reached, only exhaustive.
+      case NoticeLine():
         break;
     }
   }
@@ -177,8 +210,12 @@ void main() {
         final Conversation conversation = _conversationOf(
           _eventsOf(fixture, 'subagent-history-events.json'),
         );
+        // `owner` on an `injected` entry (B-21) names the *owning tool*, never a subagent — reused
+        // field, different meaning — so it never belongs to this slice even when it is set.
         final List<Map<String, Object?>> want = expected
-            .where((Map<String, Object?> entry) => entry['owner'] != null)
+            .where(
+              (Map<String, Object?> entry) => entry['owner'] != null && entry['kind'] != 'injected',
+            )
             .toList();
 
         expect(_neutralEntriesOf(conversation), want);

@@ -280,6 +280,150 @@ describe('the SDK message mapper', () => {
       expect(mapped.events[0]?.payload).toMatchObject({ status: 'failed' });
     });
 
+    describe('media in a tool_result — plan 27, B-14', () => {
+      it('turns an image into an attachment with a three-level blockId, never its bytes — S-53', () => {
+        const mapped = toEvents(
+          message({
+            type: 'user',
+            uuid: 'u-1',
+            message: {
+              content: [
+                { type: 'text', text: 'before' },
+                {
+                  type: 'tool_result',
+                  tool_use_id: 'tu-1',
+                  content: [
+                    {
+                      type: 'image',
+                      source: { type: 'base64', media_type: 'image/png', data: 'AAAA' },
+                    },
+                  ],
+                },
+              ],
+            },
+          }),
+        );
+
+        expect(mapped.events[0]?.payload).toMatchObject({
+          attachments: [{ kind: 'image', blockId: 'u-1:1:0', mediaType: 'image/png', size: 3 }],
+        });
+        expect(JSON.stringify(mapped.events[0]?.payload)).not.toContain('AAAA');
+      });
+
+      it('keeps the resource/resource_link text the CLI already flattens, with no attachment — S-54, S-55', () => {
+        // Measured in F0 (B-01): the CLI always flattens MCP `resource`/`resource_link` content into
+        // `text` blocks before this message is built — `[Resource …] …`, `[Resource link: …] …` — so
+        // they never reach this mapper as their own block type. Text is enough for that pair.
+        const mapped = toEvents(
+          message({
+            type: 'user',
+            uuid: 'u-1',
+            message: {
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: 'tu-1',
+                  content: [
+                    { type: 'text', text: '[Resource from fixture at fixture://note.txt] a note' },
+                    { type: 'text', text: '[Resource link: linked.txt] fixture://linked.txt' },
+                  ],
+                },
+              ],
+            },
+          }),
+        );
+
+        expect(mapped.events[0]?.payload).toMatchObject({
+          summary:
+            '[Resource from fixture at fixture://note.txt] a note[Resource link: linked.txt] fixture://linked.txt',
+        });
+        expect(mapped.events[0]?.payload).not.toHaveProperty('attachments');
+      });
+
+      it('an image without a declared mediaType still becomes an attachment — S-56', () => {
+        const mapped = toEvents(
+          message({
+            type: 'user',
+            uuid: 'u-1',
+            message: {
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: 'tu-1',
+                  content: [{ type: 'image', source: { type: 'base64', data: 'AAAA' } }],
+                },
+              ],
+            },
+          }),
+        );
+
+        expect(mapped.events[0]?.payload).toMatchObject({
+          attachments: [{ kind: 'image', blockId: 'u-1:0:0', size: 3 }],
+        });
+      });
+
+      it('a block type this adapter does not know becomes `unknown`, with a warn signal — S-57', () => {
+        const mapped = toEvents(
+          message({
+            type: 'user',
+            uuid: 'u-1',
+            message: {
+              content: [
+                { type: 'tool_result', tool_use_id: 'tu-1', content: [{ type: 'search_result' }] },
+              ],
+            },
+          }),
+        );
+
+        expect(mapped.events[0]?.payload).toMatchObject({
+          attachments: [{ kind: 'unknown', type: 'search_result' }],
+        });
+        expect(mapped.unknownAttachment).toBe('search_result');
+      });
+
+      it('a large image stays a small marker, never its base64 — S-58', () => {
+        const huge = 'A'.repeat(5 * 1024 * 1024);
+        const mapped = toEvents(
+          message({
+            type: 'user',
+            uuid: 'u-1',
+            message: {
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: 'tu-1',
+                  content: [
+                    {
+                      type: 'image',
+                      source: { type: 'base64', media_type: 'image/png', data: huge },
+                    },
+                  ],
+                },
+              ],
+            },
+          }),
+        );
+
+        expect(JSON.stringify(mapped.events[0]?.payload).length).toBeLessThan(200);
+      });
+
+      it('caps attachments at 16, the contract’s own ceiling', () => {
+        const blocks = Array.from({ length: 20 }, () => ({ type: 'search_result' }));
+        const mapped = toEvents(
+          message({
+            type: 'user',
+            uuid: 'u-1',
+            message: {
+              content: [{ type: 'tool_result', tool_use_id: 'tu-1', content: blocks }],
+            },
+          }),
+        );
+
+        const payload = mapped.events[0]?.payload as { attachments?: readonly unknown[] };
+        expect(payload.attachments).toHaveLength(16);
+      });
+    });
+
     it('reads a real user message as a completed message, so the other device is visible', () => {
       expect(
         typesOf({ type: 'user', uuid: 'u-1', message: { content: 'sent from a phone' } }),
@@ -318,6 +462,9 @@ describe('the SDK message mapper', () => {
         }),
       );
 
+      // One event, never a `turn.failed` notice alongside: that one is only for an error outcome
+      // (S-32).
+      expect(mapped.events).toHaveLength(1);
       expect(mapped.events[0]?.payload).toEqual({
         turnId: 'r-1',
         usage: { inputTokens: 10, outputTokens: 20 },
@@ -329,14 +476,14 @@ describe('the SDK message mapper', () => {
     });
 
     it.each([
-      ['error_max_turns', 'limitReached'],
-      ['error_max_budget_usd', 'budgetExceeded'],
-      ['error_during_execution', 'failed'],
-      ['error_max_structured_output_retries', 'failed'],
-      ['a subtype this build has never seen', 'failed'],
+      ['error_max_turns', 'limitReached', 'maxTurns'],
+      ['error_max_budget_usd', 'budgetExceeded', 'budget'],
+      ['error_during_execution', 'failed', 'execution'],
+      ['error_max_structured_output_retries', 'failed', 'other'],
+      ['a subtype this build has never seen', 'failed', 'other'],
     ])(
-      "reads a result of subtype %s as outcome %s, never the SDK's own name — S-32…S-34",
-      (subtype, outcome) => {
+      'reads a result of subtype %s as outcome %s, with a turn.failed notice (reason %s) alongside — S-32…S-34',
+      (subtype, outcome, reason) => {
         const mapped = toEvents(
           message({
             type: 'result',
@@ -349,8 +496,22 @@ describe('the SDK message mapper', () => {
           }),
         );
 
+        // The turn's own `outcome` never carries the SDK's subtype — only the three names the UI
+        // knows, or `failed`. The subtype is opaque, and only `origin.native` of the *notice*
+        // alongside it is allowed to carry it (diagnosis only; no client decides by it).
         expect(mapped.events[0]?.payload).toMatchObject({ outcome });
-        expect(JSON.stringify(mapped.events)).not.toContain(subtype);
+        expect(JSON.stringify(mapped.events[0])).not.toContain(subtype);
+
+        expect(mapped.events[1]).toMatchObject({
+          type: 'session.notice',
+          payload: {
+            noticeId: 'r-1',
+            kind: 'turn.failed',
+            level: 'error',
+            params: { reason },
+            text: 'boom',
+          },
+        });
       },
     );
 
@@ -410,10 +571,34 @@ describe('the SDK message mapper', () => {
       expect(after.events[0]?.payload).toMatchObject({ costUsd: '0.000000', outcome: 'failed' });
     });
 
-    it('reads an API retry as a status change rather than an error', () => {
-      expect(typesOf({ type: 'system', subtype: 'api_retry', attempt: 1 })).toEqual([
+    it('reads an API retry as a status change, with a request.retrying notice alongside — S-26', () => {
+      const mapped = toEvents(
+        message({
+          type: 'system',
+          subtype: 'api_retry',
+          uuid: 'retry-1',
+          attempt: 2,
+          max_retries: 10,
+          retry_delay_ms: 1090,
+          error_status: null,
+          error: 'unknown',
+        }),
+      );
+
+      expect(mapped.events.map((event) => event.type)).toEqual([
         'session.statusChanged',
+        'session.notice',
       ]);
+      expect(mapped.events[0]?.payload).toEqual({ status: 'thinking' });
+      expect(mapped.events[1]).toMatchObject({
+        type: 'session.notice',
+        payload: {
+          noticeId: 'retry-1',
+          kind: 'request.retrying',
+          messageKey: 'sessions.notice.requestRetrying',
+          params: { attempt: 2, maxAttempts: 10, delayMs: 1090 },
+        },
+      });
     });
 
     it('reads a compaction as an event of its own, with what triggered it — plan 08, B-02', () => {
@@ -421,12 +606,18 @@ describe('the SDK message mapper', () => {
         message({
           type: 'system',
           subtype: 'compact_boundary',
+          uuid: 'cb-1',
           compact_metadata: { trigger: 'manual', pre_tokens: 15212, post_tokens: 3021 },
         }),
       );
 
       expect(mapped.events).toEqual([
-        { type: 'session.compacted', payload: { trigger: 'manual', preTokens: 15212 } },
+        {
+          type: 'session.compacted',
+          // compactionId is the boundary's own uuid, stable live, in replay and read back from
+          // history (plan 27, F5, B-18).
+          payload: { trigger: 'manual', preTokens: 15212, compactionId: 'cb-1' },
+        },
       ]);
     });
 
@@ -769,10 +960,20 @@ describe('the SDK message mapper', () => {
   });
 
   describe('the survival rule — S-26', () => {
-    it('drops a variant it does not know instead of throwing', () => {
+    it('drops a variant it does not know instead of throwing, and shows an `unknown` notice — B-13, S-48', () => {
       const mapped = toEvents(message({ type: 'something_new_in_0_4', session_id: 's' }));
 
-      expect(mapped.events).toEqual([]);
+      expect(mapped.events).toEqual([
+        {
+          type: 'session.notice',
+          payload: {
+            noticeId: 'unknown:s:0',
+            kind: 'unknown',
+            level: 'notice',
+            origin: { engine: 'claude', native: 'something_new_in_0_4' },
+          },
+        },
+      ]);
       expect(mapped.unknown).toBe('something_new_in_0_4');
     });
 
@@ -795,10 +996,20 @@ describe('the SDK message mapper', () => {
       }
     });
 
-    it('drops a `system` subtype it does not know, and names it', () => {
+    it('drops a `system` subtype it does not know, names it, and shows an `unknown` notice — B-13, S-48', () => {
       const mapped = toEvents(message({ type: 'system', subtype: 'brand_new' }));
 
-      expect(mapped.events).toEqual([]);
+      expect(mapped.events).toEqual([
+        {
+          type: 'session.notice',
+          payload: {
+            noticeId: 'unknown:0',
+            kind: 'unknown',
+            level: 'notice',
+            origin: { engine: 'claude', native: 'system:brand_new' },
+          },
+        },
+      ]);
       expect(mapped.unknown).toBe('system:brand_new');
     });
 
@@ -878,6 +1089,13 @@ describe('the SDK message mapper', () => {
       'compact-turn',
       'plan-turn',
       'long-tool-turn',
+      'compact-failed-turn',
+      'local-command-turn',
+      'project-command-turn',
+      'hook-message-turn',
+      'mcp-media-result-turn',
+      'denied-by-rule-turn',
+      'user-skill-plugin-turn',
     ])('leaves nothing of the real run %s unmapped', (name) => {
       // If this fails after an SDK upgrade it is doing its job: something new appeared, and the
       // table has to learn about it. The session would have survived either way.
@@ -886,6 +1104,28 @@ describe('the SDK message mapper', () => {
         .filter((variant) => variant !== null);
 
       expect(unknown).toEqual([]);
+    });
+
+    it('turns the real MCP media result into an image attachment, and the tool-search result into unknown — plan 27, B-14', () => {
+      const mapper = new SdkMessageMapper('');
+      const completed = loadFixture('mcp-media-result-turn')
+        .messages.flatMap((m) => mapper.read(m).events)
+        .filter((event) => event.type === 'tool.completed');
+
+      const attachments = completed.map(
+        (event) => (event.payload as { attachments?: readonly unknown[] }).attachments,
+      );
+
+      // The deferred-tool search result: a `tool_reference` block, a type this adapter does not
+      // know how to carry as media — it survives as `unknown`, never silently (D-03).
+      expect(attachments[0]).toEqual([{ kind: 'unknown', type: 'tool_reference' }]);
+
+      // The media tool's own result: the image becomes a marker with no bytes, and the resource/
+      // resource_link text (already flattened by the CLI) is not an attachment at all.
+      const [image] = attachments[1] ?? [];
+      expect(image).toMatchObject({ kind: 'image', mediaType: 'image/png' });
+      expect((image as { blockId: string }).blockId).toMatch(/^.+:0:0$/);
+      expect(attachments[1]).toHaveLength(1);
     });
 
     it('streams the summarised thinking of a real run, and finishes it as a block — D-17', () => {

@@ -423,11 +423,46 @@ function spokenIn(fixture: AgentSdkFixture, directory: string | undefined): Agen
   return { ...fixture, messages };
 }
 
+/**
+ * A `compact_boundary`, as history carries it (F5, B-17 measured it): bare, no `subtype`, no
+ * payload — not the rich `compact_metadata` the live message has. Every other `system` subtype
+ * leaves no trace in history at all (same measurement), so this is the one `system` shape this
+ * fake's own transcript ever stores — without it, a history read taken **while the session is
+ * still open** (a reattach after a stream gap, say) never sees the compaction at all, and the
+ * synthetic summary that follows it reads back as an ordinary message instead of folding into it
+ * (plan 27, F8 · B-26, the ghost bubble R-08 found).
+ */
+function asStoredSystem(message: SDKMessage): SessionMessage | null {
+  if (message.type !== 'system' || message.subtype !== 'compact_boundary') {
+    return null;
+  }
+
+  return {
+    type: 'system',
+    uuid: String(message.uuid),
+    session_id: String(message.session_id),
+    message: null,
+    parent_tool_use_id: null,
+    parent_agent_id: null,
+  };
+}
+
 /** A message of the stream as `getSessionMessages` returns it, or `null` when it is not one. */
 function asStored(message: SDKMessage): SessionMessage | null {
+  if (message.type === 'system') {
+    return asStoredSystem(message);
+  }
+
   if (message.type !== 'user' && message.type !== 'assistant') {
     return null;
   }
+
+  // `isSynthetic`/`isReplay` are live-only (the SDK types them on `SDKUserMessage`/
+  // `SDKUserMessageReplay`, never on the plain `SessionMessage` history gives back) — the
+  // transcript names the same two facts differently (measured, plan 27 F5): `isCompactSummary`
+  // for the synthetic summary, `isCompletedLocalCommand` for the echo of a local command. Without
+  // the translation, a history read never recognises either, live session or not.
+  const flags = message as { readonly isSynthetic?: boolean; readonly isReplay?: boolean };
 
   return {
     type: message.type,
@@ -436,6 +471,8 @@ function asStored(message: SDKMessage): SessionMessage | null {
     message: message.message,
     parent_tool_use_id: message.parent_tool_use_id,
     parent_agent_id: null,
+    ...(flags.isSynthetic === true ? { isCompactSummary: true } : {}),
+    ...(flags.isReplay === true ? { isCompletedLocalCommand: true } : {}),
   };
 }
 

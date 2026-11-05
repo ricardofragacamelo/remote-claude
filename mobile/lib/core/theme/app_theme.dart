@@ -34,6 +34,12 @@ const Color brandSeed = Color(0xFF6750A4);
 TextStyle? identifierStyle(BuildContext context) =>
     Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace');
 
+/// The quiet, muted style of a line about the conversation rather than in it — a hint, a caption,
+/// a note nobody is meant to mistake for the agent's or the person's own words.
+TextStyle? mutedBodyStyle(BuildContext context) => Theme.of(
+  context,
+).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
+
 /// The themes of the app.
 abstract final class AppTheme {
   /// Light theme.

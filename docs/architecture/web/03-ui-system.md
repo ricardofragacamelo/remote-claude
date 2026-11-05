@@ -278,6 +278,44 @@ Responde a uma pergunta só: **"o que foi executado na minha máquina sem me per
   **na mesma entrega** — com o widget do app que o desenha, ou com a decisão ✅ que o exclui. O
   `pnpm render:check` (portão 11) reprova o que entrou sem par ([mobile/04](../mobile/04-ui.md#a-conversa-é-a-mesma-do-web)).
 
+### A linha de aviso e a linha genérica — plano 27, F6
+
+Um `session.notice` e o que este build não entende usam a **mesma** linha (`NoticeRow` de
+`TurnRow.tsx`), porque uma linha genuinamente desconhecida a um cliente publicado não é uma coisa
+diferente de uma que o próprio backend não soube classificar:
+
+- `info` lê dobrado, como qualquer linha de sistema; `warning` e `error` se destacam só pela cor do
+  token de tema, nunca mudando de lugar na lista;
+- o corpo abre sob demanda — `command.output` é o único `kind` desenhado pelo `Markdown` seguro
+  (R-01 acima); todo o resto, inclusive uma linha que este build não reconhece, é texto puro;
+- um aviso de dentro de um subagent aparece sob o card dele, pela mesma regra de aninhamento de um
+  `tool` ou de uma `message` (`parentToolUseId`);
+- o cliente desenha pelo `kind`, nunca por `origin.engine` nem por `origin.native` — um motor outro
+  que o Claude desenha igual, se declarar o `kind`;
+- um `kind: 'unknown'` (o próprio backend não soube classificar, B-13) ou um `kind` futuro que este
+  build não tem linha para (U-11) leem igual: o `origin.native` nomeia o quê, nunca o JSON;
+- um evento WS sem leitor e fora da lista de calados da F1 (U-06, [05 ·
+  Versionamento](../shared/05-websocket-protocol.md#versionamento-e-geração-de-tipos)) ganha a mesma
+  linha, **uma por tipo por sessão** — nunca repetida, porque já disse o que tinha a dizer; um valor
+  de enum que este build não reconhece (U-07) aplica o evento com o valor anterior, e a linha diz
+  qual valor chegou; um evento conhecido sem um campo obrigatório (U-09) vira a mesma linha **e** um
+  `warn` no log do cliente — nunca um descarte silencioso;
+- linhas idênticas em sequência — o `kind: 'unknown'` do backend repetido, ou um `kind` futuro igual
+  — colapsam numa só com o contador "×3" (D-12); um evento WS desconhecido não usa esse contador, já
+  que é no máximo uma linha por sessão.
+
+A compactação ganha "ver resumo" dobrado com o `injected.contextSummary` em markdown; o resumo
+**nunca** é uma mensagem própria — nenhuma mensagem com `injected` vira balão "Você", e a entrada da
+compactação é chaveada pelo `compactionId`, não por `seq`. O que o agente injetou além do resumo
+(`injected.kind: 'instructions'`, o corpo de uma skill) vira a linha dobrada "*x* carregada", sob o
+card da tool dona — o cliente escolhe pelo `injected.kind`, nunca pelo nome da tool.
+
+Mídia do resultado de uma tool (`tool.completed.attachments[]`) usa o mesmo `ImageMarker` da imagem
+de prompt — a mesma rota, o mesmo zoom (`ZoomableImage.tsx`: roda para ampliar, arrasta para mover,
+até 8×, [D-08](../../plans/27-conversation-losses/decisions.md#normas)); um `link` é texto, e só vira
+link clicável com confirmação para `http`, `https` ou `mailto` — `javascript:` e `data:` ficam texto
+sempre; um anexo de tipo desconhecido cai na linha genérica acima.
+
 O painel do Claude ([plano 08](../../plans/08-claude-panel/README.md)) é este stream dentro da aba de
 pasta, e acrescenta as regras abaixo. Elas vêm **antes** das telas (08 · B-05).
 

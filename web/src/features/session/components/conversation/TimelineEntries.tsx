@@ -4,10 +4,14 @@ import type { StreamMessage, TimelineEntry } from '../../types/live-session';
 import { InlinePermission } from './InlinePermission';
 import { MessageItem } from './MessageItem';
 import { ToolRow } from './ToolRow';
-import { CompactedRow, RewoundRow, TurnRow } from './TurnRow';
+import { CompactedRow, InjectedRow, NoticeRow, RewoundRow, TurnRow } from './TurnRow';
 import type { TimelineContext } from './timeline-context';
 
-/** The subagent an entry belongs to — `null` for the main conversation. */
+/**
+ * The subagent an entry belongs to — `null` for the main conversation. A notice carries its own
+ * `parentToolUseId` (plan 27, F6 · B-19): one from inside a subagent nests under it, the same place
+ * the tool that opened the subagent put everything else it said.
+ */
 function parentOfEntry(entry: TimelineEntry, context: TimelineContext): string | null | undefined {
   if (entry.kind === 'message') {
     return context.conversation.messages.find((message) => message.messageId === entry.id)
@@ -15,6 +19,9 @@ function parentOfEntry(entry: TimelineEntry, context: TimelineContext): string |
   }
   if (entry.kind === 'tool') {
     return context.conversation.tools.find((tool) => tool.toolUseId === entry.id)?.parentToolUseId;
+  }
+  if (entry.kind === 'notice' || entry.kind === 'injected') {
+    return entry.parentToolUseId;
   }
   return null;
 }
@@ -83,6 +90,34 @@ function authorsOf(
   return authors;
 }
 
+/** A message of the timeline, drawn when it has anything to show (S-109). */
+function MessageEntry({
+  messageId,
+  context,
+  showsAuthor,
+}: {
+  readonly messageId: string;
+  readonly context: TimelineContext;
+  readonly showsAuthor: boolean;
+}): React.JSX.Element | null {
+  const message = context.conversation.messages.find((each) => each.messageId === messageId);
+  return message === undefined || !isVisible(message) ? null : (
+    <MessageItem message={message} context={context} showsAuthor={showsAuthor} />
+  );
+}
+
+/** The end of a turn, when the conversation still has it. */
+function TurnEntry({
+  turnId,
+  context,
+}: {
+  readonly turnId: string;
+  readonly context: TimelineContext;
+}): React.JSX.Element | null {
+  const turn = context.conversation.turns.find((each) => each.turnId === turnId);
+  return turn === undefined ? null : <TurnRow turn={turn} />;
+}
+
 /** One entry of the timeline, drawn as what it is. */
 function Entry({
   entry,
@@ -95,25 +130,23 @@ function Entry({
   /** It is the message that says who speaks in its turn. */
   readonly showsAuthor: boolean;
 }): React.JSX.Element | null {
-  const { conversation } = context;
-
   switch (entry.kind) {
-    case 'message': {
-      const message = conversation.messages.find((each) => each.messageId === entry.id);
-      return message === undefined || !isVisible(message) ? null : (
-        <MessageItem message={message} context={context} showsAuthor={showsAuthor} />
-      );
-    }
+    case 'message':
+      return <MessageEntry messageId={entry.id} context={context} showsAuthor={showsAuthor} />;
     case 'tool':
       return <ToolEntry toolUseId={entry.id} context={context} />;
-    case 'turn': {
-      const turn = conversation.turns.find((each) => each.turnId === entry.id);
-      return turn === undefined ? null : <TurnRow turn={turn} />;
-    }
+    case 'turn':
+      return <TurnEntry turnId={entry.id} context={context} />;
     case 'compacted':
-      return <CompactedRow trigger={entry.trigger} preTokens={entry.preTokens} />;
+      return (
+        <CompactedRow trigger={entry.trigger} preTokens={entry.preTokens} summary={entry.summary} />
+      );
     case 'rewound':
       return <RewoundRow entry={entry} />;
+    case 'notice':
+      return <NoticeRow entry={entry} />;
+    case 'injected':
+      return <InjectedRow injectedKind={entry.injectedKind} name={entry.name} />;
   }
 }
 

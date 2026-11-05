@@ -158,6 +158,8 @@ void main() {
                 outcome: TurnOutcome.failed,
               ),
               TurnSummary(turnId: 'turn-2', durationMs: 500, outcome: TurnOutcome.limitReached),
+              TurnSummary(turnId: 'turn-3', durationMs: 500, outcome: TurnOutcome.budgetExceeded),
+              TurnSummary(turnId: 'turn-4', durationMs: 500, outcome: TurnOutcome.cancelled),
             ],
           ),
         ),
@@ -165,6 +167,8 @@ void main() {
 
       expect(find.text(l10n.sessionTurnOutcomeFailed), findsOneWidget);
       expect(find.text(l10n.sessionTurnOutcomeLimitReached), findsOneWidget);
+      expect(find.text(l10n.sessionTurnOutcomeBudgetExceeded), findsOneWidget);
+      expect(find.text(l10n.sessionTurnOutcomeCancelled), findsOneWidget);
       expect(find.textContaining('10,08'), findsNothing);
       expect(find.textContaining('10.08'), findsNothing);
     },

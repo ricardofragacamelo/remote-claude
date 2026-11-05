@@ -9,6 +9,7 @@ import {
   capturedTranscript,
   ScriptedTranscripts,
 } from '../../../../../fakes/agent-sdk/scripted-transcripts';
+import { FakeNoticeStore } from '../../../../../support/fakes/fake-notice-store';
 import { ManualScheduler } from '../../../../../support/fakes/manual-scheduler';
 import { RecordingLogger } from '../../../../../support/fakes/recording-logger';
 import { conversationId } from '../../../../../support/builders/transcript.builder';
@@ -32,13 +33,15 @@ describe('AgentSdkTranscriptAdapter', () => {
   let sdk: ScriptedTranscripts;
   let scheduler: ManualScheduler;
   let log: RecordingLogger;
+  let notices: FakeNoticeStore;
   let adapter: AgentSdkTranscriptAdapter;
 
   beforeEach(() => {
     sdk = new ScriptedTranscripts();
     scheduler = new ManualScheduler();
     log = new RecordingLogger();
-    adapter = new AgentSdkTranscriptAdapter(sdk, limits, scheduler, log.logger);
+    notices = new FakeNoticeStore();
+    adapter = new AgentSdkTranscriptAdapter(sdk, limits, scheduler, log.logger, notices);
   });
 
   /** The scripted store with some of its reads replaced — every method bound, none left out. */
@@ -55,6 +58,7 @@ describe('AgentSdkTranscriptAdapter', () => {
       limits,
       scheduler,
       log.logger,
+      notices,
     );
 
   describe('listing the whole store, and sharing a listing — plan 08, D-05 and S-31', () => {
@@ -92,6 +96,7 @@ describe('AgentSdkTranscriptAdapter', () => {
         { ...limits, wholeStoreTtlMs: 60_000 },
         scheduler,
         log.logger,
+        notices,
       );
 
       await kept.listAll();
@@ -283,6 +288,128 @@ describe('AgentSdkTranscriptAdapter', () => {
 
       expect(sdk.calls.getSessionMessages).toHaveLength(2);
       expect(grown).toHaveLength(capturedTranscript('tool-turn').length * 2);
+    });
+  });
+
+  describe('reading system entries too — plan 27, F5, B-16', () => {
+    const seed = (lastModified = 1): void => {
+      sdk.add({
+        sessionId: conversationId(1),
+        directory: DIRECTORY,
+        cwd: DIRECTORY,
+        lastModified,
+        messages: capturedTranscript('tool-turn'),
+      });
+    };
+    const find = async () => {
+      const session = await adapter.find(ConversationRef.create('claude', conversationId(1)));
+      if (session === null) throw new Error('seeded, and not found');
+      return session;
+    };
+
+    it('asks the SDK for `system` entries too — S-63', async () => {
+      seed();
+      await adapter.messages(await find());
+
+      expect(sdk.getSessionMessagesOptions.at(-1)).toMatchObject({ includeSystemMessages: true });
+    });
+
+    it('stays within a ceiling for a long conversation — S-64, R-03', async () => {
+      // A ceiling on OUR OWN mapping code (one pending-injection mapper threaded across every
+      // entry, B-17) — never a reproduction of the SDK's own file re-parse cost, which B-01 only
+      // measured live, for a 2-turn conversation ("poucos ms"); a long one was never measured
+      // (R-03 stays open for that half). 1,500 entries is comfortably past anything a real
+      // conversation reaches before compaction kicks in.
+      const long = Array.from({ length: 300 }, (_, copy) =>
+        capturedTranscript('tool-turn', copy),
+      ).flat();
+      sdk.add({
+        sessionId: conversationId(1),
+        directory: DIRECTORY,
+        cwd: DIRECTORY,
+        lastModified: 1,
+        messages: long,
+      });
+
+      const startedAt = Date.now();
+      const messages = await adapter.messages(await find());
+      const elapsedMs = Date.now() - startedAt;
+
+      expect(messages).toHaveLength(long.length);
+      expect(elapsedMs).toBeLessThan(2_000);
+    });
+  });
+
+  describe('persisted notices merged into the history — Plan 27, F7, D-15', () => {
+    const seed = (lastModified = 1): void => {
+      sdk.add({
+        sessionId: conversationId(1),
+        directory: DIRECTORY,
+        cwd: DIRECTORY,
+        lastModified,
+        messages: capturedTranscript('tool-turn'),
+      });
+    };
+    const find = async () => {
+      const session = await adapter.find(ConversationRef.create('claude', conversationId(1)));
+      if (session === null) throw new Error('seeded, and not found');
+      return session;
+    };
+
+    it('shows a notice this store kept, that the real transcript never carries — S-118, S-123', async () => {
+      seed();
+      const session = await find();
+      const ref = ConversationRef.create('claude', conversationId(1));
+      await notices.record(ref, {
+        noticeId: 'n1',
+        kind: 'agent.info',
+        level: 'warning',
+        origin: { engine: 'claude', native: 'system:hook_response' },
+        text: 'a hook failed',
+      });
+
+      const messages = await adapter.messages(session);
+
+      const kept = messages
+        .flatMap((message) => message.events)
+        .filter((event) => event.type === 'session.notice');
+      expect(kept.map((event) => event.payload['noticeId'])).toContain('n1');
+    });
+
+    it('picks up a notice recorded after the transcript was last cached — the merge never goes stale with the transcript cache', async () => {
+      seed();
+      const session = await find();
+      const before = await adapter.messages(session);
+      expect(
+        before.flatMap((message) => message.events).some((e) => e.type === 'session.notice'),
+      ).toBe(false);
+
+      await notices.record(ConversationRef.create('claude', conversationId(1)), {
+        noticeId: 'n1',
+        kind: 'agent.info',
+        level: 'info',
+        origin: { engine: 'claude', native: 'system:informational' },
+        text: 'a harmless hook ran',
+      });
+
+      const after = await adapter.messages(session);
+      expect(sdk.calls.getSessionMessages).toHaveLength(1); // transcript itself still cached — S-64
+      const kept = after
+        .flatMap((message) => message.events)
+        .filter((e) => e.type === 'session.notice');
+      expect(kept.map((event) => event.payload['noticeId'])).toEqual(['n1']);
+    });
+
+    it('still returns the real transcript when the store fails to list — S-121', async () => {
+      seed();
+      const session = await find();
+      notices.failListFor = new Error('store unavailable');
+
+      const messages = await adapter.messages(session);
+
+      expect(messages).toHaveLength(capturedTranscript('tool-turn').length);
+      const logged = log.lines.filter((line) => line['op'] === 'engine.transcript.notices');
+      expect(logged).toHaveLength(1);
     });
   });
 
@@ -594,6 +721,113 @@ describe('AgentSdkTranscriptAdapter', () => {
         encodedLength: 8,
         cache: 'hit',
       });
+    });
+  });
+
+  describe('an image nested in a tool_result, also down a subagent — plan 27, B-15, S-59, S-60', () => {
+    const toolResultImage = {
+      type: 'user',
+      uuid: 'b0000000-0000-4000-8000-000000000002',
+      session_id: conversationId(1),
+      parent_tool_use_id: null,
+      parent_agent_id: null,
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'tu-media',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } },
+            ],
+          },
+        ],
+      },
+    } as unknown as SessionMessage;
+
+    const nestedSubagentImage = {
+      type: 'user',
+      uuid: 'c0000000-0000-4000-8000-000000000003',
+      session_id: conversationId(1),
+      parent_tool_use_id: 'toolu_task',
+      parent_agent_id: null,
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'tu-sub-media',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'BBBB' } },
+            ],
+          },
+        ],
+      },
+    } as unknown as SessionMessage;
+
+    const theSession = async () => {
+      const found = await adapter.find(ConversationRef.create('claude', conversationId(1)));
+      if (found === null) {
+        throw new Error('seeded above');
+      }
+      return found;
+    };
+
+    it('serves an image nested inside a tool_result of the main chain — S-59', async () => {
+      sdk.add({
+        sessionId: conversationId(1),
+        directory: DIRECTORY,
+        cwd: DIRECTORY,
+        messages: [toolResultImage],
+      });
+
+      const session = await theSession();
+      expect(await adapter.promptImage(session, `${String(toolResultImage.uuid)}:0:0`)).toEqual({
+        mediaType: 'image/png',
+        data: 'AAAA',
+      });
+    });
+
+    it('404s — answers null — for a blockId that points at text, or past the block — S-60', async () => {
+      sdk.add({
+        sessionId: conversationId(1),
+        directory: DIRECTORY,
+        cwd: DIRECTORY,
+        messages: [toolResultImage],
+      });
+
+      const session = await theSession();
+      expect(await adapter.promptImage(session, `${String(toolResultImage.uuid)}:0:9`)).toBeNull();
+    });
+
+    it("falls through to a subagent's own tool_result when the main chain has no such blockId", async () => {
+      sdk
+        .add({
+          sessionId: conversationId(1),
+          directory: DIRECTORY,
+          cwd: DIRECTORY,
+          messages: [],
+        })
+        .addSubagent(conversationId(1), 'other', [])
+        .addSubagent(conversationId(1), 'agent-1', [nestedSubagentImage]);
+
+      const session = await theSession();
+      expect(await adapter.promptImage(session, `${String(nestedSubagentImage.uuid)}:0:0`)).toEqual(
+        { mediaType: 'image/png', data: 'BBBB' },
+      );
+      expect(sdk.calls.getSubagentMessages).toEqual([
+        `${conversationId(1)}/other`,
+        `${conversationId(1)}/agent-1`,
+      ]);
+    });
+
+    it('answers null when no subagent has it either, without failing', async () => {
+      sdk
+        .add({ sessionId: conversationId(1), directory: DIRECTORY, cwd: DIRECTORY, messages: [] })
+        .addSubagent(conversationId(1), 'agent-1', []);
+
+      const session = await theSession();
+      expect(await adapter.promptImage(session, 'never-seen:0:0')).toBeNull();
     });
   });
 });

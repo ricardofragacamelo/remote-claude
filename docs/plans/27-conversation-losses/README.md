@@ -82,8 +82,9 @@ Quatro escolhas dão forma ao plano:
 | Backend ao vivo: o `switch` exaustivo, os avisos do §4, o desfecho do turno, o `denied`, a mensagem sintética e o eco, a troca de modelo com retirada, a linha `unknown` | F3 |
 | Backend: imagem, `resource` e `resource_link` no resultado de tool, e a rota de imagem servindo a imagem aninhada | F4 |
 | Backend: o histórico lido com as mensagens de sistema, pelas mesmas funções do ao vivo, com ids estáveis | F5 |
-| Web e app **juntos**: a linha de aviso, todo desconhecido U-05…U-11, o resumo da compactação, a mídia no card, a retirada, o `denied`, o turno com erro, o i18n pareado, e o 05 com a regra nova | F6 |
-| E2E do web, do app e o `smoke-live` das medições, e a conferência das fixtures do plano 13 (D-11) | F7 |
+| Web e app **juntos**: a linha de aviso, todo desconhecido U-05…U-11, o resumo da compactação, a mídia no card, a retirada, o `denied`, o turno com erro, o i18n pareado, o 05 com a regra nova, e o zoom no diálogo de imagem do web ([D-08](decisions.md#normas)) | F6 |
+| Backend: um armazém próprio para o `session.notice`, fora do transcript do motor, e a mescla na leitura do histórico (D-15, escopo aberto durante a execução da E2E pela R-10) | F7 |
+| E2E do web, do app e o `smoke-live` das medições, e a conferência das fixtures do plano 13 (D-11) | F8 |
 
 ### Não entra
 
@@ -93,7 +94,6 @@ Quatro escolhas dão forma ao plano:
   escrito, e voltam a ser discutidas se a feature entrar
   ([discovery §11](../../discovery/09-perdas-do-backend-na-conversa.md#11-fora-do-escopo)).
 - **O `tool_use_result` estruturado do MCP:** o texto basta.
-- **O zoom no diálogo de imagem do web:** diferença conhecida, registrada na [D-08](decisions.md#normas).
 - **Nenhum comando novo** do cliente para o servidor: tudo aqui são eventos e campos de evento.
 
 ---
@@ -106,16 +106,23 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Spike](F0-spike.md) | as medições da D-05, os uuids da retirada e as fixtures gravadas | B-01, B-02 | 🔲 |
-| F1 | [Conhecidos e calados](F1-known-silent.md) | a lista de eventos calados no contrato, adotada pelos dois clientes | B-03, B-04 | 🔲 |
-| F2 | [Contrato](F2-contract.md) | `session.notice`, `message.retracted`, os campos novos e o teste canônico | B-05…B-07 | 🔲 |
-| F3 | [Avisos no backend](F3-backend-notices.md) | o `switch` exaustivo, os avisos, o desfecho do turno, a sintética, a retirada, o `unknown` | B-08…B-13 | 🔲 |
-| F4 | [Mídia no resultado de tool](F4-tool-media.md) | os anexos do `tool.completed` e a rota da imagem aninhada | B-14, B-15 | 🔲 |
-| F5 | [Histórico](F5-history.md) | o histórico com as mensagens de sistema, igual ao ao vivo, com ids estáveis | B-16…B-18 | 🔲 |
-| F6 | [Web e app](F6-clients.md) | cada elemento novo com o par web/app, o desconhecido na tela e a regra nova no 05 | B-19…B-24 | 🔲 |
-| F7 | [E2E](F7-e2e.md) | a conversa pela porta do usuário nas duas pontas, e as medições contra o Claude real | B-25…B-28 | 🔲 |
+| F0 | [Spike](F0-spike.md) | as medições da D-05, os uuids da retirada e as fixtures gravadas | B-01, B-02 | ✅ |
+| F1 | [Conhecidos e calados](F1-known-silent.md) | a lista de eventos calados no contrato, adotada pelos dois clientes | B-03, B-04 | ✅ |
+| F2 | [Contrato](F2-contract.md) | `session.notice`, `message.retracted`, os campos novos e o teste canônico | B-05…B-07 | ✅ |
+| F3 | [Avisos no backend](F3-backend-notices.md) | o `switch` exaustivo, os avisos, o desfecho do turno, a sintética, a retirada, o `unknown` | B-08…B-13 | ✅ |
+| F4 | [Mídia no resultado de tool](F4-tool-media.md) | os anexos do `tool.completed` e a rota da imagem aninhada | B-14, B-15 | ✅ |
+| F5 | [Histórico](F5-history.md) | o histórico com as mensagens de sistema, igual ao ao vivo, com ids estáveis | B-16…B-18 | ✅ |
+| F6 | [Web e app](F6-clients.md) | cada elemento novo com o par web/app, o desconhecido na tela e a regra nova no 05 | B-19…B-24 | ✅ |
+| F7 | [Persistência de avisos](F7-notice-persistence.md) | um `session.notice` sobrevive a uma releitura fria do histórico, mesmo sem rastro no transcript do motor | B-29…B-31 | ✅ |
+| F8 | [E2E](F8-e2e.md) | a conversa pela porta do usuário nas duas pontas, e as medições contra o Claude real | B-25…B-28 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
+
+**A E2E é sempre a última fase.** A Persistência de avisos nasceu durante a execução da E2E (a R-10,
+[D-15](decisions.md#f8--e2e)) e, por um tempo, ficou depois dela — F7 a E2E, F8 a persistência. Corrigido:
+a Persistência de avisos voltou a ser a **F7** e a E2E, renumerada para o fim, é a **F8** ([regra do
+índice de planos](../README.md#as-quatro-regras-estruturais)). Ver
+[progress.md](progress.md#decisões-tomadas-durante-a-execução).
 
 O andamento real fica em [progress.md](progress.md) — esta tabela é o índice, não o diário.
 
@@ -138,10 +145,11 @@ Requisito → tarefa → documento normativo → cenários. **Nenhuma linha sem 
 | A variante desconhecida aparece, sem o JSON, e o `warn` continua (R3) | B-13 | [shared/03-logging](../../architecture/shared/03-logging.md) | S-48…S-52 |
 | Imagem, recurso e link no resultado de tool chegam sem bytes no WS (R1) | B-14, B-15 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md), [04-errors-and-http](../../architecture/shared/04-errors-and-http.md) | S-53…S-62 |
 | O histórico mostra o mesmo que o ao vivo mostrou, sem duplicar nem sobrescrever (R1) | B-16, B-17, B-18 | [backend/05-persistence](../../architecture/backend/05-persistence.md), [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#acompanhar-um-transcript--transcript) | S-63…S-71 |
-| Cada elemento novo tem o mesmo par no web e no app (R2) | B-19, B-21, B-22, B-23 | [web/03-ui-system](../../architecture/web/03-ui-system.md), [mobile/04-ui](../../architecture/mobile/04-ui.md), [shared/02-i18n](../../architecture/shared/02-i18n.md) | S-72…S-77, S-88…S-101 |
+| Cada elemento novo tem o mesmo par no web e no app (R2) | B-19, B-21, B-22, B-23 | [web/03-ui-system](../../architecture/web/03-ui-system.md), [mobile/04-ui](../../architecture/mobile/04-ui.md), [shared/02-i18n](../../architecture/shared/02-i18n.md) | S-72…S-77, S-88…S-101, S-108 |
 | Todo desconhecido U-05…U-11 aparece na conversa, nas duas pontas (R3) | B-20 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#versionamento-e-geração-de-tipos) | S-78…S-87 |
 | A regra nova do contrato é norma escrita (R3) | B-24 | [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#versionamento-e-geração-de-tipos) | S-102 |
 | A conversa pela porta do usuário, nas duas pontas, e as fixtures do plano 13 conferidas (R1, R2, D-11) | B-25, B-26, B-28 | [shared/06-testing-strategy](../../architecture/shared/06-testing-strategy.md) | S-103, S-104, S-107 |
+| Um aviso sem rastro no transcript do motor sobrevive a uma releitura fria do histórico (R1, D-15) | B-29, B-30, B-31 | [backend/05-persistence](../../architecture/backend/05-persistence.md) | S-109…S-124 |
 
 Detalhe de cada `S-nn` em [scenarios.md](scenarios.md).
 
@@ -162,7 +170,12 @@ backend/src/adapter/outbound/engines/claude/     (o adapter do Claude, movido pe
 ├── sdk-notices.ts                       F3 — variante do Claude → kind canônico (só no adapter)
 ├── sdk-tool-result.ts                   F4 — anexos do tool_result
 ├── transcript-contents.ts               F4 — o índice de imagens olha dentro do tool_result
-└── transcript.adapter.ts                F5 — includeSystemMessages
+└── transcript.adapter.ts                F5 — includeSystemMessages; F7 — mescla o `session.notice` persistido
+backend/src/application/notice/                        F7 — porta `NoticeStore`, neutra de motor
+backend/src/adapter/outbound/persistence/notice/       F7 — implementação Drizzle da porta
+backend/src/infrastructure/database/
+├── schema/persisted-notices.schema.ts                 F7
+└── migrations/0028_persisted_notices.sql               F7
 web/src/features/session/
 ├── services/conversation-reducer.ts     F1, F6 — calados, aviso, desconhecido, retirada
 └── components/conversation/             F6 — NoticeRow, UnknownRow, resumo da compactação, mídia no ToolRow

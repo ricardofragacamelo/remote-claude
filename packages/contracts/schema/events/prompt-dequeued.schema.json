@@ -5,6 +5,7 @@
   "description": "A prompt left the queue: it started, or somebody took it out. The positions of the ones behind it move up by one.",
   "x-kind": "event",
   "x-type": "prompt.dequeued",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["queueId", "reason"],
   "properties": {

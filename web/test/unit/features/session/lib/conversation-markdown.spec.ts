@@ -53,7 +53,7 @@ const conversation = (summary: string | null) => ({
     { kind: 'message', id: 'm1' },
     { kind: 'tool', id: 't1' },
     { kind: 'message', id: 'm2' },
-    { kind: 'compacted', id: 'c1', trigger: 'manual', preTokens: 10 },
+    { kind: 'compacted', id: 'c1', trigger: 'manual', preTokens: 10, summary: null },
     { kind: 'turn', id: 'turn-1' },
     { kind: 'message', id: 'gone' },
     { kind: 'tool', id: 'gone' },

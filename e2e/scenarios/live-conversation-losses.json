@@ -1,0 +1,11 @@
+{
+  "id": "27·S-105…S-106",
+  "title": "smoke-live: the synthetic message and the echo a real /compact still produces, and that the same shape survives a reopen from the history",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "firstPrompt": "Reply with exactly the word: one. Do not use any tool."
+  }
+}

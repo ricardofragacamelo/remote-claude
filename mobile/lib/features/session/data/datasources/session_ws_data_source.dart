@@ -12,6 +12,8 @@ import 'package:remote_claude/core/network/contracts/protocol.g.dart';
 import 'package:remote_claude/core/network/ws_client.dart';
 import 'package:remote_claude/features/session/data/mappers/command_answer_mapper.dart';
 import 'package:remote_claude/features/session/data/mappers/session_event_mapper.dart';
+import 'package:remote_claude/features/session/domain/entities/conversation_entry.dart'
+    show GenericReason;
 import 'package:remote_claude/features/session/domain/entities/session_event.dart';
 import 'package:remote_claude/features/session/domain/entities/session_update.dart';
 
@@ -106,6 +108,7 @@ class SessionWsDataSource implements SessionSubscriber {
     if (event is UnreadEvent && frame.type == messageDeltaType) {
       _ignored(frame);
     }
+    _logReadOutcome(frame, event);
 
     // A frame with no `seq` is not part of a session's history — a question is asked, not
     // recorded — and belongs to the permission queue rather than here. Three of them are this
@@ -121,6 +124,33 @@ class SessionWsDataSource implements SessionSubscriber {
     if (update != null) {
       _emit(update);
     }
+  }
+
+  /// One of three outcomes a session frame can have, logged for every one (plan 27, F1 · B-04): a
+  /// type with its own reader, a type the contract classifies `silent` — screen state, never the
+  /// conversation — or the rest, truly unknown to this build. Not a session event at all (a
+  /// question, a command answer) is none of these and logs nothing here.
+  void _logReadOutcome(Envelope frame, SessionEvent? event) {
+    if (event == null) {
+      return;
+    }
+
+    final String outcome = switch (event) {
+      SilentEvent() => 'silent event, no reader',
+      UnreadEvent() => 'unknown event, no reader',
+      GenericSessionEvent(reason: GenericReason.unknownEvent) => 'unknown event, no reader',
+      GenericSessionEvent(reason: GenericReason.unknownValue) =>
+        'unknown value, applied without it',
+      GenericSessionEvent(reason: GenericReason.malformed) =>
+        'malformed event, required field missing',
+      _ => 'event read',
+    };
+
+    _logger?.debug(
+      outcome,
+      op: 'session.event.read',
+      fields: <String, Object?>{'type': frame.type, 'seq': frame.seq},
+    );
   }
 
   /// A fragment this build does not draw — a block kind it does not know, or a subagent's text —

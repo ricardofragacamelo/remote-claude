@@ -38,6 +38,7 @@ const FIXTURES = [
   'mcp-composed-tool-turn',
   'user-skill-plugin-turn',
   'subagent-permission-turn',
+  'mcp-media-result-turn',
 ] as const;
 
 const OUT_ROOT = path.join(
@@ -93,7 +94,8 @@ function liveEventsOf(name: string): { type: string; payload: Record<string, unk
 function historyEventsOf(
   messages: readonly SessionMessage[],
 ): { type: string; payload: Record<string, unknown> }[] {
-  return messages.flatMap((message) => historicalEvents(message, '').map(recordOf));
+  const mapper = new SdkMessageMapper('');
+  return messages.flatMap((message) => historicalEvents(message, mapper).map(recordOf));
 }
 
 function writeJson(file: string, value: unknown): void {

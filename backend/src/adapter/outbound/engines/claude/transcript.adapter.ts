@@ -6,13 +6,17 @@ import { SCHEDULER } from '@application/shared';
 import type { Scheduler } from '@application/shared';
 import type { EngineTranscriptStore, StoredImage } from '@application/transcript';
 import { payloadRecord } from '@application/session';
-import { TaskListTracker } from '@domain/session';
+import { NOTICE_STORE } from '@application/notice';
+import type { NoticeStore } from '@application/notice';
 import { TranscriptTimeoutError, TranscriptUnavailableError } from '@domain/transcript';
 import type { TranscriptMessage, TranscriptSession } from '@domain/transcript';
 import { LOGGER, type Logger } from '@shared/logging/logger';
+import type { SessionNoticePayload } from '@remote-claude/contracts';
 import { withinDeadline } from './deadline';
-import { historicalEvents } from './sdk-message.mapper';
-import { contentsOf } from './transcript-contents';
+import { historicalEvents, SdkMessageMapper, timestampOf } from './sdk-message.mapper';
+import { mergedWithPersistedNotices } from './persisted-notice-merge';
+import type { TimedTranscriptMessage } from './persisted-notice-merge';
+import { contentsOf, imagesOf } from './transcript-contents';
 import type { TranscriptContents } from './transcript-contents';
 import { ReadLimiter, SharedListing, TRANSCRIPT_LIMITS, TranscriptCache } from './transcript-reads';
 import type { TranscriptReadLimits } from './transcript-reads';
@@ -60,7 +64,7 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
   }
 
   private readonly limiter: ReadLimiter;
-  private readonly cache: TranscriptCache<readonly TranscriptMessage[]>;
+  private readonly cache: TranscriptCache<readonly TimedTranscriptMessage[]>;
 
   /** The whole outputs and the images, of fewer conversations — what weighs (plan 22, D-18). */
   private readonly contents: TranscriptCache<TranscriptContents>;
@@ -76,6 +80,7 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
     @Inject(TRANSCRIPT_LIMITS) private readonly limits: TranscriptReadLimits,
     @Inject(SCHEDULER) private readonly scheduler: Scheduler,
     @Inject(LOGGER) private readonly logger: Logger,
+    @Inject(NOTICE_STORE) private readonly notices: NoticeStore,
   ) {
     this.limiter = new ReadLimiter(limits.concurrentReads);
     this.cache = new TranscriptCache(limits.cachedSessions);
@@ -203,7 +208,35 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
       'transcript messages read',
     );
 
-    return value;
+    // Outside the cache above: a notice persisted after the transcript was last cached must still
+    // show up on the next read, and the cache is keyed by the transcript's own `lastModified` —
+    // which a notice never changes (Plan 27, F7, D-15).
+    const notices = await this.persistedNotices(session.id);
+
+    return mergedWithPersistedNotices(value, notices);
+  }
+
+  /**
+   * The notices kept outside the transcript for [conversation] — empty, never thrown, when the
+   * store fails: a page of real messages is still worth more than a `502` over a side copy the
+   * engine itself never had (S-121).
+   */
+  private async persistedNotices(conversation: ConversationRef): Promise<SessionNoticePayload[]> {
+    try {
+      return [...(await this.notices.listFor(conversation))];
+    } catch (error) {
+      this.logger.error(
+        {
+          op: 'engine.transcript.notices',
+          layer: 'adapter',
+          engine: CLAUDE_ENGINE,
+          conversationId: conversation.id,
+          err: error,
+        },
+        'failed to read persisted notices; history read continues without them',
+      );
+      return [];
+    }
   }
 
   async subagentMessages(
@@ -218,21 +251,17 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
       `${claudeSessionId}/${toolUseId}`,
       session.lastModified,
       async () => {
-        const agents = await this.call('list subagents', { claudeSessionId }, () =>
-          this.sdk.listSubagents(claudeSessionId, options),
-        );
-
-        for (const agentId of agents) {
-          const messages = await this.call('read a subagent', { claudeSessionId, agentId }, () =>
-            this.sdk.getSubagentMessages(claudeSessionId, agentId, options),
-          );
-
-          if (messages.some((message) => message.parent_tool_use_id === toolUseId)) {
-            return messages.map((message) => toMessage(message, session.cwd ?? ''));
+        const found = await this.findInSubagents(claudeSessionId, options, (messages) => {
+          if (!messages.some((message) => message.parent_tool_use_id === toolUseId)) {
+            return null;
           }
-        }
+          // The subagent's own mapper: its pending-injection and task-list state are its own
+          // stream, never the main chain's or another subagent's (plan 27, F5, B-17).
+          const mapper = new SdkMessageMapper(session.cwd ?? '');
+          return messages.map((message) => toMessage(message, mapper));
+        });
 
-        return NO_SUBAGENT;
+        return found ?? NO_SUBAGENT;
       },
     );
 
@@ -276,7 +305,8 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
 
   async promptImage(session: TranscriptSession, blockId: string): Promise<StoredImage | null> {
     const { value, hit } = await this.contentsFor(session);
-    const image = value.images.get(blockId) ?? null;
+    const direct = value.images.get(blockId) ?? null;
+    const image = direct ?? (await this.subagentImage(session, blockId));
 
     // The type and the length of the encoding — never a byte of the image (S-33).
     this.logger.debug(
@@ -298,6 +328,50 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
   }
 
   /**
+   * An image nested in a subagent's own `tool_result`, searched only once the main chain's did not
+   * have the `blockId` the route was given (plan 27, B-15, S-59).
+   *
+   * Not cached: a conversation with a subagent card still open paid this cost already, and one
+   * nobody opened yet is read once, the same cost `subagentMessages` would pay to open it.
+   */
+  private subagentImage(session: TranscriptSession, blockId: string): Promise<StoredImage | null> {
+    const { claudeSessionId, options } = sdkCallOf(session);
+
+    return this.findInSubagents(claudeSessionId, options, (messages) => {
+      const image = imagesOf(messages).get(blockId);
+      return image ?? null;
+    });
+  }
+
+  /**
+   * The first subagent whose own messages give [find] something: lists the conversation's subagents
+   * once, and reads each one's messages at most once, in order — shared by `subagentMessages` and
+   * `subagentImage` so the SDK calls that list and read a subagent live in exactly one place.
+   */
+  private async findInSubagents<T>(
+    claudeSessionId: string,
+    options: { dir?: string },
+    find: (messages: readonly SessionMessage[]) => T | null,
+  ): Promise<T | null> {
+    const agents = await this.call('list subagents', { claudeSessionId }, () =>
+      this.sdk.listSubagents(claudeSessionId, options),
+    );
+
+    for (const agentId of agents) {
+      const messages = await this.call('read a subagent', { claudeSessionId, agentId }, () =>
+        this.sdk.getSubagentMessages(claudeSessionId, agentId, options),
+      );
+
+      const found = find(messages);
+      if (found !== null) {
+        return found;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * The contents of a conversation at its version — indexed when its messages were read, or read again
    * when the index let it go. The second read fills the cache of the events too: it paid for both.
    */
@@ -316,12 +390,18 @@ export class AgentSdkTranscriptAdapter implements EngineTranscriptStore {
     });
   }
 
-  /** Everything the SDK holds of a conversation's main chain, in one call. */
+  /**
+   * Everything the SDK holds of a conversation's main chain, in one call — `system` entries
+   * included (plan 27, F5, B-16), so a compaction's trace is in the read at all, even though it
+   * carries no `subtype` or payload of its own (measured, B-01). Subagents read without it: a
+   * subagent's own transcript never held one to begin with (never measured carrying `system`
+   * entries), so asking costs a slightly larger parse for nothing.
+   */
   private readWhole(session: TranscriptSession): Promise<SessionMessage[]> {
     const { claudeSessionId, options } = sdkCallOf(session);
 
     return this.call('read messages', { claudeSessionId }, () =>
-      this.sdk.getSessionMessages(claudeSessionId, options),
+      this.sdk.getSessionMessages(claudeSessionId, { ...options, includeSystemMessages: true }),
     );
   }
 
@@ -431,32 +511,27 @@ function toSession(info: SDKSessionInfo): TranscriptSession | null {
 const NO_SUBAGENT: readonly TranscriptMessage[] = Object.freeze([]);
 
 /**
- * The messages of [session]'s transcript, as the events of our contract — with the task list
- * followed across the whole conversation, by the same steps as live (plan 28, B-22).
+ * The messages of [session]'s transcript, as the events of our contract — with the task list and the
+ * pending-injection state followed across the whole conversation, by the same steps as live (plan
+ * 28, B-22; plan 27, F5, B-17): one mapper for the whole read, never one per message, or a `Skill`
+ * tool call and the compaction boundary would have nothing to prime the entry right after them with.
  */
 function messagesOf(
   read: readonly SessionMessage[],
   session: TranscriptSession,
-): TranscriptMessage[] {
-  const tasks = new TaskListTracker();
-  return read.map((message) => toMessage(message, session.cwd ?? '', tasks));
+): TimedTranscriptMessage[] {
+  const mapper = new SdkMessageMapper(session.cwd ?? '');
+  return read.map((message) => toMessage(message, mapper));
 }
 
-/**
- * One message of the transcript, as the events of our contract it amounts to.
- *
- * @param folder the conversation's folder — what the paths of a tool's label are relative to, as
- *   the live session's are (S-47)
- * @param tasks the task list of the conversation — none for a subagent's page, whose list is its own
- */
-function toMessage(
-  message: SessionMessage,
-  folder: string,
-  tasks?: TaskListTracker,
-): TranscriptMessage {
+/** One message of the transcript, as the events of our contract it amounts to. */
+function toMessage(message: SessionMessage, mapper: SdkMessageMapper): TimedTranscriptMessage {
+  const at = timestampOf(message);
+
   return {
     id: message.uuid,
-    events: historicalEvents(message, folder, tasks).map((event) => ({
+    ...(at === undefined ? {} : { at }),
+    events: historicalEvents(message, mapper).map((event) => ({
       type: event.type,
       payload: payloadRecord(event),
     })),

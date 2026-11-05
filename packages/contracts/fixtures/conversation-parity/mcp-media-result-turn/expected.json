@@ -1,0 +1,88 @@
+{
+  "entries": [
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "user",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "Call the media tool of the fixture MCP server with no arguments. Then reply with exactly: done."
+        }
+      ]
+    },
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "assistant",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "I'll load the tool schema first."
+        }
+      ]
+    },
+    {
+      "kind": "tool",
+      "owner": null,
+      "toolKind": "other",
+      "label": {
+        "messageKey": "sessions.tool.other",
+        "params": {
+          "name": "ToolSearch"
+        }
+      },
+      "status": "succeeded",
+      "media": [
+        {
+          "kind": "unknown",
+          "type": "tool_reference"
+        }
+      ]
+    },
+    {
+      "kind": "tool",
+      "owner": null,
+      "toolKind": "mcp",
+      "label": {
+        "messageKey": "sessions.tool.mcp",
+        "params": {
+          "server": "fixture",
+          "tool": "media"
+        }
+      },
+      "status": "succeeded",
+      "media": [
+        {
+          "kind": "image",
+          "blockId": "b9dc6599-9b15-4a6d-a898-97900e050f28:0:0",
+          "mediaType": "image/png",
+          "size": 79
+        }
+      ]
+    },
+    {
+      "kind": "message",
+      "owner": null,
+      "author": "assistant",
+      "blocks": [
+        {
+          "kind": "text",
+          "text": "done."
+        }
+      ]
+    },
+    {
+      "kind": "turn",
+      "owner": null,
+      "usage": {
+        "inputTokens": 6,
+        "outputTokens": 131,
+        "cacheReadTokens": 43605,
+        "cacheWriteTokens": 3954,
+        "webSearches": 0
+      },
+      "costUsd": "0.065630"
+    }
+  ]
+}

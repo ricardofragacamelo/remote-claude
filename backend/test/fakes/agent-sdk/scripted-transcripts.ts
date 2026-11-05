@@ -1,4 +1,5 @@
 import type {
+  GetSessionMessagesOptions,
   ListSessionsOptions,
   SDKMessage,
   SDKSessionInfo,
@@ -148,6 +149,12 @@ export class ScriptedTranscripts implements TranscriptSdk {
     getSubagentMessages: [] as string[],
   };
 
+  /**
+   * The `options` of every {@link getSessionMessages} call, same index as `calls.getSessionMessages`
+   * — kept apart so the existing array of plain session ids never changes shape (plan 27, F5, B-16).
+   */
+  readonly getSessionMessagesOptions: (GetSessionMessagesOptions | undefined)[] = [];
+
   /** The subagents of each conversation: agent id → its messages, as the SDK files them apart. */
   private readonly subagents = new Map<string, Map<string, SessionMessage[]>>();
 
@@ -282,8 +289,12 @@ export class ScriptedTranscripts implements TranscriptSdk {
     return this.answer(() => this.conversations.get(sessionId)?.info);
   }
 
-  async getSessionMessages(sessionId: string): Promise<SessionMessage[]> {
+  async getSessionMessages(
+    sessionId: string,
+    options?: GetSessionMessagesOptions,
+  ): Promise<SessionMessage[]> {
     this.calls.getSessionMessages.push(sessionId);
+    this.getSessionMessagesOptions.push(options);
 
     // The snapshot is taken when the call is made, as one parse of the file is: whatever is
     // written while the read is held open is not in it.

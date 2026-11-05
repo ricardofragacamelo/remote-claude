@@ -1,0 +1,15 @@
+{
+  "id": "27·S-103…S-104",
+  "title": "the plan proven through the user's door: no ghost bubble after a /compact, with its summary on open; a failed hook's warning; an MCP tool's image in its card and its resource_link as text; a tool denied by rule, with its reason; the generic line of a variant this build has never seen — live, and the same again on reopening the conversation from its history",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "compactSummarySnippet": "Reply with exactly the word: one",
+    "hookFailureSnippet": "hook failed on purpose",
+    "mcpToolLabel": "fixture · media",
+    "deniedReasonSnippet": "has been denied",
+    "unknownLineSnippet": "a kind of system message this build has never seen"
+  }
+}

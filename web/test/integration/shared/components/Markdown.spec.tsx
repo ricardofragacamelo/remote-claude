@@ -99,6 +99,22 @@ describe('the safe markdown renderer — plan 07 · B-50, plan 08 · D-04', () =
     expect(document.querySelector('img')).toBeNull();
   });
 
+  it('draws a plain `<pre>` for a fenced block, with nobody to draw it instead', () => {
+    const { container } = render(<Markdown source={'```ts\nconst a = 1;\n```'} />);
+
+    expect(container.querySelector('pre')).not.toBeNull();
+  });
+
+  it('names a remote image by its own alt text, when the text wrote one', () => {
+    render(<Markdown source={'![a shot of something](https://x.example/p.png)'} />);
+
+    expect(
+      screen.getByRole('link', {
+        name: t('markdown.image.remote', { name: 'a shot of something' }),
+      }),
+    ).toHaveAttribute('href', 'https://x.example/p.png');
+  });
+
   it('hands each fenced block to the host, with the language its fence named — plan 08 · B-15', () => {
     const renderCode = vi.fn((code: string, language: string) => (
       <output data-language={language}>{code}</output>

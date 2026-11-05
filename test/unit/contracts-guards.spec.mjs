@@ -16,11 +16,14 @@ import {
   isPermissionRequestedFrame,
   isPermissionResolvePayload,
   isMessageCompletedPayload,
+  isMessageCompletedPayloadInjected,
   isMessageDeltaPayload,
+  isNoticeSubject,
   isPromptDequeuedPayload,
   isPromptQueuedPayload,
   isSessionCancelQueuedPromptPayload,
   isSessionCompactedPayload,
+  isSessionNoticePayload,
   isSessionPromptPayload,
   isSessionPromptPayloadAttachmentsItem,
   isSessionPromptPayloadAttachmentsItemRange,
@@ -28,6 +31,7 @@ import {
   isSessionRewindFilesPayload,
   isSessionStartPayload,
   isToolCompletedPayload,
+  isToolCompletedPayloadAttachmentsItem,
   isToolStartedPayload,
   isTurnCompletedPayload,
   isTranscriptAppendedPayload,
@@ -37,6 +41,7 @@ import {
   isTranscriptToolResultPayload,
   isTranscriptUnfollowPayload,
   isMessageCompletedPayloadContentItem,
+  SESSION_NOTICE_PAYLOAD_LIMITS,
   SESSION_PROMPT_PAYLOAD_ATTACHMENTS_ITEM_LIMITS,
   SESSION_PROMPT_PAYLOAD_LIMITS,
 } from '../../packages/contracts/src/index.js';
@@ -128,6 +133,7 @@ describe('the generated protocol surface', () => {
       'session.detach',
       'session.interrupt',
       'session.mcpStatusChanged',
+      'session.notice',
       'session.prompt',
       'session.reconnectMcpServer',
       'session.rejectChange',
@@ -835,5 +841,127 @@ describe('the canonical turn (plan 28, B-29)', () => {
         durationMs: 5,
       }),
     ).toBe(true);
+  });
+});
+
+/** Plan 27, F2 · B-05 — the one event every warning, retry and failure the engine says goes through. */
+describe('session.notice', () => {
+  const origin = { engine: 'claude', native: 'system:xyz' };
+  const base = { noticeId: 'n1', kind: 'agent.info', level: 'info', origin };
+
+  /** S-10 */
+  it('accepts a notice of each kind the D-10 table canonises, and FRAME_TYPES names the event', () => {
+    expect(FRAME_TYPES).toContain('session.notice');
+
+    for (const kind of [
+      'command.output',
+      'agent.info',
+      'agent.notification',
+      'agent.stopping',
+      'model.switched',
+      'model.refused',
+      'request.retrying',
+      'usage.limited',
+      'turn.failed',
+      'compaction.failed',
+      'auth.failed',
+      'unknown',
+    ]) {
+      expect(isSessionNoticePayload({ ...base, kind })).toBe(true);
+    }
+    // Open on purpose (ADR-025): a kind this build has never heard of is still a valid notice.
+    expect(isSessionNoticePayload({ ...base, kind: 'somethingNewAFutureBuildAdds' })).toBe(true);
+  });
+
+  /** S-11 */
+  it('refuses a notice missing noticeId, kind, level or origin', () => {
+    expect(isSessionNoticePayload(base)).toBe(true);
+
+    for (const field of ['noticeId', 'kind', 'level', 'origin']) {
+      expect(isSessionNoticePayload(without(base, field))).toBe(false);
+    }
+  });
+
+  /** S-12 */
+  it('accepts text at the D-13 cap, and refuses one character more', () => {
+    expect(SESSION_NOTICE_PAYLOAD_LIMITS.text.maxLength).toBe(4000);
+    expect(isSessionNoticePayload({ ...base, text: 'a'.repeat(4000), truncated: false })).toBe(
+      true,
+    );
+    expect(isSessionNoticePayload({ ...base, text: 'a'.repeat(4001) })).toBe(false);
+  });
+
+  it('accepts the messageKey/params pair, the subject and a subagent notice', () => {
+    expect(
+      isSessionNoticePayload({
+        noticeId: 'n2',
+        kind: 'model.switched',
+        level: 'notice',
+        origin,
+        messageKey: 'sessions.notice.modelSwitched',
+        params: { from: 'a', to: 'b', reason: 'refusal' },
+        subject: { command: '/cost' },
+        parentToolUseId: 'toolu_1',
+      }),
+    ).toBe(true);
+    expect(isNoticeSubject({ hook: 'release-notes', trigger: 'afterTool' })).toBe(true);
+    expect(isNoticeSubject({})).toBe(true);
+  });
+});
+
+/** Plan 27, F2 · B-06 — the fields message.completed, tool.completed, turn.completed and
+ * session.compacted gained, all optional: nothing recorded before this plan stops validating. */
+describe('the fields B-06 added to existing events', () => {
+  /** S-13 */
+  it('keeps every event valid with the new fields absent — a server older than this plan', () => {
+    expect(isMessageCompletedPayload({ messageId: 'm', role: 'assistant', content: [] })).toBe(
+      true,
+    );
+    expect(isToolCompletedPayload({ toolUseId: 't', status: 'succeeded' })).toBe(true);
+    expect(
+      isTurnCompletedPayload({ turnId: 't', outcome: 'completed', usage: {}, durationMs: 1 }),
+    ).toBe(true);
+    expect(isSessionCompactedPayload({ trigger: 'auto' })).toBe(true);
+  });
+
+  it('accepts message.completed.injected, by kind, and refuses one with no kind', () => {
+    expect(isMessageCompletedPayloadInjected({ kind: 'instructions', name: 'fortune' })).toBe(true);
+    expect(isMessageCompletedPayloadInjected({ kind: 'commandExpansion', name: 'greet' })).toBe(
+      true,
+    );
+    expect(isMessageCompletedPayloadInjected({ kind: 'contextSummary' })).toBe(true);
+    expect(isMessageCompletedPayloadInjected({ kind: 'other' })).toBe(true);
+    expect(isMessageCompletedPayloadInjected({})).toBe(false);
+  });
+
+  /** S-15 */
+  it('accepts an image attachment with no mediaType and a link with no title; refuses one with no kind', () => {
+    expect(isToolCompletedPayloadAttachmentsItem({ kind: 'image', blockId: 'u-1:0' })).toBe(true);
+    expect(
+      isToolCompletedPayloadAttachmentsItem({
+        kind: 'image',
+        blockId: 'u-1:0',
+        mediaType: 'image/png',
+        size: 128,
+      }),
+    ).toBe(true);
+    expect(isToolCompletedPayloadAttachmentsItem({ kind: 'link', uri: 'https://x.example' })).toBe(
+      true,
+    );
+    expect(isToolCompletedPayloadAttachmentsItem({ kind: 'unknown', type: 'resource' })).toBe(true);
+    expect(isToolCompletedPayloadAttachmentsItem({ uri: 'https://x.example' })).toBe(false);
+    expect(isToolCompletedPayload({ toolUseId: 't', status: 'succeeded', attachments: [] })).toBe(
+      true,
+    );
+  });
+
+  it('accepts a turn a person cancelled, never confused with a failure', () => {
+    expect(
+      isTurnCompletedPayload({ turnId: 't', outcome: 'cancelled', usage: {}, durationMs: 1 }),
+    ).toBe(true);
+  });
+
+  it('accepts a compaction with a stable id, carried live and in the history alike', () => {
+    expect(isSessionCompactedPayload({ trigger: 'manual', compactionId: 'c-1' })).toBe(true);
   });
 });

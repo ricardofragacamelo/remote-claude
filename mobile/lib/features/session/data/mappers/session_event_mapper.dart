@@ -7,7 +7,9 @@
 /// A frame it cannot read becomes an [UnreadEvent] rather than nothing. Two different things are
 /// going on and both need the resume point to move: an event added to the contract after this
 /// build shipped, and a payload missing the field it is about. Dropping either would have the
-/// client ask for it again after every reconnection, for ever.
+/// client ask for it again after every reconnection, for ever. A type the contract classifies
+/// `silent` — screen state, never the conversation's timeline — becomes a [SilentEvent] instead:
+/// a known, deliberate absence, not a gap in the contract (plan 27, D-02, F1 · B-04).
 library;
 
 // `McpServer` here is the store's own config shape (plan 13, B-19) — a different thing from this
@@ -90,7 +92,7 @@ SessionEvent? historyEventFrom(Object? entry) {
 
   final SessionEvent event = _eventOf(type, historySeq, payload, at: '', pong: () => null);
 
-  return event is UnreadEvent ? null : event;
+  return event is UnreadEvent || event is SilentEvent ? null : event;
 }
 
 /// What the reader of one event type needs from the frame around the payload.
@@ -98,6 +100,7 @@ class _Frame {
   const _Frame(
     this.seq,
     this.payload, {
+    required this.type,
     required this.at,
     required this.pong,
     this.sessionId,
@@ -107,6 +110,10 @@ class _Frame {
   final int seq;
   final Map<String, Object?> payload;
 
+  /// The frame's own WS type — what a malformed or an unrecognised-value generic line names
+  /// (plan 27, F6 · B-20, U-07/U-09).
+  final String type;
+
   /// When, by the server's clock — empty for the history.
   final String at;
   final Pong? Function() pong;
@@ -115,6 +122,26 @@ class _Frame {
   /// The `correlationId` of the frame: the command it answers, when it answers one.
   final String? commandId;
 }
+
+/// The generic line for a known event missing a field it requires (U-09) — one per event type per
+/// session, same as an unknown WS event (U-06): a published client does not need to say the same
+/// thing twice.
+GenericSessionEvent _malformed(_Frame frame) => GenericSessionEvent(
+  frame.seq,
+  reason: GenericReason.malformed,
+  id: 'malformed:${frame.type}',
+  detail: frame.type,
+);
+
+/// The generic line for a known event carrying an enum value this build does not recognise (U-07) —
+/// one per (type, field) per session. The event still applies with whatever the rest of its payload
+/// gives — the caller is responsible for that half; this only ever builds the line.
+GenericSessionEvent _unknownValue(_Frame frame, String field, String value) => GenericSessionEvent(
+  frame.seq,
+  reason: GenericReason.unknownValue,
+  id: 'unknown-value:${frame.type}:$field',
+  detail: value,
+);
 
 /// One reader per event type. A table rather than a `switch`, so adding an event adds a row, not a
 /// branch to a function that already reads a dozen.
@@ -135,7 +162,12 @@ const Map<String, SessionEvent Function(_Frame frame)> _readers =
       'session.closed': _closed,
       'session.rewound': _rewound,
       'session.mcpStatusChanged': _mcpStatusChanged,
+      'session.notice': _notice,
     };
+
+/// Every event's `type` that is screen state, never the conversation's timeline, as a lookup
+/// (plan 27, D-02) — generated from the schema, the same list the web reads.
+final Set<String> _silentTypes = Set<String>.of(silentEventTypes);
 
 SessionEvent _eventOf(
   String type,
@@ -149,13 +181,39 @@ SessionEvent _eventOf(
   final _Frame frame = _Frame(
     seq,
     payload,
+    type: type,
     at: at,
     pong: pong,
     sessionId: sessionId,
     commandId: commandId,
   );
 
-  return (_readers[type] ?? _pongOr)(frame);
+  final SessionEvent Function(_Frame frame)? reader = _readers[type];
+  if (reader != null) {
+    return reader(frame);
+  }
+
+  // `_pongOr` is the one case of a frame with no entry in `_readers` that still reads as
+  // something: a `diag.pong`, which the contract also classifies `silent`, since it is never part
+  // of the conversation either. Tried first, so that classification never shadows the pong itself.
+  final SessionEvent fallback = _pongOr(frame);
+  if (fallback is PongArrived) {
+    return fallback;
+  }
+
+  if (_silentTypes.contains(type)) {
+    return SilentEvent(frame.seq);
+  }
+
+  // A type this build has never heard of (U-06, D-02): drawn as the generic line, once per type per
+  // session — a published client has to keep working when the contract gains an event it has never
+  // heard of, and now has to say so, where it used to stay invisible.
+  return GenericSessionEvent(
+    frame.seq,
+    reason: GenericReason.unknownEvent,
+    id: 'unknown-event:$type',
+    detail: type,
+  );
 }
 
 SessionEvent _opened(_Frame frame) {
@@ -186,8 +244,54 @@ SessionEvent _pongOr(_Frame frame) {
   return pong == null ? UnreadEvent(frame.seq) : PongArrived(frame.seq, pong);
 }
 
+/// The four levels the contract carries — an unrecognised one reads as [NoticeLevel.notice]: still
+/// shown, never hidden, and never mistaken for `error`'s emphasis.
+const Map<String, NoticeLevel> _noticeLevels = <String, NoticeLevel>{
+  'info': NoticeLevel.info,
+  'notice': NoticeLevel.notice,
+  'warning': NoticeLevel.warning,
+  'error': NoticeLevel.error,
+};
+
+/// A `session.notice` read into the event the conversation draws (plan 27, F6 · B-19). Mirrors web's
+/// `applyNotice` exactly: an unrecognised `kind` (B-13's own `unknown`, or one this build has no line
+/// for yet, U-11) is still read whole, into the same [SessionNotice] — `Conversation` is what decides
+/// it draws generically, by the same `_knownNoticeKinds` set web's reducer keeps.
+SessionEvent _notice(_Frame frame) {
+  final Map<String, Object?> payload = frame.payload;
+  final String? noticeId = _text(payload, 'noticeId');
+
+  // Without one, a notice cannot be kept from duplicating on replay — the one field this reader
+  // insists on, same as `_finished` insists on `messageId`. Not malformed: nothing more to say.
+  if (noticeId == null) {
+    return UnreadEvent(frame.seq);
+  }
+
+  final Object? origin = payload['origin'];
+
+  return SessionNotice(
+    frame.seq,
+    noticeId: noticeId,
+    kind: _text(payload, 'kind') ?? 'unknown',
+    level: _noticeLevels[_text(payload, 'level')] ?? NoticeLevel.notice,
+    messageKey: _text(payload, 'messageKey'),
+    params: _record(payload, 'params'),
+    text: _text(payload, 'text'),
+    truncated: payload['truncated'] == true,
+    parentToolUseId: _text(payload, 'parentToolUseId'),
+    originNative: origin is Map<String, Object?> ? _text(origin, 'native') : null,
+    writtenAt: _writtenAt(payload),
+  );
+}
+
 SessionEvent _status(_Frame frame) {
-  final SessionStatus? status = switch (_text(frame.payload, 'status')) {
+  final String? raw = _text(frame.payload, 'status');
+
+  if (raw == null) {
+    return _malformed(frame);
+  }
+
+  final SessionStatus? status = switch (raw) {
     'starting' => SessionStatus.starting,
     'idle' => SessionStatus.idle,
     'thinking' => SessionStatus.thinking,
@@ -197,8 +301,12 @@ SessionEvent _status(_Frame frame) {
     _ => null,
   };
 
+  // A value this build does not recognise leaves the session where it was (U-07) — a card in its
+  // last known state is still true; a guess at a new one might not be — and the generic line names
+  // what arrived. Nothing applies the status itself: not emitting SessionStatusReported at all is
+  // what keeps it unchanged.
   return status == null
-      ? UnreadEvent(frame.seq)
+      ? _unknownValue(frame, 'status', raw)
       : SessionStatusReported(frame.seq, status, at: frame.at);
 }
 
@@ -212,9 +320,18 @@ SessionEvent _fragment(_Frame frame) {
   final Map<String, Object?> payload = frame.payload;
   final String? messageId = _text(payload, 'messageId');
   final String? delta = _text(payload, 'delta');
+
+  if (messageId == null || delta == null) {
+    return _malformed(frame);
+  }
+
   final String blockType = blockTypeOf(payload);
 
-  if (messageId == null || delta == null || !_drawnFragments.contains(blockType)) {
+  // A block type this build does not know (U-08): never summed into the answer. The block itself
+  // still arrives whole in the `message.completed` that finishes it, drawn generically (U-05) — this
+  // just refuses to let its fragments pass as the model's own words in the meantime. Not malformed:
+  // the fragment is well-formed, this build just does not stream this kind of content live.
+  if (!_drawnFragments.contains(blockType)) {
     return UnreadEvent(frame.seq);
   }
 
@@ -245,12 +362,14 @@ SessionEvent _finished(_Frame frame) {
   final String? messageId = _text(payload, 'messageId');
 
   if (messageId == null) {
-    return UnreadEvent(frame.seq);
+    return _malformed(frame);
   }
 
   final List<Map<String, Object?>> blocks = payload['content'] is List<Object?>
       ? (payload['content']! as List<Object?>).whereType<Map<String, Object?>>().toList()
       : const <Map<String, Object?>>[];
+  final Object? injected = payload['injected'];
+  final String? injectedKind = injected is Map<String, Object?> ? _text(injected, 'kind') : null;
 
   return MessageFinished(
     frame.seq,
@@ -265,16 +384,42 @@ SessionEvent _finished(_Frame frame) {
     at: frame.at,
     writtenAt: _writtenAt(payload),
     parentToolUseId: _text(payload, 'parentToolUseId'),
+    injectedKind: injectedKind,
+    injectedName: injected is Map<String, Object?> ? _text(injected, 'name') : null,
   );
 }
 
-/// The block of a message [block] becomes, in the order it arrived — `null` for a block that is not
-/// text or an image (a tool call, say), which plays no part in the message.
-MessageBlock? _messageBlockOf(Map<String, Object?> block) => switch (block['type']) {
-  'text' => TextBlock(_text(block, 'text') ?? '', blockId: _text(block, 'blockId')),
-  'image' => ImageBlock(_imageOf(block)),
-  _ => null,
+/// Block types never drawn as part of the message, with the reason neither is the generic line of
+/// U-05: `thinking` and `redactedThinking` have their own path (`_thoughtOf`, into `thoughts`, never
+/// `blocks`); `toolUse` and `toolResult` are drawn whole as their own tool, elsewhere in the timeline
+/// (plan 28, S-88). The adapter's own canonicalisation of the engine's own block kinds (plan 28,
+/// B-30) happens before anything reaches the wire, live or from the history — this build never has
+/// to recognise the engine's own spelling of a kind it already knows under its canonical name, and
+/// must not (neutral core): a client that somehow received the engine's own spelling anyway reads
+/// it as any other block it does not know (U-05), never silently.
+const Set<String> _silentBlockTypes = <String>{
+  'thinking',
+  'redactedThinking',
+  'toolUse',
+  'toolResult',
 };
+
+/// The block of a message [block] becomes, in the order it arrived — `null` for an item that is not
+/// one of the exclusions above. A type this build does not know otherwise (U-05) is drawn
+/// generically, with its own text when it has one, never dropped in silence.
+MessageBlock? _messageBlockOf(Map<String, Object?> block) {
+  final Object? type = block['type'];
+
+  if (type is! String || _silentBlockTypes.contains(type)) {
+    return null;
+  }
+
+  return switch (type) {
+    'text' => TextBlock(_text(block, 'text') ?? '', blockId: _text(block, 'blockId')),
+    'image' => ImageBlock(_imageOf(block)),
+    _ => UnknownBlock(type, text: _text(block, 'text') ?? '', blockId: _text(block, 'blockId')),
+  };
+}
 
 /// An image block, as the marker it travels as: its type and size, never the bytes (plan 22, D-09).
 /// A size that is not a whole, non-negative number is not one.
@@ -313,7 +458,7 @@ SessionEvent _invoked(_Frame frame) {
   final ToolCall? call = toolCallFrom(payload);
 
   if (toolUseId == null || call == null) {
-    return UnreadEvent(frame.seq);
+    return _malformed(frame);
   }
 
   return ToolInvoked(
@@ -337,16 +482,23 @@ SessionEvent _output(_Frame frame) {
 
 SessionEvent _toolOutcome(_Frame frame) {
   final String? toolUseId = _text(frame.payload, 'toolUseId');
+  final String? raw = _text(frame.payload, 'status');
 
-  final ToolStatus? status = switch (_text(frame.payload, 'status')) {
+  if (toolUseId == null || raw == null) {
+    return UnreadEvent(frame.seq);
+  }
+
+  final ToolStatus? status = switch (raw) {
     'succeeded' => ToolStatus.succeeded,
     'failed' => ToolStatus.failed,
     'denied' => ToolStatus.denied,
     _ => null,
   };
 
-  return toolUseId == null || status == null
-      ? UnreadEvent(frame.seq)
+  // A value this build does not recognise leaves the tool where it was (U-07) — the generic line
+  // names it — the same rule `_status` applies to the session's own.
+  return status == null
+      ? _unknownValue(frame, 'status', raw)
       : ToolFinished(
           frame.seq,
           toolUseId: toolUseId,
@@ -354,7 +506,44 @@ SessionEvent _toolOutcome(_Frame frame) {
           summary: _text(frame.payload, 'summary'),
           writtenAt: _writtenAt(frame.payload),
           question: _record(frame.payload, 'question'),
+          attachments: _attachmentsOf(frame.payload),
         );
+}
+
+/// One attachment of a `tool.completed`, read by its own `kind` (plan 27, F6 · B-22) — an entry
+/// with no readable `kind` is dropped: B-20's generic line is for a kind this build cannot
+/// classify, not for one missing its own classifier.
+ToolAttachment? _attachmentOf(Object? raw) {
+  if (raw is! Map<String, Object?>) {
+    return null;
+  }
+
+  final String? kind = _text(raw, 'kind');
+
+  if (kind == 'image') {
+    final Object? size = raw['size'];
+    return ImageAttachment(
+      blockId: _text(raw, 'blockId'),
+      mediaType: _text(raw, 'mediaType'),
+      size: size is int ? size : null,
+    );
+  }
+  if (kind == 'link') {
+    return LinkAttachment(uri: _text(raw, 'uri'), title: _text(raw, 'title'));
+  }
+  if (kind == null) {
+    return null;
+  }
+
+  return UnknownAttachment(type: _text(raw, 'type'));
+}
+
+List<ToolAttachment> _attachmentsOf(Map<String, Object?> payload) {
+  final Object? raw = payload['attachments'];
+
+  return raw is List<Object?>
+      ? <ToolAttachment>[for (final Object? each in raw) ?_attachmentOf(each)]
+      : const <ToolAttachment>[];
 }
 
 /// The states of a task, as the contract writes them.
@@ -399,6 +588,7 @@ const Map<String, TurnOutcome> _turnOutcomes = <String, TurnOutcome>{
   'limitReached': TurnOutcome.limitReached,
   'budgetExceeded': TurnOutcome.budgetExceeded,
   'failed': TurnOutcome.failed,
+  'cancelled': TurnOutcome.cancelled,
 };
 
 /// The outcome of a `turn.completed` — absent entirely, it is [TurnOutcome.completed]: a backend
@@ -420,7 +610,7 @@ SessionEvent _turn(_Frame frame) {
 
   // No cost is not an unreadable turn: the engine reports none (plan 28, B-29, S-86).
   if (turnId == null || durationMs is! int) {
-    return UnreadEvent(frame.seq);
+    return _malformed(frame);
   }
 
   return TurnFinished(
@@ -467,11 +657,18 @@ SessionEvent _compacted(_Frame frame) {
     frame.seq,
     trigger: _text(frame.payload, 'trigger') ?? 'auto',
     preTokens: preTokens is int ? preTokens : null,
+    compactionId: _text(frame.payload, 'compactionId'),
   );
 }
 
 SessionEvent _closed(_Frame frame) {
-  final SessionCloseReason? reason = switch (_text(frame.payload, 'reason')) {
+  final String? raw = _text(frame.payload, 'reason');
+
+  if (raw == null) {
+    return _malformed(frame);
+  }
+
+  final SessionCloseReason? reason = switch (raw) {
     'closedByUser' => SessionCloseReason.closedByUser,
     'completed' => SessionCloseReason.completed,
     'failed' => SessionCloseReason.failed,
@@ -482,14 +679,14 @@ SessionEvent _closed(_Frame frame) {
   };
 
   return reason == null
-      ? UnreadEvent(frame.seq)
+      ? _unknownValue(frame, 'reason', raw)
       : SessionFinished(frame.seq, SessionEnding(reason: reason, at: frame.at));
 }
 
 SessionEvent _rewound(_Frame frame) {
   final RewindOutcome? outcome = rewindOutcomeFrom(frame.payload);
 
-  return outcome == null ? UnreadEvent(frame.seq) : FilesRewound(frame.seq, outcome);
+  return outcome == null ? _malformed(frame) : FilesRewound(frame.seq, outcome);
 }
 
 /// The statuses an MCP server carries, as the contract words them (plan 13, B-22).

@@ -495,6 +495,18 @@ abstract class AppLocalizations {
   /// **'Refused'**
   String get sessionToolStatusDenied;
 
+  /// The reason the CLI itself refused a tool, plan 27 F6 B-22
+  ///
+  /// In en, this message translates to:
+  /// **'Refused: {reason}'**
+  String sessionToolRowDenied(String reason);
+
+  /// Label of a link attachment with no title
+  ///
+  /// In en, this message translates to:
+  /// **'Link'**
+  String get sessionToolRowAttachmentLink;
+
   /// Label of a tool with the description the model gave the call
   ///
   /// In en, this message translates to:
@@ -2403,6 +2415,12 @@ abstract class AppLocalizations {
   /// **'The turn failed, with no answer'**
   String get sessionTurnOutcomeFailed;
 
+  /// A turn.completed whose outcome is cancelled (plan 27, B-10)
+  ///
+  /// In en, this message translates to:
+  /// **'The turn was cancelled'**
+  String get sessionTurnOutcomeCancelled;
+
   /// Line where the conversation was compacted on request
   ///
   /// In en, this message translates to:
@@ -2426,6 +2444,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Compacted on its own, the context was full: {tokens} tokens before are a summary now'**
   String sessionCompactedAutoTokens(String tokens);
+
+  /// Opens the compaction's own summary (plan 27, F6 · B-21)
+  ///
+  /// In en, this message translates to:
+  /// **'See summary'**
+  String get sessionCompactedSummary;
+
+  /// A skill's body the agent injected (injected.kind: instructions)
+  ///
+  /// In en, this message translates to:
+  /// **'{name} loaded'**
+  String sessionInjectedInstructions(String name);
+
+  /// injected.kind: other — content this build has no specific line for
+  ///
+  /// In en, this message translates to:
+  /// **'The agent added content here'**
+  String get sessionInjectedOther;
+
+  /// A session.notice of kind model.switched (plan 27, B-09)
+  ///
+  /// In en, this message translates to:
+  /// **'Answered by {to} instead of {from}'**
+  String sessionNoticeModelSwitched(String to, String from);
+
+  /// A session.notice of kind request.retrying
+  ///
+  /// In en, this message translates to:
+  /// **'Trying again — attempt {attempt} of {maxAttempts}'**
+  String sessionNoticeRequestRetrying(String attempt, String maxAttempts);
+
+  /// A session.notice of kind usage.limited
+  ///
+  /// In en, this message translates to:
+  /// **'Usage limit: {status}'**
+  String sessionNoticeUsageLimited(String status);
+
+  /// A session.notice of kind agent.stopping
+  ///
+  /// In en, this message translates to:
+  /// **'The agent is stopping ({reason})'**
+  String sessionNoticeAgentStopping(String reason);
+
+  /// A session.notice of kind agent.info, folded from memory.recalled (D-10)
+  ///
+  /// In en, this message translates to:
+  /// **'The agent read saved memories'**
+  String get sessionNoticeMemoryRecalled;
+
+  /// A session.notice of kind agent.info, folded from conversation.reset (D-10)
+  ///
+  /// In en, this message translates to:
+  /// **'The agent started a new conversation'**
+  String get sessionNoticeConversationReset;
+
+  /// The counter on an identical notice repeated in a row (D-12)
+  ///
+  /// In en, this message translates to:
+  /// **'×{count}'**
+  String sessionNoticeRepeated(int count);
+
+  /// Shown under a notice whose text the backend cut to the D-13 ceiling
+  ///
+  /// In en, this message translates to:
+  /// **'Cut — the full text is longer than this build keeps'**
+  String get sessionNoticeTruncated;
+
+  /// The label of a session.notice of kind command.output
+  ///
+  /// In en, this message translates to:
+  /// **'Command output'**
+  String get sessionNoticeKindCommandOutput;
+
+  /// The label of a session.notice of kind agent.info
+  ///
+  /// In en, this message translates to:
+  /// **'A message from the agent'**
+  String get sessionNoticeKindAgentInfo;
+
+  /// The label of a session.notice of kind agent.notification
+  ///
+  /// In en, this message translates to:
+  /// **'A notification from the agent'**
+  String get sessionNoticeKindAgentNotification;
+
+  /// The label of a session.notice of kind agent.stopping
+  ///
+  /// In en, this message translates to:
+  /// **'The agent is stopping'**
+  String get sessionNoticeKindAgentStopping;
+
+  /// The label of a session.notice of kind model.switched
+  ///
+  /// In en, this message translates to:
+  /// **'The model changed'**
+  String get sessionNoticeKindModelSwitched;
+
+  /// The label of a session.notice of kind model.refused
+  ///
+  /// In en, this message translates to:
+  /// **'The model refused to answer'**
+  String get sessionNoticeKindModelRefused;
+
+  /// The label of a session.notice of kind request.retrying
+  ///
+  /// In en, this message translates to:
+  /// **'Trying the request again'**
+  String get sessionNoticeKindRequestRetrying;
+
+  /// The label of a session.notice of kind usage.limited
+  ///
+  /// In en, this message translates to:
+  /// **'Usage limit'**
+  String get sessionNoticeKindUsageLimited;
+
+  /// The label of a session.notice of kind turn.failed
+  ///
+  /// In en, this message translates to:
+  /// **'The turn ended in error'**
+  String get sessionNoticeKindTurnFailed;
+
+  /// The label of a session.notice of kind compaction.failed
+  ///
+  /// In en, this message translates to:
+  /// **'Compaction failed'**
+  String get sessionNoticeKindCompactionFailed;
+
+  /// The label of a session.notice of kind auth.failed
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed'**
+  String get sessionNoticeKindAuthFailed;
+
+  /// A session.notice of a kind this build has no line for — B-13's own unknown, or a future one (U-11)
+  ///
+  /// In en, this message translates to:
+  /// **'The agent sent something this build does not show ({detail})'**
+  String sessionNoticeKindUnknown(String detail);
+
+  /// A WS event type with no reader and not in the silent list (U-06, D-02)
+  ///
+  /// In en, this message translates to:
+  /// **'This build does not show a kind of content from the session ({detail}). Update the app.'**
+  String sessionNoticeReasonUnknownEvent(String detail);
+
+  /// A known event with an enum value this build does not recognise (U-07)
+  ///
+  /// In en, this message translates to:
+  /// **'A value this build does not recognise arrived ({detail})'**
+  String sessionNoticeReasonUnknownValue(String detail);
+
+  /// A known event missing a field it requires (U-09)
+  ///
+  /// In en, this message translates to:
+  /// **'The session sent something this build could not read ({detail})'**
+  String sessionNoticeReasonMalformed(String detail);
+
+  /// A content block of a kind this build does not know (U-05)
+  ///
+  /// In en, this message translates to:
+  /// **'Content of a kind this build does not show ({blockType})'**
+  String sessionMessageUnknownBlock(String blockType);
 
   /// Thinking line while the model thinks
   ///

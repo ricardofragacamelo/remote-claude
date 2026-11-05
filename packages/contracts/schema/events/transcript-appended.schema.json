@@ -5,6 +5,7 @@
   "description": "What a followed conversation gained since the last frame of the subscription — or, on the first one, since the `afterMessageId` it was followed from. The frame's `seq` belongs to the subscription, not to any session: monotonic per `followId`, from 1, and never replayed. A hole in it is a lost frame, and the client reads the conversation again rather than patching. It also goes out with no `events` when only `activity` or `working` changed, so the screen never says the conversation is busy after it stopped.",
   "x-kind": "event",
   "x-type": "transcript.appended",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["followId", "conversation", "events", "activity", "working"],
   "properties": {

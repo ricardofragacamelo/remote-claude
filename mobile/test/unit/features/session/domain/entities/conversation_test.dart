@@ -273,6 +273,19 @@ void main() {
       expect(after.lastSeq, 9);
     });
 
+    test(
+      'plan 27, F1 · B-04 — a type the contract classifies silent changes nothing but the resume point either',
+      () {
+        final Conversation after = const Conversation(
+          status: SessionStatus.idle,
+        ).apply(const SilentEvent(9));
+
+        expect(after.status, SessionStatus.idle);
+        expect(after.isEmpty, isTrue);
+        expect(after.lastSeq, 9);
+      },
+    );
+
     test('S-78 · a tool invoked again by the replay starts over, in its place', () {
       final Conversation after = applyAll(<SessionEvent>[
         ToolInvoked(1, toolUseId: 't1', call: shellLs),
@@ -1193,6 +1206,302 @@ void main() {
         ),
       );
       expect(testing, isNot(read));
+    });
+  });
+
+  group('compaction and injected content — plan 27, F6 · B-21', () {
+    test('keys a compaction by its compactionId when the backend sends one', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const ContextCompacted(1, trigger: 'manual', compactionId: 'cx1'),
+      ]);
+
+      expect((state.entries.single as CompactionLine).entryId, 'compaction:cx1');
+    });
+
+    test('falls back to seq from a server older than compactionId', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const ContextCompacted(7, trigger: 'auto'),
+      ]);
+
+      expect((state.entries.single as CompactionLine).entryId, 'compaction:7');
+    });
+
+    test("folds a message with injectedKind 'contextSummary' into the compaction it belongs to, "
+        'never as a message bubble', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const ContextCompacted(1, trigger: 'auto', compactionId: 'cx1'),
+        const MessageFinished(
+          2,
+          messageId: 's1',
+          isFromUser: true,
+          blocks: <MessageBlock>[TextBlock('what changed')],
+          injectedKind: 'contextSummary',
+        ),
+      ]);
+
+      expect(state.entries, hasLength(1));
+      expect((state.entries.single as CompactionLine).summary, 'what changed');
+    });
+
+    test("an injected skill body ('instructions') draws its own line, nested under the tool, never "
+        'a message bubble', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const MessageFinished(
+          1,
+          messageId: 's1',
+          isFromUser: true,
+          blocks: <MessageBlock>[TextBlock('be concise')],
+          injectedKind: 'instructions',
+          injectedName: 'pr-reviewer',
+          parentToolUseId: 't1',
+        ),
+      ]);
+
+      expect(state.entries, hasLength(1));
+      expect(
+        state.entries.single,
+        isA<InjectedLine>()
+            .having((InjectedLine l) => l.injectedKind, 'injectedKind', 'instructions')
+            .having((InjectedLine l) => l.name, 'name', 'pr-reviewer'),
+      );
+      expect(state.entriesUnder('t1'), hasLength(1));
+    });
+
+    test('a commandExpansion message still shows as the person’s own prompt', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const MessageFinished(
+          1,
+          messageId: 's1',
+          isFromUser: true,
+          blocks: <MessageBlock>[TextBlock('/review args')],
+          injectedKind: 'commandExpansion',
+        ),
+      ]);
+
+      expect(state.messages, hasLength(1));
+      expect(state.messages.single.text, '/review args');
+    });
+  });
+
+  group('session.notice — plan 27, F6 · B-19', () {
+    const SessionNotice base = SessionNotice(
+      1,
+      noticeId: 'n1',
+      kind: 'command.output',
+      level: NoticeLevel.info,
+      text: 'README.md',
+    );
+
+    test('reads a known kind into its own entry, keyed by noticeId, not seq — S-72', () {
+      final Conversation state = applyAll(<SessionEvent>[base]);
+
+      expect(idsOf(state), <String>['notice:n1']);
+      expect(
+        state.entries.single,
+        isA<NoticeLine>()
+            .having((NoticeLine n) => n.kind, 'kind', 'command.output')
+            .having((NoticeLine n) => n.reason, 'reason', isNull)
+            .having((NoticeLine n) => n.text, 'text', 'README.md'),
+      );
+    });
+
+    test('replaces rather than duplicates the same notice delivered twice — S-77', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        base,
+        const SessionNotice(2, noticeId: 'n1', kind: 'command.output', level: NoticeLevel.info),
+      ]);
+
+      expect(state.entries, hasLength(1));
+    });
+
+    test('nests under its subagent by parentToolUseId — S-75', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const SessionNotice(
+          1,
+          noticeId: 'n1',
+          kind: 'agent.info',
+          level: NoticeLevel.warning,
+          parentToolUseId: 't1',
+          text: 'a subagent said something',
+        ),
+      ]);
+
+      expect(state.entriesUnder('t1'), hasLength(1));
+      expect(state.entriesUnder(null), isEmpty);
+    });
+
+    test('reads a kind this build has no line for as unknown, named by origin.native — U-11', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const SessionNotice(
+          1,
+          noticeId: 'n1',
+          kind: 'a.future.kind',
+          level: NoticeLevel.notice,
+          text: 'details',
+          originNative: 'system:future_thing',
+        ),
+      ]);
+
+      final NoticeLine line = state.entries.single as NoticeLine;
+      expect(line.detail, 'system:future_thing');
+      expect(line.text, 'details');
+    });
+
+    test('collapses an unknown kind repeated in a row into one line with a counter, but not across '
+        'a gap — S-86, S-87, D-12', () {
+      final Conversation ten = applyAll(<SessionEvent>[
+        for (int i = 1; i <= 10; i++)
+          SessionNotice(
+            i,
+            noticeId: 'u$i',
+            kind: 'unknown',
+            level: NoticeLevel.notice,
+            text: 'same',
+          ),
+      ]);
+
+      expect(ten.entries, hasLength(1));
+      expect((ten.entries.single as NoticeLine).count, 10);
+
+      final Conversation interleaved = applyAll(<SessionEvent>[
+        const SessionNotice(
+          1,
+          noticeId: 'a1',
+          kind: 'unknown',
+          level: NoticeLevel.notice,
+          text: 'A',
+        ),
+        const SessionNotice(
+          2,
+          noticeId: 'b1',
+          kind: 'unknown',
+          level: NoticeLevel.notice,
+          text: 'B',
+        ),
+        const SessionNotice(
+          3,
+          noticeId: 'a2',
+          kind: 'unknown',
+          level: NoticeLevel.notice,
+          text: 'A',
+        ),
+      ]);
+
+      expect(interleaved.entries, hasLength(3));
+      expect(
+        interleaved.entries.every((ConversationEntry e) => (e as NoticeLine).count == 1),
+        isTrue,
+      );
+    });
+  });
+
+  group(
+    'the generic line in place of something this build could not read — plan 27, F6 · B-20',
+    () {
+      test('shows the generic line for an unknown type only once per type, ever — U-06, D-02', () {
+        final Conversation state = applyAll(<SessionEvent>[
+          const GenericSessionEvent(
+            1,
+            reason: GenericReason.unknownEvent,
+            id: 'unknown-event:session.inventedByAFutureBuild',
+            detail: 'session.inventedByAFutureBuild',
+          ),
+          const GenericSessionEvent(
+            2,
+            reason: GenericReason.unknownEvent,
+            id: 'unknown-event:session.inventedByAFutureBuild',
+            detail: 'session.inventedByAFutureBuild',
+          ),
+        ]);
+
+        expect(state.entries, hasLength(1));
+      });
+
+      test('leaves the session where it was when a status value is not recognised — U-07', () {
+        final Conversation started = applyAll(<SessionEvent>[
+          const SessionStatusReported(1, SessionStatus.thinking),
+        ]);
+        final Conversation state = started.apply(
+          const GenericSessionEvent(
+            2,
+            reason: GenericReason.unknownValue,
+            id: 'unknown-value:session.statusChanged:status',
+            detail: 'napping',
+          ),
+        );
+
+        expect(state.status, SessionStatus.thinking);
+        expect(state.entries, hasLength(1));
+        expect((state.entries.single as NoticeLine).reason, GenericReason.unknownValue);
+      });
+
+      test('a malformed event still moves the resume point, and draws the line once — U-09', () {
+        final Conversation state = applyAll(<SessionEvent>[
+          const GenericSessionEvent(
+            5,
+            reason: GenericReason.malformed,
+            id: 'malformed:tool.started',
+          ),
+        ]);
+
+        expect(state.lastSeq, 5);
+        expect(state.entries, hasLength(1));
+      });
+    },
+  );
+
+  group('turn error and the notice around it — plan 27, F6 · B-23', () {
+    test('a turn that did not complete keeps its entry, in an error state — S-97', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const TurnFinished(
+          1,
+          TurnSummary(turnId: 't1', durationMs: 1, outcome: TurnOutcome.failed),
+        ),
+      ]);
+
+      expect(state.entries, hasLength(1));
+      expect(state.turns.single.outcome, TurnOutcome.failed);
+    });
+
+    test('the turn.failed notice lands right after the turn, as its own entry — S-97', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const TurnFinished(
+          1,
+          TurnSummary(turnId: 't1', durationMs: 1, outcome: TurnOutcome.failed),
+        ),
+        const SessionNotice(
+          2,
+          noticeId: 'n1',
+          kind: 'turn.failed',
+          level: NoticeLevel.error,
+          text: 'boom',
+        ),
+      ]);
+
+      expect(state.entries, hasLength(2));
+      expect(state.entries[0], isA<TurnSummary>());
+      expect(state.entries[1], isA<NoticeLine>());
+    });
+
+    test('a notice arriving between two fragments of the same message does not split the answer '
+        'in two — S-101', () {
+      final Conversation state = applyAll(<SessionEvent>[
+        const MessageFragment(1, messageId: 'm1', delta: 'Hello'),
+        const SessionNotice(
+          2,
+          noticeId: 'n1',
+          kind: 'agent.info',
+          level: NoticeLevel.info,
+          text: 'thinking out loud',
+        ),
+        const MessageFragment(3, messageId: 'm1', delta: ', world'),
+      ]);
+
+      expect(state.messages, hasLength(1));
+      expect(state.messages.single.text, 'Hello, world');
+      expect(state.entries, hasLength(2));
+      expect(state.entries[0], isA<StreamMessage>());
+      expect(state.entries[1], isA<NoticeLine>());
     });
   });
 }

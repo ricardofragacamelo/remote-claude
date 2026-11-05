@@ -5,6 +5,7 @@
   "description": "A permission request is settled. It reaches **every** connection, including the one that answered — that is how a second client learns it lost the race, and who won it.",
   "x-kind": "event",
   "x-type": "permission.resolved",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["requestId", "decision", "auto"],
   "x-required-when": [

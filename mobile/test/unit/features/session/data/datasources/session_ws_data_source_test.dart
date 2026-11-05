@@ -456,6 +456,46 @@ void main() {
     expect(written.withOp('session.fragment.ignored'), isEmpty);
   });
 
+  test(
+    'plan 27, F1 · B-04 — the three outcomes a session frame can have are each logged, distinctly',
+    () async {
+      await ready();
+
+      final Future<SessionUpdate> read = repository.updates.first;
+      socket().deliver(
+        frame(
+          kind: 'event',
+          type: 'message.completed',
+          sessionId: 'ses-1',
+          seq: 10,
+          payload: <String, Object?>{'messageId': 'm', 'role': 'assistant', 'content': <Object?>[]},
+        ),
+      );
+      await read;
+      expect(written.withOp('session.event.read').single['type'], 'message.completed');
+
+      final Future<SessionUpdate> silent = repository.updates.first;
+      socket().deliver(
+        frame(kind: 'event', type: 'session.commandsChanged', sessionId: 'ses-1', seq: 11),
+      );
+      await silent;
+      final Map<String, Object?> silentLine = written
+          .withOp('session.event.read')
+          .firstWhere((Map<String, Object?> line) => line['type'] == 'session.commandsChanged');
+      expect(silentLine['msg'], 'silent event, no reader');
+
+      final Future<SessionUpdate> unknown = repository.updates.first;
+      socket().deliver(
+        frame(kind: 'event', type: 'session.somethingNew', sessionId: 'ses-1', seq: 12),
+      );
+      await unknown;
+      final Map<String, Object?> unknownLine = written
+          .withOp('session.event.read')
+          .firstWhere((Map<String, Object?> line) => line['type'] == 'session.somethingNew');
+      expect(unknownLine['msg'], 'unknown event, no reader');
+    },
+  );
+
   test('plan 10 · an acceptance reaches the stream as one, naming its command', () async {
     await ready();
     final Future<SessionUpdate> first = repository.updates.first;

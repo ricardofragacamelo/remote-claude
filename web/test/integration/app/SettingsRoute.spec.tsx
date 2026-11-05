@@ -83,11 +83,13 @@ describe('the app’s Settings — plan 06, B-31', () => {
     backendAnswers(ENGINES);
     const app = mountApp('/settings');
 
-    await user.click(
-      await screen.findByRole('link', {
-        name: t('settings.links.agentSettings', { engine: 'claude' }),
-      }),
+    // `t()` reads the engine's displayName through a directory that loads asynchronously (plan 28,
+    // B-13) — computed once up front it can freeze on the id, before the name ever arrives, so this
+    // waits for the link by the name it settles on instead of the one computed at call time (S-26).
+    const link = await waitFor(() =>
+      screen.getByRole('link', { name: t('settings.links.agentSettings', { engine: 'claude' }) }),
     );
+    await user.click(link);
 
     await waitFor(() => {
       expect(app.path()).toBe('/settings/agents/claude');

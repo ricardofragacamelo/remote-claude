@@ -5,6 +5,7 @@
   "description": "Result of `diag.ping`, carrying the `seq` the hub assigned. Like every event it is fanned out to every connection observing the session, not only to the one that asked.",
   "x-kind": "event",
   "x-type": "diag.pong",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["sessionId", "pingedAt", "pingCount", "nonce"],
   "properties": {

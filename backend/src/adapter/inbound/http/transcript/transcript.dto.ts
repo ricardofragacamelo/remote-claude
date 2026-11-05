@@ -170,8 +170,11 @@ export function toTranscriptPageDto({
 /**
  * The block of an image, as its marker names it: `<uuid>:<index>` — the conversation's entry, and the
  * block's place in it (plan 22, D-06). Anything else names no block this server minted.
+ *
+ * A third segment, `<uuid>:<index>:<subIndex>`, names an image nested inside a tool's own result
+ * instead of a prompt's — the sub-index is its place inside that result (plan 27, B-14/B-15).
  */
-export const blockIdSchema = z.string().regex(/^[^\s:]{1,256}:\d{1,4}$/);
+export const blockIdSchema = z.string().regex(/^[^\s:]{1,256}:\d{1,4}(?::\d{1,4})?$/);
 
 /** The whole output of a tool, as `GET /transcripts/:engine/:id/tools/:toolUseId/result` answers it. */
 export type ToolResultDto = TranscriptToolResultPayload;

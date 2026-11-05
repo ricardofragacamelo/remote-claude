@@ -5,6 +5,7 @@
   "description": "The conversation was compacted: what came before is now a summary the agent carries forward. Said on its own rather than as a status, because a client that keeps the turns on screen has to mark the point — and the context meter drops there.",
   "x-kind": "event",
   "x-type": "session.compacted",
+  "x-timeline": "conversation",
   "type": "object",
   "required": ["trigger"],
   "properties": {
@@ -16,6 +17,10 @@
     "preTokens": {
       "type": "integer",
       "description": "How many tokens the context held before, when the engine says."
+    },
+    "compactionId": {
+      "type": "string",
+      "description": "Stable live and in the history — what lets a client tell two compactions of the same conversation apart (plan 27, F3 · B-09). Absent on a server older than it."
     }
   }
 }

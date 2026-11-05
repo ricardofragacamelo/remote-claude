@@ -34,6 +34,12 @@ export interface AgentSdkFixture {
   readonly history?: readonly SessionMessage[];
   /** What each subagent of the run said, by agent id, as the SDK files it apart (plan 26, B-02). */
   readonly subagents?: Readonly<Record<string, readonly SessionMessage[]>>;
+  /**
+   * Set only on the one fixture `pnpm fixtures:record` cannot produce — a refusal retried on a
+   * fallback model, which nothing provokes on purpose (plan 27, D-09). Written by hand instead, and
+   * marked so the fixture-shape test never mistakes it for a capture of the real SDK.
+   */
+  readonly handWritten?: true;
   readonly messages: readonly SDKMessage[];
 }
 

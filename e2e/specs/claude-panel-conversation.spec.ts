@@ -12,9 +12,9 @@ import {
   toolRow,
   turnsEnded,
 } from '../fixtures/claude-panel';
-import { editorTab, folderWith, literally } from '../fixtures/explorer';
+import { editorTab, literally } from '../fixtures/explorer';
 import { sessionsOpened, workbenchSuite } from '../fixtures/folder-tree';
-import { onWorkbenchOf, sessionInTab } from '../fixtures/workbench';
+import { onWorkbenchOf, sessionInFolder } from '../fixtures/workbench';
 import { scenario } from '../scenarios';
 
 /**
@@ -60,12 +60,7 @@ const opened = sessionsOpened(suite.user);
 
 /** A folder of the test with the files given, as a tab, and a session opened in it. */
 async function sessionIn(page: Page, files: Readonly<Record<string, string>>): Promise<string> {
-  const folder = folderWith(suite.tree().gamma, files);
-  await suite.openTab(folder);
-  const sessionId = await sessionInTab(page, rendered.user, folder);
-  opened(sessionId);
-
-  return folder;
+  return sessionInFolder(page, suite, rendered.user, opened, files);
 }
 
 /** The task list, folded into one line above the box (plan 09, B-26) — "1/3 · Write b.txt". */

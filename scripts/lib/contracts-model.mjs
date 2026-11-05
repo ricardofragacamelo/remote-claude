@@ -17,7 +17,16 @@ const METADATA = new Set([
   'x-type',
   'x-protocol-version',
   'x-route',
+  'x-timeline',
 ]);
+
+/**
+ * The two classes an event can carry (plan 27, D-02): `conversation` changes the timeline — a
+ * message, a tool, a turn, a compaction, an undo — `silent` is screen state (`workspace.*`,
+ * `transcript.*`, `diag.*`, `session.mcpStatusChanged`…). Every event needs exactly one; nothing
+ * else carries `x-timeline` at all.
+ */
+export const TIMELINE_CLASSES = ['conversation', 'silent'];
 
 /**
  * The bounds the subset understands, and the one declared type each of them may bound.
@@ -136,6 +145,9 @@ export class ContractError extends Error {
  * @property {boolean} frame whether it travels as a frame; false for a PAYLOAD_KINDS message
  * @property {string} description
  * @property {string} payload name of the payload interface
+ * @property {'conversation' | 'silent' | null} timeline one of TIMELINE_CLASSES for an event,
+ *   `null` for every other `frameKind` — a command, a request, a response, an ack or an error never
+ *   carries one (plan 27, D-02)
  */
 
 /**
@@ -752,5 +764,37 @@ function toMessage(source, schema) {
     frame: FRAME_KINDS.includes(frameKind),
     description: String(schema['description'] ?? ''),
     payload: `${title}Payload`,
+    timeline: timelineOf(source, frameKind, frameType, schema['x-timeline']),
   };
+}
+
+/**
+ * The timeline class an event declares, required and exactly one of TIMELINE_CLASSES (plan 27,
+ * D-02, S-05, S-06) — `null` for every other `x-kind`, which carries no `x-timeline` at all.
+ *
+ * @param {string} source
+ * @param {string} frameKind
+ * @param {string} frameType
+ * @param {unknown} declared
+ * @returns {'conversation' | 'silent' | null}
+ */
+function timelineOf(source, frameKind, frameType, declared) {
+  if (frameKind !== 'event') {
+    if (declared !== undefined) {
+      throw new ContractError(
+        source,
+        `\`${frameType}\` is not an event — \`x-timeline\` means nothing here`,
+      );
+    }
+    return null;
+  }
+
+  if (typeof declared !== 'string' || !TIMELINE_CLASSES.includes(declared)) {
+    throw new ContractError(
+      source,
+      `\`${frameType}\` needs an \`x-timeline\` of exactly one of ${TIMELINE_CLASSES.join(', ')}`,
+    );
+  }
+
+  return /** @type {'conversation' | 'silent'} */ (declared);
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { Envelope } from '@remote-claude/contracts';
 
@@ -10,6 +10,7 @@ import {
   withHistory,
 } from '@/features/session/services/conversation-reducer';
 import type { Conversation } from '@/features/session/types/live-session';
+import { logger } from '@/shared/logging/logger';
 import { aToolCall } from '../../../../support/canonical-tool';
 
 const T0 = '2026-09-19T12:00:00.000Z';
@@ -77,12 +78,26 @@ describe('the conversation reducer', () => {
       });
     });
 
-    it('ignores a block of a type it does not draw, and an item that is not a block', () => {
+    it('ignores an item that is not a block, and a call drawn as the tool, not the message', () => {
       const state = fold(
         completed('m1', ['text', { type: 'toolUse' }, { type: 'text', text: 'ok' }]),
       );
 
       expect(state.messages[0]?.blocks).toEqual([{ kind: 'text', text: 'ok' }]);
+    });
+
+    it('draws a block of a kind it does not know generically, in its place (U-05)', () => {
+      const state = fold(
+        completed('m1', [
+          { type: 'text', text: 'Before.' },
+          { type: 'server_tool_use', text: 'searched the web' },
+        ]),
+      );
+
+      expect(state.messages[0]?.blocks).toEqual([
+        { kind: 'text', text: 'Before.' },
+        { kind: 'unknown', text: 'searched the web', blockType: 'server_tool_use' },
+      ]);
     });
 
     it('draws a call and its result as their tool, never as blocks of the message — plan 28, S-88', () => {
@@ -94,6 +109,7 @@ describe('the conversation reducer', () => {
         ]),
       );
 
+      // Drawn as the tool, never as a block of the message — generic or otherwise (plan 28, S-88).
       expect(state.messages[0]?.blocks).toEqual([{ kind: 'text', text: 'Looking.' }]);
     });
 
@@ -109,11 +125,18 @@ describe('the conversation reducer', () => {
       expect(state.messages[0]).toMatchObject({ isComplete: true, text: 'Before.After.' });
     });
 
-    it('reads the names of the previous protocol as nothing it draws — plan 28, B-30', () => {
-      const state = fold(completed('m1', [{ type: 'redacted_thinking' }, { type: 'tool_use' }]));
+    it(
+      'a block of a kind the adapter should always have canonicalised reads generically if it ' +
+        "ever isn't — plan 28, B-30, neutral core",
+      () => {
+        const state = fold(completed('m1', [{ type: 'redacted_thinking' }, { type: 'tool_use' }]));
 
-      expect(state.messages[0]?.blocks).toEqual([]);
-    });
+        expect(state.messages[0]?.blocks).toEqual([
+          { kind: 'unknown', text: '', blockType: 'redacted_thinking' },
+          { kind: 'unknown', text: '', blockType: 'tool_use' },
+        ]);
+      },
+    );
 
     it('reads a message with no content as one with no blocks', () => {
       const state = fold(frame('message.completed', { messageId: 'm1', role: 'user' }));
@@ -121,9 +144,22 @@ describe('the conversation reducer', () => {
       expect(state.messages[0]).toMatchObject({ role: 'user', blocks: [], text: '' });
     });
 
-    it('ignores a delta with no text, and a completed message with no id', () => {
+    it('ignores a delta with no text, and draws the generic line for a completed message with no id — U-09', () => {
       expect(fold(frame('message.delta', { messageId: 'm1' }))).toBe(SILENT);
-      expect(fold(frame('message.completed', { content: [] }))).toBe(SILENT);
+
+      const state = fold(frame('message.completed', { content: [] }));
+
+      expect(state.timeline).toEqual([
+        {
+          kind: 'notice',
+          id: 'malformed:message.completed',
+          reason: 'malformed',
+          level: 'notice',
+          text: null,
+          truncated: false,
+          parentToolUseId: null,
+        },
+      ]);
     });
   });
 
@@ -270,6 +306,39 @@ describe('the conversation reducer', () => {
       expect(started.tools[0]?.rawInput).toEqual({});
     });
 
+    it('reads each attachment kind of a tool.completed — plan 27, F6 · B-22', () => {
+      const started = fold(frame('tool.started', { toolUseId: 't1', ...aToolCall('Bash') }));
+      const state = readEvent(
+        started,
+        frame('tool.completed', {
+          toolUseId: 't1',
+          status: 'succeeded',
+          attachments: [
+            { kind: 'image', blockId: 'm1:0:0', mediaType: 'image/png', size: 12 },
+            { kind: 'link', uri: 'https://example.com', title: 'Example' },
+            { kind: 'unknown', type: 'resource' },
+            { type: 'noKindAtAll' },
+          ],
+        }),
+      );
+
+      expect(state.tools[0]?.attachments).toEqual([
+        { kind: 'image', blockId: 'm1:0:0', mediaType: 'image/png', size: 12 },
+        { kind: 'link', uri: 'https://example.com', title: 'Example' },
+        { kind: 'unknown', type: 'resource' },
+      ]);
+    });
+
+    it('a tool.completed with no attachments at all carries none', () => {
+      const started = fold(frame('tool.started', { toolUseId: 't1', ...aToolCall('Bash') }));
+      const state = readEvent(
+        started,
+        frame('tool.completed', { toolUseId: 't1', status: 'succeeded' }),
+      );
+
+      expect(state.tools[0]?.attachments).toBeUndefined();
+    });
+
     it('starts a tool that is started again once, in the timeline as in the tools', () => {
       const started = frame('tool.started', { toolUseId: 't1', ...aToolCall('Bash', {}) });
       const state = fold(started, started);
@@ -278,9 +347,21 @@ describe('the conversation reducer', () => {
       expect(state.timeline).toEqual([{ kind: 'tool', id: 't1' }]);
     });
 
-    it('ignores a start with no kind, or with no id — plan 28 B-18', () => {
-      expect(fold(frame('tool.started', { toolUseId: 't1' }))).toBe(SILENT);
-      expect(fold(frame('tool.started', { ...aToolCall('Bash') }))).toBe(SILENT);
+    it('draws the generic line for a start with no kind, or with no id — plan 28 B-18, U-09', () => {
+      const malformed = [
+        {
+          kind: 'notice',
+          id: 'malformed:tool.started',
+          reason: 'malformed',
+          level: 'notice',
+          text: null,
+          truncated: false,
+          parentToolUseId: null,
+        },
+      ];
+
+      expect(fold(frame('tool.started', { toolUseId: 't1' })).timeline).toEqual(malformed);
+      expect(fold(frame('tool.started', { ...aToolCall('Bash') })).timeline).toEqual(malformed);
     });
 
     it('keeps the kind, the label, the subject, the changes and the exact input — plan 28 B-18', () => {
@@ -405,9 +486,23 @@ describe('the conversation reducer', () => {
       expect(state.lastTurn?.costUsd).toBe('0.000000');
     });
 
-    it('ignores a turn missing its id or its duration', () => {
-      expect(fold(frame('turn.completed', { durationMs: 1 }))).toBe(SILENT);
-      expect(fold(frame('turn.completed', { turnId: 'a', costUsd: '1' }))).toBe(SILENT);
+    it('draws the generic line for a turn missing its id or its duration — U-09', () => {
+      const malformed = [
+        {
+          kind: 'notice',
+          id: 'malformed:turn.completed',
+          reason: 'malformed',
+          level: 'notice',
+          text: null,
+          truncated: false,
+          parentToolUseId: null,
+        },
+      ];
+
+      expect(fold(frame('turn.completed', { durationMs: 1 })).timeline).toEqual(malformed);
+      expect(fold(frame('turn.completed', { turnId: 'a', costUsd: '1' })).timeline).toEqual(
+        malformed,
+      );
     });
 
     it.each(['limitReached', 'budgetExceeded', 'failed'])(
@@ -540,13 +635,23 @@ describe('the conversation reducer', () => {
       ]);
     });
 
-    it('counts nothing a list does not carry, and reads no undo that names no point', () => {
+    it('counts nothing a list does not carry, and draws the generic line for an undo that names no point — U-09', () => {
       const counted = fold(frame('session.rewound', { promptId: 'p1', reverted: 'all' }));
       expect(counted.timeline).toEqual([
         { kind: 'rewound', id: 'f-session.rewound', restored: 0, kept: 0, failed: 0 },
       ]);
 
-      expect(fold(frame('session.rewound', { reverted: [] })).timeline).toEqual([]);
+      expect(fold(frame('session.rewound', { reverted: [] })).timeline).toEqual([
+        {
+          kind: 'notice',
+          id: 'malformed:session.rewound',
+          reason: 'malformed',
+          level: 'notice',
+          text: null,
+          truncated: false,
+          parentToolUseId: null,
+        },
+      ]);
     });
   });
 
@@ -556,7 +661,7 @@ describe('the conversation reducer', () => {
       const state = fold(compacted, compacted);
 
       expect(state.timeline).toEqual([
-        { kind: 'compacted', id: '7', trigger: 'manual', preTokens: 9000 },
+        { kind: 'compacted', id: '7', trigger: 'manual', preTokens: 9000, summary: null },
       ]);
     });
 
@@ -564,8 +669,82 @@ describe('the conversation reducer', () => {
       const state = fold(frame('session.compacted', {}));
 
       expect(state.timeline).toEqual([
-        { kind: 'compacted', id: 'f-session.compacted', trigger: 'auto', preTokens: null },
+        {
+          kind: 'compacted',
+          id: 'f-session.compacted',
+          trigger: 'auto',
+          preTokens: null,
+          summary: null,
+        },
       ]);
+    });
+
+    it('keys a compaction by its compactionId when the backend sends one — F3 · B-09, F5 · B-18', () => {
+      const state = fold(frame('session.compacted', { trigger: 'manual', compactionId: 'cx1' }));
+
+      expect(state.timeline).toEqual([
+        { kind: 'compacted', id: 'cx1', trigger: 'manual', preTokens: null, summary: null },
+      ]);
+    });
+
+    it(
+      "folds a message with injected.kind 'contextSummary' into the compaction it belongs to, " +
+        'never as a message bubble — B-21',
+      () => {
+        const state = fold(
+          frame('session.compacted', { trigger: 'auto', compactionId: 'cx1' }),
+          completed('s1', [{ type: 'text', text: 'what changed' }], {
+            injected: { kind: 'contextSummary' },
+          }),
+        );
+
+        expect(state.timeline).toEqual([
+          {
+            kind: 'compacted',
+            id: 'cx1',
+            trigger: 'auto',
+            preTokens: null,
+            summary: 'what changed',
+          },
+        ]);
+        expect(state.messages).toEqual([]);
+      },
+    );
+
+    it(
+      "an injected skill body ('instructions') draws its own line, nested under the tool, never " +
+        'a message bubble — B-21',
+      () => {
+        const state = fold(
+          completed('s1', [{ type: 'text', text: 'be concise' }], {
+            injected: { kind: 'instructions', name: 'pr-reviewer' },
+            parentToolUseId: 't1',
+          }),
+        );
+
+        expect(state.timeline).toEqual([
+          {
+            kind: 'injected',
+            id: 'message:s1',
+            injectedKind: 'instructions',
+            name: 'pr-reviewer',
+            parentToolUseId: 't1',
+          },
+        ]);
+        expect(state.messages).toEqual([]);
+      },
+    );
+
+    it('a commandExpansion message still shows as the person’s own prompt — B-21', () => {
+      const state = fold(
+        completed('s1', [{ type: 'text', text: '/review args' }], {
+          role: 'user',
+          injected: { kind: 'commandExpansion' },
+        }),
+      );
+
+      expect(state.messages).toHaveLength(1);
+      expect(state.messages[0]).toMatchObject({ text: '/review args', role: 'user' });
     });
   });
 
@@ -692,6 +871,260 @@ describe('the conversation reducer', () => {
         'u3:0',
       ]);
       expect(state.messages[0]?.text).toBe('AB');
+    });
+  });
+
+  describe('an event without a reader — plan 27, F1 · B-04', () => {
+    it('leaves the conversation unchanged for a type the contract classifies silent, and logs it', () => {
+      const debug = vi.spyOn(logger, 'debug');
+
+      const state = fold(frame('session.mcpStatusChanged', { servers: [] }));
+
+      expect(state).toEqual(SILENT);
+      expect(debug).toHaveBeenCalledWith(
+        { op: 'conversation.readEvent', type: 'session.mcpStatusChanged' },
+        'silent event, no reader',
+      );
+    });
+
+    it('draws the generic line for a type this build has never heard of, and logs it differently — U-06', () => {
+      const debug = vi.spyOn(logger, 'debug');
+
+      const state = fold(frame('session.inventedByAFutureBuild', {}));
+
+      expect(state.timeline).toEqual([
+        {
+          kind: 'notice',
+          id: 'unknown-event:session.inventedByAFutureBuild',
+          reason: 'unknownEvent',
+          detail: 'session.inventedByAFutureBuild',
+          level: 'notice',
+          text: null,
+          truncated: false,
+          parentToolUseId: null,
+        },
+      ]);
+      expect(debug).toHaveBeenCalledWith(
+        { op: 'conversation.readEvent', type: 'session.inventedByAFutureBuild' },
+        'unknown event, no reader',
+      );
+    });
+
+    it('shows the generic line for an unknown type only once per type, ever — U-06, D-02', () => {
+      const once = fold(
+        frame('session.inventedByAFutureBuild', {}),
+        frame('session.inventedByAFutureBuild', {}),
+        frame('session.inventedByAFutureBuild', {}),
+      );
+
+      expect(once.timeline).toHaveLength(1);
+    });
+
+    it('logs an event it does read, distinctly from the two cases above', () => {
+      const debug = vi.spyOn(logger, 'debug');
+
+      fold(delta('m1', 'hi'));
+
+      expect(debug).toHaveBeenCalledWith(
+        { op: 'conversation.readEvent', type: 'message.delta' },
+        'event read',
+      );
+    });
+  });
+
+  describe('session.notice — plan 27, F6 · B-19', () => {
+    function noticeFrame(extra: Record<string, unknown> = {}): Envelope {
+      return frame('session.notice', {
+        noticeId: 'n1',
+        kind: 'command.output',
+        level: 'info',
+        origin: { engine: 'claude', native: 'system:local_command_output' },
+        ...extra,
+      });
+    }
+
+    it('reads every known kind into its own timeline entry, keyed by noticeId, not seq — S-72', () => {
+      const state = fold(noticeFrame({ text: 'README.md' }));
+
+      expect(state.timeline).toEqual([
+        {
+          kind: 'notice',
+          id: 'notice:n1',
+          noticeKind: 'command.output',
+          level: 'info',
+          text: 'README.md',
+          truncated: false,
+          parentToolUseId: null,
+        },
+      ]);
+    });
+
+    it('carries the level the backend sent, whatever it is, defaulting an unknown one to notice — S-73', () => {
+      expect(fold(noticeFrame({ level: 'error' })).timeline[0]).toMatchObject({ level: 'error' });
+      expect(fold(noticeFrame({ level: 'something-new' })).timeline[0]).toMatchObject({
+        level: 'notice',
+      });
+    });
+
+    it('carries messageKey and params through untranslated — the client translates, not the reducer', () => {
+      const state = fold(
+        noticeFrame({
+          kind: 'model.switched',
+          messageKey: 'sessions.notice.modelSwitched',
+          params: { from: 'a', to: 'b', reason: 'refusal' },
+          text: undefined,
+        }),
+      );
+
+      expect(state.timeline[0]).toMatchObject({
+        messageKey: 'sessions.notice.modelSwitched',
+        params: { from: 'a', to: 'b', reason: 'refusal' },
+      });
+    });
+
+    it('draws by kind alone, never by origin.engine — S-76', () => {
+      const claude = fold(noticeFrame({ origin: { engine: 'claude', native: 'x' } }));
+      const other = fold(noticeFrame({ origin: { engine: 'other', native: 'y' } }));
+
+      expect(claude.timeline[0]).toMatchObject({ noticeKind: 'command.output' });
+      expect(other.timeline[0]).toMatchObject({ noticeKind: 'command.output' });
+    });
+
+    it('nests under its subagent by parentToolUseId, same as a tool or a message — S-75', () => {
+      const state = fold(noticeFrame({ parentToolUseId: 't1' }));
+
+      expect(state.timeline[0]).toMatchObject({ parentToolUseId: 't1' });
+    });
+
+    it('changes nothing without a noticeId — cannot be kept from duplicating on replay', () => {
+      expect(fold(noticeFrame({ noticeId: undefined }))).toBe(SILENT);
+    });
+
+    it('replaces rather than duplicates the same notice delivered twice — live, replay or history — S-77', () => {
+      const state = fold(noticeFrame(), noticeFrame());
+
+      expect(state.timeline).toHaveLength(1);
+    });
+
+    it('reads a kind this build has no line for as unknown, with the text if there is one — U-11', () => {
+      const state = fold(noticeFrame({ kind: 'a.future.kind', text: 'details' }));
+
+      expect(state.timeline[0]).toMatchObject({
+        noticeKind: 'a.future.kind',
+        reason: 'unknownNotice',
+        text: 'details',
+      });
+    });
+
+    it('collapses an unknown kind repeated in a row into one line with a counter, but not across a gap — S-86, S-87, D-12', () => {
+      const ten = fold(
+        ...Array.from({ length: 10 }, (_unused, i) =>
+          noticeFrame({ noticeId: `u${i}`, kind: 'unknown', text: 'same' }),
+        ),
+      );
+
+      expect(ten.timeline).toHaveLength(1);
+      expect(ten.timeline[0]).toMatchObject({ count: 10 });
+
+      const interleaved = fold(
+        noticeFrame({ noticeId: 'a1', kind: 'unknown', text: 'A' }),
+        noticeFrame({ noticeId: 'b1', kind: 'unknown', text: 'B' }),
+        noticeFrame({ noticeId: 'a2', kind: 'unknown', text: 'A' }),
+      );
+
+      expect(interleaved.timeline).toHaveLength(3);
+      expect(interleaved.timeline.every((entry) => !('count' in entry) || entry.count === 1)).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('the generic line in place of a known event this build could not use — plan 27, F6 · B-20', () => {
+    it('leaves the session status where it was, with a line naming the value — U-07', () => {
+      const started = fold(frame('session.statusChanged', { status: 'thinking' }));
+      const state = readEvent(
+        started,
+        frame('session.statusChanged', { status: 'a-future-status' }),
+      );
+
+      expect(state.status).toBe('thinking');
+      expect(state.timeline).toEqual([
+        {
+          kind: 'notice',
+          id: 'unknown-value:session.statusChanged:status',
+          reason: 'unknownValue',
+          detail: 'a-future-status',
+          level: 'notice',
+          text: null,
+          truncated: false,
+          parentToolUseId: null,
+        },
+      ]);
+    });
+
+    it('leaves a tool where it was, with a line naming the value — U-07', () => {
+      const started = fold(frame('tool.started', { toolUseId: 't1', ...aToolCall('Bash') }));
+      const state = readEvent(
+        started,
+        frame('tool.completed', { toolUseId: 't1', status: 'a-future-status' }),
+      );
+
+      expect(state.tools[0]?.status).toBe('running');
+      expect(state.timeline.map((entry) => entry.kind)).toEqual(['tool', 'notice']);
+    });
+
+    it('never closes the session on a reason this build does not recognise, but still says so', () => {
+      const state = readEvent(fold(), frame('session.closed', { reason: 'a-future-reason' }));
+
+      expect(state.status).not.toBe('closed');
+      expect(state.timeline[0]).toMatchObject({
+        reason: 'unknownValue',
+        detail: 'a-future-reason',
+      });
+    });
+  });
+
+  describe('turn error and the notice around it — plan 27, F6 · B-23', () => {
+    it('a turn that did not complete keeps its timeline entry, drawn in an error state (S-97)', () => {
+      const state = fold(
+        frame('turn.completed', { turnId: 't1', durationMs: 1, outcome: 'failed' }),
+      );
+
+      expect(state.timeline).toEqual([{ kind: 'turn', id: 't1' }]);
+      expect(state.turns[0]?.outcome).toBe('failed');
+    });
+
+    it('the turn.failed notice lands right after the turn, as its own entry — S-97', () => {
+      const state = fold(
+        frame('turn.completed', { turnId: 't1', durationMs: 1, outcome: 'failed' }),
+        frame('session.notice', {
+          noticeId: 'n1',
+          kind: 'turn.failed',
+          level: 'error',
+          origin: { engine: 'claude', native: 'result:error_during_execution' },
+          text: 'boom',
+        }),
+      );
+
+      expect(state.timeline.map((entry) => entry.kind)).toEqual(['turn', 'notice']);
+    });
+
+    it('a notice arriving between two deltas of the same message does not split the answer in two — S-101', () => {
+      const state = fold(
+        delta('m1', 'Hello'),
+        frame('session.notice', {
+          noticeId: 'n1',
+          kind: 'agent.info',
+          level: 'info',
+          origin: { engine: 'claude', native: 'system:informational' },
+          text: 'thinking out loud',
+        }),
+        delta('m1', ', world'),
+      );
+
+      expect(state.messages).toHaveLength(1);
+      expect(state.messages[0]?.text).toBe('Hello, world');
+      expect(state.timeline.map((entry) => entry.kind)).toEqual(['message', 'notice']);
     });
   });
 });

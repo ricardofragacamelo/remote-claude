@@ -5,6 +5,7 @@
   "description": "A tool is still running: how long it has been at it, from the engine. The text of the row is the client's, from the `label` of the `tool.started` with the same `toolUseId`.",
   "x-kind": "event",
   "x-type": "tool.progress",
+  "x-timeline": "conversation",
   "type": "object",
   "required": ["toolUseId", "chunk"],
   "properties": {

@@ -1,0 +1,108 @@
+{
+  "$comment": "Written by hand, not recorded — nothing provokes a model refusal on purpose (plan 27, D-09). See docs/plans/27-conversation-losses/F0-spike.md#b-02--fixtures-gravadas-.",
+  "name": "refusal-fallback-turn",
+  "why": "a refusal retried on a fallback model: the original model's answer is retracted (retracted_message_uuids) and the fallback's reply supersedes it — the shape B-12/B-23 read to remove the refused response from the screen",
+  "prompt": "Explain, in general terms, how a known class of software vulnerability works.",
+  "recordedAt": "2026-11-01",
+  "sdkVersion": "0.3.277",
+  "handWritten": true,
+  "counts": { "messages": 5, "preToolUse": 0, "canUseTool": 0 },
+  "preToolUse": [],
+  "canUseTool": [],
+  "stderr": [],
+  "messages": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/workspace",
+      "session_id": "b7f5a7f0-7a39-4b3a-9b7b-9b6c2f2d6a11",
+      "tools": ["Bash", "Read", "Write"],
+      "mcp_servers": [],
+      "model": "claude-opus-5-5",
+      "permissionMode": "default",
+      "slash_commands": [],
+      "uuid": "1f1a0a9a-9f3a-4a1a-8a0a-0a1a2a3a4a5a"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Explain, in general terms, how a known class of software vulnerability works."
+      },
+      "parent_tool_use_id": null,
+      "uuid": "2c2b1b8b-1b2b-4b3b-8b4b-5b6b7b8b9b0b",
+      "session_id": "b7f5a7f0-7a39-4b3a-9b7b-9b6c2f2d6a11"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "id": "msg_refused_01",
+        "model": "claude-opus-5-5",
+        "role": "assistant",
+        "type": "message",
+        "content": [{ "type": "text", "text": "I can't help with that specific" }],
+        "stop_reason": "refusal",
+        "stop_sequence": null,
+        "usage": { "input_tokens": 18, "output_tokens": 6 }
+      },
+      "parent_tool_use_id": null,
+      "uuid": "3d3c2c7c-2c3c-4c4c-7c5c-6c7c8c9c0c1c",
+      "session_id": "b7f5a7f0-7a39-4b3a-9b7b-9b6c2f2d6a11"
+    },
+    {
+      "type": "system",
+      "subtype": "model_refusal_fallback",
+      "trigger": "refusal",
+      "direction": "retry",
+      "scope": "session",
+      "original_model": "claude-opus-5-5",
+      "fallback_model": "claude-sonnet-5-5",
+      "request_id": "req_019f2a3b4c5d6e7f8081",
+      "api_refusal_category": "cyber",
+      "api_refusal_explanation": "the request touched a restricted topic under the primary model's policy",
+      "retracted_message_uuids": ["3d3c2c7c-2c3c-4c4c-7c5c-6c7c8c9c0c1c"],
+      "refused_user_message_uuid": "2c2b1b8b-1b2b-4b3b-8b4b-5b6b7b8b9b0b",
+      "content": "Retrying on a fallback model after a refusal.",
+      "uuid": "4e4d3d6d-3d4d-4d5d-6d6d-7d8d9d0d1d2d",
+      "session_id": "b7f5a7f0-7a39-4b3a-9b7b-9b6c2f2d6a11"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "id": "msg_fallback_01",
+        "model": "claude-sonnet-5-5",
+        "role": "assistant",
+        "type": "message",
+        "content": [
+          {
+            "type": "text",
+            "text": "In general terms, this class of vulnerability happens when untrusted input is used without validation, letting an attacker influence behaviour the program did not intend."
+          }
+        ],
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "usage": { "input_tokens": 24, "output_tokens": 32 }
+      },
+      "supersedes": ["3d3c2c7c-2c3c-4c4c-7c5c-6c7c8c9c0c1c"],
+      "parent_tool_use_id": null,
+      "uuid": "5f5e4e5e-4e5e-4e6e-5e7e-8e9e0e1e2e3e",
+      "session_id": "b7f5a7f0-7a39-4b3a-9b7b-9b6c2f2d6a11"
+    },
+    {
+      "type": "result",
+      "subtype": "success",
+      "is_error": false,
+      "duration_ms": 4200,
+      "duration_api_ms": 3100,
+      "num_turns": 1,
+      "stop_reason": null,
+      "result": "In general terms, this class of vulnerability happens when untrusted input is used without validation, letting an attacker influence behaviour the program did not intend.",
+      "total_cost_usd": 0.012,
+      "usage": { "input_tokens": 42, "output_tokens": 38 },
+      "modelUsage": {},
+      "permission_denials": [],
+      "uuid": "6060f0f0-5f6f-4f7f-6f8f-9f0f1f2f3f4f",
+      "session_id": "b7f5a7f0-7a39-4b3a-9b7b-9b6c2f2d6a11"
+    }
+  ]
+}

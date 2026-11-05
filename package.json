@@ -29,6 +29,7 @@
     "transcript:follow-bench": "node scripts/transcript-follow-bench.mjs",
     "spike:claude-config": "node scripts/claude-config-spike.mjs",
     "spike:conversation-parity": "node scripts/conversation-parity-spike.mjs",
+    "spike:conversation-losses": "node scripts/conversation-losses-spike.mjs",
     "i18n:check": "node scripts/i18n-check.mjs",
     "scan:secrets": "node scripts/secrets-scan.mjs",
     "scan:security": "node scripts/scan-security.mjs",
@@ -76,7 +77,7 @@
   },
   "pnpm": {
     "overrides": {
-      "multer": ">=2.4.0",
+      "multer": ">=2.5.0",
       "dompurify": ">=3.4.17",
       "katex": "^0.18.2",
       "brace-expansion@1": "^1.1.21",
@@ -85,7 +86,17 @@
       "@grpc/grpc-js": "^1.14.5",
       "vite": ">=8.3.3",
       "@vitest/mocker": ">=4.1.12",
-      "ip-address": ">=10.7.4"
+      "ip-address": ">=10.7.4",
+      "body-parser": ">=2.4.0",
+      "undici": ">=8.12.2",
+      "seroval": ">=1.6.8",
+      "fast-uri": ">=3.1.9",
+      "qs": ">=6.16.1",
+      "zod": ">=4.6.6",
+      "glob": ">=14.0.2",
+      "@eslint/config-array>minimatch": ">=11.0.1",
+      "eslint>minimatch": ">=11.0.1",
+      "@typescript-eslint/typescript-estree>minimatch": ">=11.0.1"
     }
   }
 }

@@ -50,6 +50,7 @@ const List<String> frameTypes = <String>[
   'session.commandsChanged',
   'session.compacted',
   'session.mcpStatusChanged',
+  'session.notice',
   'session.rewound',
   'session.started',
   'session.statusChanged',
@@ -63,6 +64,25 @@ const List<String> frameTypes = <String>[
   'workspace.filesChanged',
   'workspace.watchStopped',
   'permission.resolve',
+];
+
+/// Every event's `type` that is screen state, never the conversation's timeline (plan 27, D-02).
+const List<String> silentEventTypes = <String>[
+  'diag.pong',
+  'permission.extended',
+  'permission.resolved',
+  'prompt.dequeued',
+  'prompt.queued',
+  'session.closed',
+  'session.commandsChanged',
+  'session.mcpStatusChanged',
+  'session.started',
+  'session.statusChanged',
+  'session.tasksChanged',
+  'transcript.appended',
+  'transcript.reset',
+  'workspace.filesChanged',
+  'workspace.watchStopped',
 ];
 
 /// `kind` of a command.accepted frame.
@@ -316,6 +336,12 @@ const String sessionMcpStatusChangedKind = 'event';
 
 /// `type` of a session.mcpStatusChanged frame.
 const String sessionMcpStatusChangedType = 'session.mcpStatusChanged';
+
+/// `kind` of a session.notice frame.
+const String sessionNoticeKind = 'event';
+
+/// `type` of a session.notice frame.
+const String sessionNoticeType = 'session.notice';
 
 /// `kind` of a session.rewound frame.
 const String sessionRewoundKind = 'event';
@@ -1922,6 +1948,51 @@ class ModelCheckOutcome {
       'reason': reason,
       'at': at,
     };
+
+    return json;
+  }
+}
+
+/// What a `session.notice` is about, normalised by the adapter of the engine so that a client reads it the same whatever engine made it. Every field is optional, and a `kind` sets the ones it has: the command of a `command.output`, the hook of a `hook.failed`.
+class NoticeSubject {
+  const NoticeSubject({
+    this.command,
+    this.hook,
+    this.trigger,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory NoticeSubject.fromJson(Map<String, Object?> json) => NoticeSubject(
+        command: json['command'] as String?,
+        hook: json['hook'] as String?,
+        trigger: json['trigger'] as String?,
+      );
+
+  /// The slash command a `command.output` answers, as typed — `/cost`.
+  final String? command;
+
+  /// The name of the automation a `hook.failed` names.
+  final String? hook;
+
+  /// What ran the hook — `beforeTool`, `afterTool`, and whatever the engine's own events name.
+  final String? trigger;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+    };
+
+    if (command != null) {
+      json['command'] = command;
+    }
+
+    if (hook != null) {
+      json['hook'] = hook;
+    }
+
+    if (trigger != null) {
+      json['trigger'] = trigger;
+    }
 
     return json;
   }
@@ -4095,6 +4166,39 @@ class MessageCompletedPayloadContentItem {
   }
 }
 
+/// Set when the agent put this message in the conversation itself — never the person's own prompt, and never replayed to the model as one. A skill's body, a slash command's expansion, a compaction summary (plan 27, discovery §5).
+class MessageCompletedPayloadInjected {
+  const MessageCompletedPayloadInjected({
+    required this.kind,
+    this.name,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory MessageCompletedPayloadInjected.fromJson(Map<String, Object?> json) => MessageCompletedPayloadInjected(
+        kind: json['kind']! as String,
+        name: json['name'] as String?,
+      );
+
+  /// `instructions` — a skill's body; `commandExpansion` — a project command's prompt; `contextSummary` — a compaction's summary; `other` — injected, but none of the above.
+  final String kind;
+
+  /// The skill or command named, when `kind` has one.
+  final String? name;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kind': kind,
+    };
+
+    if (name != null) {
+      json['name'] = name;
+    }
+
+    return json;
+  }
+}
+
 /// A message is finished, with its content as blocks. It supersedes whatever the deltas of the same `messageId` accumulated — a client that missed a delta is made whole here.
 class MessageCompletedPayload {
   const MessageCompletedPayload({
@@ -4104,6 +4208,7 @@ class MessageCompletedPayload {
     required this.content,
     this.at,
     this.parentToolUseId,
+    this.injected,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -4114,6 +4219,7 @@ class MessageCompletedPayload {
         content: (json['content']! as List<Object?>).map((item) => MessageCompletedPayloadContentItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         at: json['at'] as String?,
         parentToolUseId: json['parentToolUseId'] as String?,
+        injected: json['injected'] == null ? null : MessageCompletedPayloadInjected.fromJson(json['injected']! as Map<String, Object?>),
       );
 
   final String messageId;
@@ -4131,6 +4237,9 @@ class MessageCompletedPayload {
 
   /// Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation.
   final String? parentToolUseId;
+
+  /// Set when the agent put this message in the conversation itself — never the person's own prompt, and never replayed to the model as one. A skill's body, a slash command's expansion, a compaction summary (plan 27, discovery §5).
+  final MessageCompletedPayloadInjected? injected;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -4150,6 +4259,10 @@ class MessageCompletedPayload {
 
     if (parentToolUseId != null) {
       json['parentToolUseId'] = parentToolUseId;
+    }
+
+    if (injected != null) {
+      json['injected'] = injected?.toJson();
     }
 
     return json;
@@ -4774,12 +4887,14 @@ class SessionCompactedPayload {
   const SessionCompactedPayload({
     required this.trigger,
     this.preTokens,
+    this.compactionId,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory SessionCompactedPayload.fromJson(Map<String, Object?> json) => SessionCompactedPayload(
         trigger: json['trigger']! as String,
         preTokens: json['preTokens'] as int?,
+        compactionId: json['compactionId'] as String?,
       );
 
   /// `manual` — somebody sent `/compact`; `auto` — the context was full and the agent compacted it.
@@ -4787,6 +4902,9 @@ class SessionCompactedPayload {
 
   /// How many tokens the context held before, when the engine says.
   final int? preTokens;
+
+  /// Stable live and in the history — what lets a client tell two compactions of the same conversation apart (plan 27, F3 · B-09). Absent on a server older than it.
+  final String? compactionId;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -4796,6 +4914,10 @@ class SessionCompactedPayload {
 
     if (preTokens != null) {
       json['preTokens'] = preTokens;
+    }
+
+    if (compactionId != null) {
+      json['compactionId'] = compactionId;
     }
 
     return json;
@@ -4890,6 +5012,124 @@ class SessionMcpStatusChangedPayload {
 /// Whether [json] keeps within the bounds the schema gives [SessionMcpStatusChangedPayload].
 bool sessionMcpStatusChangedPayloadLimitsHold(Map<String, Object?> json) {
   if (json['servers'] is List<Object?> && (json['servers']! as List<Object?>).length > 64) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Something the agent, a hook or a command said that is not a message, a tool or a turn — a warning, a banner, an automation failing, a retry. One event covers every such case (plan 27): the adapter of the engine picks the `kind`, never the client. Carried in the replay and in the history (`transcript.appended`), the same as any other event of the conversation.
+class SessionNoticePayload {
+  const SessionNoticePayload({
+    required this.noticeId,
+    required this.kind,
+    required this.level,
+    this.messageKey,
+    this.params,
+    this.text,
+    this.truncated,
+    this.subject,
+    required this.origin,
+    this.parentToolUseId,
+    this.at,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SessionNoticePayload.fromJson(Map<String, Object?> json) => SessionNoticePayload(
+        noticeId: json['noticeId']! as String,
+        kind: json['kind']! as String,
+        level: json['level']! as String,
+        messageKey: json['messageKey'] as String?,
+        params: json['params'] as Map<String, Object?>?,
+        text: json['text'] as String?,
+        truncated: json['truncated'] as bool?,
+        subject: json['subject'] == null ? null : NoticeSubject.fromJson(json['subject']! as Map<String, Object?>),
+        origin: EngineOrigin.fromJson(json['origin']! as Map<String, Object?>),
+        parentToolUseId: json['parentToolUseId'] as String?,
+        at: json['at'] as String?,
+      );
+
+  /// Stable live and in the history — the id the engine itself gave the message, when it has one. What lets a client replace a notice rather than duplicate it.
+  final String noticeId;
+
+  /// The canonical kind of the notice, decided by the adapter of the engine: `command.output`, `agent.info`, `agent.notification`, `agent.stopping`, `model.switched`, `model.refused`, `request.retrying`, `usage.limited`, `turn.failed`, `compaction.failed`, `auth.failed`, `unknown`. **Open**: a kind the client does not know is drawn as the generic line, never an error (ADR-025).
+  final String kind;
+
+  /// How prominent the line reads. Not the same scale as a tool's `status` or a turn's `outcome` — a notice is never itself succeeded or failed.
+  final String level;
+
+  /// Set when the text is ours: an i18n key the client translates (`sessions.notice.modelSwitched`), paired with `params`. Mutually exclusive with `text` in practice — a notice carries one or the other, never both.
+  final String? messageKey;
+
+  /// The parameters `messageKey` takes — in the domain each value is a string, a number or a boolean; the generator's open-object subset cannot bound the value type further, so this is carried as a generic open object. Absent without a `messageKey`.
+  final Map<String, Object?>? params;
+
+  /// Set when the text is the agent's, a hook's or a command's own — never ours to translate, and never trusted: shown as plain text, cut to `maxLength` with `truncated: true` when it was. Mutually exclusive with `messageKey` in practice.
+  final String? text;
+
+  /// Set when `text` was cut to fit the limit. Absent otherwise, and absent without `text`.
+  final bool? truncated;
+
+  /// What the notice is about, normalised — the command, the hook, what ran it.
+  final NoticeSubject? subject;
+
+  /// The engine and its own, opaque name for whatever this notice came from — diagnosis, and the text of a `kind: 'unknown'` line.
+  final EngineOrigin origin;
+
+  /// Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation.
+  final String? parentToolUseId;
+
+  /// When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. Absent live, where the frame's `ts` is the clock.
+  final String? at;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'noticeId': noticeId,
+      'kind': kind,
+      'level': level,
+      'origin': origin.toJson(),
+    };
+
+    if (messageKey != null) {
+      json['messageKey'] = messageKey;
+    }
+
+    if (params != null) {
+      json['params'] = params;
+    }
+
+    if (text != null) {
+      json['text'] = text;
+    }
+
+    if (truncated != null) {
+      json['truncated'] = truncated;
+    }
+
+    if (subject != null) {
+      json['subject'] = subject?.toJson();
+    }
+
+    if (parentToolUseId != null) {
+      json['parentToolUseId'] = parentToolUseId;
+    }
+
+    if (at != null) {
+      json['at'] = at;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SessionNoticePayload].
+bool sessionNoticePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['kind'] is String && (json['kind']! as String).length > 64) {
+    return false;
+  }
+
+  if (json['text'] is String && (json['text']! as String).length > 4000) {
     return false;
   }
 
@@ -5334,6 +5574,92 @@ bool toolCompletedPayloadQuestionLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+class ToolCompletedPayloadAttachmentsItem {
+  const ToolCompletedPayloadAttachmentsItem({
+    required this.kind,
+    this.blockId,
+    this.mediaType,
+    this.size,
+    this.uri,
+    this.title,
+    this.type,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory ToolCompletedPayloadAttachmentsItem.fromJson(Map<String, Object?> json) => ToolCompletedPayloadAttachmentsItem(
+        kind: json['kind']! as String,
+        blockId: json['blockId'] as String?,
+        mediaType: json['mediaType'] as String?,
+        size: json['size'] as int?,
+        uri: json['uri'] as String?,
+        title: json['title'] as String?,
+        type: json['type'] as String?,
+      );
+
+  /// `image`, `link`, or `unknown` for anything else the engine's result carried. **Open**: a kind the client does not know draws as `unknown`, never an error.
+  final String kind;
+
+  /// On `image`: fetched by `GET /transcripts/:engine/:id/images/:blockId`, the same route a prompt's image uses.
+  final String? blockId;
+
+  /// On `image`: as the engine declared it (`image/png`, …). Absent when it declared none.
+  final String? mediaType;
+
+  /// On `image`: the size in bytes, decoded. Absent when the engine did not say.
+  final int? size;
+
+  /// On `link`: the address, shown as text with the link confirmation — `javascript:` and `data:` never become a link (F6).
+  final String? uri;
+
+  /// On `link`: a label for it, when the engine gave one.
+  final String? title;
+
+  /// On `unknown`: the engine's own, opaque name for what this was.
+  final String? type;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kind': kind,
+    };
+
+    if (blockId != null) {
+      json['blockId'] = blockId;
+    }
+
+    if (mediaType != null) {
+      json['mediaType'] = mediaType;
+    }
+
+    if (size != null) {
+      json['size'] = size;
+    }
+
+    if (uri != null) {
+      json['uri'] = uri;
+    }
+
+    if (title != null) {
+      json['title'] = title;
+    }
+
+    if (type != null) {
+      json['type'] = type;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ToolCompletedPayloadAttachmentsItem].
+bool toolCompletedPayloadAttachmentsItemLimitsHold(Map<String, Object?> json) {
+  if (json['kind'] is String && (json['kind']! as String).length > 32) {
+    return false;
+  }
+
+  return true;
+}
+
 /// A tool invocation ended, from the result the engine reported. It carries no `kind` nor `label`: the `tool.started` of the same `toolUseId` always came first, live and in the history, and the client has them from it (plan 28, D-28).
 class ToolCompletedPayload {
   const ToolCompletedPayload({
@@ -5343,6 +5669,7 @@ class ToolCompletedPayload {
     this.parentToolUseId,
     this.at,
     this.question,
+    this.attachments,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -5353,6 +5680,7 @@ class ToolCompletedPayload {
         parentToolUseId: json['parentToolUseId'] as String?,
         at: json['at'] as String?,
         question: json['question'] == null ? null : ToolCompletedPayloadQuestion.fromJson(json['question']! as Map<String, Object?>),
+        attachments: json['attachments'] == null ? null : (json['attachments']! as List<Object?>).map((item) => ToolCompletedPayloadAttachmentsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
       );
 
   final String toolUseId;
@@ -5371,6 +5699,9 @@ class ToolCompletedPayload {
 
   /// On an `AskUserQuestion` of the **history** (`transcript.appended`, the follower): the questions, normalised, and how they ended — joined by `toolUseId` with what the backend recorded. Live, a screen already has the `permission.requested` and `permission.resolved`, and this is absent.
   final ToolCompletedPayloadQuestion? question;
+
+  /// Media the result carried besides its text — never raw bytes on the wire. The `summary` already has the text; this is what the text cannot be.
+  final List<ToolCompletedPayloadAttachmentsItem>? attachments;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -5395,8 +5726,21 @@ class ToolCompletedPayload {
       json['question'] = question?.toJson();
     }
 
+    if (attachments != null) {
+      json['attachments'] = attachments?.map((item) => item.toJson()).toList(growable: false);
+    }
+
     return json;
   }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [ToolCompletedPayload].
+bool toolCompletedPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['attachments'] is List<Object?> && (json['attachments']! as List<Object?>).length > 16) {
+    return false;
+  }
+
+  return true;
 }
 
 /// A tool is still running: how long it has been at it, from the engine. The text of the row is the client's, from the `label` of the `tool.started` with the same `toolUseId`.
@@ -5788,7 +6132,7 @@ class TurnCompletedPayload {
 
   final String turnId;
 
-  /// How the turn ended — never the engine's own name for it (ADR-025). `completed` is the only one `usage`/`costUsd` describe a turn that actually ran to the end; the other three still carry whatever the engine reports for them, which a crash may leave zeroed. A subtype the adapter does not know is `failed`.
+  /// How the turn ended — never the engine's own name for it (ADR-025). `completed` is the only one `usage`/`costUsd` describe a turn that actually ran to the end; the other four still carry whatever the engine reports for them, which a crash may leave zeroed. `cancelled` is a person stopping the turn, never an error (plan 27, B-10). A subtype the adapter does not know is `failed`.
   final String outcome;
 
   /// Who sent the prompt this turn answered.

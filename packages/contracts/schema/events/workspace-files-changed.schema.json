@@ -5,6 +5,7 @@
   "description": "What changed on disk in a folder being followed, coalesced. The frame's `seq` belongs to the subscription, not to any session: monotonic per `watchId`, from 1, and never replayed. A client that is not following this `watchId` — the mobile app never asks to — ignores it, and never lets its `seq` move the resume point of a session.",
   "x-kind": "event",
   "x-type": "workspace.filesChanged",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["watchId", "changes"],
   "properties": {

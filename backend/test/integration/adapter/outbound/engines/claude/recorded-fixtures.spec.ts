@@ -45,6 +45,10 @@ const PANEL_TURNS = [
   'explanatory-style-turn',
   'mcp-untitled-tool-turn',
   'subagent-permission-turn',
+  // Plan 27, F0 · B-02 — the fixtures the discovery 01 §13 spike asked for (S-03).
+  'hook-message-turn',
+  'denied-by-rule-turn',
+  'mcp-media-result-turn',
 ];
 
 /** How many `tool_use` blocks the model emitted in a recording. */
@@ -94,6 +98,46 @@ describe('the recorded fixtures of the Agent SDK', () => {
         expect(text).not.toContain(homedir());
       },
     );
+
+    const HAND_WRITTEN = ['refusal-fallback-turn.json', 'unknown-variant-turn.json'];
+
+    it.each(files.filter((file) => !HAND_WRITTEN.includes(file)))(
+      '%s is a capture, not one of the fixtures nothing can provoke on purpose (plan 27, D-09; F7 · B-25/B-26)',
+      (file) => {
+        expect(
+          (JSON.parse(readFileSync(path.join(DIRECTORY, file), 'utf8')) as { handWritten?: true })
+            .handWritten,
+        ).toBeUndefined();
+      },
+    );
+
+    it('refusal-fallback-turn is marked hand-written, so the suite never mistakes it for a capture of the real SDK', () => {
+      const fixture = loadFixture('refusal-fallback-turn');
+
+      expect(fixture.handWritten).toBe(true);
+      expect(
+        fixture.messages.some(
+          (message) =>
+            message.type === 'system' &&
+            'subtype' in message &&
+            message.subtype === 'model_refusal_fallback',
+        ),
+      ).toBe(true);
+    });
+
+    it('unknown-variant-turn is marked hand-written, and carries a system subtype this build has never seen (plan 27, F8 · B-25/B-26)', () => {
+      const fixture = loadFixture('unknown-variant-turn');
+
+      expect(fixture.handWritten).toBe(true);
+      expect(
+        fixture.messages.some(
+          (message) =>
+            message.type === 'system' &&
+            'subtype' in message &&
+            (message.subtype as string) === 'nunca_visto',
+        ),
+      ).toBe(true);
+    });
   });
 
   describe('the asymmetry they carry — S-90', () => {

@@ -5,6 +5,7 @@
   "description": "A subscription ended without the client asking: nothing more arrives for this `watchId`. The client says so where the folder is shown, and watches again only when the reason allows.",
   "x-kind": "event",
   "x-type": "workspace.watchStopped",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["watchId", "reason"],
   "properties": {

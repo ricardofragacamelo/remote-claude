@@ -84,6 +84,7 @@ describe('buildModel', () => {
         title: 'Thing',
         'x-kind': 'event',
         'x-type': 'thing.happened',
+        'x-timeline': 'silent',
         type: 'object',
         properties: { inner: { type: 'object', properties: { a: { type: 'string' } } } },
       }),
@@ -112,6 +113,7 @@ describe('buildModel', () => {
         frame: true,
         description: '',
         payload: 'ConnectionReadyPayload',
+        timeline: null,
       },
     ]);
   });
@@ -138,6 +140,7 @@ describe('buildModel', () => {
         frame: false,
         description: '',
         payload: 'DeviceRegisterPayload',
+        timeline: null,
       },
     ]);
     expect(model.interfaces.map((declaration) => declaration.name)).toContain(
@@ -198,6 +201,79 @@ describe('buildModel', () => {
     expect(() =>
       buildModel(envelope(), [message({ title: 'Thing', 'x-kind': 'command', type: 'object' })]),
     ).toThrow(/needs an `x-type`/);
+  });
+
+  // Plan 27, F1 — every event needs exactly one timeline class (D-02, S-05, S-06).
+  it('refuses an event with no x-timeline at all', () => {
+    expect(() =>
+      buildModel(envelope(), [
+        message({ title: 'Thing', 'x-kind': 'event', 'x-type': 'thing.happened', type: 'object' }),
+      ]),
+    ).toThrow(/needs an `x-timeline` of exactly one of conversation, silent/);
+  });
+
+  it('refuses an event classified as neither conversation nor silent', () => {
+    expect(() =>
+      buildModel(envelope(), [
+        message({
+          title: 'Thing',
+          'x-kind': 'event',
+          'x-type': 'thing.happened',
+          'x-timeline': 'both',
+          type: 'object',
+        }),
+      ]),
+    ).toThrow(/needs an `x-timeline` of exactly one of conversation, silent/);
+  });
+
+  it('refuses an event classified in both classes at once, same as any other invalid value', () => {
+    expect(() =>
+      buildModel(envelope(), [
+        message({
+          title: 'Thing',
+          'x-kind': 'event',
+          'x-type': 'thing.happened',
+          'x-timeline': ['conversation', 'silent'],
+          type: 'object',
+        }),
+      ]),
+    ).toThrow(/needs an `x-timeline` of exactly one of conversation, silent/);
+  });
+
+  it('accepts an event classified conversation or silent, and reads it onto the message', () => {
+    const model = buildModel(envelope(), [
+      message({
+        title: 'Thing',
+        'x-kind': 'event',
+        'x-type': 'thing.happened',
+        'x-timeline': 'conversation',
+        type: 'object',
+      }),
+    ]);
+
+    expect(model.messages[0]?.timeline).toBe('conversation');
+  });
+
+  it('refuses x-timeline on anything that is not an event', () => {
+    expect(() =>
+      buildModel(envelope(), [
+        message({
+          title: 'Thing',
+          'x-kind': 'command',
+          'x-type': 'thing.do',
+          'x-timeline': 'conversation',
+          type: 'object',
+        }),
+      ]),
+    ).toThrow(/is not an event — `x-timeline` means nothing here/);
+  });
+
+  it('leaves timeline null for every frame kind that is not an event', () => {
+    const model = buildModel(envelope(), [
+      message({ title: 'Thing', 'x-kind': 'command', 'x-type': 'thing.do', type: 'object' }),
+    ]);
+
+    expect(model.messages[0]?.timeline).toBeNull();
   });
 
   it('refuses a message with no title, which is what every generated name comes from', () => {

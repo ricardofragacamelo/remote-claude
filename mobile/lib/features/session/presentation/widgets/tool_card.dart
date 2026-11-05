@@ -9,6 +9,7 @@
 /// timeline keeps, then the whole output, asked for once).
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -18,12 +19,15 @@ import 'package:remote_claude/core/conversation/conversation_key.dart';
 import 'package:remote_claude/core/conversation/tool_call.dart';
 import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/theme/app_theme.dart';
+import 'package:remote_claude/core/widgets/markdown/open_link.dart';
+import 'package:remote_claude/core/widgets/markdown/resolve_relative_link.dart';
 import 'package:remote_claude/core/widgets/scrolling_box.dart';
 import 'package:remote_claude/features/permission/permission.dart';
 import 'package:remote_claude/features/session/domain/entities/conversation.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
 import 'package:remote_claude/features/session/presentation/providers/transcript_content_controllers.dart';
 import 'package:remote_claude/features/session/presentation/widgets/fold_line.dart';
+import 'package:remote_claude/features/session/presentation/widgets/image_marker.dart';
 import 'package:remote_claude/features/session/presentation/widgets/tool_diff_view.dart';
 import 'package:remote_claude/features/session/presentation/widgets/tool_label.dart';
 import 'package:remote_claude/features/session/presentation/widgets/tool_output_view.dart';
@@ -120,16 +124,22 @@ class _ToolCardState extends ConsumerState<ToolCard> {
                   _ToolDetails(
                     tool: tool,
                     sessionId: widget.sessionId,
+                    conversationKey: conversationKey,
                     nested: widget.nested,
-                    said: ToolOutputView(
-                      tool: tool,
-                      result: result,
-                      onRetry: () => ref
-                          .read(
-                            toolResultControllerProvider(conversationKey!, tool.toolUseId).notifier,
-                          )
-                          .retry(),
-                    ),
+                    said: tool.status == ToolStatus.denied
+                        ? _DeniedLine(reason: tool.summary)
+                        : ToolOutputView(
+                            tool: tool,
+                            result: result,
+                            onRetry: () => ref
+                                .read(
+                                  toolResultControllerProvider(
+                                    conversationKey!,
+                                    tool.toolUseId,
+                                  ).notifier,
+                                )
+                                .retry(),
+                          ),
                   ),
               ],
             )
@@ -257,6 +267,7 @@ class _ToolDetails extends StatelessWidget {
     required this.tool,
     required this.said,
     this.sessionId,
+    this.conversationKey,
     this.nested = const <Widget>[],
   });
 
@@ -268,6 +279,9 @@ class _ToolDetails extends StatelessWidget {
   /// The live session the diff route reads — `null` reading the history, or for a call the fold
   /// still carries (its diff is only ever asked for once the call has finished).
   final String? sessionId;
+
+  /// The conversation an image attachment is read from (plan 27, F6 · B-22) — `null` without one.
+  final ConversationKey? conversationKey;
 
   /// A subagent's own entries, already drawn, when [tool] opened one (plan 26, B-19). Empty
   /// otherwise.
@@ -282,6 +296,10 @@ class _ToolDetails extends StatelessWidget {
     final Widget? diff = _diffOf();
     final Widget? children = nested.isEmpty ? null : _SubagentChildren(entries: nested);
 
+    final Widget? attachments = tool.attachments.isEmpty
+        ? null
+        : _AttachmentsView(attachments: tool.attachments, conversationKey: conversationKey);
+
     if (command == null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,6 +311,7 @@ class _ToolDetails extends StatelessWidget {
             ),
           ),
           said,
+          ?attachments,
           ?diff,
           ?_trailLink(context),
           ?children,
@@ -311,6 +330,7 @@ class _ToolDetails extends StatelessWidget {
         // A command still running has said nothing yet — only the elapsed time moves (B-14).
         if (tool.status != ToolStatus.running)
           _Side(tag: l10n.sessionToolRowOut, label: l10n.sessionToolRowOutput, child: said),
+        ?attachments,
         ?_trailLink(context),
         ?children,
       ],
@@ -398,6 +418,121 @@ class _SubagentChildren extends StatelessWidget {
 
 /// One side of a shell call — what went in, what came out — under its tag, as the agent's terminal
 /// does.
+/// The tool the CLI refused, and why (plan 27, F6 · B-22) — never drawn as a failure, which is the
+/// engine's own doing, not a human's.
+class _DeniedLine extends StatelessWidget {
+  const _DeniedLine({required this.reason});
+
+  final String? reason;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    AppLocalizations.of(context).sessionToolRowDenied(reason ?? ''),
+    style: Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error),
+  );
+}
+
+/// The media and the links a tool's result carried besides its text (plan 27, F6 · B-22).
+class _AttachmentsView extends StatelessWidget {
+  const _AttachmentsView({required this.attachments, this.conversationKey});
+
+  final List<ToolAttachment> attachments;
+  final ConversationKey? conversationKey;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      for (final ToolAttachment attachment in attachments)
+        Padding(
+          padding: const EdgeInsets.only(top: Tokens.spaceSm),
+          child: switch (attachment) {
+            ImageAttachment() => ImageMarker(
+              image: PromptImage(
+                blockId: attachment.blockId,
+                mediaType: attachment.mediaType,
+                size: attachment.size,
+              ),
+              conversationKey: conversationKey,
+            ),
+            LinkAttachment() => _LinkAttachmentView(attachment: attachment),
+            UnknownAttachment() => _UnknownAttachmentView(attachment: attachment),
+          },
+        ),
+    ],
+  );
+}
+
+/// A `link` attachment: plain text when there is nothing safe to open, or when there is no `uri`
+/// at all — a title alone names something, it does not open it. A safe one asks before it leaves
+/// the app, the plan-25 confirmation the markdown reader's own external link shows.
+class _LinkAttachmentView extends StatelessWidget {
+  const _LinkAttachmentView({required this.attachment});
+
+  final LinkAttachment attachment;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String? uri = attachment.uri;
+    final String label = attachment.title ?? uri ?? l10n.sessionToolRowAttachmentLink;
+
+    if (uri == null) {
+      return Text(label, style: Theme.of(context).textTheme.bodySmall);
+    }
+
+    final Uri? address = Uri.tryParse(uri);
+    final LinkTarget target = address != null && _safeSchemes.contains(address.scheme.toLowerCase())
+        ? OutsideLink(address)
+        : const Refused(RefusedLink.scheme);
+
+    if (target is Refused) {
+      return Text(label, style: Theme.of(context).textTheme.bodySmall);
+    }
+
+    return InkWell(
+      onTap: () => unawaited(openNonFileLink(context, target)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.open_in_new,
+            size: Tokens.spaceMd,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const Set<String> _safeSchemes = <String>{'http', 'https', 'mailto'};
+
+/// An attachment of a kind this build does not know (B-20's own survival rule, reused here).
+class _UnknownAttachmentView extends StatelessWidget {
+  const _UnknownAttachmentView({required this.attachment});
+
+  final UnknownAttachment attachment;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    AppLocalizations.of(context).sessionMessageUnknownBlock(attachment.type ?? ''),
+    style: mutedBodyStyle(context),
+  );
+}
+
 class _Side extends StatelessWidget {
   const _Side({required this.tag, required this.label, required this.child});
 

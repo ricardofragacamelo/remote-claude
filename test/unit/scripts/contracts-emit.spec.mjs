@@ -185,6 +185,7 @@ const optionals = {
     title: 'Optional',
     'x-kind': 'event',
     'x-type': 'optional.happened',
+    'x-timeline': 'conversation',
     type: 'object',
     required: ['status', 'ok', 'meta', 'tags'],
     properties: {
@@ -539,6 +540,7 @@ describe('the TypeScript guards, however many fields they check', () => {
           title: 'Wide',
           'x-kind': 'event',
           'x-type': 'wide.happened',
+          'x-timeline': 'conversation',
           type: 'object',
           required: Object.keys(properties).filter((name) => !name.startsWith('extra')),
           'x-required-when': Array.from({ length: ruleCount }, (_, index) => ({
@@ -621,6 +623,7 @@ describe('the TypeScript guards, however many fields they check', () => {
             title: 'AllOptional',
             'x-kind': 'event',
             'x-type': 'allOptional.happened',
+            'x-timeline': 'conversation',
             type: 'object',
             properties: {
               readOnly: { type: 'boolean' },
@@ -799,6 +802,7 @@ describe('the version, the events and the fields that may be null — plan 28, B
       title: 'ThingHappened',
       'x-kind': 'event',
       'x-type': 'thing.happened',
+      'x-timeline': 'conversation',
       type: 'object',
       required: ['id'],
       properties: { id: { type: 'string' } },
@@ -824,7 +828,18 @@ describe('the version, the events and the fields that may be null — plan 28, B
       },
     },
   };
-  const both = buildModel(envelope, [event, answer]);
+  const silentEvent = {
+    source: 'events/thing-hushed.schema.json',
+    schema: {
+      title: 'ThingHushed',
+      'x-kind': 'event',
+      'x-type': 'thing.hushed',
+      'x-timeline': 'silent',
+      type: 'object',
+      properties: {},
+    },
+  };
+  const both = buildModel(envelope, [event, answer, silentEvent]);
   const ts = emitTypeScript(both);
   const dartOut = emitDart(both);
 
@@ -845,9 +860,19 @@ describe('the version, the events and the fields that may be null — plan 28, B
 
   it('maps every event to its payload, and nothing that is not an event', () => {
     expect(ts).toContain(
-      "export interface EventPayloads {\n  'thing.happened': ThingHappenedPayload;\n}",
+      "export interface EventPayloads {\n  'thing.happened': ThingHappenedPayload;\n  'thing.hushed': ThingHushedPayload;\n}",
     );
     expect(ts).not.toContain("'things.page': ThingPagePayload;");
+  });
+
+  it('lists only the silent event in SILENT_EVENT_TYPES / silentEventTypes, in both targets — plan 27, D-02, S-07', () => {
+    expect(ts).toContain("export const SILENT_EVENT_TYPES = [\n  'thing.hushed',\n] as const;");
+    expect(ts).not.toMatch(/SILENT_EVENT_TYPES = \[[^\]]*thing\.happened/);
+
+    expect(dartOut).toContain(
+      "const List<String> silentEventTypes = <String>[\n  'thing.hushed',\n];",
+    );
+    expect(dartOut).not.toMatch(/silentEventTypes = <String>\[[^\]]*thing\.happened/);
   });
 
   it('types a field that may be null as such, and its guard takes the null', () => {

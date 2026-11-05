@@ -5,6 +5,7 @@
   "description": "The agent's task list changed: the whole list, as it is now, after a call of the main conversation that changed it ended well (plan 28, B-22). Read by the adapter of the engine from its own tools — a client draws it and never rebuilds it. A session event with its `seq`, so it is replayed; in the history (`transcript.appended`, `GET /transcripts/…/messages`) it follows the `tool.completed` of the call, by the same function as live. Only for an engine with the `taskList` capability.",
   "x-kind": "event",
   "x-type": "session.tasksChanged",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["tasks"],
   "properties": {

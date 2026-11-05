@@ -5,6 +5,7 @@
   "description": "The slash commands of a session, menu-ordered and badged — the whole list, every time, so a client never patches: pushed when the engine's own menu changes mid-session (a skill discovered as the agent works in a subdirectory, say). A client that does not know it ignores it.",
   "x-kind": "event",
   "x-type": "session.commandsChanged",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["commands"],
   "properties": {

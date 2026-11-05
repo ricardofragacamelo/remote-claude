@@ -43,6 +43,22 @@ function TextBlock({
   );
 }
 
+/**
+ * A block of a kind this build does not know (U-05): drawn generically, in its place among the
+ * others, with its own text when it has one — the same survival rule an unrecognised `session.notice`
+ * `kind` gets (B-20), never dropped in silence.
+ */
+function UnknownBlock({ block }: { readonly block: MessageBlock }): React.JSX.Element {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex flex-col gap-1 rounded-md border border-dashed border-border px-2 py-1 text-ui-sm text-muted-foreground">
+      <p>{t('sessions.message.unknownBlock', { blockType: block.blockType ?? '' })}</p>
+      {block.text !== '' && <p className="whitespace-pre-wrap">{block.text}</p>}
+    </div>
+  );
+}
+
 /** One block of a message, drawn as what it is. */
 function Block({
   block,
@@ -60,6 +76,8 @@ function Block({
       return <TextBlock text={block.text} folder={context.folder} />;
     case 'image':
       return <ImageMarker block={block} conversation={context.reference} />;
+    case 'unknown':
+      return <UnknownBlock block={block} />;
     default:
       return <ThinkingBlock block={block} thinkingMs={message.thinkingMs} streaming={streaming} />;
   }

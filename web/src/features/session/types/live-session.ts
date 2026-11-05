@@ -12,10 +12,11 @@ export type SessionCloseReason =
   'closedByUser' | 'completed' | 'failed' | 'auditUnavailable' | 'shutdown' | 'idleTimeout';
 
 /**
- * What one block of a message is: the answer, the model's thinking, thinking it would not show, or an
- * image the prompt carried — a marker of it, never its bytes (plan 22, D-09).
+ * What one block of a message is: the answer, the model's thinking, thinking it would not show, an
+ * image the prompt carried — a marker of it, never its bytes (plan 22, D-09) —, or a block of a kind
+ * this build does not know, drawn generically rather than dropped (plan 27, F6 · B-20, U-05/U-08).
  */
-export type BlockKind = 'text' | 'thinking' | 'redactedThinking' | 'image';
+export type BlockKind = 'text' | 'thinking' | 'redactedThinking' | 'image' | 'unknown';
 
 /** One finished block of a message, in the order the model wrote it. */
 export interface MessageBlock {
@@ -43,7 +44,24 @@ export interface MessageBlock {
 
   /** The size of an image, in bytes — absent for an image given by URL. */
   readonly size?: number;
+
+  /** The block's own `type`, for a `kind: 'unknown'` block — what the generic line names (U-05). */
+  readonly blockType?: string;
 }
+
+/** The four levels a notice carries — the contract's own (`session.notice.level`). */
+export type NoticeLevel = 'info' | 'notice' | 'warning' | 'error';
+
+/**
+ * Why a line is the generic one rather than something this build understood — `undefined` for a
+ * notice the backend itself marked `kind: 'unknown'` (B-13), which needs no reason of its own.
+ *
+ * `unknownEvent` — a WS event type with no reader and not in the silent list (U-06, D-02).
+ * `unknownValue` — a known event with an enum value this build does not recognise (U-07).
+ * `malformed` — a known event missing a field its payload requires (U-09).
+ * `unknownNotice` — a `session.notice.kind` this build does not have a line for (U-11).
+ */
+export type UnknownReason = 'unknownEvent' | 'unknownValue' | 'malformed' | 'unknownNotice';
 
 /**
  * One message of the conversation.
@@ -118,7 +136,24 @@ export interface ToolExecution extends ToolCall {
    * from an older server.
    */
   readonly question?: ToolQuestion;
+
+  /** Media the result carried besides its text (plan 27, F6 · B-22) — never raw bytes: an `image`
+   * is fetched by the same route a prompt's image uses, a `link` is text unless its scheme is safe,
+   * and a kind this build does not know draws the generic line (B-20). Absent from a call that
+   * finished with no attachment, and from an older server. */
+  readonly attachments?: readonly ToolAttachment[];
 }
+
+/** One attachment a tool's result carried (plan 27, F6 · B-22) — the contract's own shape. */
+export type ToolAttachment =
+  | {
+      readonly kind: 'image';
+      readonly blockId?: string;
+      readonly mediaType?: string;
+      readonly size?: number;
+    }
+  | { readonly kind: 'link'; readonly uri?: string; readonly title?: string }
+  | { readonly kind: 'unknown'; readonly type?: string };
 
 /** Where a task of the agent's list is, as `session.tasksChanged` says it (plan 28, B-22). */
 export type TaskStatus = 'pending' | 'inProgress' | 'completed';
@@ -213,9 +248,32 @@ export type TimelineEntry =
   | { readonly kind: 'turn'; readonly id: string }
   | {
       readonly kind: 'compacted';
+
+      /** The `compactionId` the backend gave it (plan 27, F3 · B-09, F5 · B-18) — stable live, on
+       * replay and from the history, what lets two compactions of the same conversation be told
+       * apart. Falls back to `seq ?? frame.id` from a server older than it. */
       readonly id: string;
       readonly trigger: string;
       readonly preTokens: number | null;
+
+      /** The compaction's own summary — the `message.completed` with `injected.kind:
+       * 'contextSummary'` that follows it, folded in here rather than drawn as its own message
+       * (plan 27, F6 · B-21): a summary nobody wrote is not "You" saying it. `null` until it
+       * arrives, or from a server that sends none. */
+      readonly summary: string | null;
+    }
+  | {
+      /**
+       * Something the agent put in the conversation itself, never the person's own words (plan 27,
+       * F6 · B-21): a skill's body (`injected.kind: 'instructions'`), or one of a kind this build
+       * draws no line of its own for (`'other'`) — a `commandExpansion` is never one of these, since
+       * it is meant to read as the prompt it expands to, and still shows as the person's own.
+       */
+      readonly kind: 'injected';
+      readonly id: string;
+      readonly injectedKind: 'instructions' | 'other';
+      readonly name: string | null;
+      readonly parentToolUseId: string | null;
     }
   | {
       /** The files of the session were put back (plan 09, B-28). */
@@ -228,6 +286,44 @@ export type TimelineEntry =
       /** Left as they were, each with its reason. */
       readonly kept: number;
       readonly failed: number;
+    }
+  | {
+      /**
+       * A `session.notice`, or a line this build draws in its place (plan 27, F6 · B-19, B-20): a WS
+       * event with no reader, a known event an enum value of which this build does not recognise, a
+       * known event missing a field it requires, or a notice of a `kind` this build has no line for.
+       * The same row draws all four — a line genuinely unknown to a published client is not a
+       * different kind of thing from one the backend itself could not place.
+       */
+      readonly kind: 'notice';
+      readonly id: string;
+
+      /** The notice's own `kind` — absent for a line this build synthesised itself (`reason` says
+       * why), present and possibly unrecognised for one the backend actually sent. */
+      readonly noticeKind?: string;
+      readonly reason?: UnknownReason;
+      readonly level: NoticeLevel;
+
+      /** Set when the text is ours: an i18n key the client translates, paired with `params` — never
+       * together with `text`. */
+      readonly messageKey?: string;
+      readonly params?: Readonly<Record<string, unknown>>;
+
+      /** Set when the text is the agent's, a hook's or a command's own — untrusted prose, shown as
+       * plain text (safe markdown only for `command.output`), never translated. */
+      readonly text: string | null;
+      readonly truncated: boolean;
+
+      /** The subagent this notice belongs to — `null` for the main conversation. */
+      readonly parentToolUseId: string | null;
+
+      /** What a synthesised line names: the WS event type, the enum field, or the notice `kind`. */
+      readonly detail?: string;
+
+      /** How many times in a row the identical backend `kind: 'unknown'` notice arrived (D-12) — the
+       * "×3" counter. Absent, or `1`, for everything else: a synthesised line is never counted this
+       * way (U-06 shows at most once per type per session on its own). */
+      readonly count?: number;
     };
 
 /**

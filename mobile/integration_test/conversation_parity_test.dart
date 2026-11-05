@@ -14,21 +14,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:remote_claude/app/router_provider.dart';
 import 'package:remote_claude/core/config/app_config.dart';
-import 'package:remote_claude/core/conversation/conversation_key.dart';
-import 'package:remote_claude/core/navigation/routes.dart';
 import 'package:remote_claude/core/widgets/markdown/code_block.dart';
 import 'package:remote_claude/core/widgets/markdown/mermaid_block.dart';
 import 'package:remote_claude/features/audit/audit.dart';
 import 'package:remote_claude/features/session/presentation/widgets/ansi_text.dart';
 import 'package:remote_claude/features/session/presentation/widgets/conversation_lines.dart';
 import 'package:remote_claude/features/session/presentation/widgets/conversation_view.dart';
-import 'package:remote_claude/features/session/presentation/widgets/fold_line.dart';
 import 'package:remote_claude/features/session/presentation/widgets/tool_diff_view.dart';
 import 'package:remote_claude/features/session/presentation/widgets/working_indicator.dart';
 import 'package:remote_claude/features/session/session.dart';
 
+import 'support/conversation_robot.dart';
 import 'support/e2e_environment.dart';
 import 'support/session_robot.dart';
 import 'support/signed_in_app.dart';
@@ -38,24 +35,6 @@ void main() {
 
   final E2eScenario parity = E2eScenario.named('mobile-conversation-parity');
   final BuildConfig config = e2eConfig();
-
-  String turnOf(String fixture) => 'do the work [fixture:$fixture]';
-
-  /// [target], inside the conversation on screen.
-  Finder said(Finder target) =>
-      find.descendant(of: find.byType(ConversationView), matching: target);
-
-  /// Opens the folded row whose own title is [rowLabel] — the one tap target of the whole line
-  /// (`FoldLine`'s `InkWell`), scrolled into view first.
-  Future<void> openRow(WidgetTester tester, SessionRobot robot, Finder rowLabel) async {
-    await robot.seeInConversation(said(rowLabel));
-    final Finder icon = find.descendant(
-      of: find.ancestor(of: rowLabel, matching: find.byType(FoldLine)).first,
-      matching: find.byIcon(Icons.expand_more),
-    );
-    await tester.tap(icon.first);
-    await tester.pumpAndSettle();
-  }
 
   testWidgets('${parity.id} — ${parity.title}', (WidgetTester tester) async {
     final List<String> copied = <String>[];
@@ -71,14 +50,11 @@ void main() {
     final SignedInApp app = await anApprovedApp(tester, config, parity);
     final SessionRobot robot = app.robot(tester);
 
-    int turnsOf(String sessionId) =>
-        app.conversationOf(sessionId).entries.whereType<TurnSummary>().length;
-
     Future<void> aTurn(String sessionId, String fixture) async {
-      final int before = turnsOf(sessionId);
+      final int before = turnsOf(app, sessionId);
       await tester.pumpAndSettle();
       await robot.prompt(turnOf(fixture));
-      await pumpUntil(tester, () => turnsOf(sessionId) > before);
+      await pumpUntil(tester, () => turnsOf(app, sessionId) > before);
       // The working line over the composer is gone a moment after the turn itself ends.
       await pumpUntil(tester, () => find.byType(WorkingIndicator).evaluate().isEmpty);
       await tester.pumpAndSettle();
@@ -88,13 +64,13 @@ void main() {
     // "Copy message" putting the same markdown on the clipboard (S-84).
     final String sessionId = await robot.startSession(app.container, turnOf('markdown-rich-turn'));
     app.endsAfterTheTest(config, sessionId);
-    await pumpUntil(tester, () => turnsOf(sessionId) == 1);
+    await pumpUntil(tester, () => turnsOf(app, sessionId) == 1);
     await pumpUntil(tester, () => find.byType(WorkingIndicator).evaluate().isEmpty);
     await tester.pumpAndSettle();
 
-    await robot.seeInConversation(said(find.byType(Table)));
-    await robot.seeInConversation(said(find.byType(CodeBlock)));
-    await robot.seeInConversation(said(find.byType(MermaidBlock)));
+    await robot.seeInConversation(inTheConversation(find.byType(Table)));
+    await robot.seeInConversation(inTheConversation(find.byType(CodeBlock)));
+    await robot.seeInConversation(inTheConversation(find.byType(MermaidBlock)));
 
     final String answer = app
         .conversationOf(sessionId)
@@ -102,7 +78,7 @@ void main() {
         .whereType<StreamMessage>()
         .firstWhere((StreamMessage message) => !message.isFromUser)
         .text;
-    final Finder copyButton = said(find.byTooltip(app.l10n.sessionMessageCopy));
+    final Finder copyButton = inTheConversation(find.byTooltip(app.l10n.sessionMessageCopy));
     await robot.seeInConversation(copyButton);
     await tester.tap(copyButton.first);
     expect(copied, contains(answer));
@@ -116,7 +92,7 @@ void main() {
     // mcp-untitled-tool-turn — the tool's own name, never a title it never had: labelled by its
     // server and its tool (plan 28, B-19; plan 26, S-48).
     await aTurn(sessionId, 'mcp-untitled-tool-turn');
-    await robot.seeInConversation(said(find.textContaining('fixture · echo')));
+    await robot.seeInConversation(inTheConversation(find.textContaining('fixture · echo')));
     await tester.pumpAndSettle();
 
     // subagent-permission-turn — its own text, and the permission of its own Write answered from
@@ -125,7 +101,7 @@ void main() {
     // own row is what moves it to its nested place (session_inline_test.dart's S-71).
     await robot.prompt(turnOf('subagent-permission-turn'));
     final String requestId = await cardRequestIdOnScreen(tester, app, sessionId);
-    await openRow(
+    await openFoldRow(
       tester,
       robot,
       find.textContaining(
@@ -135,26 +111,26 @@ void main() {
     expect(robot.cardInConversation, findsOneWidget);
     await app.robot(tester).answer(app.l10n.permissionScopeOnce);
     await pumpUntil(tester, () => app.queueOf(sessionId).outcomeOf(requestId) != null);
-    await pumpUntil(tester, () => turnsOf(sessionId) == 3);
+    await pumpUntil(tester, () => turnsOf(app, sessionId) == 3);
     await tester.pumpAndSettle();
-    await robot.seeInConversation(said(find.textContaining('from-subagent.txt')));
+    await robot.seeInConversation(inTheConversation(find.textContaining('from-subagent.txt')));
 
     // ansi-output-turn — real colour, not a stripped-plain line (plan 26, B-15; F7, B-29). The
     // folded row shows the description Claude gave the call, never the command itself (B-13).
     await aTurn(sessionId, 'ansi-output-turn');
-    await openRow(tester, robot, find.textContaining('Print styled text sample'));
-    await robot.seeInConversation(said(find.byType(AnsiText)));
+    await openFoldRow(tester, robot, find.textContaining('Print styled text sample'));
+    await robot.seeInConversation(inTheConversation(find.byType(AnsiText)));
 
     // edit-turn — a diff of a real edit, read live from the backend's own route (plan 26, B-16).
     // `app.js` is read twice before either edit — "Edit " picks one of its own two, not a read.
     await aTurn(sessionId, 'edit-turn');
-    await openRow(tester, robot, find.textContaining('Edit /workspace/app.js'));
-    await robot.seeInConversation(said(find.byType(ToolDiffView)));
+    await openFoldRow(tester, robot, find.textContaining('Edit /workspace/app.js'));
+    await robot.seeInConversation(inTheConversation(find.byType(ToolDiffView)));
 
     // The tokens of the turn that just ended, and the trail of the mcp tool's own kind.
-    await robot.seeInConversation(said(find.byType(TurnLine)));
-    await openRow(tester, robot, find.textContaining('fixture · echo'));
-    final Finder trail = said(find.text(app.l10n.sessionToolRowTrail));
+    await robot.seeInConversation(inTheConversation(find.byType(TurnLine)));
+    await openFoldRow(tester, robot, find.textContaining('fixture · echo'));
+    final Finder trail = inTheConversation(find.text(app.l10n.sessionToolRowTrail));
     await robot.seeInConversation(trail);
     await tester.tap(trail.first);
     await pumpUntil(tester, () => find.byType(AuditTrailPage).evaluate().isNotEmpty);
@@ -172,13 +148,10 @@ void main() {
     );
     app.endsAfterTheTest(config, subagentSessionId);
     final String subagentRequestId = await cardRequestIdOnScreen(tester, app, subagentSessionId);
-    await openRow(
-      tester,
-      robot,
-      find.textContaining(
-        app.l10n.sessionToolAgent('writer', 'Create from-subagent.txt with word parity'),
-      ),
+    Finder writerAgentRow() => find.textContaining(
+      app.l10n.sessionToolAgent('writer', 'Create from-subagent.txt with word parity'),
     );
+    await openFoldRow(tester, robot, writerAgentRow());
     await app.robot(tester).answer(app.l10n.permissionScopeOnce);
     await pumpUntil(
       tester,
@@ -190,19 +163,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final ConversationKey key = app.conversationOf(subagentSessionId).facts.conversation!;
-    final String workspace = app.conversationOf(subagentSessionId).facts.workspacePath!;
-    app.container.read(routerProvider).go(conversationRouteFor(key, workspace));
-    await pumpUntil(tester, () => find.byType(ConversationHistoryPage).evaluate().isNotEmpty);
-    await tester.pumpAndSettle();
+    await reopenFromHistory(tester, app, subagentSessionId);
 
-    await openRow(
-      tester,
-      robot,
-      find.textContaining(
-        app.l10n.sessionToolAgent('writer', 'Create from-subagent.txt with word parity'),
-      ),
-    );
+    await openFoldRow(tester, robot, writerAgentRow());
     await robot.seeInConversation(find.textContaining('from-subagent.txt'));
   });
 }

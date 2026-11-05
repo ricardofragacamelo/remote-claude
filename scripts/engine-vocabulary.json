@@ -305,6 +305,72 @@
       "home": "the adapter"
     },
     {
+      "term": "local_command_output",
+      "match": "token",
+      "reason": "a message subtype of the Agent SDK — translated to the canonical session.notice kind command.output (plan 27)",
+      "home": "the adapter"
+    },
+    {
+      "term": "hook_response",
+      "match": "token",
+      "reason": "a message subtype of the Agent SDK — a failed one (outcome: 'error') translated to the canonical session.notice kind agent.info; a settings hook's own systemMessage surfaces as the informational subtype instead (plan 27, discovery 01 §13)",
+      "home": "the adapter"
+    },
+    {
+      "term": "model_refusal_fallback",
+      "match": "token",
+      "reason": "a message subtype of the Agent SDK — translated to the canonical session.notice kind model.switched (plan 27)",
+      "home": "the adapter"
+    },
+    {
+      "term": "model_refusal_no_fallback",
+      "match": "token",
+      "reason": "a message subtype of the Agent SDK — translated to the canonical session.notice kind model.refused (plan 27)",
+      "home": "the adapter"
+    },
+    {
+      "term": "worker_shutting_down",
+      "match": "token",
+      "reason": "a message subtype of the Agent SDK — translated to the canonical session.notice kind agent.stopping (plan 27)",
+      "home": "the adapter"
+    },
+    {
+      "term": "rate_limit_event",
+      "match": "token",
+      "reason": "a message type of the Agent SDK — translated to the canonical session.notice kind usage.limited (plan 27)",
+      "home": "the adapter"
+    },
+    {
+      "term": "plugin_install",
+      "match": "token",
+      "reason": "a message subtype of the Agent SDK — translated to the canonical session.notice kind agent.info on a failed install (plan 27)",
+      "home": "the adapter"
+    },
+    {
+      "term": "auth_status",
+      "match": "token",
+      "reason": "a message type of the Agent SDK — translated to the canonical session.notice kind auth.failed (plan 27)",
+      "home": "the adapter"
+    },
+    {
+      "term": "permission_denied",
+      "match": "token",
+      "reason": "a message subtype of the Agent SDK — translated to tool.completed status: 'denied' (plan 27)",
+      "home": "the adapter"
+    },
+    {
+      "term": "model_switch",
+      "match": "token",
+      "reason": "the pre/post model switch hook events of the Agent SDK",
+      "home": "the adapter"
+    },
+    {
+      "term": "retracted_message_uuids",
+      "match": "token",
+      "reason": "the field of the Agent SDK's refusal-fallback message this plan measured but could not confirm matches our own message ids (plan 27, D-06, D-09)",
+      "home": "the adapter"
+    },
+    {
       "term": "rawInput",
       "match": "access",
       "reason": "the raw input of a tool call is opaque (plan 28, D-04): the exact input view draws it whole, the export carries it, and nothing reads a field of it",

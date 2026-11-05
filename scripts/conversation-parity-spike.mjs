@@ -19,12 +19,10 @@
  * The output is a Markdown table and, with `--json`, every raw number. Exits 0 when every probe ran.
  */
 
-import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 
-import { fixtureServer, placed, reportTable } from './lib/claude-config-spike.mjs';
+import { fixtureServer, reportTable } from './lib/claude-config-spike.mjs';
 import {
   blocksShape,
   MCP_SERVER,
@@ -36,8 +34,12 @@ import {
   subagentShape,
 } from './lib/conversation-parity-spike.mjs';
 import { repoRoot } from './lib/paths.mjs';
-import { copyCredential, runSpike, spikeSession } from './lib/spike-session.mjs';
-import { fail, info, line, ok, title } from './lib/ui.mjs';
+import {
+  makeThrowawayWorld,
+  runInWorld,
+  runNamedSpike,
+  withConfigDir,
+} from './lib/spike-session.mjs';
 
 const SERVER = path.join(repoRoot, 'e2e', 'fixtures', 'mcp-server', 'fixture-mcp-server.mjs');
 
@@ -61,18 +63,7 @@ const PRODUCT_STREAM = {
  * @param {string} name
  */
 function makeWorld(name) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), `rc-parity-spike-${name}-`));
-  const source = process.env['CLAUDE_CONFIG_DIR'] ?? path.join(os.homedir(), '.claude');
-  const config = path.join(root, 'config');
-  fs.mkdirSync(config);
-  copyCredential(source, config);
-
-  const repository = path.join(root, 'repository');
-  for (const [target, content] of placed(repository, repositoryFiles())) {
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, content);
-  }
-  return { root, config, repository };
+  return makeThrowawayWorld(`parity-${name}`, repositoryFiles());
 }
 
 /**
@@ -82,19 +73,16 @@ function makeWorld(name) {
  * @param {(run: any, world: { config: string, repository: string }) => Promise<unknown>} read
  */
 async function probe(sdk, name, read, options = {}) {
-  const world = makeWorld(name);
-  try {
-    const run = await spikeSession(sdk, {
-      cwd: world.repository,
-      config: world.config,
+  return runInWorld(
+    makeWorld(name),
+    sdk,
+    {
       model: MODEL,
       prompts: [PROMPTS[/** @type {keyof typeof PROMPTS} */ (name)]],
       options: { ...PRODUCT_STREAM, ...options },
-    });
-    return await read(run, world);
-  } finally {
-    fs.rmSync(world.root, { recursive: true, force: true });
-  }
+    },
+    read,
+  );
 }
 
 /**
@@ -104,9 +92,7 @@ async function probe(sdk, name, read, options = {}) {
  * @param {any} sdk @param {string} sessionId @param {{ config: string, repository: string }} world
  */
 async function storedRun(sdk, sessionId, world) {
-  const previous = process.env['CLAUDE_CONFIG_DIR'];
-  process.env['CLAUDE_CONFIG_DIR'] = world.config;
-  try {
+  return withConfigDir(world.config, async () => {
     const options = { dir: world.repository };
     const main = await sdk.getSessionMessages(sessionId, options);
     const agents = await sdk.listSubagents(sessionId, options);
@@ -115,10 +101,7 @@ async function storedRun(sdk, sessionId, world) {
       subagents.push(await sdk.getSubagentMessages(sessionId, agentId, options));
     }
     return { main, subagents };
-  } finally {
-    if (previous === undefined) delete process.env['CLAUDE_CONFIG_DIR'];
-    else process.env['CLAUDE_CONFIG_DIR'] = previous;
-  }
+  });
 }
 
 /** 1 · A subagent of the project that writes, asking — live and from the history (S-05). */
@@ -150,14 +133,10 @@ async function blocks(/** @type {any} */ sdk) {
   return probe(sdk, 'blocks', async (run) => blocksShape(run.messages));
 }
 
-const RUNNERS = { subagent, mcp, blocks };
-
-process.exitCode = await runSpike({
+process.exitCode = await runNamedSpike({
   args: process.argv.slice(2),
   probes: PROBES,
   heading: 'Plan 26 · B-01 — the shapes of the conversation, measured',
-  root: repoRoot,
-  probe: (sdk, name) => RUNNERS[/** @type {keyof typeof RUNNERS} */ (name)](sdk),
-  report: (results) => reportTable(spikeRows(results)),
-  say: { info, ok, fail, title, line },
+  runners: { subagent, mcp, blocks },
+  reportOf: (results) => reportTable(spikeRows(results)),
 });

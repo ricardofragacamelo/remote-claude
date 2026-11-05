@@ -176,7 +176,7 @@ describe('the block kinds of a message, in canonical names — plan 28, S-88 / S
   });
 
   it('renames them the same read back from history', () => {
-    expect(kindsOf(historicalEvents(entry(blocks), ''))).toEqual(canonical);
+    expect(kindsOf(historicalEvents(entry(blocks), new SdkMessageMapper('')))).toEqual(canonical);
   });
 
   it('leaves no name of the API in the blocks', () => {
@@ -194,7 +194,9 @@ describe('the block kinds of a message, in canonical names — plan 28, S-88 / S
       const live = new SdkMessageMapper('').read(assistant([{ type, extra: 1 }])).events;
 
       expect(kindsOf(live)).toEqual([type]);
-      expect(kindsOf(historicalEvents(entry([{ type }]), ''))).toEqual([type]);
+      expect(kindsOf(historicalEvents(entry([{ type }]), new SdkMessageMapper('')))).toEqual([
+        type,
+      ]);
     },
   );
 

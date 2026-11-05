@@ -179,9 +179,10 @@ describe('the recordings of the conversation of the app — plan 26, B-02', () =
     it('keeps the subagent’s history apart, every message of it under the Agent call — S-69', () => {
       const filed = Object.values(loadFixture('subagent-permission-turn').subagents ?? {});
       const [own] = filed;
+      const mapper = new SdkMessageMapper('');
       const history = (own ?? []).flatMap(
         (message: SessionMessage) =>
-          asRecords(historicalEvents(message, '')) as readonly Published[],
+          asRecords(historicalEvents(message, mapper)) as readonly Published[],
       );
 
       expect(filed).toHaveLength(1);

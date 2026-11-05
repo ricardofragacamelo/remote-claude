@@ -906,16 +906,100 @@ da [B-31](../plans/26-mobile-conversation-parity/F7-e2e.md) volta a conferi-la a
 
 ---
 
+## 13 — Sétima rodada de spikes (2026-11-01)
+
+Feita para a F0 do [plano 27](../plans/27-conversation-losses/F0-spike.md) — a B-01: as dez perguntas
+da [D-05](../plans/27-conversation-losses/decisions.md#f0--spike), que alimentam o D-04 (destino de
+cada variante), o D-06 (retirada) e o D-13 (teto do texto) do mesmo plano. Mesmo ambiente dos §11/§12:
+`CLAUDE_CONFIG_DIR` isolado com a credencial copiada, repositório descartável por sessão. CLI
+**2.1.277**, SDK **0.3.277**, turnos em `haiku`.
+
+| # | Pergunta | Medido | Decide |
+|---|---|---|---|
+| 1 | `includeSystemMessages`: subtipos e custo | numa conversa de 2 turnos (uma tool, um `/compact`): **sem** a opção, `getSessionMessages` já devolve as três mensagens sintéticas do `/compact` — o resumo (`isCompactSummary: true`, `is_meta: true`, o resumo inteiro como texto) e os dois ecos (`isCompletedLocalCommand: true`: o `<command-name>/compact</command-name>` e o `<local-command-stdout>Compacted </local-command-stdout>`) —, todas de `type: 'user'`. **Com** a opção, entra **uma** linha a mais, de `type: 'system'`, mas **sem `subtype` nem qualquer outro campo** além de `uuid`, `session_id`, `parent_tool_use_id`, `parent_agent_id` e `timestamp` — um marcador de posição vazio, não a informação da variante. Custo, nesta conversa pequena: poucos ms nos dois casos; não mede R-03 numa conversa longa | D-05, R-03 |
+| 2 | onde chega o `systemMessage` de um hook de `.claude/settings.json` | **nunca** no `hook_response` (que só tem `output`/`stdout`/`stderr`/`exit_code`/`outcome` — o `output` é o JSON cru do hook, não os campos). O CLI monta uma mensagem própria, `system/informational`, com `content: "<hook_name> says: <mensagem>"` e `level: 'notice'`. Mas só chega ao stream com `includeHookEvents: true`: sem a opção, o hook roda do mesmo jeito — nenhum `hook_started`/`hook_progress`/`hook_response` nem `informational` aparece. O primeiro run deste spike mediu exatamente essa ausência, por não ter passado a opção | D-04 |
+| 3 | troca de modelo por sobrecarga: aviso próprio? | não provocável de propósito (como a recusa da D-09). Medição estática do `sdk.d.ts`: não existe variante de "troca por sobrecarga" — só `model_refusal_fallback`/`model_refusal_no_fallback`, e os dois têm `trigger: 'refusal'`, nunca sobrecarga. A troca pela opção `fallbackModel` não tem aviso de nenhum tipo | D-04 |
+| 4 | campos do `rate_limit_info` | esta conta (assinatura, não chave de API) recebe um `rate_limit_event` passivo em toda sessão, mesmo sem pedir nada: `status: 'allowed'`, `resetsAt`, `rateLimitType: 'five_hour'`, e um `unifiedWindows` com `five_hour`/`seven_day`, cada um com `utilization` e `resetsAt`; e os campos de excedente — `overageStatus: 'rejected'`, `overageDisabledReason: 'out_of_credits'`, `isUsingOverage: false` — próprios desta conta (sem crédito de excedente), não do campo em geral. Os outros `rateLimitType` (`seven_day_opus`, `seven_day_sonnet`, `seven_day_overage_included`, `overage`) e outros `overageDisabledReason` não foram vistos | D-04 |
+| 5 | volume do `api_retry` sob falha de rede forçada | `ANTHROPIC_BASE_URL` para uma porta fechada (`http://127.0.0.1:1`, sem gastar cota: a chamada nunca sai da máquina). Em 30 s: **6** tentativas, com o atraso dobrando a cada uma (566, 1090, 2049, 4475, 9345, 18810 ms), `max_retries: 10` (continuaria além dos 30 s), `error_status: null` — confirma o comentário do tipo ("erro de conexão não tem resposta HTTP") — e `error: 'unknown'`, o valor do enum para uma falha de transporte, sem nenhum dos valores específicos de HTTP | D-04 |
+| 6 | `/clear`: `conversation_reset` e troca de `session_id` | o CLI emite exatamente um `conversation_reset`, com um `new_conversation_id` novo. E o `session_id` que **toda** `SDKMessage` carrega muda entre a mensagem antes e a de depois do `/clear` — mesmo sendo o mesmo subprocesso, a mesma `options.sessionId` do `query()`. Quem correlaciona pelo `session_id` do payload, em vez do `sessionId` que o backend controla, vê o identificador trocar no meio do stream | D-04 |
+| 7 | `worker_shutting_down` frente ao `session.closed` | não observável pela SDK local usada por este produto: o comentário do tipo diz que é emitido "pela bridge", num encerramento gracioso que o **hospedeiro** pede com um motivo — caminho de um backend hospedado, que o `query()` local não aciona. O `close()` da sessão não aceita motivo. Nenhuma sessão foi aberta para esta sonda (sem gasto de cota) | D-04 |
+| 8 | uuid da retirada bate com `blockId`/`messageId` | não provocável de propósito, pela mesma razão da D-09. O `sdk.d.ts` documenta a forma dos `retracted_message_uuids`: "um uuid por mensagem normalizada do SDK; mensagens de vários blocos carregam um uuid derivado por bloco" — por bloco, não por mensagem inteira, o que é compatível com um `blockId` nosso, mas sem uma retirada real para confirmar | D-06 |
+| 9 | bloco que não é `tool_result` numa mensagem de `tool_result` | nenhum visto, no único `tool_result` desta sessão (o `ls` do Bash). Um ponto só; a preocupação do [discovery 09 §5](09-perdas-do-backend-na-conversa.md#5-perdas-dentro-da-mensagem-de-usuário) continua em aberto para outras tools — a F4 cobre imagem e `resource`/`resource_link` nas próprias fixtures | discovery 09 §5 |
+| 10 | onde ficam o `compact_boundary` e o resumo depois do `/compact` | o `compact_boundary` ao vivo carrega um `compact_metadata` rico: `trigger`, `pre_tokens`, `post_tokens`, `cumulative_dropped_tokens`, `duration_ms` (13 s neste `/compact` manual), `preserved_segment` (uuids de início/âncora/fim) e `preserved_messages` (os uuids preservados ao pé da letra). No histórico (`includeSystemMessages`), esse `compact_boundary` **não aparece** (`inHistory: false`) — o histórico reconstrói como [a linha `system` vazia da sonda 1] + [o resumo sintético, `isCompactSummary`] + [a cauda preservada ao pé da letra: aqui, a última resposta real e os dois ecos do `/compact`], **fora da ordem cronológica** (a cauda preservada tem timestamp anterior ao do resumo sintético). Os turnos originais de antes da compactação (o prompt do `ls` e a chamada de tool) somem — a compactação é mesmo destrutiva, como o nome promete | D-05 |
+
+**Consequências:**
+
+- confirma, com números, a premissa do [discovery 09 §1](09-perdas-do-backend-na-conversa.md#1-o-pedido)
+  sobre o `/compact`: o resumo e os dois ecos já
+  chegam ao histórico hoje, sem `includeSystemMessages` — o que falta é o backend **saber** que são
+  sintéticos (pelos campos `isCompactSummary`/`is_meta`/`isCompletedLocalCommand`, não por adivinhar
+  pela posição) e dizer isso ao cliente, em vez de desenhar três balões "Você" (F3, B-11);
+- `includeSystemMessages` no histórico entrega pouco: uma linha por evento de sistema, sem o `subtype`
+  nem o payload — o `compact_boundary` com o `compact_metadata` só existe **ao vivo**. Se o produto
+  quiser mostrar o resumo da compactação com os números (tokens, duração) depois de reabrir o
+  histórico, precisa gravar isso no momento em que acontece ao vivo, não reconstruir depois (F5,
+  R-03 — o teto do plano 22 por versão continua valendo, e a resposta é "não dá para só ligar a
+  opção");
+- o `systemMessage` de um hook de projeto só chega ao stream com `includeHookEvents: true`, como uma
+  mensagem `informational` separada — nunca um campo do `hook_response` (F3, B-09);
+- o `api_retry` sob falha de transporte nunca tem `error_status`; o volume (6 tentativas em 30 s, antes
+  do `max_retries: 10`) é a base para o teto de ruído de um aviso de "tentando de novo" (F3, B-09, R-01);
+- o `session_id` do payload muda com o `/clear` — qualquer correlação por esse campo, em vez do
+  `sessionId` que o backend já controla, quebra nesse momento (F3, B-10/B-11);
+- dois bugs no próprio spike, achados pela sonda e não pela leitura do tipo: o comando do hook de
+  teste, escrito entre aspas duplas, perdia as aspas do JSON na casca (saída inválida, sonda 2 vazia na
+  primeira rodada) — corrigido com aspas simples; e `makeThrowawayWorld` sem arquivo nenhum nunca
+  criava o diretório do repositório, e o CLI falhava ao nascer com uma mensagem genérica de "binário
+  não compatível com a libc" que não tinha nada a ver com a causa real — corrigido criando o diretório
+  sempre. Os dois ficam em `scripts/lib/spike-session.mjs` e
+  `scripts/lib/conversation-losses-spike.mjs`, compartilhados com os spikes dos §12 e §11.
+
+### 13.1 — Três achados da gravação das fixtures (B-02, mesma rodada)
+
+Gravando as fixtures da [B-02](../plans/27-conversation-losses/F0-spike.md#b-02--fixtures-gravadas-)
+pelo `pnpm fixtures:record`, três medições que a B-01 não cobria:
+
+- **`resource` e `resource_link` de uma tool MCP não chegam como bloco estruturado**: só a `image`
+  sobrevive como bloco `image` de verdade (`source.type: 'base64'`). O CLI já achata `resource` e
+  `resource_link` em texto antes do backend ver a mensagem — `[Resource from fixture at
+  fixture://note.txt] a fixture resource` e `[Resource link: linked.txt] fixture://linked.txt` —, o que
+  confirma a decisão de escopo do plano 27 ("o texto basta" para esse par, [README](../plans/27-conversation-losses/README.md#não-entra)): não há nada estruturado para a F4 desenhar além da imagem;
+- **um `/comando` de projeto não tem eco nenhum ao vivo**: nem `local_command_output`, nem mensagem de
+  `user` alguma — o stream vai direto de `system/init` ao `assistant` com a resposta. Só no histórico
+  (`getSessionMessages`) a expansão aparece, como um `user` com
+  `<command-message>…</command-message><command-name>/…</command-name><command-args>…</command-args>`,
+  a mesma forma de tag do eco do `/compact` (§13, sonda 1). O prompt digitado que a B-21 mostra ao vivo
+  é o que o próprio backend enviou, não um eco do CLI — não há perda aqui, só a confirmação de que não
+  há o que esperar da CLI;
+- **`/compact` sem nada para compactar falha por uma resposta sintética, não pelo `compact_error`**: o
+  `assistant` que seguiu era `model: '<synthetic>'`, com o texto `Error: No messages to compact` — o
+  CLI nunca chegou a emitir um `compact_boundary`. O `compact_error` do tipo pode existir para uma
+  falha **durante** uma compactação real, mas essa forma não foi medida — não provocável sem uma falha
+  de API no meio do processo.
+
+### Como reproduzir
+
+`pnpm spike:conversation-losses` — ou uma sonda pelo nome (`systemMessages`, `hookMessage`,
+`fallbackModel`, `rateLimit`, `apiRetry`, `conversationReset`, `workerShutdown`, `retraction`,
+`strayBlock`, `compactChain`), e `--json <arquivo>` para os números crus. Exige o Claude logado;
+`fallbackModel`, `workerShutdown` e `retraction` não abrem sessão nem gastam cota — respondem do
+`sdk.d.ts`, pela mesma razão da D-09. `apiRetry` também não gasta cota (a chamada nunca sai da
+máquina). As demais abrem no máximo três sessões reais, uma por grupo de sondas. As fixtures da B-02
+são gravadas por `pnpm fixtures:record <nome>` (ou sem nome, todas), definidas em
+`scripts/record-agent-sdk-fixtures.mjs`.
+
+---
+
 ## Versões verificadas
 
 | Item | Versão |
 |---|---|
-| `@anthropic-ai/claude-agent-sdk` | 0.3.270 na descoberta · **0.3.273** na rodada de 2026-09-16 · **0.3.277** nas de 2026-10-01 e 2026-10-09 (CLI embutido 2.1.277) |
+| `@anthropic-ai/claude-agent-sdk` | 0.3.270 na descoberta · **0.3.273** na rodada de 2026-09-16 · **0.3.277** de 2026-10-01 a 2026-11-01 (CLI embutido 2.1.277) |
 | Claude Code CLI (PATH) | 2.1.226 — e **2.1.273** na extensão do VSCode: há dois binários na máquina |
 | Node | v24.16.0 |
 | npm | 11.13.0 |
 | Flutter / Dart | presentes em `~/middleware/flutter/flutter/bin` |
-| Data da descoberta | 2026-09-13 · terceira rodada de spikes em 2026-09-16 · quarta em 2026-10-01 · quinta e sexta em 2026-10-09 |
+| Data da descoberta | 2026-09-13 · terceira rodada de spikes em 2026-09-16 · quarta em 2026-10-01 · quinta e sexta em 2026-10-09 · sétima em 2026-11-01 |
 
 Fontes: `sdk.d.ts` (9221 linhas) e `README.md` do pacote, inspecionados localmente.
 Doc oficial: <https://platform.claude.com/docs/en/agent-sdk/overview>

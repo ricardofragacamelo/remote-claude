@@ -455,6 +455,97 @@ const SCENARIOS = [
       'Then reply with exactly: done.',
     files: {},
   },
+
+  // Plan 27, F0 · B-02 — the fixtures the B-01 spike's own findings (discovery 01 §13) asked for:
+  // the compaction that fails, a local command, a project command, a settings hook that answers and
+  // one that fails, an MCP tool result with image/resource/resource_link, and a tool denied by rule.
+  {
+    name: 'compact-failed-turn',
+    why: "a /compact with nothing to compact yet: measured (discovery 01 §13) as a synthetic assistant reply — model: '<synthetic>', text 'Error: No messages to compact' — never the compact_error field of a compact_boundary, which this recording never emits at all",
+    prompt: '/compact',
+    files: {},
+  },
+  {
+    name: 'local-command-turn',
+    why: 'a local command with structured output: local_command_output alongside the usage_report the B-01 spike found attached to the synthetic assistant message (D-04)',
+    prompt: '/cost',
+    files: {},
+  },
+  {
+    name: 'project-command-turn',
+    why: "a project's own /comando, live and in the history it leaves — the prompt the backend composes from it (B-21)",
+    prompt: '/greet world',
+    files: {
+      '.claude/commands/greet.md': [
+        '---',
+        'description: Greets whoever is named in the argument.',
+        '---',
+        '',
+        'Reply with exactly: Hello, $ARGUMENTS!',
+        '',
+      ].join('\n'),
+    },
+  },
+  {
+    name: 'hook-message-turn',
+    why: "a project's PreToolUse hook that answers with a systemMessage — surfaces as system/informational, never a field of hook_response (discovery 01 §13, probe 2) — and one that fails with stderr, in the same recording",
+    prompt:
+      'Run `ls` with the Bash tool, then use the Write tool to create ok.txt containing the ' +
+      'single line: ok. Then reply with exactly: done.',
+    files: {
+      '.claude/settings.json': `${JSON.stringify(
+        {
+          hooks: {
+            PreToolUse: [
+              {
+                matcher: 'Bash',
+                hooks: [
+                  {
+                    type: 'command',
+                    command:
+                      'node -e \'console.log(JSON.stringify({systemMessage:"the Bash hook ran"}))\'',
+                  },
+                ],
+              },
+              {
+                matcher: 'Write',
+                hooks: [
+                  {
+                    type: 'command',
+                    command: 'node -e \'console.error("hook failed on purpose"); process.exit(1)\'',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    },
+    requires: sawHookOutcomes(['success', 'error']),
+  },
+  {
+    name: 'mcp-media-result-turn',
+    why: 'an MCP tool result with image, resource and resource_link content, never text — the shapes the B-15 route and the B-22 card read (plan 27, F4)',
+    prompt:
+      'Call the media tool of the fixture MCP server with no arguments. Then reply with exactly: done.',
+    files: {},
+    options: {
+      strictMcpConfig: true,
+      mcpServers: { [MCP_SERVER]: fixtureMcpServerConfig() },
+    },
+    requires: calledTool('mcp__fixture__media'),
+  },
+  {
+    name: 'denied-by-rule-turn',
+    why: "a tool denied by a project's own permissions.deny rule, before canUseTool is ever asked — system/permission_denied, decision_reason_type: 'subcommandResults' (discovery 01 §13, B-02)",
+    prompt: 'Run `touch forbidden.txt` with the Bash tool. Then reply with exactly: done.',
+    files: {
+      '.claude/settings.json': `${JSON.stringify({ permissions: { deny: ['Bash(touch:*)'] } }, null, 2)}\n`,
+    },
+    requires: sawSystemSubtype('permission_denied'),
+  },
 ];
 
 /**
@@ -607,6 +698,46 @@ function calledTool(name) {
       );
     });
     return ran ? [] : [`no tool_use named ${name} in the stream`];
+  };
+}
+
+/**
+ * Whether the stream carries a `system` message of the given subtype — plan 27, F0 · B-02: the
+ * fixtures that prove a variant actually happened, rather than guessing from the prompt alone.
+ *
+ * @param {string} subtype
+ */
+function sawSystemSubtype(subtype) {
+  return (/** @type {unknown[]} */ _consulted, /** @type {unknown[]} */ messages) => {
+    const seen = messages.some(
+      (message) =>
+        /** @type {{ type?: string, subtype?: string }} */ (message).type === 'system' &&
+        /** @type {{ type?: string, subtype?: string }} */ (message).subtype === subtype,
+    );
+    return seen ? [] : [`no system/${subtype} in the stream`];
+  };
+}
+
+/**
+ * Whether a `hook_response` of each outcome given turned up — `hook-message-turn` needs one hook
+ * that answers with a `systemMessage` and one that fails with `stderr`, both in the same recording.
+ *
+ * @param {readonly ('success' | 'error')[]} outcomes
+ */
+function sawHookOutcomes(outcomes) {
+  return (/** @type {unknown[]} */ _consulted, /** @type {unknown[]} */ messages) => {
+    const seen = new Set(
+      messages
+        .filter(
+          (message) =>
+            /** @type {{ type?: string, subtype?: string }} */ (message).type === 'system' &&
+            /** @type {{ type?: string, subtype?: string }} */ (message).subtype ===
+              'hook_response',
+        )
+        .map((message) => /** @type {{ outcome?: string }} */ (message).outcome),
+    );
+    const missing = outcomes.filter((outcome) => !seen.has(outcome));
+    return missing.map((outcome) => `no hook_response with outcome ${outcome}`);
   };
 }
 

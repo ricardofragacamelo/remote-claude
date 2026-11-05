@@ -5,6 +5,7 @@
   "description": "The session is open and its engine has initialised. Normalised by the adapter of the engine — the engine's own message is never emitted raw (ADR-006, ADR-025).",
   "x-kind": "event",
   "x-type": "session.started",
+  "x-timeline": "silent",
   "type": "object",
   "required": [
     "sessionId",

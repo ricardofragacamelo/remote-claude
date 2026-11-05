@@ -5,6 +5,7 @@
   "description": "A message is finished, with its content as blocks. It supersedes whatever the deltas of the same `messageId` accumulated — a client that missed a delta is made whole here.",
   "x-kind": "event",
   "x-type": "message.completed",
+  "x-timeline": "conversation",
   "type": "object",
   "required": ["messageId", "role", "content"],
   "properties": {
@@ -63,6 +64,22 @@
     "parentToolUseId": {
       "type": "string",
       "description": "Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation."
+    },
+    "injected": {
+      "type": "object",
+      "required": ["kind"],
+      "description": "Set when the agent put this message in the conversation itself — never the person's own prompt, and never replayed to the model as one. A skill's body, a slash command's expansion, a compaction summary (plan 27, discovery §5).",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["instructions", "commandExpansion", "contextSummary", "other"],
+          "description": "`instructions` — a skill's body; `commandExpansion` — a project command's prompt; `contextSummary` — a compaction's summary; `other` — injected, but none of the above."
+        },
+        "name": {
+          "type": "string",
+          "description": "The skill or command named, when `kind` has one."
+        }
+      }
     }
   }
 }

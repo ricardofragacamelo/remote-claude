@@ -32,7 +32,8 @@ void main() {
     expect(page.nextCursor, 'c1');
   });
 
-  test('an event this build cannot read is dropped, not the whole page', () {
+  test('an entry this build cannot read draws the generic line (U-06, U-10), costing that entry '
+      'nothing, let alone the whole page', () {
     final body = <String, Object?>{
       'events': <Object?>[
         <String, Object?>{'type': 'session.somethingNew', 'payload': <String, Object?>{}},
@@ -49,7 +50,8 @@ void main() {
 
     final page = subagentPageFrom(body);
 
-    expect(page!.events, hasLength(1));
+    expect(page!.events, hasLength(2));
+    expect(page.events.first, isA<GenericSessionEvent>());
     expect(page.nextCursor, isNull);
   });
 

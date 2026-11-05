@@ -46,7 +46,7 @@ type Entry =
       readonly toolKind: string;
       readonly label: ToolLabelKey;
       readonly status: string;
-      readonly media: readonly unknown[];
+      readonly media: readonly Attachment[];
       readonly neverInHistory?: true;
     }
   | {
@@ -54,9 +54,27 @@ type Entry =
       readonly owner: null;
       readonly usage: unknown;
       readonly costUsd: string | null;
+    }
+  | {
+      readonly kind: 'injected';
+      readonly owner: string | null;
+      readonly injectedKind: 'instructions' | 'other';
+      readonly name: string | null;
+      readonly neverInHistory?: true;
     };
 
 type Block = { readonly kind: 'text'; readonly text: string } | { readonly kind: 'image' };
+
+/** A tool result's own media (plan 27, F6 · B-22) — the contract's `ToolAttachment`, read as-is. */
+type Attachment =
+  | {
+      readonly kind: 'image';
+      readonly blockId?: string;
+      readonly mediaType?: string;
+      readonly size?: number;
+    }
+  | { readonly kind: 'link'; readonly uri?: string; readonly title?: string }
+  | { readonly kind: 'unknown'; readonly type?: string };
 
 const FIXTURES = [
   'markdown-rich-turn',
@@ -66,6 +84,7 @@ const FIXTURES = [
   'mcp-composed-tool-turn',
   'user-skill-plugin-turn',
   'subagent-permission-turn',
+  'mcp-media-result-turn',
 ] as const;
 
 function readJson<T>(fixture: string, file: string): T {
@@ -144,7 +163,7 @@ function neutralEntriesOf(state: Conversation): Entry[] {
           toolKind: tool.kind,
           label: tool.label,
           status: tool.status,
-          media: [],
+          media: (tool.attachments ?? []) as readonly Attachment[],
         });
       }
     } else if (item.kind === 'turn') {
@@ -152,6 +171,13 @@ function neutralEntriesOf(state: Conversation): Entry[] {
       if (turn) {
         entries.push({ kind: 'turn', owner: null, usage: turn.usage, costUsd: turn.costUsd });
       }
+    } else if (item.kind === 'injected') {
+      entries.push({
+        kind: 'injected',
+        owner: item.parentToolUseId,
+        injectedKind: item.injectedKind,
+        name: item.name,
+      });
     }
   }
 
@@ -191,7 +217,9 @@ describe('conversation-parity fixtures — plan 26, F6, B-28', () => {
 
     it('projects a subagent’s own history into its own slice of the same content — S-83', () => {
       const subagentHistory = eventsOf(fixture, 'subagent-history-events.json');
-      const want = expected.filter((entry) => entry.owner !== null);
+      // `owner` on an `injected` entry (B-21) names the *owning tool*, never a subagent — reused
+      // field, different meaning — so it never belongs to this slice even when it is set.
+      const want = expected.filter((entry) => entry.owner !== null && entry.kind !== 'injected');
 
       expect(neutralEntriesOf(conversationFrom(subagentHistory))).toEqual(want);
     });

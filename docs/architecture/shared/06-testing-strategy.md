@@ -185,6 +185,20 @@ Rodado por `pnpm test:e2e:live:report`, a falha não morre num terminal: vira **
 issue. Agendamento continua fora: a [D-12 do plano 01](../../plans/01-live-session/decisions.md)
 foi mantida na [D-11 do plano 05](../../plans/05-hardening-operations/decisions.md).
 
+**Um timeout intermitente em specs sem relação entre si é pista, não ruído.** O plano 27 viu
+`chat-layout.spec.ts`, `claude-panel-phone.spec.ts`/`claude-panel-sessions.spec.ts` e
+`live-history.spec.ts` — de três planos diferentes (08, 09, 22) — estourarem o teto de 120 s em
+`locator.click`, sempre em specs que conferem texto estático logo após o carregamento da página,
+nunca nas mesmas exatas, sob carga variável. A tentação é aceitar como "instabilidade sob carga" e
+seguir — mas o rastro do Playwright mostrou um botão preso no texto de reserva do i18n ("the
+agent"), nunca atualizado para "Claude Code": a variável que guarda o `GET /engines` resolvido
+(`web/src/shared/i18n/agent-names.ts`) não é reativa por si (nada no React assina um módulo-nível),
+então um componente que já renderizou uma vez antes dela chegar fica preso até algum outro
+re-render incidental acontecer — o que a maioria das telas tem de sobra, e por isso nunca aparecia
+fora do e2e. Três execuções nunca fecharam 154/154 porque a causa era real, não a carga; o teto de
+120 s nunca precisou mudar. Specs "instáveis" que sempre falham no mesmo tipo de asserção, mesmo
+trocando qual teste exatamente falha a cada rodada, merecem o trace antes de qualquer reinício.
+
 ---
 
 ## Cenários e2e obrigatórios

@@ -17,6 +17,7 @@ import 'package:remote_claude/features/session/domain/entities/conversation.dart
 import 'package:remote_claude/features/session/domain/entities/tool_diff.dart';
 import 'package:remote_claude/features/session/domain/entities/transcript_content.dart';
 import 'package:remote_claude/features/session/presentation/widgets/ansi_text.dart';
+import 'package:remote_claude/features/session/presentation/widgets/image_marker.dart';
 import 'package:remote_claude/features/session/presentation/widgets/tool_card.dart';
 import 'package:remote_claude/features/session/presentation/widgets/tool_output_view.dart';
 import 'package:remote_claude/features/session/session_providers.dart';
@@ -38,6 +39,7 @@ ToolExecution tool({
   String? title,
   bool isSubagent = false,
   Map<String, Object?>? question,
+  List<ToolAttachment> attachments = const <ToolAttachment>[],
 }) => ToolExecution(
   toolUseId: 't1',
   call: call ?? shellCall('rm -rf /tmp/scratch'),
@@ -47,6 +49,7 @@ ToolExecution tool({
   title: title,
   parentToolUseId: isSubagent ? 'agent-1' : null,
   question: question,
+  attachments: attachments,
 );
 
 /// The conversation the content is read from.
@@ -158,6 +161,89 @@ void main() {
       );
 
       expect(find.byType(PermissionOutcomeLine), findsOneWidget);
+    });
+  });
+
+  group('media and the denied reason — plan 27, F6 · B-22', () {
+    testWidgets('a tool the CLI itself refused (not a question) shows the reason, once opened', (
+      WidgetTester tester,
+    ) async {
+      await pump(tester, tool(status: ToolStatus.denied, summary: 'blocked by rule'));
+      await toggle(tester);
+
+      expect(find.text(l10n.sessionToolRowDenied('blocked by rule')), findsOneWidget);
+    });
+
+    testWidgets('an image attachment draws the marker, inside the card', (
+      WidgetTester tester,
+    ) async {
+      await pump(
+        tester,
+        tool(
+          status: ToolStatus.succeeded,
+          attachments: const <ToolAttachment>[
+            ImageAttachment(blockId: 'm1:0:0', mediaType: 'image/png', size: 12),
+          ],
+        ),
+      );
+      await toggle(tester);
+
+      expect(find.byType(ImageMarker), findsOneWidget);
+    });
+
+    testWidgets('a link attachment with a safe scheme is clickable, and asks before it opens', (
+      WidgetTester tester,
+    ) async {
+      await pump(
+        tester,
+        tool(
+          status: ToolStatus.succeeded,
+          attachments: const <ToolAttachment>[
+            LinkAttachment(uri: 'https://example.com', title: 'Example'),
+          ],
+        ),
+      );
+      await toggle(tester);
+
+      expect(find.text('Example'), findsOneWidget);
+
+      await tester.tap(find.text('Example'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('https://example.com'), findsWidgets);
+    });
+
+    testWidgets('a link attachment with an unsafe scheme is text only, never clickable', (
+      WidgetTester tester,
+    ) async {
+      await pump(
+        tester,
+        tool(
+          status: ToolStatus.succeeded,
+          attachments: const <ToolAttachment>[
+            LinkAttachment(uri: 'javascript:alert(1)', title: 'Click me'),
+          ],
+        ),
+      );
+      await toggle(tester);
+
+      expect(find.text('Click me'), findsOneWidget);
+      expect(find.byIcon(Icons.open_in_new), findsNothing);
+    });
+
+    testWidgets('an unknown attachment reads generically, with its own type', (
+      WidgetTester tester,
+    ) async {
+      await pump(
+        tester,
+        tool(
+          status: ToolStatus.succeeded,
+          attachments: const <ToolAttachment>[UnknownAttachment(type: 'resource')],
+        ),
+      );
+      await toggle(tester);
+
+      expect(find.text(l10n.sessionMessageUnknownBlock('resource')), findsOneWidget);
     });
   });
 

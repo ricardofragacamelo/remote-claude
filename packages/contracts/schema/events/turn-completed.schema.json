@@ -5,6 +5,7 @@
   "description": "A turn finished. It is what closes the turn in the UI and what carries what it used and, when the engine says, what it cost.",
   "x-kind": "event",
   "x-type": "turn.completed",
+  "x-timeline": "conversation",
   "type": "object",
   "required": ["turnId", "usage", "durationMs", "outcome"],
   "properties": {
@@ -13,8 +14,8 @@
     },
     "outcome": {
       "type": "string",
-      "enum": ["completed", "limitReached", "budgetExceeded", "failed"],
-      "description": "How the turn ended — never the engine's own name for it (ADR-025). `completed` is the only one `usage`/`costUsd` describe a turn that actually ran to the end; the other three still carry whatever the engine reports for them, which a crash may leave zeroed. A subtype the adapter does not know is `failed`."
+      "enum": ["completed", "limitReached", "budgetExceeded", "failed", "cancelled"],
+      "description": "How the turn ended — never the engine's own name for it (ADR-025). `completed` is the only one `usage`/`costUsd` describe a turn that actually ran to the end; the other four still carry whatever the engine reports for them, which a crash may leave zeroed. `cancelled` is a person stopping the turn, never an error (plan 27, B-10). A subtype the adapter does not know is `failed`."
     },
     "promptedBy": {
       "type": "string",

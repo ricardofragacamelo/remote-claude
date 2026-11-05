@@ -234,6 +234,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionToolStatusDenied => 'Recusada';
 
   @override
+  String sessionToolRowDenied(String reason) {
+    return 'Recusada: $reason';
+  }
+
+  @override
+  String get sessionToolRowAttachmentLink => 'Link';
+
+  @override
   String sessionToolTitled(String name, String title) {
     return '$name · $title';
   }
@@ -1397,6 +1405,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sessionTurnOutcomeFailed => 'O turno falhou, sem resposta';
 
   @override
+  String get sessionTurnOutcomeCancelled => 'O turno foi cancelado';
+
+  @override
   String get sessionCompactedManual => 'Compactada a pedido: o que veio antes agora é um resumo';
 
   @override
@@ -1411,6 +1422,110 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String sessionCompactedAutoTokens(String tokens) {
     return 'Compactada sozinha, o contexto encheu: $tokens tokens de antes agora são um resumo';
+  }
+
+  @override
+  String get sessionCompactedSummary => 'Ver resumo';
+
+  @override
+  String sessionInjectedInstructions(String name) {
+    return '$name carregada';
+  }
+
+  @override
+  String get sessionInjectedOther => 'O agente acrescentou conteúdo aqui';
+
+  @override
+  String sessionNoticeModelSwitched(String to, String from) {
+    return 'Respondido por $to em vez de $from';
+  }
+
+  @override
+  String sessionNoticeRequestRetrying(String attempt, String maxAttempts) {
+    return 'Tentando de novo — tentativa $attempt de $maxAttempts';
+  }
+
+  @override
+  String sessionNoticeUsageLimited(String status) {
+    return 'Limite de uso: $status';
+  }
+
+  @override
+  String sessionNoticeAgentStopping(String reason) {
+    return 'O agente está parando ($reason)';
+  }
+
+  @override
+  String get sessionNoticeMemoryRecalled => 'O agente leu memórias salvas';
+
+  @override
+  String get sessionNoticeConversationReset => 'O agente começou uma conversa nova';
+
+  @override
+  String sessionNoticeRepeated(int count) {
+    return '×$count';
+  }
+
+  @override
+  String get sessionNoticeTruncated =>
+      'Cortado — o texto inteiro é maior do que esta versão guarda';
+
+  @override
+  String get sessionNoticeKindCommandOutput => 'Saída de comando';
+
+  @override
+  String get sessionNoticeKindAgentInfo => 'Uma mensagem do agente';
+
+  @override
+  String get sessionNoticeKindAgentNotification => 'Uma notificação do agente';
+
+  @override
+  String get sessionNoticeKindAgentStopping => 'O agente está parando';
+
+  @override
+  String get sessionNoticeKindModelSwitched => 'O modelo mudou';
+
+  @override
+  String get sessionNoticeKindModelRefused => 'O modelo recusou responder';
+
+  @override
+  String get sessionNoticeKindRequestRetrying => 'Tentando o pedido de novo';
+
+  @override
+  String get sessionNoticeKindUsageLimited => 'Limite de uso';
+
+  @override
+  String get sessionNoticeKindTurnFailed => 'O turno terminou com erro';
+
+  @override
+  String get sessionNoticeKindCompactionFailed => 'A compactação falhou';
+
+  @override
+  String get sessionNoticeKindAuthFailed => 'A autenticação falhou';
+
+  @override
+  String sessionNoticeKindUnknown(String detail) {
+    return 'O agente enviou algo que esta versão não mostra ($detail)';
+  }
+
+  @override
+  String sessionNoticeReasonUnknownEvent(String detail) {
+    return 'Esta versão não mostra um tipo de conteúdo da sessão ($detail). Atualize o app.';
+  }
+
+  @override
+  String sessionNoticeReasonUnknownValue(String detail) {
+    return 'Chegou um valor que esta versão não reconhece ($detail)';
+  }
+
+  @override
+  String sessionNoticeReasonMalformed(String detail) {
+    return 'A sessão enviou algo que esta versão não conseguiu ler ($detail)';
+  }
+
+  @override
+  String sessionMessageUnknownBlock(String blockType) {
+    return 'Conteúdo de um tipo que esta versão não mostra ($blockType)';
   }
 
   @override

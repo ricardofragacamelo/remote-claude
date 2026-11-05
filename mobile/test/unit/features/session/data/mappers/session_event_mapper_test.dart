@@ -191,7 +191,8 @@ void main() {
       expect(started(toolCallJson(edit))!.call, edit);
     });
 
-    test('no kind, an empty kind or no readable label: nothing to draw it by — unread', () {
+    test('no kind, an empty kind or no readable label: nothing to draw it by — '
+        'the generic line (U-09)', () {
       final Map<String, Object?> whole = toolCallJson(shellLs);
 
       for (final Map<String, Object?> payload in <Map<String, Object?>>[
@@ -215,7 +216,7 @@ void main() {
               payload: <String, Object?>{'toolUseId': 't1', ...payload},
             ),
           ),
-          const UnreadEvent(4),
+          isA<GenericSessionEvent>(),
         );
       }
     });
@@ -328,6 +329,7 @@ void main() {
       'limitReached': TurnOutcome.limitReached,
       'budgetExceeded': TurnOutcome.budgetExceeded,
       'failed': TurnOutcome.failed,
+      'cancelled': TurnOutcome.cancelled,
     };
 
     test('reads each outcome the contract names, never the engine\'s own subtype', () {
@@ -432,22 +434,54 @@ void main() {
   });
 
   group('what it cannot read', () {
+    test('an event added to the contract after this build shipped draws the generic line, once '
+        '(U-06, D-02) — and still moves the resume point', () {
+      // A published app has to survive the contract growing an event it has never heard of
+      // (S-77). Dropping it would have the client ask for it again after every reconnection.
+      final SessionEvent? event = read(
+        frame(kind: 'event', type: 'session.somethingNew', seq: 9, payload: <String, Object?>{}),
+      );
+
+      final GenericSessionEvent generic = event! as GenericSessionEvent;
+
+      expect(generic.seq, 9);
+      expect(generic.reason, GenericReason.unknownEvent);
+      expect(generic.detail, 'session.somethingNew');
+    });
+
     test(
-      'an event added to the contract after this build shipped still moves the resume point',
+      'plan 27, F1 · B-04 — a type the contract classifies silent is a SilentEvent, not an UnreadEvent',
       () {
-        // A published app has to survive the contract growing an event it has never heard of
-        // (S-77). Dropping it would have the client ask for it again after every reconnection.
+        // session.commandsChanged has no reader here: the app does not draw a slash-command menu
+        // from the session stream. The contract still says it is screen state, not an unknown gap.
         final SessionEvent? event = read(
-          frame(kind: 'event', type: 'session.somethingNew', seq: 9, payload: <String, Object?>{}),
+          frame(
+            kind: 'event',
+            type: 'session.commandsChanged',
+            seq: 9,
+            payload: <String, Object?>{},
+          ),
         );
 
-        expect(event, isA<UnreadEvent>());
+        expect(event, isA<SilentEvent>());
         expect(event!.seq, 9);
       },
     );
 
-    test('a payload missing the field its event is about is unreadable, not fatal', () {
-      final List<String> incomplete = <String>[
+    test(
+      'plan 27, F1 · B-04 — a diag.pong is still read as a pong, never shadowed by its own silent classification',
+      () {
+        // diag.pong has no reader in the table either, and the contract also classifies it
+        // silent — but it is tried as a pong first, exactly as before this plan.
+        final SessionEvent? event = read(diagPong(sessionId: 'session-1', seq: 9, nonce: 'n-1'));
+
+        expect(event, isA<PongArrived>());
+      },
+    );
+
+    test('a payload missing a field a conversation event requires draws the generic line (U-09) — '
+        'still unread for one this build never checked (`tool.progress`, `session.started`)', () {
+      final List<String> malformed = <String>[
         frame(
           kind: 'event',
           type: 'message.delta',
@@ -461,13 +495,6 @@ void main() {
           seq: 1,
           payload: <String, Object?>{'toolUseId': 't'},
         ),
-        frame(kind: 'event', type: 'tool.progress', seq: 1, payload: <String, Object?>{}),
-        frame(
-          kind: 'event',
-          type: 'tool.completed',
-          seq: 1,
-          payload: <String, Object?>{'toolUseId': 't'},
-        ),
         frame(
           kind: 'event',
           type: 'turn.completed',
@@ -475,18 +502,43 @@ void main() {
           payload: <String, Object?>{'turnId': 't'},
         ),
         frame(kind: 'event', type: 'session.closed', seq: 1, payload: <String, Object?>{}),
+      ];
+
+      for (final String line in malformed) {
+        expect(read(line), isA<GenericSessionEvent>(), reason: line);
+        expect((read(line)! as GenericSessionEvent).reason, GenericReason.malformed, reason: line);
+      }
+
+      final List<String> stillUnread = <String>[
+        frame(kind: 'event', type: 'tool.progress', seq: 1, payload: <String, Object?>{}),
+        frame(
+          kind: 'event',
+          type: 'tool.completed',
+          seq: 1,
+          payload: <String, Object?>{'toolUseId': 't'},
+        ),
+        frame(kind: 'event', type: 'session.started', seq: 1, payload: <String, Object?>{}),
+      ];
+
+      for (final String line in stillUnread) {
+        expect(read(line), isA<UnreadEvent>(), reason: line);
+      }
+    });
+
+    test('an enum value this build does not recognise draws the generic line instead, leaving the '
+        'event unapplied (U-07)', () {
+      final SessionEvent? event = read(
         frame(
           kind: 'event',
           type: 'session.statusChanged',
           seq: 1,
           payload: <String, Object?>{'status': 'napping'},
         ),
-        frame(kind: 'event', type: 'session.started', seq: 1, payload: <String, Object?>{}),
-      ];
+      );
 
-      for (final String line in incomplete) {
-        expect(read(line), isA<UnreadEvent>(), reason: line);
-      }
+      expect(event, isA<GenericSessionEvent>());
+      expect((event! as GenericSessionEvent).reason, GenericReason.unknownValue);
+      expect((event as GenericSessionEvent).detail, 'napping');
     });
 
     test('B-05 · a frame of another stream is no event of a session, whatever its seq', () {
@@ -670,7 +722,8 @@ void main() {
       },
     );
 
-    test('a block that calls a tool, or one of an unknown kind, is no text of the answer', () {
+    test('a block that calls a tool is no block of the message; one of an unknown kind draws '
+        'generically — U-05', () {
       final SessionEvent? event = read(
         messageBlocks(
           messageId: 'm',
@@ -686,6 +739,7 @@ void main() {
       final MessageFinished finished = event! as MessageFinished;
       expect(finished.text, isEmpty);
       expect(finished.thoughts, isEmpty);
+      expect(finished.blocks, <MessageBlock>[const UnknownBlock('hologram', text: 'nor this')]);
     });
 
     test('S-38 · the queue and the compaction are read with their seq', () {
@@ -928,25 +982,47 @@ void main() {
       );
     });
 
-    test('an entry this build cannot read is dropped — it has no seq to move past', () {
+    test('an entry not even shaped like one is dropped — it has no seq to move past', () {
       final List<Object?> unreadable = <Object?>[
         null,
         'message.completed',
         <String, Object?>{'type': 'message.completed'},
         <String, Object?>{'payload': <String, Object?>{}},
         <String, Object?>{'type': 7, 'payload': <String, Object?>{}},
-        <String, Object?>{'type': 'message.completed', 'payload': <String, Object?>{}},
         <String, Object?>{
           'type': 'diag.pong',
           'payload': <String, Object?>{'nonce': 'n'},
         },
-        <String, Object?>{'type': 'something.new', 'payload': <String, Object?>{}},
+        // Plan 27, F1 · B-04 — a type the contract classifies silent is dropped from history too:
+        // it is screen state, never a line of the conversation, live or replayed.
+        <String, Object?>{'type': 'session.commandsChanged', 'payload': <String, Object?>{}},
       ];
 
       for (final Object? entry in unreadable) {
         expect(historyEventFrom(entry), isNull, reason: '$entry');
       }
     });
+
+    test(
+      'an entry shaped like one, but malformed or of an unknown type, is kept — the generic line '
+      'in the history too (U-09, U-10), never dropped in silence',
+      () {
+        expect(
+          historyEventFrom(<String, Object?>{
+            'type': 'message.completed',
+            'payload': <String, Object?>{},
+          }),
+          isA<GenericSessionEvent>(),
+        );
+        expect(
+          historyEventFrom(<String, Object?>{
+            'type': 'something.new',
+            'payload': <String, Object?>{},
+          }),
+          isA<GenericSessionEvent>(),
+        );
+      },
+    );
   });
 
   group('B-18 · what an undo did', () {
@@ -956,11 +1032,15 @@ void main() {
       expect(event, FilesRewound(7, anOutcome()));
     });
 
-    test('an outcome this build cannot read still moves the resume point', () {
-      expect(
-        read(sessionRewound(seq: 8, payload: <String, Object?>{'promptId': 'p-1'})),
-        const UnreadEvent(8),
+    test('an outcome this build cannot read draws the generic line (U-09), and still moves the '
+        'resume point', () {
+      final SessionEvent? event = read(
+        sessionRewound(seq: 8, payload: <String, Object?>{'promptId': 'p-1'}),
       );
+
+      expect(event, isA<GenericSessionEvent>());
+      expect(event!.seq, 8);
+      expect((event as GenericSessionEvent).reason, GenericReason.malformed);
     });
 
     test('in the history it is read the same way, with no seq of its own', () {
@@ -1260,7 +1340,7 @@ void main() {
       expect(turn.turn.costUsd, '0.000000');
     });
 
-    test('a turn with no id or no duration is unread, cost or not', () {
+    test('a turn with no id or no duration draws the generic line (U-09), cost or not', () {
       final SessionEvent? noId = read(
         frame(
           kind: 'event',
@@ -1278,8 +1358,8 @@ void main() {
         ),
       );
 
-      expect(noId, isA<UnreadEvent>());
-      expect(noDuration, isA<UnreadEvent>());
+      expect(noId, isA<GenericSessionEvent>());
+      expect(noDuration, isA<GenericSessionEvent>());
     });
 
     test('S-88 · redactedThinking, toolUse and toolResult read as the old names did — live and in '
@@ -1310,7 +1390,8 @@ void main() {
       }
     });
 
-    test('S-88 · the names of the previous protocol are no blocks of ours any more', () {
+    test('S-88 · a block of a kind the adapter should always have canonicalised reads generically '
+        'if it ever isn\'t — plan 28, neutral core', () {
       final MessageFinished finished =
           read(
                 messageBlocks(
@@ -1326,6 +1407,10 @@ void main() {
 
       expect(finished.thoughts, isEmpty);
       expect(finished.text, 'A');
+      expect(finished.blocks, <MessageBlock>[
+        const UnknownBlock('redacted_thinking'),
+        const TextBlock('A'),
+      ]);
     });
 
     test('S-89 · a message with no thinking carries no thought at all', () {
@@ -1352,6 +1437,100 @@ void main() {
 
       expect(finished.text, 'Before. After.');
       expect(finished.thoughts, isEmpty);
+    });
+  });
+
+  group('session.notice — plan 27, F6 · B-19', () {
+    test('reads a session.notice into a SessionNotice event', () {
+      final SessionEvent? event = read(
+        frame(
+          kind: 'event',
+          type: 'session.notice',
+          seq: 10,
+          payload: <String, Object?>{
+            'noticeId': 'n1',
+            'kind': 'command.output',
+            'level': 'info',
+            'origin': <String, Object?>{
+              'engine': 'claude',
+              'native': 'system:local_command_output',
+            },
+            'text': 'README.md',
+          },
+        ),
+      );
+
+      expect(
+        event,
+        const SessionNotice(
+          10,
+          noticeId: 'n1',
+          kind: 'command.output',
+          level: NoticeLevel.info,
+          text: 'README.md',
+          originNative: 'system:local_command_output',
+        ),
+      );
+    });
+
+    test('changes nothing without a noticeId — cannot be kept from duplicating on replay', () {
+      expect(
+        read(
+          frame(
+            kind: 'event',
+            type: 'session.notice',
+            seq: 11,
+            payload: <String, Object?>{
+              'kind': 'command.output',
+              'level': 'info',
+              'origin': <String, Object?>{'engine': 'claude', 'native': 'x'},
+            },
+          ),
+        ),
+        const UnreadEvent(11),
+      );
+    });
+
+    test('an unrecognised level reads as notice — still shown, never hidden', () {
+      final SessionEvent? event = read(
+        frame(
+          kind: 'event',
+          type: 'session.notice',
+          seq: 12,
+          payload: <String, Object?>{
+            'noticeId': 'n2',
+            'kind': 'command.output',
+            'level': 'something-new',
+          },
+        ),
+      );
+
+      expect((event! as SessionNotice).level, NoticeLevel.notice);
+    });
+
+    test('in the history it is read the same way, with no seq of its own', () {
+      final SessionEvent? event = historyEventFrom(<String, Object?>{
+        'type': 'session.notice',
+        'payload': <String, Object?>{
+          'noticeId': 'n3',
+          'kind': 'agent.info',
+          'level': 'warning',
+          'text': 'hook failed',
+          'at': '2026-11-01T00:00:00.000Z',
+        },
+      });
+
+      expect(
+        event,
+        const SessionNotice(
+          historySeq,
+          noticeId: 'n3',
+          kind: 'agent.info',
+          level: NoticeLevel.warning,
+          text: 'hook failed',
+          writtenAt: '2026-11-01T00:00:00.000Z',
+        ),
+      );
     });
   });
 }

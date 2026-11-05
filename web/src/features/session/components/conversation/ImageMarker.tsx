@@ -8,6 +8,7 @@ import { Button } from '@/shared/components/ui/button';
 import { usePromptImage } from '../../hooks/usePromptImage';
 import type { MessageBlock } from '../../types/live-session';
 import type { ConversationRef } from '@/shared/lib/conversation';
+import { ZoomableImage } from './ZoomableImage';
 
 /** The refusals of the route that trying again does not change: the type, the size, the absence. */
 const FINAL = new Set(['UNSUPPORTED_MEDIA_TYPE', 'PAYLOAD_TOO_LARGE', 'NOT_FOUND']);
@@ -47,11 +48,7 @@ function OpenImage({
       {t('sessions.image.loading')}
     </p>
   ) : (
-    <img
-      src={image.url}
-      alt={t('sessions.image.alt')}
-      className="max-h-[70vh] max-w-full self-center object-contain"
-    />
+    <ZoomableImage src={image.url} alt={t('sessions.image.alt')} />
   );
 }
 

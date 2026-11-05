@@ -5,6 +5,7 @@
   "description": "A tool invocation began. Emitted for **every** tool, including the ones no human was asked about — the audit trail is anchored on the same hook, for exactly that reason (ADR-011).",
   "x-kind": "event",
   "x-type": "tool.started",
+  "x-timeline": "conversation",
   "type": "object",
   "required": ["toolUseId", "kind", "label", "subject", "changes", "origin", "rawInput"],
   "properties": {

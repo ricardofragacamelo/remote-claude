@@ -1868,6 +1868,10 @@
       "input": "The exact input",
       "denied": "Refused: {{reason}}",
       "trail": "See it in the audit trail",
+      "attachmentLink": "Link",
+      "linkConfirmTitle": "Open this link?",
+      "linkConfirmOpen": "Open",
+      "linkConfirmCancel": "Cancel",
       "labelTitled": "{{tool}} ({{detail}}) — {{status}}. Show the exact input",
       "in": "IN",
       "out": "OUT",
@@ -1935,14 +1939,45 @@
       "noTokens": "no token count",
       "outcomeLimitReached": "The turn did not finish: turn limit reached",
       "outcomeBudgetExceeded": "The turn did not finish: the session's budget ran out",
-      "outcomeFailed": "The turn failed, with no answer"
+      "outcomeFailed": "The turn failed, with no answer",
+      "outcomeCancelled": "The turn was cancelled"
     },
     "compacted": {
       "label": "The conversation was compacted",
       "manual": "Compacted on request: what came before is a summary now",
       "auto": "Compacted on its own, the context was full: what came before is a summary now",
       "manualTokens": "Compacted on request: {{tokens}} tokens before are a summary now",
-      "autoTokens": "Compacted on its own, the context was full: {{tokens}} tokens before are a summary now"
+      "autoTokens": "Compacted on its own, the context was full: {{tokens}} tokens before are a summary now",
+      "summary": "See summary"
+    },
+    "injected": {
+      "instructions": "{{name}} loaded",
+      "other": "The agent added content here"
+    },
+    "notice": {
+      "modelSwitched": "Answered by {{to}} instead of {{from}}",
+      "requestRetrying": "Trying again — attempt {{attempt}} of {{maxAttempts}}",
+      "usageLimited": "Usage limit: {{status}}",
+      "agentStopping": "The agent is stopping ({{reason}})",
+      "memoryRecalled": "The agent read saved memories",
+      "conversationReset": "The agent started a new conversation",
+      "repeated": "×{{count}}",
+      "truncated": "Cut — the full text is longer than this build keeps",
+      "kindCommandOutput": "Command output",
+      "kindAgentInfo": "A message from the agent",
+      "kindAgentNotification": "A notification from the agent",
+      "kindAgentStopping": "The agent is stopping",
+      "kindModelSwitched": "The model changed",
+      "kindModelRefused": "The model refused to answer",
+      "kindRequestRetrying": "Trying the request again",
+      "kindUsageLimited": "Usage limit",
+      "kindTurnFailed": "The turn ended in error",
+      "kindCompactionFailed": "Compaction failed",
+      "kindAuthFailed": "Authentication failed",
+      "kindUnknown": "The agent sent something this build does not show ({{detail}})",
+      "reasonUnknownEvent": "This build does not show a kind of content from the session ({{detail}}). Update the app.",
+      "reasonUnknownValue": "A value this build does not recognise arrived ({{detail}})",
+      "reasonMalformed": "The session sent something this build could not read ({{detail}})"
     },
     "message": {
       "copy": "Copy the message",
@@ -1951,7 +1986,8 @@
       "forkFrom": "Fork from here — send it again, unchanged, in a new conversation",
       "actions": "What to do with this prompt",
       "undo": "Put the files back to before this prompt",
-      "undoBusy": "Put the files back to before this prompt — not while {{agent}} is working"
+      "undoBusy": "Put the files back to before this prompt — not while {{agent}} is working",
+      "unknownBlock": "Content of a kind this build does not show ({{blockType}})"
     },
     "search": {
       "label": "Search the conversation",

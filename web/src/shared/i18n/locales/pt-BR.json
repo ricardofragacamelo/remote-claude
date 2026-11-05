@@ -1868,6 +1868,10 @@
       "input": "O input exato",
       "denied": "Recusada: {{reason}}",
       "trail": "Ver na trilha de auditoria",
+      "attachmentLink": "Link",
+      "linkConfirmTitle": "Abrir este link?",
+      "linkConfirmOpen": "Abrir",
+      "linkConfirmCancel": "Cancelar",
       "labelTitled": "{{tool}} ({{detail}}) — {{status}}. Mostrar o input exato",
       "in": "IN",
       "out": "OUT",
@@ -1935,14 +1939,45 @@
       "noTokens": "sem contagem de tokens",
       "outcomeLimitReached": "O turno não terminou: limite de turnos atingido",
       "outcomeBudgetExceeded": "O turno não terminou: orçamento da sessão esgotado",
-      "outcomeFailed": "O turno falhou, sem resposta"
+      "outcomeFailed": "O turno falhou, sem resposta",
+      "outcomeCancelled": "O turno foi cancelado"
     },
     "compacted": {
       "label": "A conversa foi compactada",
       "manual": "Compactada a pedido: o que veio antes agora é um resumo",
       "auto": "Compactada sozinha, o contexto encheu: o que veio antes agora é um resumo",
       "manualTokens": "Compactada a pedido: {{tokens}} tokens de antes agora são um resumo",
-      "autoTokens": "Compactada sozinha, o contexto encheu: {{tokens}} tokens de antes agora são um resumo"
+      "autoTokens": "Compactada sozinha, o contexto encheu: {{tokens}} tokens de antes agora são um resumo",
+      "summary": "Ver resumo"
+    },
+    "injected": {
+      "instructions": "{{name}} carregada",
+      "other": "O agente acrescentou conteúdo aqui"
+    },
+    "notice": {
+      "modelSwitched": "Respondido por {{to}} em vez de {{from}}",
+      "requestRetrying": "Tentando de novo — tentativa {{attempt}} de {{maxAttempts}}",
+      "usageLimited": "Limite de uso: {{status}}",
+      "agentStopping": "O agente está parando ({{reason}})",
+      "memoryRecalled": "O agente leu memórias salvas",
+      "conversationReset": "O agente começou uma conversa nova",
+      "repeated": "×{{count}}",
+      "truncated": "Cortado — o texto inteiro é maior do que esta versão guarda",
+      "kindCommandOutput": "Saída de comando",
+      "kindAgentInfo": "Uma mensagem do agente",
+      "kindAgentNotification": "Uma notificação do agente",
+      "kindAgentStopping": "O agente está parando",
+      "kindModelSwitched": "O modelo mudou",
+      "kindModelRefused": "O modelo recusou responder",
+      "kindRequestRetrying": "Tentando o pedido de novo",
+      "kindUsageLimited": "Limite de uso",
+      "kindTurnFailed": "O turno terminou com erro",
+      "kindCompactionFailed": "A compactação falhou",
+      "kindAuthFailed": "A autenticação falhou",
+      "kindUnknown": "O agente enviou algo que esta versão não mostra ({{detail}})",
+      "reasonUnknownEvent": "Esta versão não mostra um tipo de conteúdo da sessão ({{detail}}). Atualize o app.",
+      "reasonUnknownValue": "Chegou um valor que esta versão não reconhece ({{detail}})",
+      "reasonMalformed": "A sessão enviou algo que esta versão não conseguiu ler ({{detail}})"
     },
     "message": {
       "copy": "Copiar a mensagem",
@@ -1951,7 +1986,8 @@
       "forkFrom": "Bifurcar daqui — reenviar sem mudar, numa nova conversa",
       "actions": "O que fazer com este prompt",
       "undo": "Devolver os arquivos a antes deste prompt",
-      "undoBusy": "Devolver os arquivos a antes deste prompt — não enquanto o {{agent}} trabalha"
+      "undoBusy": "Devolver os arquivos a antes deste prompt — não enquanto o {{agent}} trabalha",
+      "unknownBlock": "Conteúdo de um tipo que esta versão não mostra ({{blockType}})"
     },
     "search": {
       "label": "Buscar na conversa",

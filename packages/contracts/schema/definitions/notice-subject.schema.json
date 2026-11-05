@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/notice-subject.json",
+  "title": "NoticeSubject",
+  "description": "What a `session.notice` is about, normalised by the adapter of the engine so that a client reads it the same whatever engine made it. Every field is optional, and a `kind` sets the ones it has: the command of a `command.output`, the hook of a `hook.failed`.",
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "string",
+      "description": "The slash command a `command.output` answers, as typed — `/cost`."
+    },
+    "hook": {
+      "type": "string",
+      "description": "The name of the automation a `hook.failed` names."
+    },
+    "trigger": {
+      "type": "string",
+      "description": "What ran the hook — `beforeTool`, `afterTool`, and whatever the engine's own events name."
+    }
+  }
+}

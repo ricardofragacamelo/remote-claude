@@ -5,6 +5,7 @@
   "description": "Where the session stands. Derived by us, not read off a single message of the engine.",
   "x-kind": "event",
   "x-type": "session.statusChanged",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["status"],
   "properties": {

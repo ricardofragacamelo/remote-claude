@@ -37,6 +37,13 @@
       "state": "ok"
     },
     {
+      "element": "image.zoom",
+      "web": "web/src/features/session/components/conversation/ZoomableImage.tsx",
+      "app": "mobile/lib/core/widgets/zoomable_image.dart#ZoomableImage",
+      "appTest": "mobile/test/widget/core/widgets/zoomable_image_test.dart",
+      "state": "ok"
+    },
+    {
       "element": "message.blocksInOrder",
       "web": "web/src/features/session/components/conversation/MessageItem.tsx#MessageItem",
       "app": "mobile/lib/features/session/presentation/widgets/conversation_view.dart#MessageBubble",
@@ -320,6 +327,48 @@
       "web": "web/src/features/session/components/conversation/TurnRow.tsx#CompactedRow",
       "app": "mobile/lib/features/session/presentation/widgets/conversation_lines.dart#CompactedLine",
       "appTest": "mobile/test/widget/features/session/conversation_view_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "turn.compactedSummary",
+      "web": "web/src/features/session/components/conversation/TurnRow.tsx#CompactedRow",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_lines.dart#CompactedLine",
+      "appTest": "mobile/test/widget/features/session/compacted_injected_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "notice.line",
+      "web": "web/src/features/session/components/conversation/TurnRow.tsx#NoticeRow",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_lines.dart#NoticeRow",
+      "appTest": "mobile/test/widget/features/session/notice_row_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "injected.line",
+      "web": "web/src/features/session/components/conversation/TurnRow.tsx#InjectedRow",
+      "app": "mobile/lib/features/session/presentation/widgets/conversation_lines.dart#InjectedRow",
+      "appTest": "mobile/test/widget/features/session/compacted_injected_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "tool.attachmentImage",
+      "web": "web/src/features/session/components/conversation/ToolRow.tsx#Attachment",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#_AttachmentsView",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "tool.attachmentLink",
+      "web": "web/src/features/session/components/conversation/ToolRow.tsx#LinkAttachment",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#_LinkAttachmentView",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
+      "state": "ok"
+    },
+    {
+      "element": "tool.deniedReason",
+      "web": "web/src/features/session/components/conversation/ToolRow.tsx#ToolDetails",
+      "app": "mobile/lib/features/session/presentation/widgets/tool_card.dart#_DeniedLine",
+      "appTest": "mobile/test/widget/features/session/tool_card_test.dart",
       "state": "ok"
     },
     {

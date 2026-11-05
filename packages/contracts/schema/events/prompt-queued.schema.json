@@ -5,6 +5,7 @@
   "description": "A prompt is waiting for the running turn to end. The queue is the backend's, not the engine's — a prompt handed to the engine cannot be taken back (plan 08, D-14) — so every watcher sees the same queue, and any of them can take one out with `session.cancelQueuedPrompt`.",
   "x-kind": "event",
   "x-type": "prompt.queued",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["queueId", "position", "promptedBy", "preview"],
   "properties": {

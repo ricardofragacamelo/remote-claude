@@ -750,6 +750,8 @@ class EntryView extends StatelessWidget {
     final TurnSummary turn => TurnLine(turn: turn),
     final CompactionLine compaction => CompactedLine(line: compaction),
     final RewoundLine rewound => RewoundRow(line: rewound),
+    final NoticeLine notice => NoticeRow(line: notice),
+    final InjectedLine injected => InjectedRow(line: injected),
     ReplayGapLine() => const ReplayGapRow(),
   };
 
@@ -848,7 +850,39 @@ class MessageBubble extends StatelessWidget {
       image: image,
       conversationKey: conversationKey,
     ),
+    UnknownBlock(:final String blockType, :final String text) => _UnknownBlockView(
+      blockType: blockType,
+      text: text,
+    ),
   };
+}
+
+/// A block of a kind this build does not know (U-05): drawn generically, in its place among the
+/// others, with its own text when it has one — never dropped in silence.
+class _UnknownBlockView extends StatelessWidget {
+  const _UnknownBlockView({required this.blockType, required this.text});
+
+  final String blockType;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    decoration: BoxDecoration(
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          AppLocalizations.of(context).sessionMessageUnknownBlock(blockType),
+          style: mutedBodyStyle(context),
+        ),
+        if (text.isNotEmpty) SelectableText(text, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    ),
+  );
 }
 
 /// One text block of a [MessageBubble], with the folder's file links wired in (plan 26, B-10).

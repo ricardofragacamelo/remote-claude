@@ -145,6 +145,99 @@ void main() {
     expect(manual, const CompactionLine(seq: 4, trigger: 'manual', preTokens: 10));
   });
 
+  test('a compaction keeps its place when its summary arrives (plan 27, F6 · B-21)', () {
+    const CompactionLine manual = CompactionLine(
+      seq: 4,
+      trigger: 'manual',
+      preTokens: 10,
+      compactionId: 'c-1',
+    );
+
+    final CompactionLine summarised = manual.withSummary('what happened');
+
+    expect(summarised.entryId, manual.entryId);
+    expect(summarised.summary, 'what happened');
+    expect(
+      summarised,
+      const CompactionLine(
+        seq: 4,
+        trigger: 'manual',
+        preTokens: 10,
+        compactionId: 'c-1',
+        summary: 'what happened',
+      ),
+    );
+    expect(summarised, isNot(manual));
+  });
+
+  test('an injected line is known by its message, not its kind (plan 27, F6 · B-21)', () {
+    const InjectedLine instructions = InjectedLine(messageId: 'm-1', injectedKind: 'instructions');
+    const InjectedLine other = InjectedLine(
+      messageId: 'm-1',
+      injectedKind: 'other',
+      name: 'skill',
+      parentToolUseId: 'agent-1',
+    );
+
+    expect(instructions.entryId, 'injected:m-1');
+    expect(other.entryId, instructions.entryId);
+    expect(instructions, isNot(other));
+    expect(
+      other,
+      const InjectedLine(
+        messageId: 'm-1',
+        injectedKind: 'other',
+        name: 'skill',
+        parentToolUseId: 'agent-1',
+      ),
+    );
+  });
+
+  test(
+    'a notice is known by its noticeId, or by its own synthesised id (plan 27, F6 · B-19, B-20)',
+    () {
+      const NoticeLine fromBackend = NoticeLine(
+        noticeId: 'n-1',
+        kind: 'commandOutput',
+        level: NoticeLevel.info,
+      );
+      const NoticeLine synthesised = NoticeLine(
+        id: 'generic:unknownEvent:session.weird',
+        kind: '',
+        reason: GenericReason.unknownEvent,
+        detail: 'session.weird',
+        level: NoticeLevel.notice,
+      );
+
+      expect(fromBackend.entryId, 'notice:n-1');
+      expect(synthesised.entryId, 'generic:unknownEvent:session.weird');
+      expect(
+        fromBackend,
+        const NoticeLine(noticeId: 'n-1', kind: 'commandOutput', level: NoticeLevel.info),
+      );
+      expect(fromBackend, isNot(synthesised));
+
+      final NoticeLine repeated = synthesised.repeated();
+      expect(repeated.count, 2);
+      expect(repeated.entryId, synthesised.entryId);
+      expect(repeated, isNot(synthesised));
+    },
+  );
+
+  test('a tool attachment compares by its own fields (plan 27, F6 · B-22)', () {
+    const ImageAttachment image = ImageAttachment(blockId: 'b-1', mediaType: 'image/png', size: 10);
+    const LinkAttachment link = LinkAttachment(uri: 'https://example.com', title: 't');
+    const UnknownAttachment unknown = UnknownAttachment(type: 'future');
+
+    expect(image, const ImageAttachment(blockId: 'b-1', mediaType: 'image/png', size: 10));
+    expect(image, isNot(const ImageAttachment(blockId: 'b-2', mediaType: 'image/png', size: 10)));
+    expect(link, const LinkAttachment(uri: 'https://example.com', title: 't'));
+    expect(link, isNot(const LinkAttachment(uri: 'https://example.com', title: 'other')));
+    expect(unknown, const UnknownAttachment(type: 'future'));
+    expect(unknown, isNot(const UnknownAttachment(type: 'other')));
+    expect(image, isNot(unknown));
+  });
+
   test('a queued prompt compares by value', () {
     expect(
       const QueuedPrompt(queueId: 'q', promptedBy: 'web', preview: 'p'),

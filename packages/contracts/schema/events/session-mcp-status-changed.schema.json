@@ -5,6 +5,7 @@
   "description": "The MCP servers of a session and where each one stands — the whole list, every time, so a client never patches. An event of the session, with its `seq`: published once the servers the backend composed have been handed to the CLI, after every `session.toggleMcpServer` or `session.reconnectMcpServer` that changed something, and when a server is switched off because its configuration was removed or switched off (tightening applies at once). A client that does not know it ignores it.",
   "x-kind": "event",
   "x-type": "session.mcpStatusChanged",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["servers"],
   "properties": {

@@ -14,11 +14,14 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
 import { withoutParentSession } from './parent-session.mjs';
+import { repoRoot } from './paths.mjs';
+import { fail, info, line, ok, title } from './ui.mjs';
 
 /** How long one session may take before it is abandoned. */
 export const SESSION_TIMEOUT_MS = 240_000;
@@ -171,12 +174,20 @@ export async function spikeSession(sdk, spec) {
     },
   });
 
-  try {
-    const extra = spec.before === undefined ? null : await spec.before(query, sessionId);
-    ready.resolve();
+  /**
+   * Reads the stream until every prompt got its `result`, pushing each message as it arrives. The
+   * deadline abandoning the session partway is itself a measurement, not a failure of the spike
+   * (F0-spike.md's own standard): what came through before it fired is kept, not thrown away.
+   *
+   * @returns {Promise<boolean>} whether the deadline cut the session short
+   */
+  async function readTurns() {
+    if (prompts.length === 0) {
+      return false;
+    }
 
     let results = 0;
-    if (prompts.length > 0) {
+    try {
       for await (const message of query) {
         messages.push(message);
         if (message.type === 'result') {
@@ -185,9 +196,21 @@ export async function spikeSession(sdk, spec) {
           if (results === prompts.length) break;
         }
       }
+    } catch (error) {
+      if (!abortController.signal.aborted) {
+        throw error;
+      }
+      return true;
     }
+    return false;
+  }
 
-    return { sessionId, seen, messages, extra };
+  try {
+    const extra = spec.before === undefined ? null : await spec.before(query, sessionId);
+    ready.resolve();
+
+    const abandoned = await readTurns();
+    return { sessionId, seen, messages, extra, abandoned };
   } finally {
     clearTimeout(deadline);
     query.close();
@@ -285,6 +308,79 @@ export function copyCredential(source, config) {
 }
 
 /**
+ * A throwaway root for one spike run: an isolated `CLAUDE_CONFIG_DIR` with the credential copied,
+ * and a repository seeded with the given files — the shape every spike needs before it can open a
+ * session the way the product does.
+ *
+ * @param {string} name part of the directory's name, for telling runs apart on disk
+ * @param {Record<string, string>} [files] relative path → content, written under the repository
+ * @returns {{ root: string, config: string, repository: string }}
+ */
+export function makeThrowawayWorld(name, files = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), `rc-spike-${name}-`));
+  const source = process.env['CLAUDE_CONFIG_DIR'] ?? path.join(os.homedir(), '.claude');
+  const config = path.join(root, 'config');
+  fs.mkdirSync(config);
+  copyCredential(source, config);
+
+  const repository = path.join(root, 'repository');
+  fs.mkdirSync(repository);
+  for (const [relative, content] of Object.entries(files)) {
+    const target = path.join(repository, relative);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content);
+  }
+  return { root, config, repository };
+}
+
+/**
+ * Runs one throwaway session end to end: opens it on `world` with `session`, hands what it saw to
+ * `read` for the probe to turn into its answer, and tears `world` down after — even when `read` or
+ * the session itself throws. The shape every probe that needs a session of its own shares, instead
+ * of each repeating the same open/read/clean-up around `spikeSession`.
+ *
+ * @template T
+ * @param {{ root: string, config: string, repository: string }} world
+ * @param {any} sdk
+ * @param {Omit<SessionSpec, 'cwd' | 'config'>} session
+ * @param {(run: Awaited<ReturnType<typeof spikeSession>>, world: { config: string, repository: string }) => Promise<T> | T} read
+ * @returns {Promise<T>}
+ */
+export async function runInWorld(world, sdk, session, read) {
+  try {
+    const run = await spikeSession(sdk, {
+      cwd: world.repository,
+      config: world.config,
+      ...session,
+    });
+    return await read(run, world);
+  } finally {
+    fs.rmSync(world.root, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Runs `fn` with `CLAUDE_CONFIG_DIR` pointed at a spike's own isolated configuration — what reading
+ * a session back through the SDK's store functions needs, since the store lives under it — and
+ * restores whatever the variable held before, even when `fn` throws.
+ *
+ * @template T
+ * @param {string} config
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ */
+export async function withConfigDir(config, fn) {
+  const previous = process.env['CLAUDE_CONFIG_DIR'];
+  process.env['CLAUDE_CONFIG_DIR'] = config;
+  try {
+    return await fn();
+  } finally {
+    if (previous === undefined) delete process.env['CLAUDE_CONFIG_DIR'];
+    else process.env['CLAUDE_CONFIG_DIR'] = previous;
+  }
+}
+
+/**
  * A whole spike: the probes asked for on the command line, each run on the SDK of the backend, the
  * raw numbers printed — and written to the `--json` file —, and the report. Exits 0 when every probe
  * ran; a result that is bad for the design is not a failure of the spike.
@@ -319,4 +415,31 @@ export async function runSpike(spec) {
   }
   spec.say.line(spec.report(results));
   return failed === 0 ? 0 : 1;
+}
+
+/**
+ * A whole spike, for the common case every spike after plan 13's shares: one runner per probe name,
+ * taking only the SDK, and a report that is `reportOf(results)` — printed and exited through
+ * `runSpike`, with this repository's own SDK and the real terminal output. A spike whose probe needs
+ * more than the SDK, or that reports through something other than `reportTable`, calls `runSpike`
+ * directly instead (`scripts/claude-config-spike.mjs`).
+ *
+ * @param {object} spec
+ * @param {readonly string[]} spec.args the command line, after the script
+ * @param {readonly string[]} spec.probes the names the spike knows, in order
+ * @param {string} spec.heading what the run is called on screen
+ * @param {Record<string, (sdk: any) => Promise<unknown>>} spec.runners one function per probe name
+ * @param {(results: Record<string, unknown>) => string} spec.reportOf the table of what it measured
+ * @returns {Promise<number>} the exit code
+ */
+export async function runNamedSpike(spec) {
+  return runSpike({
+    args: spec.args,
+    probes: spec.probes,
+    heading: spec.heading,
+    root: repoRoot,
+    probe: (sdk, name) => /** @type {(sdk: any) => Promise<unknown>} */ (spec.runners[name])(sdk),
+    report: spec.reportOf,
+    say: { info, ok, fail, title, line },
+  });
 }

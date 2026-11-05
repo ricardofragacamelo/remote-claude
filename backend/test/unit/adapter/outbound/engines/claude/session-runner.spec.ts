@@ -647,6 +647,40 @@ describe('SessionRunner', () => {
       ).toBe(true);
       expect(novel.closed).toEqual([]);
     });
+
+    it('warns about a tool_result block of a type it does not know, and still finishes the tool — plan 27, B-14', async () => {
+      const odd = runner({
+        extraMessages: [
+          {
+            type: 'user',
+            uuid: 'u-odd',
+            session_id: 's',
+            parent_tool_use_id: null,
+            message: {
+              role: 'user',
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: 'tu-odd',
+                  content: [{ type: 'search_result' }],
+                },
+              ],
+            },
+          },
+        ],
+      });
+      odd.runner.run();
+      odd.runner.prompt('hello');
+      await odd.settle();
+
+      expect(
+        odd.log.withOp('engine.output').some((line) => line['blockType'] === 'search_result'),
+      ).toBe(true);
+      const completed = odd.events.find((event) => event.type === 'tool.completed');
+      expect(
+        (completed?.payload as { attachments?: readonly { kind: string }[] }).attachments,
+      ).toEqual([{ kind: 'unknown', type: 'search_result' }]);
+    });
   });
 
   describe("the CLI's own channel", () => {

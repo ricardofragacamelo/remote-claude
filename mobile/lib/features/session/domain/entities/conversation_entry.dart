@@ -12,6 +12,15 @@ import 'package:remote_claude/core/conversation/tool_call.dart';
 /// How a tool invocation ended, when it has.
 enum ToolStatus { running, succeeded, failed, denied }
 
+/// The four levels a `session.notice` carries — the contract's own.
+enum NoticeLevel { info, notice, warning, error }
+
+/// Why a [NoticeLine] without a backend `kind` is drawn — never for an unrecognised
+/// `session.notice.kind`, which stays a real notice line (U-11): a WS event type with no reader
+/// (U-06), a known event with an enum value this build does not recognise (U-07), or a known event
+/// missing a field it requires (U-09).
+enum GenericReason { unknownEvent, unknownValue, malformed }
+
 /// One entry of the conversation.
 ///
 /// Sealed, so drawing the list is an exhaustive `switch`: an entry nobody draws is a compile error,
@@ -118,6 +127,23 @@ final class ImageBlock extends MessageBlock {
 
   @override
   List<Object?> get props => <Object?>[image];
+}
+
+/// A block of a kind this build does not know (U-05) — drawn generically, in its place among the
+/// others, with its own text when it has one, never dropped in silence. The web's same survival rule
+/// for a `BlockKind` of `'unknown'` (plan 27, F6 · B-20).
+final class UnknownBlock extends MessageBlock {
+  const UnknownBlock(this.blockType, {this.text = '', this.blockId});
+
+  /// The block's own `type`, as the backend passed it through — what the generic line names.
+  final String blockType;
+  final String text;
+
+  @override
+  final String? blockId;
+
+  @override
+  List<Object?> get props => <Object?>[blockType, text, blockId];
 }
 
 /// An image a prompt carried, as the conversation keeps it: what it is and how large, never the
@@ -255,6 +281,7 @@ class ToolExecution extends ConversationEntry {
     this.parentToolUseId,
     this.title,
     this.question,
+    this.attachments = const <ToolAttachment>[],
   });
 
   final String toolUseId;
@@ -285,6 +312,12 @@ class ToolExecution extends ConversationEntry {
   /// A subagent ran it, not the main conversation — [parentToolUseId], read as a question.
   bool get isSubagent => parentToolUseId != null;
 
+  /// Media the result carried besides its text (plan 27, F6 · B-22) — never raw bytes: an `image`
+  /// is fetched by the same route a prompt's image uses, a `link` is text unless its scheme is
+  /// safe, and a kind this build does not know draws the generic line (B-20). Empty from a call
+  /// that finished with no attachment, and from an older server.
+  final List<ToolAttachment> attachments;
+
   @override
   String get entryId => 'tool:$toolUseId';
 
@@ -294,6 +327,7 @@ class ToolExecution extends ConversationEntry {
     String? elapsed,
     String? summary,
     Map<String, Object?>? question,
+    List<ToolAttachment>? attachments,
   }) => ToolExecution(
     toolUseId: toolUseId,
     call: call,
@@ -303,6 +337,7 @@ class ToolExecution extends ConversationEntry {
     parentToolUseId: parentToolUseId,
     title: title,
     question: question ?? this.question,
+    attachments: attachments ?? this.attachments,
   );
 
   @override
@@ -315,13 +350,54 @@ class ToolExecution extends ConversationEntry {
     parentToolUseId,
     title,
     question,
+    attachments,
   ];
 }
 
+/// One attachment a tool's result carried (plan 27, F6 · B-22) — the contract's own shape.
+sealed class ToolAttachment extends Equatable {
+  const ToolAttachment();
+}
+
+/// Fetched by `GET /transcripts/:engine/:id/images/:blockId`, the same route a prompt's image uses.
+final class ImageAttachment extends ToolAttachment {
+  const ImageAttachment({this.blockId, this.mediaType, this.size});
+
+  final String? blockId;
+  final String? mediaType;
+  final int? size;
+
+  @override
+  List<Object?> get props => <Object?>[blockId, mediaType, size];
+}
+
+/// Shown as text, and only as a clickable link for a safe scheme (`http`, `https`, `mailto`) —
+/// `javascript:` and `data:` never become one.
+final class LinkAttachment extends ToolAttachment {
+  const LinkAttachment({this.uri, this.title});
+
+  final String? uri;
+  final String? title;
+
+  @override
+  List<Object?> get props => <Object?>[uri, title];
+}
+
+/// A kind this build does not know (B-20's own survival rule, reused here) — drawn generically.
+final class UnknownAttachment extends ToolAttachment {
+  const UnknownAttachment({this.type});
+
+  final String? type;
+
+  @override
+  List<Object?> get props => <Object?>[type];
+}
+
 /// How a turn ended — never the engine's own name for it (ADR-025). Only [completed] is a turn
-/// that ran to the end; the other three still carry whatever the engine reports for them, which a
-/// crash may leave zeroed (plan 27, B-10).
-enum TurnOutcome { completed, limitReached, budgetExceeded, failed }
+/// that ran to the end; the other four still carry whatever the engine reports for them, which a
+/// crash may leave zeroed (plan 27, B-10). [cancelled] is a person stopping the turn, never an
+/// error.
+enum TurnOutcome { completed, limitReached, budgetExceeded, failed, cancelled }
 
 /// What a finished turn cost — the line that closes it in the conversation.
 class TurnSummary extends ConversationEntry {
@@ -383,9 +459,16 @@ class TurnSummary extends ConversationEntry {
 
 /// The conversation was compacted here: what came before is now a summary the agent carries.
 class CompactionLine extends ConversationEntry {
-  const CompactionLine({required this.seq, required this.trigger, this.preTokens});
+  const CompactionLine({
+    required this.seq,
+    required this.trigger,
+    this.preTokens,
+    this.compactionId,
+    this.summary,
+  });
 
-  /// Where in the stream it happened — what tells two compactions apart.
+  /// Where in the stream it happened — what two compactions are told apart by on a server older
+  /// than [compactionId].
   final int seq;
 
   /// `manual` — somebody sent `/compact`; `auto` — the context was full.
@@ -394,14 +477,145 @@ class CompactionLine extends ConversationEntry {
   /// How many tokens the context held before, when the engine said.
   final int? preTokens;
 
+  /// Stable live, on replay and from the history (plan 27, F3 · B-09, F5 · B-18) — what two
+  /// compactions of the same conversation are told apart by. Absent from a server older than it,
+  /// which falls back to [seq].
+  final String? compactionId;
+
+  /// The compaction's own summary — the `message.completed` with `injected.kind: 'contextSummary'`
+  /// that follows it, folded in here rather than drawn as its own message (plan 27, F6 · B-21):
+  /// `null` until it arrives, or from an engine that sends none.
+  final String? summary;
+
   /// Whether a person asked for it, rather than the context filling up.
   bool get isManual => trigger == 'manual';
 
   @override
-  String get entryId => 'compaction:$seq';
+  String get entryId => 'compaction:${compactionId ?? seq}';
+
+  /// This same compaction, with its summary filled in.
+  CompactionLine withSummary(String text) => CompactionLine(
+    seq: seq,
+    trigger: trigger,
+    preTokens: preTokens,
+    compactionId: compactionId,
+    summary: text,
+  );
 
   @override
-  List<Object?> get props => <Object?>[seq, trigger, preTokens];
+  List<Object?> get props => <Object?>[seq, trigger, preTokens, compactionId, summary];
+}
+
+/// What the agent put in the conversation itself, as its own quiet line — never a message bubble
+/// (plan 27, F6 · B-21). The client picks it by `injected.kind`, never by the name of the tool that
+/// owns it: `instructions` is a skill's body, loaded under the tool's own card.
+final class InjectedLine extends ConversationEntry {
+  const InjectedLine({
+    required this.messageId,
+    required this.injectedKind,
+    this.name,
+    this.parentToolUseId,
+  });
+
+  final String messageId;
+
+  /// `'instructions'` or `'other'` — never `'commandExpansion'` or `'contextSummary'`, which never
+  /// reach this entry (B-21).
+  final String injectedKind;
+  final String? name;
+  final String? parentToolUseId;
+
+  @override
+  String get entryId => 'injected:$messageId';
+
+  @override
+  List<Object?> get props => <Object?>[messageId, injectedKind, name, parentToolUseId];
+}
+
+/// A `session.notice`, or the generic line this build draws in its place — plan 27, F6 · B-19, B-20.
+/// One entry for both, the same row the discovery itself asks for: a line genuinely unknown to a
+/// published client is not a different kind of thing from one the backend itself could not place
+/// (B-13's own `kind: 'unknown'`, and an unrecognised future `kind`, U-11, read the same way).
+///
+/// Keyed by [noticeId] when the backend sent one, never by `seq` — the same notice delivered live,
+/// on replay and from the history must be the **same** entry, not three (S-77); a line this build
+/// synthesised itself (a [reason] of U-06, U-07 or U-09) is keyed by [id] instead, which the mapper
+/// derives so it repeats at most once per session (U-06) or per (type, field) (U-07, U-09).
+final class NoticeLine extends ConversationEntry {
+  const NoticeLine({
+    this.noticeId,
+    this.id,
+    required this.kind,
+    this.reason,
+    this.detail,
+    this.count = 1,
+    required this.level,
+    this.parentToolUseId,
+    this.messageKey,
+    this.params,
+    this.text,
+    this.truncated = false,
+  }) : assert(noticeId != null || id != null, 'a NoticeLine is keyed by noticeId or by id');
+
+  final String? noticeId;
+  final String? id;
+
+  /// The notice's own `kind` — `''` for a line this build synthesised itself ([reason] says why).
+  final String kind;
+  final GenericReason? reason;
+
+  /// What a synthesised line names: the WS event type, the enum field's bad value, or the notice
+  /// `kind` this build has no line for.
+  final String? detail;
+
+  final NoticeLevel level;
+
+  /// The subagent this entry nests under — `null` for the main conversation.
+  final String? parentToolUseId;
+  final String? messageKey;
+  final Map<String, Object?>? params;
+  final String? text;
+  final bool truncated;
+
+  /// How many times in a row the identical backend `kind: 'unknown'` (or unrecognised-`kind`) notice
+  /// arrived (D-12) — the "×3" counter. `1` for everything else.
+  final int count;
+
+  @override
+  String get entryId => noticeId != null ? 'notice:$noticeId' : id!;
+
+  /// This same line, counted once more — the "×3" collapsing of an identical notice repeated in a
+  /// row (D-12).
+  NoticeLine repeated() => NoticeLine(
+    noticeId: noticeId,
+    id: id,
+    kind: kind,
+    reason: reason,
+    level: level,
+    messageKey: messageKey,
+    params: params,
+    text: text,
+    truncated: truncated,
+    parentToolUseId: parentToolUseId,
+    detail: detail,
+    count: count + 1,
+  );
+
+  @override
+  List<Object?> get props => <Object?>[
+    noticeId,
+    id,
+    kind,
+    reason,
+    level,
+    messageKey,
+    params,
+    text,
+    truncated,
+    parentToolUseId,
+    detail,
+    count,
+  ];
 }
 
 /// The files of the session went back to a point, here: how many went back, stayed and failed. File

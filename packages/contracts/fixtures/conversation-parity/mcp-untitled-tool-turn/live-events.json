@@ -55,7 +55,13 @@
     "payload": {
       "toolUseId": "toolu_01UfbMLyXmAwG77EamKBHyUb",
       "status": "succeeded",
-      "summary": ""
+      "summary": "",
+      "attachments": [
+        {
+          "kind": "unknown",
+          "type": "tool_reference"
+        }
+      ]
     }
   },
   {

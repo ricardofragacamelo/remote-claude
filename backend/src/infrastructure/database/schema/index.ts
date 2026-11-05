@@ -11,6 +11,7 @@ export { fileHistoryEntries } from './file-history.schema';
 export { notifications } from './notifications.schema';
 export { diagSessions } from './diag.schema';
 export { permissionRequests } from './permission.schema';
+export { persistedNotices } from './persisted-notices.schema';
 export { permissionRules } from './permission-rules.schema';
 export { sessionFileStates, turnFileCheckpoints } from './session-files.schema';
 export { sessionOrigins } from './session-origins.schema';

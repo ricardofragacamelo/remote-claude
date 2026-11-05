@@ -152,7 +152,7 @@ describe('the conversation reducer — plan 22, F5', () => {
     it('remembers no instant from an event it does not read', () => {
       const state = fold(frame('session.unheardOf', { at: at(5) }));
 
-      expect(state).toBe(SILENT);
+      expect(state).not.toHaveProperty('writtenAt');
     });
   });
 

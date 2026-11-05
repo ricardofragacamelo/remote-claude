@@ -54,7 +54,7 @@ function resultOf(content: unknown, extra: Record<string, unknown> = {}): Record
       type: 'user',
       message: { content: [{ type: 'tool_result', tool_use_id: 't', content, ...extra }] },
     }),
-    '',
+    new SdkMessageMapper(''),
   );
 
   return { ...payloadOf(event) };
@@ -77,8 +77,9 @@ describe('every block has an identity — plan 22, B-06', () => {
     const live = liveMessages('thinking-turn').flatMap((message) =>
       blocksOf(new SdkMessageMapper('').read(message).events),
     );
+    const historyMapper = new SdkMessageMapper('');
     const history = capturedTranscript('thinking-turn').flatMap((message) =>
-      blocksOf(historicalEvents(message, '')),
+      blocksOf(historicalEvents(message, historyMapper)),
     );
 
     expect(history).toEqual(live);
@@ -96,7 +97,7 @@ describe('every block has an identity — plan 22, B-06', () => {
           ],
         },
       }),
-      '',
+      new SdkMessageMapper(''),
     );
 
     const ids = (payloadOf(event)['content'] as { blockId: string }[]).map(
@@ -117,8 +118,8 @@ describe('every block has an identity — plan 22, B-06', () => {
   it('gives the same ids to the same entry read twice — S-11', () => {
     const [message] = capturedTranscript('tool-turn');
 
-    expect(historicalEvents(message as SessionMessage, '')).toEqual(
-      historicalEvents(message as SessionMessage, ''),
+    expect(historicalEvents(message as SessionMessage, new SdkMessageMapper(''))).toEqual(
+      historicalEvents(message as SessionMessage, new SdkMessageMapper('')),
     );
   });
 });
@@ -134,7 +135,7 @@ describe('the instant of an entry of the history — plan 22, B-06', () => {
           content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'ls' } }],
         },
       }),
-      '',
+      new SdkMessageMapper(''),
     );
 
     expect(events.map((event) => payloadOf(event)['at'])).toEqual([
@@ -150,7 +151,7 @@ describe('the instant of an entry of the history — plan 22, B-06', () => {
         timestamp: '2026-10-07T13:28:36.017Z',
         message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] },
       }),
-      '',
+      new SdkMessageMapper(''),
     );
 
     expect(payloadOf(event)['at']).toBe('2026-10-07T13:28:36.017Z');
@@ -163,7 +164,7 @@ describe('the instant of an entry of the history — plan 22, B-06', () => {
   ])('leaves `at` out when the timestamp is %s, without breaking — S-10', (_, timestamp) => {
     const [event] = historicalEvents(
       entry({ type: 'user', timestamp, message: { content: 'continue' } }),
-      '',
+      new SdkMessageMapper(''),
     );
 
     expect(event?.payload).not.toHaveProperty('at');
@@ -187,7 +188,10 @@ describe('the title of a tool — plan 22, B-07', () => {
     const [read] = capturedTranscript('bash-output-turn');
 
     const live = firstOf(new SdkMessageMapper('').read(tool as SDKMessage).events, 'tool.started');
-    const history = firstOf(historicalEvents(read as SessionMessage, ''), 'tool.started');
+    const history = firstOf(
+      historicalEvents(read as SessionMessage, new SdkMessageMapper('')),
+      'tool.started',
+    );
 
     expect(live).toMatchObject({
       kind: 'shell',
@@ -213,7 +217,7 @@ describe('the title of a tool — plan 22, B-07', () => {
           ],
         },
       }),
-      '',
+      new SdkMessageMapper(''),
     );
 
     expect(event?.type).toBe('message.completed');
@@ -231,7 +235,7 @@ describe('the title of a tool — plan 22, B-07', () => {
         type: 'assistant',
         message: { id: 'm', content: [{ type: 'tool_use', id: 't', name: 'Read', input }] },
       }),
-      '',
+      new SdkMessageMapper(''),
     );
 
     expect(started?.payload).not.toHaveProperty('title');
@@ -240,16 +244,18 @@ describe('the title of a tool — plan 22, B-07', () => {
 
 describe('the summary of a tool`s output — plan 22, B-08', () => {
   it('keeps the end of a long Bash output, recorded — S-15, S-07', () => {
+    const mapper = new SdkMessageMapper('');
     const results = capturedTranscript('bash-output-turn').flatMap((message) =>
-      historicalEvents(message, '').filter((event) => event.type === 'tool.completed'),
+      historicalEvents(message, mapper).filter((event) => event.type === 'tool.completed'),
     );
 
     expect(results[0]?.payload['summary']).toBe('…596\n597\n598\n599\n600');
   });
 
   it('reads a result made of blocks as their text, never as JSON — S-14', () => {
+    const mapper = new SdkMessageMapper('');
     const listed = capturedTranscript('task-subagent-turn')
-      .flatMap((message) => historicalEvents(message, ''))
+      .flatMap((message) => historicalEvents(message, mapper))
       .filter(
         (event) =>
           event.type === 'tool.completed' && event.payload['parentToolUseId'] === undefined,
@@ -327,7 +333,7 @@ describe('the image of a prompt is a marker — plan 22, B-09', () => {
           ],
         },
       }),
-      '',
+      new SdkMessageMapper(''),
     );
 
     expect(payloadOf(event)['content']).toEqual([
@@ -349,7 +355,7 @@ describe('the image of a prompt is a marker — plan 22, B-09', () => {
           ],
         },
       }),
-      '',
+      new SdkMessageMapper(''),
     );
 
     expect(payloadOf(event)['content']).toEqual([
@@ -363,7 +369,7 @@ describe('the image of a prompt is a marker — plan 22, B-09', () => {
   ])('still marks an image with %s — S-19', (_, source, fields) => {
     const [event] = historicalEvents(
       entry({ type: 'user', message: { content: [{ type: 'image', source }] } }),
-      '',
+      new SdkMessageMapper(''),
     );
 
     expect(payloadOf(event)['content']).toEqual([{ type: 'image', blockId: 'u-1:0', ...fields }]);
@@ -397,8 +403,9 @@ describe('the canonical call, live and read back — plan 28, S-47', () => {
   ])('%s: every tool of the history is the tool the stream showed', (name) => {
     const mapper = new SdkMessageMapper(RECORDED_FOLDER);
     const live = startedOf(liveMessages(name).flatMap((message) => mapper.read(message).events));
+    const historyMapper = new SdkMessageMapper(RECORDED_FOLDER);
     const history = startedOf(
-      capturedTranscript(name).flatMap((message) => historicalEvents(message, RECORDED_FOLDER)),
+      capturedTranscript(name).flatMap((message) => historicalEvents(message, historyMapper)),
     );
 
     expect(live.length).toBeGreaterThan(0);
@@ -413,8 +420,9 @@ describe('the canonical call, live and read back — plan 28, S-47', () => {
       const live = startedOf(
         liveMessages(name).flatMap((message) => mapper.read(message).events),
       ).filter((payload) => payload['parentToolUseId'] === undefined);
+      const historyMapper = new SdkMessageMapper(RECORDED_FOLDER);
       const read = startedOf(
-        recordedHistory(name).flatMap((message) => historicalEvents(message, RECORDED_FOLDER)),
+        recordedHistory(name).flatMap((message) => historicalEvents(message, historyMapper)),
       );
 
       // The read-back history may hold the turns before the recorded one too: every call the
@@ -427,7 +435,7 @@ describe('the canonical call, live and read back — plan 28, S-47', () => {
   it('labels the paths relative to the folder, the same live and read back', () => {
     const [read] = startedOf(
       capturedTranscript('edit-turn').flatMap((message) =>
-        historicalEvents(message, RECORDED_FOLDER),
+        historicalEvents(message, new SdkMessageMapper(RECORDED_FOLDER)),
       ),
     );
 
@@ -439,7 +447,9 @@ describe('the canonical call, live and read back — plan 28, S-47', () => {
     // Without the folder, the label keeps the whole path — it never guesses one.
     expect(
       startedOf(
-        capturedTranscript('edit-turn').flatMap((message) => historicalEvents(message, '')),
+        capturedTranscript('edit-turn').flatMap((message) =>
+          historicalEvents(message, new SdkMessageMapper('')),
+        ),
       )[0],
     ).toMatchObject({ label: { params: { path: '/workspace/app.js' } } });
   });

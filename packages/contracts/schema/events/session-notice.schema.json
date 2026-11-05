@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/events/session-notice.json",
+  "title": "SessionNotice",
+  "description": "Something the agent, a hook or a command said that is not a message, a tool or a turn — a warning, a banner, an automation failing, a retry. One event covers every such case (plan 27): the adapter of the engine picks the `kind`, never the client. Carried in the replay and in the history (`transcript.appended`), the same as any other event of the conversation.",
+  "x-kind": "event",
+  "x-type": "session.notice",
+  "x-timeline": "conversation",
+  "type": "object",
+  "required": ["noticeId", "kind", "level", "origin"],
+  "properties": {
+    "noticeId": {
+      "type": "string",
+      "description": "Stable live and in the history — the id the engine itself gave the message, when it has one. What lets a client replace a notice rather than duplicate it."
+    },
+    "kind": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "The canonical kind of the notice, decided by the adapter of the engine: `command.output`, `agent.info`, `agent.notification`, `agent.stopping`, `model.switched`, `model.refused`, `request.retrying`, `usage.limited`, `turn.failed`, `compaction.failed`, `auth.failed`, `unknown`. **Open**: a kind the client does not know is drawn as the generic line, never an error (ADR-025)."
+    },
+    "level": {
+      "type": "string",
+      "enum": ["info", "notice", "warning", "error"],
+      "description": "How prominent the line reads. Not the same scale as a tool's `status` or a turn's `outcome` — a notice is never itself succeeded or failed."
+    },
+    "messageKey": {
+      "type": "string",
+      "description": "Set when the text is ours: an i18n key the client translates (`sessions.notice.modelSwitched`), paired with `params`. Mutually exclusive with `text` in practice — a notice carries one or the other, never both."
+    },
+    "params": {
+      "type": "object",
+      "description": "The parameters `messageKey` takes — in the domain each value is a string, a number or a boolean; the generator's open-object subset cannot bound the value type further, so this is carried as a generic open object. Absent without a `messageKey`."
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Set when the text is the agent's, a hook's or a command's own — never ours to translate, and never trusted: shown as plain text, cut to `maxLength` with `truncated: true` when it was. Mutually exclusive with `messageKey` in practice."
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "Set when `text` was cut to fit the limit. Absent otherwise, and absent without `text`."
+    },
+    "subject": {
+      "$ref": "../definitions/notice-subject.schema.json",
+      "description": "What the notice is about, normalised — the command, the hook, what ran it."
+    },
+    "origin": {
+      "$ref": "../definitions/engine-origin.schema.json",
+      "description": "The engine and its own, opaque name for whatever this notice came from — diagnosis, and the text of a `kind: 'unknown'` line."
+    },
+    "parentToolUseId": {
+      "type": "string",
+      "description": "Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation."
+    },
+    "at": {
+      "type": "string",
+      "description": "When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. Absent live, where the frame's `ts` is the clock."
+    }
+  }
+}

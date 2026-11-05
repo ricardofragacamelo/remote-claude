@@ -5,6 +5,7 @@
   "description": "A fragment of the assistant's answer, from the engine's own streaming event. The client accumulates by `messageId`; it never concatenates blindly in arrival order.",
   "x-kind": "event",
   "x-type": "message.delta",
+  "x-timeline": "conversation",
   "type": "object",
   "required": ["messageId", "delta"],
   "properties": {

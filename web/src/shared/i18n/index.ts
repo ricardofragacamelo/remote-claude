@@ -3,7 +3,7 @@ import type { i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 import { isRecord } from '@/shared/lib/json';
-import { agentNameOf } from './agent-names';
+import { agentNameOf, watchAgentNames } from './agent-names';
 import en from './locales/en.json';
 import ptBR from './locales/pt-BR.json';
 
@@ -69,6 +69,15 @@ export function createI18n(locale: Locale): i18n {
     returnNull: false,
     missingInterpolationHandler: (_text: string, match: RegExpExecArray, options: unknown) =>
       missingVariable(instance, match, options),
+  });
+
+  // `useTranslation` already re-renders every mounted text on this event — the one language
+  // switching fires — so re-emitting it is what makes a text whose `{{agent}}` nobody passed
+  // update the moment the directory arrives, instead of only on some other, unrelated re-render
+  // (measured: a mobile-viewport nav button and a draft's own placeholder stayed "the agent" for
+  // the rest of the page's life otherwise, e2e `chat-layout.spec.ts`/`live-history.spec.ts`).
+  watchAgentNames(() => {
+    instance.emit('languageChanged', instance.language);
   });
 
   return instance;

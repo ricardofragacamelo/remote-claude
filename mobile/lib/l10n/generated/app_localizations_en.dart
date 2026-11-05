@@ -232,6 +232,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionToolStatusDenied => 'Refused';
 
   @override
+  String sessionToolRowDenied(String reason) {
+    return 'Refused: $reason';
+  }
+
+  @override
+  String get sessionToolRowAttachmentLink => 'Link';
+
+  @override
   String sessionToolTitled(String name, String title) {
     return '$name · $title';
   }
@@ -1392,6 +1400,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionTurnOutcomeFailed => 'The turn failed, with no answer';
 
   @override
+  String get sessionTurnOutcomeCancelled => 'The turn was cancelled';
+
+  @override
   String get sessionCompactedManual => 'Compacted on request: what came before is a summary now';
 
   @override
@@ -1406,6 +1417,109 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String sessionCompactedAutoTokens(String tokens) {
     return 'Compacted on its own, the context was full: $tokens tokens before are a summary now';
+  }
+
+  @override
+  String get sessionCompactedSummary => 'See summary';
+
+  @override
+  String sessionInjectedInstructions(String name) {
+    return '$name loaded';
+  }
+
+  @override
+  String get sessionInjectedOther => 'The agent added content here';
+
+  @override
+  String sessionNoticeModelSwitched(String to, String from) {
+    return 'Answered by $to instead of $from';
+  }
+
+  @override
+  String sessionNoticeRequestRetrying(String attempt, String maxAttempts) {
+    return 'Trying again — attempt $attempt of $maxAttempts';
+  }
+
+  @override
+  String sessionNoticeUsageLimited(String status) {
+    return 'Usage limit: $status';
+  }
+
+  @override
+  String sessionNoticeAgentStopping(String reason) {
+    return 'The agent is stopping ($reason)';
+  }
+
+  @override
+  String get sessionNoticeMemoryRecalled => 'The agent read saved memories';
+
+  @override
+  String get sessionNoticeConversationReset => 'The agent started a new conversation';
+
+  @override
+  String sessionNoticeRepeated(int count) {
+    return '×$count';
+  }
+
+  @override
+  String get sessionNoticeTruncated => 'Cut — the full text is longer than this build keeps';
+
+  @override
+  String get sessionNoticeKindCommandOutput => 'Command output';
+
+  @override
+  String get sessionNoticeKindAgentInfo => 'A message from the agent';
+
+  @override
+  String get sessionNoticeKindAgentNotification => 'A notification from the agent';
+
+  @override
+  String get sessionNoticeKindAgentStopping => 'The agent is stopping';
+
+  @override
+  String get sessionNoticeKindModelSwitched => 'The model changed';
+
+  @override
+  String get sessionNoticeKindModelRefused => 'The model refused to answer';
+
+  @override
+  String get sessionNoticeKindRequestRetrying => 'Trying the request again';
+
+  @override
+  String get sessionNoticeKindUsageLimited => 'Usage limit';
+
+  @override
+  String get sessionNoticeKindTurnFailed => 'The turn ended in error';
+
+  @override
+  String get sessionNoticeKindCompactionFailed => 'Compaction failed';
+
+  @override
+  String get sessionNoticeKindAuthFailed => 'Authentication failed';
+
+  @override
+  String sessionNoticeKindUnknown(String detail) {
+    return 'The agent sent something this build does not show ($detail)';
+  }
+
+  @override
+  String sessionNoticeReasonUnknownEvent(String detail) {
+    return 'This build does not show a kind of content from the session ($detail). Update the app.';
+  }
+
+  @override
+  String sessionNoticeReasonUnknownValue(String detail) {
+    return 'A value this build does not recognise arrived ($detail)';
+  }
+
+  @override
+  String sessionNoticeReasonMalformed(String detail) {
+    return 'The session sent something this build could not read ($detail)';
+  }
+
+  @override
+  String sessionMessageUnknownBlock(String blockType) {
+    return 'Content of a kind this build does not show ($blockType)';
   }
 
   @override

@@ -48,6 +48,7 @@ export const FRAME_TYPES = [
   'session.commandsChanged',
   'session.compacted',
   'session.mcpStatusChanged',
+  'session.notice',
   'session.rewound',
   'session.started',
   'session.statusChanged',
@@ -383,6 +384,16 @@ export interface ModelCheckOutcome {
   readonly reason: string | null;
   /** ISO-8601. */
   readonly at: string;
+}
+
+/** What a `session.notice` is about, normalised by the adapter of the engine so that a client reads it the same whatever engine made it. Every field is optional, and a `kind` sets the ones it has: the command of a `command.output`, the hook of a `hook.failed`. */
+export interface NoticeSubject {
+  /** The slash command a `command.output` answers, as typed — `/cost`. */
+  readonly command?: string;
+  /** The name of the automation a `hook.failed` names. */
+  readonly hook?: string;
+  /** What ran the hook — `beforeTool`, `afterTool`, and whatever the engine's own events name. */
+  readonly trigger?: string;
 }
 
 /** One entry of the notification centre, as the client reads it (plan 06, B-40). */
@@ -864,6 +875,14 @@ export interface MessageCompletedPayloadContentItem {
   readonly size?: number;
 }
 
+/** Set when the agent put this message in the conversation itself — never the person's own prompt, and never replayed to the model as one. A skill's body, a slash command's expansion, a compaction summary (plan 27, discovery §5). */
+export interface MessageCompletedPayloadInjected {
+  /** `instructions` — a skill's body; `commandExpansion` — a project command's prompt; `contextSummary` — a compaction's summary; `other` — injected, but none of the above. */
+  readonly kind: 'instructions' | 'commandExpansion' | 'contextSummary' | 'other';
+  /** The skill or command named, when `kind` has one. */
+  readonly name?: string;
+}
+
 /** A message is finished, with its content as blocks. It supersedes whatever the deltas of the same `messageId` accumulated — a client that missed a delta is made whole here. */
 export interface MessageCompletedPayload {
   readonly messageId: string;
@@ -876,6 +895,8 @@ export interface MessageCompletedPayload {
   readonly at?: string;
   /** Set when this comes from a subagent: the `toolUseId` of the `Task` that opened it. Absent on the main conversation. */
   readonly parentToolUseId?: string;
+  /** Set when the agent put this message in the conversation itself — never the person's own prompt, and never replayed to the model as one. A skill's body, a slash command's expansion, a compaction summary (plan 27, discovery §5). */
+  readonly injected?: MessageCompletedPayloadInjected;
 }
 
 /** A fragment of the assistant's answer, from the engine's own streaming event. The client accumulates by `messageId`; it never concatenates blindly in arrival order. */
@@ -1029,6 +1050,8 @@ export interface SessionCompactedPayload {
   readonly trigger: 'manual' | 'auto';
   /** How many tokens the context held before, when the engine says. */
   readonly preTokens?: number;
+  /** Stable live and in the history — what lets a client tell two compactions of the same conversation apart (plan 27, F3 · B-09). Absent on a server older than it. */
+  readonly compactionId?: string;
 }
 
 export interface SessionMcpStatusChangedPayloadServersItem {
@@ -1046,6 +1069,32 @@ export interface SessionMcpStatusChangedPayloadServersItem {
 /** The MCP servers of a session and where each one stands — the whole list, every time, so a client never patches. An event of the session, with its `seq`: published once the servers the backend composed have been handed to the CLI, after every `session.toggleMcpServer` or `session.reconnectMcpServer` that changed something, and when a server is switched off because its configuration was removed or switched off (tightening applies at once). A client that does not know it ignores it. */
 export interface SessionMcpStatusChangedPayload {
   readonly servers: readonly SessionMcpStatusChangedPayloadServersItem[];
+}
+
+/** Something the agent, a hook or a command said that is not a message, a tool or a turn — a warning, a banner, an automation failing, a retry. One event covers every such case (plan 27): the adapter of the engine picks the `kind`, never the client. Carried in the replay and in the history (`transcript.appended`), the same as any other event of the conversation. */
+export interface SessionNoticePayload {
+  /** Stable live and in the history — the id the engine itself gave the message, when it has one. What lets a client replace a notice rather than duplicate it. */
+  readonly noticeId: string;
+  /** The canonical kind of the notice, decided by the adapter of the engine: `command.output`, `agent.info`, `agent.notification`, `agent.stopping`, `model.switched`, `model.refused`, `request.retrying`, `usage.limited`, `turn.failed`, `compaction.failed`, `auth.failed`, `unknown`. **Open**: a kind the client does not know is drawn as the generic line, never an error (ADR-025). */
+  readonly kind: string;
+  /** How prominent the line reads. Not the same scale as a tool's `status` or a turn's `outcome` — a notice is never itself succeeded or failed. */
+  readonly level: 'info' | 'notice' | 'warning' | 'error';
+  /** Set when the text is ours: an i18n key the client translates (`sessions.notice.modelSwitched`), paired with `params`. Mutually exclusive with `text` in practice — a notice carries one or the other, never both. */
+  readonly messageKey?: string;
+  /** The parameters `messageKey` takes — in the domain each value is a string, a number or a boolean; the generator's open-object subset cannot bound the value type further, so this is carried as a generic open object. Absent without a `messageKey`. */
+  readonly params?: Readonly<Record<string, unknown>>;
+  /** Set when the text is the agent's, a hook's or a command's own — never ours to translate, and never trusted: shown as plain text, cut to `maxLength` with `truncated: true` when it was. Mutually exclusive with `messageKey` in practice. */
+  readonly text?: string;
+  /** Set when `text` was cut to fit the limit. Absent otherwise, and absent without `text`. */
+  readonly truncated?: boolean;
+  /** What the notice is about, normalised — the command, the hook, what ran it. */
+  readonly subject?: NoticeSubject;
+  /** The engine and its own, opaque name for whatever this notice came from — diagnosis, and the text of a `kind: 'unknown'` line. */
+  readonly origin: EngineOrigin;
+  /** Set when this comes from a subagent: the `toolUseId` of the `agent` call that opened it. Absent on the main conversation. */
+  readonly parentToolUseId?: string;
+  /** When the entry was written, ISO 8601 — on the events of the history only, from the transcript's own `timestamp`. Absent live, where the frame's `ts` is the clock. */
+  readonly at?: string;
 }
 
 export interface SessionRewoundPayloadRevertedItem {
@@ -1144,6 +1193,23 @@ export interface ToolCompletedPayloadQuestion {
   readonly reason?: string;
 }
 
+export interface ToolCompletedPayloadAttachmentsItem {
+  /** `image`, `link`, or `unknown` for anything else the engine's result carried. **Open**: a kind the client does not know draws as `unknown`, never an error. */
+  readonly kind: string;
+  /** On `image`: fetched by `GET /transcripts/:engine/:id/images/:blockId`, the same route a prompt's image uses. */
+  readonly blockId?: string;
+  /** On `image`: as the engine declared it (`image/png`, …). Absent when it declared none. */
+  readonly mediaType?: string;
+  /** On `image`: the size in bytes, decoded. Absent when the engine did not say. */
+  readonly size?: number;
+  /** On `link`: the address, shown as text with the link confirmation — `javascript:` and `data:` never become a link (F6). */
+  readonly uri?: string;
+  /** On `link`: a label for it, when the engine gave one. */
+  readonly title?: string;
+  /** On `unknown`: the engine's own, opaque name for what this was. */
+  readonly type?: string;
+}
+
 /** A tool invocation ended, from the result the engine reported. It carries no `kind` nor `label`: the `tool.started` of the same `toolUseId` always came first, live and in the history, and the client has them from it (plan 28, D-28). */
 export interface ToolCompletedPayload {
   readonly toolUseId: string;
@@ -1157,6 +1223,8 @@ export interface ToolCompletedPayload {
   readonly at?: string;
   /** On an `AskUserQuestion` of the **history** (`transcript.appended`, the follower): the questions, normalised, and how they ended — joined by `toolUseId` with what the backend recorded. Live, a screen already has the `permission.requested` and `permission.resolved`, and this is absent. */
   readonly question?: ToolCompletedPayloadQuestion;
+  /** Media the result carried besides its text — never raw bytes on the wire. The `summary` already has the text; this is what the text cannot be. */
+  readonly attachments?: readonly ToolCompletedPayloadAttachmentsItem[];
 }
 
 /** A tool is still running: how long it has been at it, from the engine. The text of the row is the client's, from the `label` of the `tool.started` with the same `toolUseId`. */
@@ -1242,8 +1310,8 @@ export interface TurnCompletedPayloadUsage {
 /** A turn finished. It is what closes the turn in the UI and what carries what it used and, when the engine says, what it cost. */
 export interface TurnCompletedPayload {
   readonly turnId: string;
-  /** How the turn ended — never the engine's own name for it (ADR-025). `completed` is the only one `usage`/`costUsd` describe a turn that actually ran to the end; the other three still carry whatever the engine reports for them, which a crash may leave zeroed. A subtype the adapter does not know is `failed`. */
-  readonly outcome: 'completed' | 'limitReached' | 'budgetExceeded' | 'failed';
+  /** How the turn ended — never the engine's own name for it (ADR-025). `completed` is the only one `usage`/`costUsd` describe a turn that actually ran to the end; the other four still carry whatever the engine reports for them, which a crash may leave zeroed. `cancelled` is a person stopping the turn, never an error (plan 27, B-10). A subtype the adapter does not know is `failed`. */
+  readonly outcome: 'completed' | 'limitReached' | 'budgetExceeded' | 'failed' | 'cancelled';
   /** Who sent the prompt this turn answered. */
   readonly promptedBy?: string;
   /** What the turn used, in our names (plan 28, B-29) — each count present only when the engine reports it; an empty object when it reports none. */
@@ -2290,6 +2358,12 @@ export const SESSION_MCP_STATUS_CHANGED_PAYLOAD_LIMITS = {
   servers: { maxItems: 64 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link SessionNoticePayload}. */
+export const SESSION_NOTICE_PAYLOAD_LIMITS = {
+  kind: { maxLength: 64 },
+  text: { maxLength: 4000 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link SessionStartedPayload}. */
 export const SESSION_STARTED_PAYLOAD_LIMITS = {
   outputStyle: { maxLength: 128 },
@@ -2308,6 +2382,16 @@ export const SESSION_TASKS_CHANGED_PAYLOAD_LIMITS = {
 /** The bounds the schema gives the fields of {@link ToolCompletedPayloadQuestion}. */
 export const TOOL_COMPLETED_PAYLOAD_QUESTION_LIMITS = {
   answers: { maxItems: 4 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ToolCompletedPayloadAttachmentsItem}. */
+export const TOOL_COMPLETED_PAYLOAD_ATTACHMENTS_ITEM_LIMITS = {
+  kind: { maxLength: 32 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link ToolCompletedPayload}. */
+export const TOOL_COMPLETED_PAYLOAD_LIMITS = {
+  attachments: { maxItems: 16 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link ToolStartedPayload}. */
@@ -3059,6 +3143,17 @@ export function isModelCheckOutcome(value: unknown): value is ModelCheckOutcome 
     nullOr(record['reason'], typeof record['reason'] === 'string'),
     typeof record['at'] === 'string',
   ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link NoticeSubject}. Unknown fields are accepted.
+ */
+export function isNoticeSubject(value: unknown): value is NoticeSubject {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -3931,6 +4026,21 @@ export function isMessageCompletedPayloadContentItem(value: unknown): value is M
 }
 
 /**
+ * Whether `value` carries every required field of {@link MessageCompletedPayloadInjected}. Unknown fields are accepted.
+ */
+export function isMessageCompletedPayloadInjected(value: unknown): value is MessageCompletedPayloadInjected {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['kind'] === 'string',
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link MessageCompletedPayload}. Unknown fields are accepted.
  */
 export function isMessageCompletedPayload(value: unknown): value is MessageCompletedPayload {
@@ -4202,6 +4312,26 @@ export function isSessionMcpStatusChangedPayload(value: unknown): value is Sessi
 }
 
 /**
+ * Whether `value` carries every required field of {@link SessionNoticePayload}. Unknown fields are accepted.
+ */
+export function isSessionNoticePayload(value: unknown): value is SessionNoticePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['noticeId'] === 'string',
+    typeof record['kind'] === 'string',
+    typeof record['level'] === 'string',
+    isEngineOrigin(record['origin']),
+    withinMaxLength(record['kind'], 64),
+    withinMaxLength(record['text'], 4000),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link SessionRewoundPayloadRevertedItem}. Unknown fields are accepted.
  */
 export function isSessionRewoundPayloadRevertedItem(value: unknown): value is SessionRewoundPayloadRevertedItem {
@@ -4370,6 +4500,22 @@ export function isToolCompletedPayloadQuestion(value: unknown): value is ToolCom
 }
 
 /**
+ * Whether `value` carries every required field of {@link ToolCompletedPayloadAttachmentsItem}. Unknown fields are accepted.
+ */
+export function isToolCompletedPayloadAttachmentsItem(value: unknown): value is ToolCompletedPayloadAttachmentsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['kind'] === 'string',
+    withinMaxLength(record['kind'], 32),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link ToolCompletedPayload}. Unknown fields are accepted.
  */
 export function isToolCompletedPayload(value: unknown): value is ToolCompletedPayload {
@@ -4382,6 +4528,7 @@ export function isToolCompletedPayload(value: unknown): value is ToolCompletedPa
   return [
     typeof record['toolUseId'] === 'string',
     typeof record['status'] === 'string',
+    withinMaxItems(record['attachments'], 16),
   ].every(Boolean);
 }
 
@@ -7163,6 +7310,26 @@ export function isSessionMcpStatusChangedFrame(value: unknown): value is Session
   );
 }
 
+/** Something the agent, a hook or a command said that is not a message, a tool or a turn — a warning, a banner, an automation failing, a retry. One event covers every such case (plan 27): the adapter of the engine picks the `kind`, never the client. Carried in the replay and in the history (`transcript.appended`), the same as any other event of the conversation. */
+export interface SessionNoticeFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
+  readonly kind: 'event';
+  readonly type: 'session.notice';
+  readonly payload: SessionNoticePayload;
+}
+
+/** Whether `value` is a {@link SessionNoticeFrame}. */
+export function isSessionNoticeFrame(value: unknown): value is SessionNoticeFrame {
+  if (!isEnvelope(value)) {
+    return false;
+  }
+
+  return (
+    value.kind === 'event' &&
+    value.type === 'session.notice' &&
+    isSessionNoticePayload(value.payload)
+  );
+}
+
 /** What an undo did to the disk, file by file — never a boolean. Fanned out to every connection watching the session, because the files changed for all of them. A path in `failed` means the undo stopped short there; an `error` with `INTERNAL_ERROR` follows, and nothing listed as reverted is left half-written. */
 export interface SessionRewoundFrame extends Omit<Envelope, 'kind' | 'type' | 'payload'> {
   readonly kind: 'event';
@@ -7436,6 +7603,7 @@ export interface EventPayloads {
   'session.commandsChanged': SessionCommandsChangedPayload;
   'session.compacted': SessionCompactedPayload;
   'session.mcpStatusChanged': SessionMcpStatusChangedPayload;
+  'session.notice': SessionNoticePayload;
   'session.rewound': SessionRewoundPayload;
   'session.started': SessionStartedPayload;
   'session.statusChanged': SessionStatusChangedPayload;
@@ -7449,3 +7617,22 @@ export interface EventPayloads {
   'workspace.filesChanged': WorkspaceFilesChangedPayload;
   'workspace.watchStopped': WorkspaceWatchStoppedPayload;
 }
+
+/** Every event's `type` that is screen state, never the conversation's timeline (plan 27, D-02). */
+export const SILENT_EVENT_TYPES = [
+  'diag.pong',
+  'permission.extended',
+  'permission.resolved',
+  'prompt.dequeued',
+  'prompt.queued',
+  'session.closed',
+  'session.commandsChanged',
+  'session.mcpStatusChanged',
+  'session.started',
+  'session.statusChanged',
+  'session.tasksChanged',
+  'transcript.appended',
+  'transcript.reset',
+  'workspace.filesChanged',
+  'workspace.watchStopped',
+] as const;

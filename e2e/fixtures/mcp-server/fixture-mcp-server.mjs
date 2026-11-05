@@ -18,7 +18,9 @@
  *   arrived without the value ever appearing in a response, a log or a screen;
  * - `env_names` — the **names** of the variables the process sees, sorted, never a value: what the
  *   spike measures about the environment a server inherits from the CLI (S-05), and what the
- *   integration proves the backend's configuration no longer reaches (S-81).
+ *   integration proves the backend's configuration no longer reaches (S-81);
+ * - `media` — answers with an `image`, an embedded `resource` and a `resource_link`, never text: the
+ *   content types a tool result can carry besides plain text (plan 27, F0 · B-02, F4 · B-14/B-15).
  *
  * Configured by its arguments, the way an MCP configuration configures any server:
  *
@@ -37,6 +39,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import { maskedSecret } from './masked-secret.mjs';
+
+/** A 16×16 red PNG — the same fixture image `scripts/record-agent-sdk-fixtures.mjs` sends in a prompt. */
+const RED_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGO4I2JDEmIY1TCqYfhqAAAeBCwQ8YdREQAAAABJRU5ErkJggg==';
 
 /** The value after a flag of the command line, or `null`. @param {string} flag */
 function argument(flag) {
@@ -79,6 +85,26 @@ const TOOLS = [
     description: 'Lists the names, never the values, of the environment variables it sees.',
     inputSchema: { type: 'object', properties: {} },
   },
+  {
+    name: 'media',
+    description: 'Returns an image, an embedded resource and a resource link — no text.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+];
+
+/** What `media` answers: an image, an embedded resource and a resource link, never text. */
+const MEDIA_CONTENT = [
+  { type: 'image', data: RED_PNG, mimeType: 'image/png' },
+  {
+    type: 'resource',
+    resource: { uri: 'fixture://note.txt', mimeType: 'text/plain', text: 'a fixture resource' },
+  },
+  {
+    type: 'resource_link',
+    uri: 'fixture://linked.txt',
+    name: 'linked.txt',
+    mimeType: 'text/plain',
+  },
 ];
 
 /** @param {string} tool @param {Record<string, unknown>} args */
@@ -102,6 +128,10 @@ const server = new Server({ name: NAME, version: '1.0.0' }, { capabilities: { to
 server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: TOOLS }));
 
 server.setRequestHandler(CallToolRequestSchema, (request) => {
+  if (request.params.name === 'media') {
+    return { content: MEDIA_CONTENT };
+  }
+
   const text = answer(request.params.name, request.params.arguments ?? {});
   return text === null
     ? { isError: true, content: [{ type: 'text', text: `unknown tool ${request.params.name}` }] }

@@ -26,7 +26,7 @@ que já conhece a lista é o que permite à regra nova sair depois sem quebrá-l
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-03 — A classificação dos eventos no contrato 🔲
+### B-03 — A classificação dos eventos no contrato ✅
 
 Todo evento servidor → cliente do schema de `packages/contracts` ganha uma classe: **conversa** (muda a
 linha do tempo) ou **calado** (estado de tela, `workspace.*`, `transcript.*`, `diag.*`,
@@ -37,14 +37,34 @@ O `contracts:check` (portão 11) reprova evento sem classe e evento nas duas. A 
 no [05-websocket-protocol](../../architecture/shared/05-websocket-protocol.md#eventos-servidor--cliente),
 na tabela de eventos. Cenários S-05…S-07.
 
-### B-04 — Os dois clientes adotam a lista 🔲
+**Como ficou:** 8 eventos conversa (`message.delta`, `message.completed`, `tool.started`,
+`tool.progress`, `tool.completed`, `turn.completed`, `session.compacted`, `session.rewound` — todos os
+que hoje mudam `Conversation.timeline` no web) e 15 calados (os demais — `session.started`,
+`session.statusChanged`, `session.tasksChanged` e `session.closed` incluídos: têm leitor próprio no
+reducer, mas mudam `status`/`taskList`/`ending`, nunca a linha do tempo). `error` e
+`permission.requested` não são `x-kind: event` — não carregam `x-timeline`, e o gerador recusa se
+carregarem. `x-timeline` entrou no `METADATA` e na validação de `scripts/lib/contracts-model.mjs`
+(`TIMELINE_CLASSES`), com `SILENT_EVENT_TYPES`/`silentEventTypes` emitidos ao fim do `protocol.ts` e
+do `protocol.g.dart`.
+
+### B-04 — Os dois clientes adotam a lista ✅
 
 O web (`readEvent` do [conversation-reducer.ts](../../../web/src/features/session/services/conversation-reducer.ts))
-e o app (`_pongOr` do [session_event_mapper.dart](../../../mobile/lib/features/session/data/mappers/session_event_mapper.dart))
+e o app (`_eventOf` do [session_event_mapper.dart](../../../mobile/lib/features/session/data/mappers/session_event_mapper.dart))
 passam a separar três casos: evento com leitor, evento calado da lista, e o resto. Os dois primeiros
 fazem o que fazem hoje. O terceiro também, por ora (o `seq` avança, nada na tela): a F6 é que o
 desenha. O caminho separado existe para a F6 só trocar o terceiro ramo. Log `debug` em cada ramo.
 Cenários S-08, S-09.
+
+**Como ficou:** o web guarda `SILENT_EVENT_TYPES` num `Set` e separa os três ramos dentro de
+`readEvent`, cada um com seu próprio `logger.debug`. O app ganhou uma terceira variante de
+`SessionEvent`, `SilentEvent` — ao lado de `UnreadEvent` — para não confundir "calado por decisão do
+contrato" com "este build não sabe ler" (os dois já eram tratados como `UnreadEvent`, e `F6` precisa
+distingui-los). `diag.pong` é ao mesmo tempo calado **e** o único tipo sem entrada em `_readers` que
+ainda é lido de verdade — `_eventOf` tenta `_pongOr` antes de olhar a lista de calados, para a
+classificação nunca esconder o pong. `historyEventFrom` descarta `SilentEvent` do histórico, do mesmo
+jeito que já descartava `UnreadEvent`. `_onFrame` (`session_ws_data_source.dart`) loga os três
+desfechos em `session.event.read`, ao lado do log já existente de fragmento não desenhado.
 
 ---
 

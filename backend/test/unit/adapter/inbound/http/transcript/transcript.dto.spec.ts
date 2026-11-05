@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  blockIdSchema,
   engineSchema,
   listTranscriptsSchema,
   MAX_PAGE_SIZE,
@@ -68,6 +69,24 @@ describe('the transcript transport shapes', () => {
       expect(engineSchema.safeParse('claude').success).toBe(true);
       expect(engineSchema.safeParse('Claude').success).toBe(false);
       expect(engineSchema.safeParse('').success).toBe(false);
+    });
+  });
+
+  describe('the image blockId — plan 27, B-15', () => {
+    it('takes a two-level id — a prompt’s own image', () => {
+      expect(blockIdSchema.safeParse(`${conversationId(1)}:0`).success).toBe(true);
+    });
+
+    it('takes a three-level id — an image nested inside a tool_result — S-59, S-62', () => {
+      expect(blockIdSchema.safeParse(`${conversationId(1)}:0:0`).success).toBe(true);
+      expect(blockIdSchema.safeParse(`${conversationId(1)}:12:9999`).success).toBe(true);
+    });
+
+    it('refuses a fourth level, whitespace, or an empty uuid segment — S-60', () => {
+      expect(blockIdSchema.safeParse(`${conversationId(1)}:0:0:0`).success).toBe(false);
+      expect(blockIdSchema.safeParse(`${conversationId(1)} :0`).success).toBe(false);
+      expect(blockIdSchema.safeParse(':0').success).toBe(false);
+      expect(blockIdSchema.safeParse(`${conversationId(1)}:`).success).toBe(false);
     });
   });
 

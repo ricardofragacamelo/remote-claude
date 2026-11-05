@@ -34,6 +34,7 @@ import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { AuthModule } from './auth.module';
 import { engineTranscriptProviders } from './engines';
+import { NoticeModule } from './notice.module';
 import { SessionOriginModule } from './session-origin.module';
 import { SessionRegistryModule } from './session-registry.module';
 import { WorkspaceModule } from './workspace.module';
@@ -49,7 +50,7 @@ import { WorkspaceModule } from './workspace.module';
  * editor, and never ours to change (docs/architecture/backend/03-modules.md#transcript).
  */
 @Module({
-  imports: [AuthModule, WorkspaceModule, SessionOriginModule, SessionRegistryModule],
+  imports: [AuthModule, WorkspaceModule, SessionOriginModule, SessionRegistryModule, NoticeModule],
   controllers: [TranscriptController],
   providers: [
     ...engineTranscriptProviders,

@@ -385,6 +385,25 @@ function emitEventPayloads(frames) {
 }
 
 /**
+ * The `type` of every event classified `silent` (plan 27, D-02, F1 · B-03) — screen state, never the
+ * conversation's timeline. A client checks this list **before** treating an event it has no reader
+ * for as unknown: silent is a known, deliberate absence, not a gap in the contract.
+ *
+ * @param {readonly import('./contracts-model.mjs').Message[]} frames
+ * @returns {string[]}
+ */
+function emitSilentEventTypes(frames) {
+  const silent = frames.filter((message) => message.timeline === 'silent');
+  return [
+    "/** Every event's `type` that is screen state, never the conversation's timeline (plan 27, D-02). */",
+    'export const SILENT_EVENT_TYPES = [',
+    ...silent.map((message) => `  '${message.frameType}',`),
+    '] as const;',
+    '',
+  ];
+}
+
+/**
  * The whole generated TypeScript file.
  *
  * @param {import('./contracts-model.mjs').Model} model
@@ -416,6 +435,7 @@ export function emitTypeScript(model) {
     ...model.aliases.flatMap((alias) => [emitAlias(alias), '']),
     ...frames.flatMap((message) => [emitFrame(message), '']),
     ...emitEventPayloads(frames),
+    ...emitSilentEventTypes(frames),
   ];
 
   return `${blocks.join('\n').trimEnd()}\n`;

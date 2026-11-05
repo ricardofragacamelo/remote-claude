@@ -5,7 +5,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import request from 'supertest';
 
-import { historicalEvents } from '@adapter/outbound/engines/claude/sdk-message.mapper';
+import {
+  historicalEvents,
+  SdkMessageMapper,
+} from '@adapter/outbound/engines/claude/sdk-message.mapper';
 import { TRANSCRIPT_SDK } from '@adapter/outbound/engines/claude/transcript-sdk';
 import { QUERY_FACTORY } from '@adapter/outbound/engines/claude/query.factory';
 import type { QueryFactory } from '@adapter/outbound/engines/claude/query.factory';
@@ -663,9 +666,10 @@ describe('the transcript HTTP surface', () => {
       gate.open();
 
       const response = await pending;
+      const snapshotMapper = new SdkMessageMapper(allowlist.root);
       const snapshot = [capturedTranscript('tool-turn', 0), capturedTranscript('tool-turn', 1)]
         .flat()
-        .flatMap((message) => historicalEvents(message, allowlist.root));
+        .flatMap((message) => historicalEvents(message, snapshotMapper));
 
       expect(response.status).toBe(200);
       expect(response.body.events).toEqual(snapshot);

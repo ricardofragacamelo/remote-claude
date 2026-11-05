@@ -208,7 +208,7 @@ describe('the rows of the system', () => {
             },
           }}
         />
-        <CompactedRow trigger="manual" preTokens={180_000} />
+        <CompactedRow trigger="manual" preTokens={180_000} summary={null} />
         <RewoundRow entry={{ restored: 2, kept: 1, failed: 1 }} />
       </ul>,
     );

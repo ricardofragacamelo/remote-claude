@@ -33,7 +33,7 @@ resultado ruim não é falha do spike, é o que ele existe para achar.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — Spike: as medições da D-05 🔲
+### B-01 — Spike: as medições da D-05 ✅
 
 Um script em `scripts/`: `pnpm spike:conversation-losses`, com uma sonda por nome e `--json`, sobre o
 `scripts/lib/spike-session.mjs` que os spikes dos planos 13 e 26 já usam (as opções do produto:
@@ -59,7 +59,7 @@ O resultado vai para a [descoberta do SDK](../../discovery/01-descoberta-claude-
 seção de spikes, com o "como reproduzir", e cada resposta fecha a linha correspondente do
 [decisions.md](decisions.md). Cenários S-01, S-02.
 
-### B-02 — Fixtures gravadas 🔲
+### B-02 — Fixtures gravadas ✅
 
 Pelo `scripts/record-agent-sdk-fixtures.mjs`, gravadas do Claude real e não escritas à mão. Vão para
 `backend/test/fakes/agent-sdk/fixtures/`, com o par de histórico no `scripted-transcripts`:
@@ -67,18 +67,22 @@ Pelo `scripts/record-agent-sdk-fixtures.mjs`, gravadas do Claude real e não esc
 | Fixture | O que tem |
 |---|---|
 | `compact-turn` | já existe; passa a provar a mensagem sintética e o eco do §5 |
-| `compact-failed-turn` | um `/compact` que falha, com o `compact_error` |
-| `local-command-turn` | `/cost` ou `/context` |
-| `project-command-turn` | um `/comando` do projeto, ao vivo e no histórico |
-| `skill-turn` | uma skill de usuário carregada pelo plugin sintético do plano 13 |
-| `hook-message-turn` | um hook de settings com `systemMessage`, e um que falha com `stderr` |
-| `mcp-media-result-turn` | tool MCP com imagem, `resource` e `resource_link` no resultado |
-| `denied-by-rule-turn` | uma tool negada por regra, sem pergunta |
+| `compact-failed-turn` | um `/compact` sem nada para compactar: medido como uma resposta sintética do `assistant` (`model: '<synthetic>'`, texto `Error: No messages to compact`) — **nunca** um `compact_error` de um `compact_boundary`, que esta gravação não emite |
+| `local-command-turn` | `/cost` |
+| `project-command-turn` | um `/comando` do projeto — medido: **sem eco nenhum ao vivo** (nem `local_command_output`, nem mensagem alguma de `user`); o `<command-name>`/`<command-args>` só existe no histórico (`getSessionMessages`), no mesmo formato de tag do eco do `/compact` |
+| `skill-turn` | **não gravada aqui** — já coberta por `user-skill-plugin-turn` (plano 13, D-11): a skill carrega pelo plugin sintético e o CLI injeta o corpo da skill como um `user` sintético, a mensagem dobrada que a B-21 lê pelo `injected.kind` |
+| `hook-message-turn` | um hook de settings com `systemMessage` (vira `system/informational`, nunca um campo do `hook_response`) e um que falha com `stderr` (`hook_response.outcome: 'error'`), nos dois matchers de uma só gravação |
+| `mcp-media-result-turn` | tool MCP com `image`, `resource` e `resource_link` pedidos — medido: a **imagem** chega como bloco `image` de verdade (`source.type: 'base64'`); `resource` e `resource_link` **não chegam como blocos estruturados** — o CLI já os achata em texto (`[Resource from fixture at …] …`, `[Resource link: …] …`) antes do backend ver a mensagem, o que confirma a decisão de escopo de "o texto basta" para esse par |
+| `denied-by-rule-turn` | uma tool negada por `permissions.deny` do projeto, nunca perguntada: `system/permission_denied` (`decision_reason_type: 'subcommandResults'`), e o `canUseTool` do produto nunca é chamado |
 
 A recusa com troca de modelo não se provoca de propósito: a `refusal-fallback-turn` é escrita à mão e
-**marcada** como tal, como a [D-09](decisions.md#f0--spike) recomenda. O teste de forma das gravadas a
-reconhece e não a confunde com uma gravação. Cada fixture entra no catálogo do SDK roteirizado
-(`backend/test/fakes/agent-sdk/fixture.ts`). Cenários S-03, S-04.
+**marcada** (`handWritten: true`) como a [D-09](decisions.md#f0--spike) recomenda. O teste de forma das
+gravadas (`recorded-fixtures.spec.ts`) reconhece a marca e não a confunde com uma gravação. Toda
+fixture é carregável pelo catálogo do SDK roteirizado (`backend/test/fakes/agent-sdk/fixture.ts`), sem
+registro à parte — `loadFixture(nome)` lê qualquer `.json` do diretório. As medições acima entraram na
+[descoberta do SDK §13](../../discovery/01-descoberta-claude-agent-sdk.md#13--sétima-rodada-de-spikes-2026-11-01).
+O servidor MCP de fixture ganhou a tool `media` (`e2e/fixtures/mcp-server/fixture-mcp-server.mjs`),
+reaproveitada pela F4. Cenários S-03, S-04.
 
 ---
 

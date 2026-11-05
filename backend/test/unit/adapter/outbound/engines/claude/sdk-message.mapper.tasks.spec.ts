@@ -7,7 +7,6 @@ import {
   SdkMessageMapper,
   taskOf,
 } from '@adapter/outbound/engines/claude/sdk-message.mapper';
-import { TaskListTracker } from '@domain/session';
 import { isSessionTasksChangedPayload } from '@remote-claude/contracts';
 import { loadFixture } from '../../../../../fakes/agent-sdk/fixture';
 import { capturedTranscript } from '../../../../../fakes/agent-sdk/scripted-transcripts';
@@ -277,7 +276,7 @@ describe('session.tasksChanged — S-66', () => {
   });
 
   it('dates the event read back from the history with the instant of its entry', () => {
-    const tracker = new TaskListTracker();
+    const mapper = new SdkMessageMapper('');
     const started = {
       type: 'assistant',
       uuid: 'a-1',
@@ -301,8 +300,8 @@ describe('session.tasksChanged — S-66', () => {
       },
     } as unknown as SessionMessage;
 
-    historicalEvents(started, '', tracker);
-    const events = asRecords(historicalEvents(ended, '', tracker));
+    historicalEvents(started, mapper);
+    const events = asRecords(historicalEvents(ended, mapper));
 
     expect(events.map((event) => event.type)).toEqual(['tool.completed', 'session.tasksChanged']);
     expect(events[1]?.payload).toMatchObject({ at: '2026-10-01T12:00:01.000Z' });
@@ -310,7 +309,7 @@ describe('session.tasksChanged — S-66', () => {
 
   it('publishes nothing from a history read with no list to follow — a subagent page', () => {
     const events = capturedTranscript('todo-write-turn').flatMap((message) =>
-      asRecords(historicalEvents(message, '')),
+      asRecords(historicalEvents(message, new SdkMessageMapper(''))),
     );
 
     expect(events.some((event) => event.type === 'session.tasksChanged')).toBe(false);
@@ -323,9 +322,9 @@ describe('the task list read again — S-67', () => {
     'reaches, from the history of %s, the same lists the live stream published',
     (name) => {
       const live = liveEvents(name).filter((event) => event.type === 'session.tasksChanged');
-      const tracker = new TaskListTracker();
+      const mapper = new SdkMessageMapper('');
       const history = capturedTranscript(name)
-        .flatMap((message) => asRecords(historicalEvents(message, '', tracker)))
+        .flatMap((message) => asRecords(historicalEvents(message, mapper)))
         .filter((event) => event.type === 'session.tasksChanged');
 
       expect(history.map((event) => event.payload['tasks'])).toEqual(
@@ -336,9 +335,9 @@ describe('the task list read again — S-67', () => {
 
   it('reads a history twice, each with its own list, to the same lists — never doubled', () => {
     const read = () => {
-      const tracker = new TaskListTracker();
+      const mapper = new SdkMessageMapper('');
       return capturedTranscript('task-tools-turn')
-        .flatMap((message) => asRecords(historicalEvents(message, '', tracker)))
+        .flatMap((message) => asRecords(historicalEvents(message, mapper)))
         .filter((event) => event.type === 'session.tasksChanged')
         .map((event) => event.payload['tasks']);
     };

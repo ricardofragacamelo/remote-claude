@@ -5,7 +5,7 @@ input the web's `conversation-reducer` and the app's `session_event_mapper`/`Con
 tested against, so a client that reads the same events into different content fails here, not in
 production. Generated — never hand-written — by `pnpm fixtures:conversation-parity`
 (`backend/scripts/record-conversation-parity-fixtures.ts`), through the real `SdkMessageMapper` and
-`historicalEvents` the backend ships, from the five recordings of plan 26's B-02
+`historicalEvents` the backend ships, from recordings of plan 26's B-02 and plan 27's F0, B-02
 (`backend/test/fakes/agent-sdk/fixtures/`). Re-run that script and commit what it writes whenever a
 recording changes; do not edit the `*-events.json` files by hand.
 
@@ -31,19 +31,32 @@ arrived; a tool call, a thinking block and the turn's summary are their own entr
 F6 doc lists them, not blocks of a message. The field `owner` is `null` for the main conversation, or
 the `toolUseId` of the `agent`-kind tool a subagent's own entry nests under (plan 26, B-18…B-21) — the
 one thing a client must use to put it back in the right place, never which engine or tool produced it.
+An `injected` entry (plan 27, F6 · B-21) reuses the same field for the **owning tool**, not a
+subagent: the tool card the agent's own content (a skill's body, say) is nested under.
 
 ```ts
 type Entry =
   | { kind: 'message'; owner: string | null; author: 'user' | 'assistant'; blocks: Block[]; neverInHistory?: true }
   | { kind: 'thinking'; owner: string | null; text: string; redacted: boolean; neverInHistory?: true }
-  | { kind: 'tool'; owner: string | null; toolKind: string; label: ToolLabel; status: string; media: unknown[]; neverInHistory?: true }
-  | { kind: 'turn'; owner: null; usage: TurnCompletedPayloadUsage | null; costUsd: string | null };
+  | { kind: 'tool'; owner: string | null; toolKind: string; label: ToolLabel; status: string; media: Attachment[]; neverInHistory?: true }
+  | { kind: 'turn'; owner: null; usage: TurnCompletedPayloadUsage | null; costUsd: string | null }
+  | { kind: 'injected'; owner: string | null; injectedKind: 'instructions' | 'other'; name: string | null; neverInHistory?: true };
 
 type Block = { kind: 'text'; text: string } | { kind: 'image'; mediaType: string; size: number };
+
+/** A tool result's own media (plan 27, F6 · B-22) — the contract's `ToolAttachment`, unchanged. */
+type Attachment =
+  | { kind: 'image'; blockId?: string; mediaType?: string; size?: number }
+  | { kind: 'link'; uri?: string; title?: string }
+  | { kind: 'unknown'; type?: string };
 ```
 
 A `toolUse` content block of a `message.completed` carries no entry of its own — the matching
-`tool.started`/`tool.completed` pair already is one, at the position it arrives.
+`tool.started`/`tool.completed` pair already is one, at the position it arrives. A `session.notice`
+and the client-synthesized "unknown" lines (plan 27, F6 · B-19, B-20) carry no content the two clients
+are compared on beyond what they already show elsewhere — no fixture here exercises one, so `Entry`
+has no case for it; `conversation_parity_fixtures_test.dart`'s exhaustive switch still names
+`NoticeLine` to stay exhaustive, matched to nothing.
 
 `neverInHistory: true` (plan 13, B-46/D-31) marks an entry the CLI's own transcript never
 persists although the live stream carries it — measured on `user-skill-plugin-turn`: the user-role

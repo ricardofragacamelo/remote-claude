@@ -31,8 +31,13 @@ describe('Claude\'s shortcuts, beyond the generic "go to its settings" — plan 
     const user = userEvent.setup();
     backendAnswers(ENGINES);
     const app = mountApp('/settings');
-    await screen.findByRole('link', {
-      name: t('settings.links.agentSettings', { engine: 'claude' }),
+    // `t()` reads the engine's displayName through a directory that loads asynchronously (plan 28,
+    // B-13) — computed once up front it can freeze on the id, before the name ever arrives, so this
+    // re-evaluates it on every poll instead (S-26).
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: t('settings.links.agentSettings', { engine: 'claude' }) }),
+      ).toBeInTheDocument();
     });
 
     await user.keyboard('{Control>}{Shift>}p{/Shift}{/Control}');
@@ -59,8 +64,13 @@ describe('Claude\'s shortcuts, beyond the generic "go to its settings" — plan 
     backendAnswers(ENGINES);
     const app = mountApp('/settings');
     await screen.findByRole('heading', { level: 1, name: t('settings.screen.title') });
-    await screen.findByRole('link', {
-      name: t('settings.links.agentSettings', { engine: 'claude' }),
+    // `t()` reads the engine's displayName through a directory that loads asynchronously (plan 28,
+    // B-13) — computed once up front it can freeze on the id, before the name ever arrives, so this
+    // re-evaluates it on every poll instead (S-26).
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: t('settings.links.agentSettings', { engine: 'claude' }) }),
+      ).toBeInTheDocument();
     });
 
     await user.keyboard('{Control>}{Shift>}p{/Shift}{/Control}');
@@ -92,8 +102,13 @@ describe('Claude\'s shortcuts, beyond the generic "go to its settings" — plan 
     backendAnswers(ENGINES);
     mountApp('/settings');
     await screen.findByRole('heading', { level: 1, name: t('settings.screen.title') });
-    await screen.findByRole('link', {
-      name: t('settings.links.agentSettings', { engine: 'claude' }),
+    // `t()` reads the engine's displayName through a directory that loads asynchronously (plan 28,
+    // B-13) — computed once up front it can freeze on the id, before the name ever arrives, so this
+    // re-evaluates it on every poll instead (S-26).
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: t('settings.links.agentSettings', { engine: 'claude' }) }),
+      ).toBeInTheDocument();
     });
 
     expect(commandRegistry.currentId('claude.defaultModel')).toBe('agent.defaultModel');

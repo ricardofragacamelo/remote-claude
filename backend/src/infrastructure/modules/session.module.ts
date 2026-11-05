@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { NOTICE_STORE } from '@application/notice';
+import type { NoticeStore } from '@application/notice';
 import {
   EngineRegistry,
   FOLDER_LOCATOR,
@@ -119,6 +121,7 @@ import { EngineModule, engineSessionProviders } from './engines';
 import { McpModule } from './mcp.module';
 import { PermissionModule } from './permission.module';
 import { WebsocketModule } from './websocket.module';
+import { NoticeModule } from './notice.module';
 import { SessionOriginModule } from './session-origin.module';
 import { SessionRegistryModule } from './session-registry.module';
 import { TranscriptModule } from './transcript.module';
@@ -144,6 +147,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
     AuthModule,
     EngineModule,
     McpModule,
+    NoticeModule,
     PermissionModule,
     SessionOriginModule,
     SessionRegistryModule,
@@ -334,6 +338,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         SESSION_CONFIGURATION_SOURCE,
         SESSION_MCP_SERVERS_SOURCE,
         SESSION_EXTENSION_PATHS_SOURCE,
+        NOTICE_STORE,
       ],
       useFactory: (
         workspaces: WorkspaceResolver,
@@ -350,6 +355,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
         configuration: SessionConfigurationSource,
         mcpServers: SessionMcpServersSource,
         extensionPaths: SessionExtensionPathsSource,
+        notices: NoticeStore,
       ) =>
         new StartSessionUseCase(
           workspaces,
@@ -365,6 +371,7 @@ const CHANGE_WRITING = Symbol('ChangeWriting');
           configuration,
           mcpServers,
           extensionPaths,
+          notices,
         ),
     },
 

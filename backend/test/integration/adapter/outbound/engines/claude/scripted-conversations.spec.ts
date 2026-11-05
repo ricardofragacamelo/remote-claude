@@ -107,6 +107,44 @@ describe('the scripted Agent SDK, writing what it replays', () => {
     expect(await transcripts.listSessions({ dir: CWD })).toHaveLength(1);
   });
 
+  it("persists the compaction boundary and the synthetic summary's own flag — plan 27, F8 · B-26, R-08", async () => {
+    const transcripts = new ScriptedTranscripts();
+    const { createQuery } = scriptedSdk({ transcripts });
+
+    // `compact-turn` answers the prompt and then compacts in the same recording — two `result`s,
+    // so this reads the query to the end rather than breaking on the first one, as `turn()` does.
+    const query = createQuery({
+      prompt: once('do the work [fixture:compact-turn]'),
+      options: {
+        cwd: CWD,
+        sessionId: OURS,
+        canUseTool: (_tool, input) => Promise.resolve({ behavior: 'allow', updatedInput: input }),
+      },
+    });
+    for await (const message of query) {
+      void message;
+    }
+
+    const messages = await transcripts.getSessionMessages(OURS);
+    const boundary = messages.find((message) => message.type === 'system');
+    const summary = messages.find(
+      (message) => (message as { isCompactSummary?: boolean }).isCompactSummary === true,
+    );
+
+    // Bare, no `subtype` — the shape `historicalSystemEvents` (B-17) reads as the compaction
+    // boundary itself, measured off a real transcript (F5). Without it, a history read taken while
+    // the session is still open (a reattach after a stream gap, say) never sees the compaction, and
+    // the synthetic summary that follows reads back as an ordinary message instead of folding into
+    // it — the ghost bubble R-08 found, reproduced only against the scripted backend's own
+    // live-built store, never against `compact-turn.json`'s `.history` (it records none).
+    expect(boundary).toBeDefined();
+    expect('subtype' in (boundary ?? {})).toBe(false);
+    expect(summary?.message).toMatchObject({
+      role: 'user',
+      content: expect.stringContaining('ran out of context'),
+    });
+  });
+
   it('forks one begun elsewhere under the new id, and writes nothing to the origin', async () => {
     const transcripts = new ScriptedTranscripts();
     await turn({ transcripts }, { sessionId: OURS });

@@ -413,16 +413,20 @@ describe('the history, through the live reducer — plan 04, B-03', () => {
     expect(conversationFrom([])).toEqual(SILENT);
   });
 
-  it('reads nothing into an event named after something every object has', () => {
+  it('reads an event named after something every object has as unknown, same as any other', () => {
     // The readers are looked up by type; a type that is a property of `Object.prototype` must be
-    // as unknown as any other, and leave the conversation as it was.
+    // as unknown as any other — drawn as the generic line, never crashing on the lookup itself.
     const conversation = conversationFrom([
       { type: 'constructor', payload: {} },
       { type: 'toString', payload: {} },
       { type: '__proto__', payload: {} },
     ]);
 
-    expect(conversation).toBe(SILENT);
+    expect(conversation.timeline.map((entry) => entry.id)).toEqual([
+      'unknown-event:constructor',
+      'unknown-event:toString',
+      'unknown-event:__proto__',
+    ]);
   });
 
   it('lays the history under the stream: history first, the stream on top — S-15', () => {

@@ -238,6 +238,8 @@ class Conversation extends Equatable {
     StreamMessage(:final String? parentToolUseId) => parentToolUseId,
     ThinkingEntry(:final String? parentToolUseId) => parentToolUseId,
     ToolExecution(:final String? parentToolUseId) => parentToolUseId,
+    NoticeLine(:final String? parentToolUseId) => parentToolUseId,
+    InjectedLine(:final String? parentToolUseId) => parentToolUseId,
     _ => null,
   };
 
@@ -398,8 +400,12 @@ class Conversation extends Equatable {
     ),
     ToolFinished() => _changeTool(
       event.toolUseId,
-      (ToolExecution tool) =>
-          tool.copyWith(status: event.status, summary: event.summary, question: event.question),
+      (ToolExecution tool) => tool.copyWith(
+        status: event.status,
+        summary: event.summary,
+        question: event.question,
+        attachments: event.attachments,
+      ),
     ),
     TasksChanged(:final List<SessionTask> tasks) => copyWith(tasks: tasks),
     TurnFinished(:final TurnSummary turn) => _turn(turn),
@@ -408,7 +414,12 @@ class Conversation extends Equatable {
     ),
     PromptDequeued(:final String queueId) => copyWith(queue: _without(queueId)),
     ContextCompacted() => _withEntry(
-      CompactionLine(seq: event.seq, trigger: event.trigger, preTokens: event.preTokens),
+      CompactionLine(
+        seq: event.seq,
+        trigger: event.trigger,
+        preTokens: event.preTokens,
+        compactionId: event.compactionId,
+      ),
     ),
     // The session that closes takes its queue with it, without a `prompt.dequeued` for each.
     SessionFinished(:final SessionEnding ending) => copyWith(
@@ -429,6 +440,17 @@ class Conversation extends Equatable {
     // an unreadable event is only here to move the resume point.
     PongArrived() => this,
     UnreadEvent() => this,
+    SilentEvent() => this,
+    SessionNotice() => _withNotice(_noticeLineOf(event)),
+    GenericSessionEvent() => _withGenericOnce(
+      NoticeLine(
+        id: event.id,
+        kind: '',
+        reason: event.reason,
+        level: NoticeLevel.notice,
+        detail: event.detail,
+      ),
+    ),
     // The MCP servers are the chip's own state (plan 13, B-22; `McpServersController`), never part
     // of the conversation itself.
     McpStatusChanged() => this,
@@ -483,6 +505,74 @@ class Conversation extends Equatable {
 
     return copyWith(entries: next);
   }
+
+  /// The `kind`s of `session.notice` this build has a line for ([§8.2](../../../../../../docs/discovery/09-perdas-do-backend-na-conversa.md#82-o-evento-de-aviso),
+  /// `unknown` excepted — that one already **is** the generic line). A `kind` not in this set is
+  /// drawn exactly like `unknown`: the client draws by `kind` alone, never by `origin.engine` or
+  /// `origin.native` (plan 28), and one it does not know yet is not an error, the same survival rule
+  /// as an unknown WS event (U-11). The same set web's `conversation-reducer.ts` keeps.
+  static const Set<String> _knownNoticeKinds = <String>{
+    'command.output',
+    'agent.info',
+    'agent.notification',
+    'agent.stopping',
+    'model.switched',
+    'model.refused',
+    'request.retrying',
+    'usage.limited',
+    'turn.failed',
+    'compaction.failed',
+    'auth.failed',
+  };
+
+  /// A `session.notice` read into the [NoticeLine] it draws — an unrecognised `kind` (B-13's own
+  /// `unknown`, or a future one this build has no line for, U-11) is named by the engine's own
+  /// opaque `origin.native` (D-03).
+  static NoticeLine _noticeLineOf(SessionNotice event) {
+    final bool known = _knownNoticeKinds.contains(event.kind);
+
+    return NoticeLine(
+      noticeId: event.noticeId,
+      kind: event.kind,
+      level: event.level,
+      messageKey: event.messageKey,
+      params: event.params,
+      text: event.text,
+      truncated: event.truncated,
+      parentToolUseId: event.parentToolUseId,
+      detail: known ? null : (event.originNative ?? event.kind),
+    );
+  }
+
+  /// A notice added — once per `noticeId`, never duplicated by a replay (`_withEntry`'s own rule).
+  /// A `kind` this build has no line for collapses with the one before it when they are the
+  /// identical notice repeated, immediately ("×3", D-12): ten in a row make one line, but a gap of
+  /// anything else in between starts a new one (S-87) — the same rule as [_withGenericOnce], applied
+  /// to a notice the backend actually sent rather than one this build synthesised.
+  Conversation _withNotice(NoticeLine line) {
+    if (entries.any((ConversationEntry each) => each.entryId == line.entryId)) {
+      return this;
+    }
+
+    final ConversationEntry? last = entries.isEmpty ? null : entries.last;
+
+    if (last is NoticeLine &&
+        last.kind.isNotEmpty &&
+        !_knownNoticeKinds.contains(last.kind) &&
+        last.kind == line.kind &&
+        last.text == line.text &&
+        last.detail == line.detail) {
+      return _withEntry(last.repeated());
+    }
+
+    return copyWith(entries: <ConversationEntry>[...entries, line]);
+  }
+
+  /// The generic line this build synthesised itself — once per [NoticeLine.id], ever (U-06), or per
+  /// (type, field) (U-07, U-09): a published client does not need to say the same thing twice.
+  /// [_withEntry]'s own replace-in-place is a no-op here in practice, since the same [NoticeLine.id]
+  /// always carries the same content.
+  Conversation _withGenericOnce(NoticeLine line) => _withEntry(line);
 
   /// The entry with [entryId] changed by [change], or this conversation untouched when there is
   /// none.
@@ -573,6 +663,24 @@ class Conversation extends Equatable {
   /// [atMost] bounds how long its thinking took, when the history dated it and the entry before
   /// (plan 22, D-14).
   Conversation _finished(MessageFinished event, Duration? atMost) {
+    // What the agent put in the conversation itself never draws as a message bubble (plan 27,
+    // F6 · B-21) — `contextSummary` folds into the compaction it belongs to; `instructions` and
+    // `other` get their own line. `commandExpansion` (and no `injected` at all) falls through to
+    // the ordinary message below: it is meant to read exactly like the prompt it expands to.
+    if (event.injectedKind == 'contextSummary') {
+      return _withContextSummary(event.text);
+    }
+    if (event.injectedKind == 'instructions' || event.injectedKind == 'other') {
+      return _withEntry(
+        InjectedLine(
+          messageId: event.messageId,
+          injectedKind: event.injectedKind!,
+          name: event.injectedName,
+          parentToolUseId: event.parentToolUseId,
+        ),
+      );
+    }
+
     final Conversation thought = event.thoughts.fold(
       this,
       (Conversation state, Thought each) =>
@@ -584,6 +692,23 @@ class Conversation extends Equatable {
     }
 
     return thought._text(event);
+  }
+
+  /// The summary of the **last** [CompactionLine] of the entries, filled in — never drawn as its
+  /// own message (B-21): a summary nobody wrote is not "You" saying it. Silently dropped if no
+  /// compaction precedes it, which a server that sends the fields in the documented order never
+  /// does.
+  Conversation _withContextSummary(String text) {
+    final int at = entries.lastIndexWhere((ConversationEntry each) => each is CompactionLine);
+
+    if (at < 0) {
+      return this;
+    }
+
+    final List<ConversationEntry> next = List<ConversationEntry>.of(entries);
+    next[at] = (next[at] as CompactionLine).withSummary(text);
+
+    return copyWith(entries: next);
   }
 
   /// One finished thinking: the one still arriving, completed — or a new one, unless the message

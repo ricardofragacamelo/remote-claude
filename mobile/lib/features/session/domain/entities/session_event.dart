@@ -171,6 +171,8 @@ final class MessageFinished extends SessionEvent {
     this.at = '',
     this.writtenAt = '',
     this.parentToolUseId,
+    this.injectedKind,
+    this.injectedName,
   });
 
   final String messageId;
@@ -194,6 +196,15 @@ final class MessageFinished extends SessionEvent {
   /// B-18) — `null` for the main thread.
   final String? parentToolUseId;
 
+  /// Set when the agent put this message in the conversation itself — never the person's own
+  /// prompt (plan 27, F6 · B-21). `'contextSummary'` folds into the compaction it belongs to;
+  /// `'instructions'` and `'other'` draw their own line; `'commandExpansion'` is absent here on
+  /// purpose — it is meant to read exactly like the prompt it expands to.
+  final String? injectedKind;
+
+  /// The skill or command named, when [injectedKind] has one.
+  final String? injectedName;
+
   /// The text blocks, joined — empty when what finished carried none.
   String get text => <String>[
     for (final MessageBlock block in blocks)
@@ -207,6 +218,8 @@ final class MessageFinished extends SessionEvent {
     blocks,
     isFromUser,
     thoughts,
+    injectedKind,
+    injectedName,
     at,
     writtenAt,
     parentToolUseId,
@@ -281,6 +294,7 @@ final class ToolFinished extends SessionEvent {
     this.summary,
     this.writtenAt = '',
     this.question,
+    this.attachments = const <ToolAttachment>[],
   });
 
   final String toolUseId;
@@ -291,11 +305,22 @@ final class ToolFinished extends SessionEvent {
   /// feature, which owns questions (plan 24, B-22).
   final Map<String, Object?>? question;
 
+  /// Media the result carried besides its text (plan 27, F6 · B-22).
+  final List<ToolAttachment> attachments;
+
   @override
   final String writtenAt;
 
   @override
-  List<Object?> get props => <Object?>[seq, toolUseId, status, summary, writtenAt, question];
+  List<Object?> get props => <Object?>[
+    seq,
+    toolUseId,
+    status,
+    summary,
+    writtenAt,
+    question,
+    attachments,
+  ];
 }
 
 /// The agent's task list changed: the whole list, as it is now (plan 28, B-22). Read by the adapter
@@ -345,7 +370,7 @@ final class PromptDequeued extends SessionEvent {
 
 /// The conversation was compacted: what came before is now a summary.
 final class ContextCompacted extends SessionEvent {
-  const ContextCompacted(super.seq, {required this.trigger, this.preTokens});
+  const ContextCompacted(super.seq, {required this.trigger, this.preTokens, this.compactionId});
 
   /// `manual` — somebody sent `/compact`; `auto` — the context was full.
   final String trigger;
@@ -353,8 +378,12 @@ final class ContextCompacted extends SessionEvent {
   /// How many tokens the context held before, when the engine said.
   final int? preTokens;
 
+  /// Stable live, on replay and from the history (plan 27, F3 · B-09, F5 · B-18) — what lets two
+  /// compactions of the same conversation be told apart. Absent from a server older than it.
+  final String? compactionId;
+
   @override
-  List<Object?> get props => <Object?>[seq, trigger, preTokens];
+  List<Object?> get props => <Object?>[seq, trigger, preTokens, compactionId];
 }
 
 /// The session ended.
@@ -406,4 +435,86 @@ final class PongArrived extends SessionEvent {
 /// the same event again after every reconnection, for ever.
 final class UnreadEvent extends SessionEvent {
   const UnreadEvent(super.seq);
+}
+
+/// An event the contract classifies screen state, never the conversation's timeline — plan 27,
+/// D-02, F1 · B-04. A known, deliberate absence from the conversation, unlike [UnreadEvent]: the
+/// contract's own `silentEventTypes` says so, not a type or a payload this build fails to read.
+final class SilentEvent extends SessionEvent {
+  const SilentEvent(super.seq);
+}
+
+/// A `session.notice`, read into the event the conversation applies — plan 27, F6 · B-19. The same
+/// shape web's `TimelineEntry` kind `'notice'` carries: a `kind` the backend chose (open, and
+/// possibly one this build has no line for yet — U-11 reads the same as B-13's own `kind: 'unknown'`,
+/// never an error), either `messageKey`/`params` (ours, translated) or `text` (the agent's, a hook's
+/// or a command's own, untrusted, never both).
+final class SessionNotice extends SessionEvent {
+  const SessionNotice(
+    super.seq, {
+    required this.noticeId,
+    required this.kind,
+    required this.level,
+    this.messageKey,
+    this.params,
+    this.text,
+    this.truncated = false,
+    this.parentToolUseId,
+    this.originNative,
+    this.writtenAt = '',
+  });
+
+  final String noticeId;
+  final String kind;
+  final NoticeLevel level;
+  final String? messageKey;
+  final Map<String, Object?>? params;
+  final String? text;
+  final bool truncated;
+
+  /// Set when this comes from a subagent — nests the line under it, the same as a message or a tool.
+  final String? parentToolUseId;
+
+  /// The engine's own, opaque name for whatever this notice came from (`origin.native`) — what names
+  /// a `kind` this build has no line for (U-11), never judged, never shown as JSON (D-03).
+  final String? originNative;
+
+  @override
+  final String writtenAt;
+
+  @override
+  List<Object?> get props => <Object?>[
+    seq,
+    noticeId,
+    kind,
+    level,
+    messageKey,
+    params,
+    text,
+    truncated,
+    parentToolUseId,
+    originNative,
+    writtenAt,
+  ];
+}
+
+/// The generic line this build draws for something it does not understand, synthesised by the mapper
+/// rather than read off a `session.notice` (plan 27, F6 · B-20) — mirrors web's synthesised
+/// `TimelineEntry` kind `'notice'` entries exactly (see `conversation-reducer.ts`'s
+/// `appendGenericOnce`).
+final class GenericSessionEvent extends SessionEvent {
+  const GenericSessionEvent(super.seq, {required this.reason, required this.id, this.detail});
+
+  final GenericReason reason;
+
+  /// What this line is kept from duplicating by — the WS type, or `type:field` for a bad value —
+  /// what [Conversation] keys the one-line-per-session rule by (U-06), or the one-per-(type,field)
+  /// rule (U-07, U-09).
+  final String id;
+
+  /// The event type, the field's bad value, or the type again for a malformed event.
+  final String? detail;
+
+  @override
+  List<Object?> get props => <Object?>[seq, reason, id, detail];
 }

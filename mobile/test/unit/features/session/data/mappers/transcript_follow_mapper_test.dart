@@ -82,7 +82,7 @@ void main() {
     expect(appended.working, isFalse);
   });
 
-  test('one entry this build cannot read costs that entry, not the frame', () {
+  test('one entry this build cannot read draws the generic line (U-06, U-10), not dropped', () {
     final String raw = withPayload(
       transcriptAppended(
         seq: 1,
@@ -94,7 +94,10 @@ void main() {
       ),
     );
 
-    expect((read(raw)! as FollowAppended).events, hasLength(1));
+    final List<SessionEvent> events = (read(raw)! as FollowAppended).events;
+
+    expect(events, hasLength(2));
+    expect(events.first, isA<GenericSessionEvent>());
   });
 
   test(

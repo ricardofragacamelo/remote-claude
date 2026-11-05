@@ -68,7 +68,12 @@
           "blockId": "615e3e89-adce-4eed-9112-86951a338288:0",
           "text": "Base directory for this skill: /home/user/projects/remote-claude/e2e/fixtures/user-skills-plugin/skills/fixture-fortune\n\nReply with exactly one short, invented fortune-cookie sentence, in quotes, and nothing else.\n"
         }
-      ]
+      ],
+      "injected": {
+        "kind": "instructions",
+        "name": "fixture-user-skills:fixture-fortune"
+      },
+      "parentToolUseId": "toolu_017uFmZqHoBYMCcnb4QDFMHh"
     }
   },
   {

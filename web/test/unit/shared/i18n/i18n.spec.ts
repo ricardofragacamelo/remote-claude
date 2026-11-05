@@ -176,6 +176,36 @@ describe('the agent a text names — plan 28, B-13, S-26', () => {
     expect(t('common.error.traceLabel')).toBe('Trace {{traceId}}');
   });
 
+  it('tells the instance to re-render every mounted text once the directory changes — a text whose `{{agent}}` nobody passed is otherwise stuck at the word the fallback uses, until some other prop or state change happens to re-render it', () => {
+    const instance = createI18n('en');
+    const seen: string[] = [];
+    instance.on('languageChanged', () => {
+      seen.push(instance.t('session.error.agentUnavailable'));
+    });
+
+    expect(instance.t('session.error.agentUnavailable')).toBe(
+      'The agent stopped responding on this machine.',
+    );
+
+    nameAgents(DIRECTORY);
+
+    expect(seen).toEqual(['Claude stopped responding on this machine.']);
+  });
+
+  it('never re-renders for a directory it already kept — a caller that calls this every render, not only when it changes, must not loop forever', () => {
+    const instance = createI18n('en');
+    let changes = 0;
+    instance.on('languageChanged', () => {
+      changes += 1;
+    });
+
+    nameAgents(DIRECTORY);
+    nameAgents(DIRECTORY);
+    nameAgents(DIRECTORY);
+
+    expect(changes).toBe(1);
+  });
+
   it('reads the directory in the order a person is best served by', () => {
     expect(agentNameIn(DIRECTORY, 'other')).toBe('Other Agent');
     expect(agentNameIn(DIRECTORY, 'unlisted')).toBe('unlisted');

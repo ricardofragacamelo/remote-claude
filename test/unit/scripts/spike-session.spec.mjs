@@ -9,12 +9,16 @@ import {
   copyCredential,
   hookSighting,
   importAgentSdk,
+  makeThrowawayWorld,
   openSpike,
+  runInWorld,
+  runNamedSpike,
   runSpike,
   permissionSighting,
   runProbes,
   spikeArguments,
   spikeSession,
+  withConfigDir,
 } from '../../../scripts/lib/spike-session.mjs';
 
 /**
@@ -180,6 +184,60 @@ describe('one session of a spike — plan 26, B-01', () => {
     }
   });
 
+  it('reports a session its own deadline abandoned as a result, not a failure', async () => {
+    vi.useFakeTimers();
+    try {
+      const assistant = { type: 'assistant', message: { content: [] } };
+      const sdk = {
+        query: (/** @type {any} */ params) => {
+          async function* stream() {
+            await params.prompt[Symbol.asyncIterator]().next();
+            yield assistant;
+            await new Promise((_resolve, reject) => {
+              params.options.abortController.signal.addEventListener('abort', () =>
+                reject(new Error('aborted by the test double')),
+              );
+            });
+          }
+          return Object.assign(stream(), { close: () => undefined });
+        },
+      };
+
+      const run = spikeSession(sdk, {
+        cwd: '/repo',
+        config: '/config',
+        model: 'haiku',
+        prompts: ['hi'],
+        timeoutMs: 10,
+      });
+      await vi.advanceTimersByTimeAsync(20);
+
+      await expect(run).resolves.toEqual(
+        expect.objectContaining({ messages: [assistant], abandoned: true }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still throws when the stream fails for a reason other than its own deadline', async () => {
+    const sdk = {
+      query: (/** @type {any} */ params) => ({
+        [Symbol.asyncIterator]: () => ({
+          next: async () => {
+            await params.prompt[Symbol.asyncIterator]().next();
+            throw new Error('boom');
+          },
+        }),
+        close: () => undefined,
+      }),
+    };
+
+    await expect(
+      spikeSession(sdk, { cwd: '/repo', config: '/config', model: 'haiku', prompts: ['hi'] }),
+    ).rejects.toThrow('boom');
+  });
+
   it('closes the session even when `before` throws', async () => {
     const sdk = fakeSdk();
 
@@ -329,6 +387,109 @@ describe('a whole spike', () => {
     expect(fs.statSync(copied).mode & 0o777).toBe(0o600);
   });
 
+  /** Runs `fn` with `CLAUDE_CONFIG_DIR` pointed at `source`, restoring it after, even on failure. */
+  async function withSourceAsConfigDir(/** @type {string} */ source, /** @type {() => any} */ fn) {
+    const previous = process.env['CLAUDE_CONFIG_DIR'];
+    process.env['CLAUDE_CONFIG_DIR'] = source;
+    try {
+      return await fn();
+    } finally {
+      if (previous === undefined) delete process.env['CLAUDE_CONFIG_DIR'];
+      else process.env['CLAUDE_CONFIG_DIR'] = previous;
+    }
+  }
+
+  it('builds a throwaway world: the credential copied, and the files written under the repository', async () => {
+    const source = scratch();
+    fs.writeFileSync(path.join(source, '.credentials.json'), '{"token":"w"}');
+
+    await withSourceAsConfigDir(source, () => {
+      const world = makeThrowawayWorld('losses-test', { 'a.txt': 'hello', 'nested/b.txt': 'deep' });
+      roots.push(world.root);
+
+      expect(fs.readFileSync(path.join(world.config, '.credentials.json'), 'utf8')).toBe(
+        '{"token":"w"}',
+      );
+      expect(fs.readFileSync(path.join(world.repository, 'a.txt'), 'utf8')).toBe('hello');
+      expect(fs.readFileSync(path.join(world.repository, 'nested/b.txt'), 'utf8')).toBe('deep');
+    });
+  });
+
+  it('creates an empty repository directory when no files are given — a session still needs a cwd that exists', async () => {
+    const source = scratch();
+    fs.writeFileSync(path.join(source, '.credentials.json'), '{}');
+
+    await withSourceAsConfigDir(source, () => {
+      const world = makeThrowawayWorld('losses-empty');
+      roots.push(world.root);
+
+      expect(fs.existsSync(world.repository)).toBe(true);
+      expect(fs.readdirSync(world.repository)).toEqual([]);
+    });
+  });
+
+  it('runs `fn` with its own CLAUDE_CONFIG_DIR, and restores what was there before', async () => {
+    await withSourceAsConfigDir('/was-here', async () => {
+      let seenInside;
+      await withConfigDir('/spike-config', () => {
+        seenInside = process.env['CLAUDE_CONFIG_DIR'];
+        return Promise.resolve();
+      });
+
+      expect(seenInside).toBe('/spike-config');
+      expect(process.env['CLAUDE_CONFIG_DIR']).toBe('/was-here');
+    });
+  });
+
+  it('deletes CLAUDE_CONFIG_DIR again when it was unset before, even when `fn` throws', async () => {
+    const previous = process.env['CLAUDE_CONFIG_DIR'];
+    delete process.env['CLAUDE_CONFIG_DIR'];
+    try {
+      await expect(
+        withConfigDir('/spike-config', () => Promise.reject(new Error('no'))),
+      ).rejects.toThrow('no');
+      expect(process.env['CLAUDE_CONFIG_DIR']).toBeUndefined();
+    } finally {
+      if (previous === undefined) delete process.env['CLAUDE_CONFIG_DIR'];
+      else process.env['CLAUDE_CONFIG_DIR'] = previous;
+    }
+  });
+
+  it('opens a session on a world, hands the run and the world to read, and tears the world down', async () => {
+    const source = scratch();
+    fs.writeFileSync(path.join(source, '.credentials.json'), '{}');
+    const world = await withSourceAsConfigDir(source, () => makeThrowawayWorld('run-in-world'));
+
+    const sdk = fakeSdk({ replies: [[RESULT]] });
+    const seen = /** @type {any[]} */ ([]);
+    const answer = await runInWorld(world, sdk, { model: 'haiku', prompts: ['hi'] }, (run, w) => {
+      seen.push(run, w);
+      return 'answer';
+    });
+
+    expect(answer).toBe('answer');
+    expect(seen[0]?.messages).toEqual([RESULT]);
+    expect(seen[1]).toBe(world);
+    expect(fs.existsSync(world.root)).toBe(false);
+  });
+
+  it('tears the world down even when read throws', async () => {
+    const source = scratch();
+    fs.writeFileSync(path.join(source, '.credentials.json'), '{}');
+    const world = await withSourceAsConfigDir(source, () =>
+      makeThrowawayWorld('run-in-world-throws'),
+    );
+
+    const sdk = fakeSdk({ replies: [[RESULT]] });
+
+    await expect(
+      runInWorld(world, sdk, { model: 'haiku', prompts: ['hi'] }, () => {
+        throw new Error('read failed');
+      }),
+    ).rejects.toThrow('read failed');
+    expect(fs.existsSync(world.root)).toBe(false);
+  });
+
   it('runs the probes on the SDK it loads, writes the raw numbers and the report', async () => {
     const json = path.join(scratch(), 'out.json');
     const sdk = { name: 'fake sdk' };
@@ -364,5 +525,25 @@ describe('a whole spike', () => {
 
     expect(await runSpike({ ...spec, args: [] })).toBe(1);
     expect(await runSpike({ ...spec, args: ['two'] })).toBe(1);
+  });
+
+  it('runs a named spike by routing each probe to its own runner, on the real SDK, through the real terminal output', async () => {
+    const written = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    try {
+      const code = await runNamedSpike({
+        args: [],
+        probes: ['one'],
+        heading: 'Heading',
+        runners: {
+          one: (sdk) => Promise.resolve({ queryIsFunction: typeof sdk.query === 'function' }),
+        },
+        reportOf: (results) => `report of ${Object.keys(results).join(',')}`,
+      });
+
+      expect(code).toBe(0);
+      expect(written.mock.calls.map((call) => call[0]).join('')).toContain('report of one');
+    } finally {
+      written.mockRestore();
+    }
   });
 });

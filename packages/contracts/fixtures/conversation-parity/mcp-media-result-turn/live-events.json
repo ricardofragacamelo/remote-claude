@@ -1,0 +1,193 @@
+[
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "10876e03-2f43-41fe-8146-97f04034e05e",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "10876e03-2f43-41fe-8146-97f04034e05e:0",
+          "text": "Call the media tool of the fixture MCP server with no arguments. Then reply with exactly: done."
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011Cgd4BcRaTqhu2wbvi5irP",
+      "delta": "I"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011Cgd4BcRaTqhu2wbvi5irP",
+      "delta": "'ll load the t"
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011Cgd4BcRaTqhu2wbvi5irP",
+      "delta": "ool schema first."
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011Cgd4BcRaTqhu2wbvi5irP",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "3d7a1297-4bee-41ec-941f-1f5e8d334c81:0",
+          "text": "I'll load the tool schema first."
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011Cgd4BcRaTqhu2wbvi5irP",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "b84a58e5-4546-4409-8552-2b270f7479ac:0",
+          "toolUseId": "toolu_017o4HkoaA4KKqrNSLRj8DGT"
+        }
+      ]
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_017o4HkoaA4KKqrNSLRj8DGT",
+      "kind": "other",
+      "label": {
+        "messageKey": "sessions.tool.other",
+        "params": {
+          "name": "ToolSearch"
+        }
+      },
+      "subject": {},
+      "changes": [],
+      "origin": {
+        "engine": "claude",
+        "native": "ToolSearch"
+      },
+      "rawInput": {
+        "query": "select:mcp__fixture__media",
+        "max_results": 1
+      }
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_017o4HkoaA4KKqrNSLRj8DGT",
+      "status": "succeeded",
+      "summary": "",
+      "attachments": [
+        {
+          "kind": "unknown",
+          "type": "tool_reference"
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011Cgd4Bo1K6m6fofghgT2eF",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "toolUse",
+          "blockId": "7194dec1-1435-4564-ac57-ab08c658375a:0",
+          "toolUseId": "toolu_015YwrXesc9otZ19UXiJE2QH"
+        }
+      ]
+    }
+  },
+  {
+    "type": "tool.started",
+    "payload": {
+      "toolUseId": "toolu_015YwrXesc9otZ19UXiJE2QH",
+      "kind": "mcp",
+      "label": {
+        "messageKey": "sessions.tool.mcp",
+        "params": {
+          "server": "fixture",
+          "tool": "media"
+        }
+      },
+      "subject": {
+        "server": "fixture",
+        "tool": "media"
+      },
+      "changes": [],
+      "origin": {
+        "engine": "claude",
+        "native": "mcp__fixture__media"
+      },
+      "rawInput": {}
+    }
+  },
+  {
+    "type": "tool.completed",
+    "payload": {
+      "toolUseId": "toolu_015YwrXesc9otZ19UXiJE2QH",
+      "status": "succeeded",
+      "summary": "[Resource from fixture at fixture://note.txt] a fixture resource[Resource link: linked.txt] fixture://linked.txt",
+      "attachments": [
+        {
+          "kind": "image",
+          "blockId": "b9dc6599-9b15-4a6d-a898-97900e050f28:0:0",
+          "mediaType": "image/png",
+          "size": 79
+        }
+      ]
+    }
+  },
+  {
+    "type": "message.delta",
+    "payload": {
+      "messageId": "msg_011Cgd4BspXyMfsDaHLhfRqD",
+      "delta": "done."
+    }
+  },
+  {
+    "type": "message.completed",
+    "payload": {
+      "messageId": "msg_011Cgd4BspXyMfsDaHLhfRqD",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "blockId": "51e3f47f-f352-441b-b59b-5bbbe9dc8912:0",
+          "text": "done."
+        }
+      ]
+    }
+  },
+  {
+    "type": "turn.completed",
+    "payload": {
+      "turnId": "cd642aa7-b24a-4895-aed1-af74a20dd147",
+      "usage": {
+        "inputTokens": 6,
+        "outputTokens": 131,
+        "cacheReadTokens": 43605,
+        "cacheWriteTokens": 3954,
+        "webSearches": 0
+      },
+      "costUsd": "0.065630",
+      "durationMs": 5294,
+      "outcome": "completed"
+    }
+  }
+]

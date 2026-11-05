@@ -59,7 +59,13 @@
       "toolUseId": "toolu_01UfbMLyXmAwG77EamKBHyUb",
       "status": "succeeded",
       "summary": "",
-      "at": "2026-10-10T02:52:11.483Z"
+      "at": "2026-10-10T02:52:11.483Z",
+      "attachments": [
+        {
+          "kind": "unknown",
+          "type": "tool_reference"
+        }
+      ]
     }
   },
   {

@@ -1,6 +1,8 @@
+import { SILENT_EVENT_TYPES } from '@remote-claude/contracts';
 import type { Envelope } from '@remote-claude/contracts';
 
 import { isRecord, readText } from '@/shared/lib/json';
+import { logger } from '@/shared/logging/logger';
 import { readToolCall } from '@/shared/lib/tool-call';
 import { isTurnRunning } from '../lib/turn';
 import type { HistoryEvent } from '../types/history';
@@ -10,15 +12,18 @@ import type {
   BlockKind,
   Conversation,
   MessageBlock,
+  NoticeLevel,
   SessionCloseReason,
   SessionStatus,
   StreamMessage,
   TimelineEntry,
+  ToolAttachment,
   ToolExecution,
   ToolStatus,
   TurnOutcome,
   TurnSummary,
   TurnUsage,
+  UnknownReason,
 } from '../types/live-session';
 
 /** A conversation nothing has been said in. What a history is folded onto. */
@@ -49,11 +54,65 @@ type MessageReader = (
   at: string,
 ) => Conversation;
 
-/** The reader of an event about one message: a payload that names no message changes nothing. */
+/**
+ * The reader of an event about one message: a payload that names no message is malformed (U-09),
+ * never silently dropped.
+ */
 function aboutMessage(read: MessageReader): EventReader {
   return (state, payload, frame) => {
     const messageId = readText(payload, 'messageId');
-    return messageId === null ? state : read(state, messageId, payload, frame.ts);
+    return messageId === null
+      ? appendGenericOnce(state, `malformed:${frame.type}`, 'malformed')
+      : read(state, messageId, payload, frame.ts);
+  };
+}
+
+/** The silent event types, as a plain lookup — the tuple `includes` only widens to its own members. */
+const SILENT_TYPES: ReadonlySet<string> = new Set(SILENT_EVENT_TYPES);
+
+/**
+ * The generic line this build draws in place of something it does not understand (plan 27, F6 ·
+ * B-20): a WS event with no reader, a known event with an enum value or a required field this build
+ * does not recognise, or a `session.notice` of a `kind` it has no line for. The same row the backend's
+ * own `kind: 'unknown'` notice draws (B-19) — a line genuinely unknown to a published client is not a
+ * different kind of thing from one the backend itself could not place.
+ *
+ * One line **per type, ever**, for an unknown event (U-06) and for a malformed one (U-09): a build
+ * that never learns this type does not need to say so again every time it arrives. An unknown enum
+ * value gets one line per (type, field): two different bad values of the same field are both worth
+ * knowing about.
+ */
+function appendGenericOnce(
+  state: Conversation,
+  id: string,
+  reason: UnknownReason,
+  detail?: string,
+): Conversation {
+  if (state.timeline.some((entry) => entry.kind === 'notice' && entry.id === id)) {
+    return state;
+  }
+
+  // A malformed event is a contract violated, never forward-compatibility: it is worth a `warn`,
+  // not just the `debug` an unknown-but-well-formed event gets (U-09).
+  if (reason === 'malformed') {
+    logger.warn({ op: 'conversation.readEvent', id }, 'malformed event, required field missing');
+  }
+
+  return {
+    ...state,
+    timeline: [
+      ...state.timeline,
+      {
+        kind: 'notice',
+        id,
+        reason,
+        level: 'notice',
+        text: null,
+        truncated: false,
+        parentToolUseId: null,
+        ...(detail === undefined ? {} : { detail }),
+      },
+    ],
   };
 }
 
@@ -64,23 +123,34 @@ function aboutMessage(read: MessageReader): EventReader {
  * and never with an `Envelope`. It is a pure function of (state, frame), which is what lets every
  * ordering rule be tested without a socket, a store or a component.
  *
- * **An unknown event returns the state unchanged.** The same survival rule the backend applies to
- * an unknown message of the engine: a published client has to keep working when the contract gains an event
- * it has never heard of.
+ * Three cases, checked in order (plan 27, F1 · B-04): a type with its own reader is applied, as
+ * always; a type the contract classifies `silent` ([05-websocket-protocol](../../../../../docs/architecture/shared/05-websocket-protocol.md#eventos-servidor--cliente))
+ * changes nothing, on purpose; and the rest — truly unknown to this build — also changes nothing
+ * **for now**, the same survival rule the backend applies to an unknown message of the engine: a
+ * published client has to keep working when the contract gains an event it has never heard of. The
+ * third case is what the F6 redraws into a line.
  */
 export function readEvent(state: Conversation, frame: Envelope): Conversation {
   const read = EVENT_READERS.get(frame.type);
 
-  if (read === undefined) {
+  if (read !== undefined) {
+    logger.debug({ op: 'conversation.readEvent', type: frame.type }, 'event read');
+
+    const payload = frame.payload ?? {};
+    const next = read(state, payload, frame);
+    const at = readText(payload, 'at');
+
+    // An event of the history says when its entry was written: the next thinking is measured from it.
+    return at === null ? next : { ...next, writtenAt: at };
+  }
+
+  if (SILENT_TYPES.has(frame.type)) {
+    logger.debug({ op: 'conversation.readEvent', type: frame.type }, 'silent event, no reader');
     return state;
   }
 
-  const payload = frame.payload ?? {};
-  const next = read(state, payload, frame);
-  const at = readText(payload, 'at');
-
-  // An event of the history says when its entry was written: the next thinking is measured from it.
-  return at === null ? next : { ...next, writtenAt: at };
+  logger.debug({ op: 'conversation.readEvent', type: frame.type }, 'unknown event, no reader');
+  return appendGenericOnce(state, `unknown-event:${frame.type}`, 'unknownEvent', frame.type);
 }
 
 /**
@@ -186,16 +256,29 @@ function statusOf(payload: Readonly<Record<string, unknown>>): SessionStatus | n
  * server's clock, the status first left rest — kept while it moves between thinking, running a tool
  * and waiting on a person, and dropped once the turn is over. A replay re-delivers the same frame,
  * so it lands on the same instant; the history carries no instant, and so starts no clock.
+ *
+ * A `status` this build does not recognise leaves the session where it was (U-07) — a card in its
+ * last known state is still true; a guess at a new one might not be — and the generic line says
+ * which value it was.
  */
 function applyStatus(
   state: Conversation,
   payload: Readonly<Record<string, unknown>>,
   frame: Envelope,
 ): Conversation {
+  const raw = payload['status'];
+
+  if (typeof raw !== 'string') {
+    return appendGenericOnce(state, `malformed:${frame.type}`, 'malformed');
+  }
+
   const status = statusOf(payload) ?? state.status;
   const since = state.turnSince ?? (frame.ts === '' ? null : frame.ts);
+  const next = { ...state, status, turnSince: isTurnRunning(status) ? since : null };
 
-  return { ...state, status, turnSince: isTurnRunning(status) ? since : null };
+  return STATUSES.has(raw)
+    ? next
+    : appendGenericOnce(next, `unknown-value:${frame.type}:status`, 'unknownValue', raw);
 }
 
 /** The subagent a payload belongs to, or `null` for the main conversation. */
@@ -308,7 +391,16 @@ const applyDelta: MessageReader = (state, messageId, payload, at) => {
     return state;
   }
 
-  const kind = readText(payload, 'blockType') === 'thinking' ? 'thinking' : 'text';
+  const blockType = readText(payload, 'blockType');
+
+  // A block type this build does not know (U-08): never summed into the answer. The block itself
+  // still arrives whole in the `message.completed` that finishes it, drawn generically (U-05) —
+  // this just refuses to let its fragments pass as the model's own words in the meantime.
+  if (blockType !== null && blockType !== 'text' && blockType !== 'thinking') {
+    return state;
+  }
+
+  const kind = blockType === 'thinking' ? 'thinking' : 'text';
   const existing = state.messages.find((message) => message.messageId === messageId);
   const base = existing ?? aMessage(messageId, 'assistant', parentOf(payload));
   const changed = withFragment(base, kind, delta, at);
@@ -345,6 +437,17 @@ const BLOCK_KINDS: ReadonlyMap<string, BlockKind> = new Map<string, BlockKind>([
   ['image', 'image'],
 ]);
 
+/**
+ * Block types never drawn as part of the message: `toolUse` and `toolResult` are drawn whole as
+ * their own tool, elsewhere in the timeline, never as a block of the message that calls one (plan
+ * 28, S-88). The adapter's own canonicalisation of the engine's own block kinds (plan 28, B-30)
+ * happens before anything reaches the wire, live or from the history — this build never has to
+ * recognise the engine's own spelling of a kind it already knows under its canonical name, and must
+ * not (neutral core): a client that somehow received the engine's own spelling anyway reads it as
+ * any other block it does not know (U-05), never silently, which is the generic line's whole point.
+ */
+const SILENT_BLOCK_TYPES = new Set<string>(['toolUse', 'toolResult']);
+
 /** What an image block says of itself: its type and its size — the bytes never travel (D-09). */
 function imageOf(block: Readonly<Record<string, unknown>>): Partial<MessageBlock> {
   const mediaType = readText(block, 'mediaType');
@@ -353,6 +456,48 @@ function imageOf(block: Readonly<Record<string, unknown>>): Partial<MessageBlock
   return {
     ...(mediaType === null ? {} : { mediaType }),
     ...(typeof size === 'number' && Number.isFinite(size) && size >= 0 ? { size } : {}),
+  };
+}
+
+/** An unrecognised block (U-05): drawn generically, with its text when it has one. */
+function unknownBlockOf(block: Readonly<Record<string, unknown>>, blockType: string): MessageBlock {
+  const blockId = readText(block, 'blockId');
+
+  return {
+    kind: 'unknown',
+    text: readText(block, 'text') ?? '',
+    blockType,
+    ...(blockId === null ? {} : { blockId }),
+  };
+}
+
+/** One block of a message's content, by its own `type` — `null` for one this message never draws. */
+function blockOf(block: unknown, atMostMs: number | null): MessageBlock | null {
+  if (!isRecord(block)) {
+    return null;
+  }
+
+  const blockType = String(block['type']);
+
+  if (SILENT_BLOCK_TYPES.has(blockType)) {
+    return null;
+  }
+
+  const kind = BLOCK_KINDS.get(blockType);
+
+  if (kind === undefined) {
+    return unknownBlockOf(block, blockType);
+  }
+
+  const blockId = readText(block, 'blockId');
+  const text = kind === 'thinking' ? readText(block, 'thinking') : readText(block, 'text');
+
+  return {
+    kind,
+    text: text ?? '',
+    ...(blockId === null ? {} : { blockId }),
+    ...(kind === 'thinking' && atMostMs !== null ? { atMostMs } : {}),
+    ...(kind === 'image' ? imageOf(block) : {}),
   };
 }
 
@@ -368,24 +513,9 @@ function blocksOf(
 ): MessageBlock[] {
   const content = Array.isArray(payload['content']) ? payload['content'] : [];
 
-  return content.flatMap((block): MessageBlock[] => {
-    const kind = isRecord(block) ? BLOCK_KINDS.get(String(block['type'])) : undefined;
-
-    if (kind === undefined || !isRecord(block)) {
-      return [];
-    }
-
-    const text = kind === 'thinking' ? readText(block, 'thinking') : readText(block, 'text');
-    const blockId = readText(block, 'blockId');
-    return [
-      {
-        kind,
-        text: text ?? '',
-        ...(blockId === null ? {} : { blockId }),
-        ...(kind === 'thinking' && atMostMs !== null ? { atMostMs } : {}),
-        ...(kind === 'image' ? imageOf(block) : {}),
-      },
-    ];
+  return content.flatMap((block) => {
+    const read = blockOf(block, atMostMs);
+    return read === null ? [] : [read];
   });
 }
 
@@ -440,7 +570,88 @@ function streamingAfter(
  * A client that missed a fragment is made whole here: the block that finished replaces the fragment
  * that was streaming it, and one that missed none gets the same text it already had.
  */
+/**
+ * What `injected.kind` draws instead of a message bubble (plan 27, F6 · B-21): `contextSummary`
+ * folds into the `compacted` entry it belongs to; `instructions` and `other` get their own line,
+ * nested under whichever subagent put them there. `commandExpansion` is deliberately absent — it is
+ * meant to read exactly like the prompt it expands to, and falls through to the ordinary message
+ * path below, same as no `injected` at all.
+ */
+function injectedLineKindOf(kind: string | null): 'instructions' | 'other' | null {
+  return kind === 'instructions' || kind === 'other' ? kind : null;
+}
+
+/** The text of a compaction's synthetic summary message — its text blocks, joined. */
+function summaryTextOf(payload: Readonly<Record<string, unknown>>): string {
+  return blocksOf(payload, null)
+    .filter((block) => block.kind === 'text')
+    .map((block) => block.text)
+    .join('');
+}
+
+/**
+ * The summary of the **last** `compacted` entry of the timeline, filled in — never drawn as its own
+ * message (B-21): a summary nobody wrote is not "You" saying it. Silently dropped if no compaction
+ * precedes it, which a server that sends the fields in the documented order never does.
+ */
+function applyContextSummary(
+  state: Conversation,
+  payload: Readonly<Record<string, unknown>>,
+): Conversation {
+  const text = summaryTextOf(payload);
+  const at = state.timeline.findLastIndex((entry) => entry.kind === 'compacted');
+
+  if (at === -1) {
+    return state;
+  }
+
+  const timeline = [...state.timeline];
+  timeline[at] = {
+    ...(timeline[at] as Extract<TimelineEntry, { kind: 'compacted' }>),
+    summary: text,
+  };
+
+  return { ...state, timeline };
+}
+
+/**
+ * The agent's own content (a skill's body, or a kind this build has no line of its own for) as its
+ * line — never a message bubble (B-21): the client picks the line by `injected.kind`, never by the
+ * tool's name, and nests it under the subagent that owns it the same way a notice does.
+ */
+function applyInjectedLine(
+  state: Conversation,
+  messageId: string,
+  kind: 'instructions' | 'other',
+  payload: Readonly<Record<string, unknown>>,
+): Conversation {
+  const injected = isRecord(payload['injected']) ? payload['injected'] : {};
+
+  return {
+    ...state,
+    timeline: appended(state.timeline, {
+      kind: 'injected',
+      id: `message:${messageId}`,
+      injectedKind: kind,
+      name: readText(injected, 'name'),
+      parentToolUseId: parentOf(payload),
+    }),
+  };
+}
+
 const applyCompleted: MessageReader = (state, messageId, payload, at) => {
+  const injected = isRecord(payload['injected']) ? payload['injected'] : null;
+  const injectedKind = injected === null ? null : readText(injected, 'kind');
+
+  if (injectedKind === 'contextSummary') {
+    return applyContextSummary(state, payload);
+  }
+
+  const lineKind = injectedLineKindOf(injectedKind);
+  if (lineKind !== null) {
+    return applyInjectedLine(state, messageId, lineKind, payload);
+  }
+
   const role = readText(payload, 'role') === 'user' ? 'user' : 'assistant';
   const existing =
     state.messages.find((message) => message.messageId === messageId) ??
@@ -473,7 +684,7 @@ function applyToolStarted(
   const call = readToolCall(payload);
 
   if (toolUseId === null || call === null) {
-    return state;
+    return appendGenericOnce(state, 'malformed:tool.started', 'malformed');
   }
 
   const title = readText(payload, 'title')?.trim() ?? '';
@@ -503,10 +714,58 @@ function progressOf(payload: Readonly<Record<string, unknown>>): ToolChange {
 }
 
 /** A `tool.completed`: how the tool ended, when it is an outcome the contract carries. */
+/** One attachment of a `tool.completed`, read by its own `kind` (plan 27, F6 · B-22) — an entry with
+ * no readable `kind` is dropped: B-20's generic line is for a kind this build cannot classify, not
+ * for one missing its own classifier. */
+function imageAttachmentOf(raw: Readonly<Record<string, unknown>>): ToolAttachment {
+  const blockId = readText(raw, 'blockId');
+  const mediaType = readText(raw, 'mediaType');
+  const size = raw['size'];
+  return {
+    kind: 'image',
+    ...(blockId === null ? {} : { blockId }),
+    ...(mediaType === null ? {} : { mediaType }),
+    ...(typeof size === 'number' ? { size } : {}),
+  };
+}
+
+function linkAttachmentOf(raw: Readonly<Record<string, unknown>>): ToolAttachment {
+  const uri = readText(raw, 'uri');
+  const title = readText(raw, 'title');
+  return { kind: 'link', ...(uri === null ? {} : { uri }), ...(title === null ? {} : { title }) };
+}
+
+function attachmentOf(raw: unknown): ToolAttachment | null {
+  if (!isRecord(raw)) {
+    return null;
+  }
+
+  const kind = readText(raw, 'kind');
+
+  if (kind === 'image') {
+    return imageAttachmentOf(raw);
+  }
+  if (kind === 'link') {
+    return linkAttachmentOf(raw);
+  }
+  if (kind === null) {
+    return null;
+  }
+
+  const type = readText(raw, 'type');
+  return { kind: 'unknown', ...(type === null ? {} : { type }) };
+}
+
+function attachmentsOf(payload: Readonly<Record<string, unknown>>): readonly ToolAttachment[] {
+  const raw = payload['attachments'];
+  return Array.isArray(raw) ? raw.flatMap((each) => attachmentOf(each) ?? []) : [];
+}
+
 function outcomeOf(payload: Readonly<Record<string, unknown>>): ToolChange {
   return (tool) => {
     const status = readText(payload, 'status');
     const question = readToolQuestion(payload['question']);
+    const attachments = attachmentsOf(payload);
 
     return status === null || !TOOL_OUTCOMES.has(status)
       ? null
@@ -515,6 +774,7 @@ function outcomeOf(payload: Readonly<Record<string, unknown>>): ToolChange {
           status: status as ToolStatus,
           summary: readText(payload, 'summary'),
           ...(question === null ? {} : { question }),
+          ...(attachments.length === 0 ? {} : { attachments }),
         };
   };
 }
@@ -609,7 +869,7 @@ function applyTurn(state: Conversation, payload: Readonly<Record<string, unknown
   const durationMs = payload['durationMs'];
 
   if (turnId === null || typeof durationMs !== 'number') {
-    return state;
+    return appendGenericOnce(state, 'malformed:turn.completed', 'malformed');
   }
 
   const turn: TurnSummary = {
@@ -628,6 +888,116 @@ function applyTurn(state: Conversation, payload: Readonly<Record<string, unknown
   };
 }
 
+/** The levels a notice carries. A level this build does not recognise reads as `notice`: still shown,
+ * never hidden, and never mistaken for `error`'s emphasis. */
+const NOTICE_LEVELS = new Set<string>(['info', 'notice', 'warning', 'error']);
+
+function levelOf(payload: Readonly<Record<string, unknown>>): NoticeLevel {
+  const level = readText(payload, 'level');
+  return level !== null && NOTICE_LEVELS.has(level) ? (level as NoticeLevel) : 'notice';
+}
+
+/**
+ * The `kind`s of `session.notice` this build has a line for ([§8.2's twelve](../../../../../docs/discovery/09-perdas-do-backend-na-conversa.md#82-o-evento-de-aviso),
+ * `unknown` excepted — that one already **is** the generic line). A `kind` not in this set is drawn
+ * exactly like `unknown`: the client draws by `kind`, never by `origin.engine` or `origin.native`
+ * (plan 28), and a kind it does not know yet is not an error, the same survival rule as an unknown
+ * WS event (U-11).
+ */
+const KNOWN_NOTICE_KINDS = new Set<string>([
+  'command.output',
+  'agent.info',
+  'agent.notification',
+  'agent.stopping',
+  'model.switched',
+  'model.refused',
+  'request.retrying',
+  'usage.limited',
+  'turn.failed',
+  'compaction.failed',
+  'auth.failed',
+]);
+
+/**
+ * A `session.notice`, read into the timeline entry that draws it (plan 27, F6 · B-19). A notice
+ * without a `noticeId` cannot be kept from duplicating on replay, so it changes nothing — the one
+ * payload field this reader insists on, same as `aboutMessage` insists on `messageId`.
+ */
+function applyNotice(
+  state: Conversation,
+  payload: Readonly<Record<string, unknown>>,
+): Conversation {
+  const noticeId = readText(payload, 'noticeId');
+
+  if (noticeId === null) {
+    return state;
+  }
+
+  const kind = readText(payload, 'kind') ?? 'unknown';
+  const messageKey = readText(payload, 'messageKey');
+  const known = KNOWN_NOTICE_KINDS.has(kind);
+  const origin = isRecord(payload['origin']) ? payload['origin'] : {};
+  const entry: TimelineEntry = {
+    kind: 'notice',
+    id: `notice:${noticeId}`,
+    noticeKind: kind,
+    level: levelOf(payload),
+    text: readText(payload, 'text'),
+    truncated: payload['truncated'] === true,
+    parentToolUseId: parentOf(payload),
+    ...(messageKey === null
+      ? {}
+      : { messageKey, params: isRecord(payload['params']) ? payload['params'] : {} }),
+    // An unrecognised `kind` (B-13's own `unknown`, or a future one this build has no line for, U-11)
+    // names what arrived by the engine's own, opaque name for it — never the JSON (D-03).
+    ...(known
+      ? {}
+      : { reason: 'unknownNotice' as const, detail: readText(origin, 'native') ?? kind }),
+  };
+
+  return { ...state, timeline: appendNotice(state.timeline, entry) };
+}
+
+/**
+ * The timeline with a notice added — once per `noticeId`, never duplicated by a replay. A `kind`
+ * this build has no line for collapses with the one before it when they are the identical notice
+ * repeated ("×3", D-12): ten in a row make one line, but A, B, A intercalated stay three — the
+ * counter never joins what is not a run.
+ */
+/** Whether `last` is the identical unrecognised-kind notice `entry` repeats, immediately — the one
+ * case the "×3" counter collapses (D-12): ten in a row make one line, but a gap of anything else
+ * in between starts a new one (S-87). */
+function repeatsUnknownNotice(
+  last: TimelineEntry | undefined,
+  entry: Extract<TimelineEntry, { kind: 'notice' }>,
+): last is Extract<TimelineEntry, { kind: 'notice' }> {
+  return (
+    last?.kind === 'notice' &&
+    last.reason === 'unknownNotice' &&
+    entry.reason === 'unknownNotice' &&
+    last.noticeKind === entry.noticeKind &&
+    last.text === entry.text &&
+    last.detail === entry.detail
+  );
+}
+
+function appendNotice(
+  timeline: readonly TimelineEntry[],
+  entry: TimelineEntry,
+): readonly TimelineEntry[] {
+  if (timeline.some((each) => each.kind === 'notice' && each.id === entry.id)) {
+    return timeline;
+  }
+
+  const last = timeline[timeline.length - 1];
+
+  if (entry.kind === 'notice' && repeatsUnknownNotice(last, entry)) {
+    return [...timeline.slice(0, -1), { ...last, count: (last.count ?? 1) + 1 }];
+  }
+
+  return [...timeline, entry];
+}
+
 /** The point where the conversation was compacted — marked, so the turns before read as summarised. */
 function applyCompacted(
   state: Conversation,
@@ -635,14 +1005,18 @@ function applyCompacted(
   frame: Envelope,
 ): Conversation {
   const preTokens = payload['preTokens'];
+  const compactionId = readText(payload, 'compactionId');
 
   return {
     ...state,
     timeline: appended(state.timeline, {
       kind: 'compacted',
-      id: frame.seq === undefined ? frame.id : String(frame.seq),
+      // Stable live, on replay and from the history (plan 27, F3 · B-09, F5 · B-18) — falls back to
+      // the frame's own identity from a server older than the field.
+      id: compactionId ?? (frame.seq === undefined ? frame.id : String(frame.seq)),
       trigger: readText(payload, 'trigger') ?? 'auto',
       preTokens: typeof preTokens === 'number' ? preTokens : null,
+      summary: null,
     }),
   };
 }
@@ -658,7 +1032,7 @@ function applyRewound(
   frame: Envelope,
 ): Conversation {
   return readText(payload, 'promptId') === null
-    ? state
+    ? appendGenericOnce(state, 'malformed:session.rewound', 'malformed')
     : {
         ...state,
         timeline: appended(state.timeline, {
@@ -693,8 +1067,12 @@ function applyClosed(
 ): Conversation {
   const reason = readText(payload, 'reason');
 
-  if (reason === null || !CLOSE_REASONS.has(reason)) {
-    return state;
+  if (reason === null) {
+    return appendGenericOnce(state, 'malformed:session.closed', 'malformed');
+  }
+
+  if (!CLOSE_REASONS.has(reason)) {
+    return appendGenericOnce(state, 'unknown-value:session.closed:reason', 'unknownValue', reason);
   }
 
   return {
@@ -737,10 +1115,21 @@ const EVENT_READERS: ReadonlyMap<string, EventReader> = new Map<string, EventRea
   ['message.completed', aboutMessage(applyCompleted)],
   ['tool.started', applyToolStarted],
   ['tool.progress', (state, payload) => changeTool(state, payload, progressOf(payload))],
-  ['tool.completed', (state, payload) => changeTool(state, payload, outcomeOf(payload))],
+  [
+    'tool.completed',
+    (state, payload) => {
+      const changed = changeTool(state, payload, outcomeOf(payload));
+      const status = readText(payload, 'status');
+
+      return status !== null && !TOOL_OUTCOMES.has(status)
+        ? appendGenericOnce(changed, 'unknown-value:tool.completed:status', 'unknownValue', status)
+        : changed;
+    },
+  ],
   ['turn.completed', applyTurn],
   ['session.compacted', applyCompacted],
   ['session.rewound', applyRewound],
   ['session.tasksChanged', applyTasksChanged],
   ['session.closed', (state, payload, frame) => applyClosed(state, payload, frame.ts)],
+  ['session.notice', applyNotice],
 ]);

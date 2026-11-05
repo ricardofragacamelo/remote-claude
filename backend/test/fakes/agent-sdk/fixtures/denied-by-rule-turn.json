@@ -1,0 +1,850 @@
+{
+  "$comment": "Recorded by scripts/record-agent-sdk-fixtures.mjs from a real Agent SDK run. Do not edit by hand — re-record instead. See docs/plans/01-live-session/F2-session-runtime.md.",
+  "name": "denied-by-rule-turn",
+  "why": "a tool denied by a project's own permissions.deny rule, before canUseTool is ever asked — system/permission_denied, decision_reason_type: 'subcommandResults' (discovery 01 §13, B-02)",
+  "prompt": "Run `touch forbidden.txt` with the Bash tool. Then reply with exactly: done.",
+  "recordedAt": "2026-11-01",
+  "sdkVersion": "0.3.277",
+  "counts": { "messages": 30, "preToolUse": 1, "canUseTool": 0 },
+  "preToolUse": [
+    { "toolName": "Bash", "toolUseId": "toolu_01Bmhed7mcCfA8do9uxQFDkL", "effort": "high" }
+  ],
+  "canUseTool": [],
+  "stderr": [],
+  "history": [
+    {
+      "type": "user",
+      "uuid": "956d6738-c333-4673-b55a-98347e3776d8",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "message": {
+        "role": "user",
+        "content": "Run `touch forbidden.txt` with the Bash tool. Then reply with exactly: done."
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-11-01T23:13:06.802Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "af125ec3-576e-4a14-885d-c255416733e5",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cgd4C8Xpw7pkV53rhoyqY",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01Bmhed7mcCfA8do9uxQFDkL",
+            "name": "Bash",
+            "input": { "command": "touch forbidden.txt", "description": "Create an empty file" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3552,
+          "cache_read_input_tokens": 12060,
+          "output_tokens": 81,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 3552, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "global",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 81,
+              "cache_read_input_tokens": 12060,
+              "cache_creation_input_tokens": 3552,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 3552
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-11-01T23:13:08.950Z"
+    },
+    {
+      "type": "user",
+      "uuid": "7c221d3c-648d-45e7-ae47-b1ae4459e6c9",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "content": "Permission to use Bash with command touch forbidden.txt has been denied.",
+            "is_error": true,
+            "tool_use_id": "toolu_01Bmhed7mcCfA8do9uxQFDkL"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-11-01T23:13:08.980Z"
+    },
+    {
+      "type": "assistant",
+      "uuid": "f9bee169-1639-4e76-ba89-31c2a2dd6462",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cgd4CEheX1Hu9Z3kxtqqD",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Permission to run that command was denied, so `forbidden.txt` was not created."
+          }
+        ],
+        "container": null,
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2257,
+          "cache_read_input_tokens": 15612,
+          "output_tokens": 27,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+          "service_tier": "standard",
+          "cache_creation": { "ephemeral_1h_input_tokens": 2257, "ephemeral_5m_input_tokens": 0 },
+          "inference_geo": "global",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 27,
+              "cache_read_input_tokens": 15612,
+              "cache_creation_input_tokens": 2257,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2257
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "parent_agent_id": null,
+      "timestamp": "2026-11-01T23:13:10.220Z"
+    }
+  ],
+  "messages": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/workspace",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "tools": [
+        "Task",
+        "AskUserQuestion",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterPlanMode",
+        "EnterWorktree",
+        "ExitPlanMode",
+        "ExitWorktree",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "ShareOnboardingGuide",
+        "Skill",
+        "TaskStop",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write"
+      ],
+      "mcp_servers": [],
+      "model": "claude-opus-5[1m]",
+      "permissionMode": "default",
+      "slash_commands": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "advisor",
+        "agents",
+        "auto-mode-setup",
+        "autocompact",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "output-style",
+        "context",
+        "effort",
+        "fast",
+        "heapdump",
+        "init",
+        "mcp",
+        "import",
+        "model",
+        "__remote-workflow",
+        "workflow-launch-exec",
+        "reload-plugins",
+        "reload-skills",
+        "rename",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "skill-doctor",
+        "goal",
+        "design-consent",
+        "design-revoke",
+        "list-agents",
+        "team-onboarding"
+      ],
+      "terminal_slash_commands": ["doctor", "color", "reload-plugins"],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.277",
+      "output_style": "default",
+      "agents": ["claude", "Explore", "general-purpose", "Plan", "statusline-setup"],
+      "skills": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator"
+      ],
+      "plugins": [{ "name": "agents-md", "path": "builtin", "source": "agents-md@builtin" }],
+      "capabilities": ["interrupt_receipt_v1", "interrupt_cancel_queued_v1", "msg_lifecycle_v1"],
+      "analytics_disabled": false,
+      "product_feedback_disabled": false,
+      "uuid": "2a32777e-bc6f-40a2-8567-e71a117e78c6",
+      "memory_paths": { "auto": "/home/user/.claude/projects/-workspace/memory/" },
+      "messaging_socket_path": "/run/user/1000/cc-socks/3093554.sock",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required"
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "uuid": "48a10304-3208-4486-b50e-676050ad6b84"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1793583600,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "out_of_credits",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": { "utilization": 0.11, "resetsAt": 1793583600 },
+          "seven_day": { "utilization": 0.23, "resetsAt": 1793898000 }
+        }
+      },
+      "uuid": "f1dd779b-525a-4135-b842-3b950f4d71fa",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011Cgd4C8Xpw7pkV53rhoyqY",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 3552,
+            "cache_read_input_tokens": 12060,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 3552 },
+            "output_tokens": 17,
+            "service_tier": "standard",
+            "inference_geo": "global",
+            "speed": "standard"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "fcd54981-c3f3-4bed-a2b6-fe09c2eeca47",
+      "ttft_ms": 1309
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01Bmhed7mcCfA8do9uxQFDkL",
+          "name": "Bash",
+          "input": {},
+          "caller": { "type": "direct" }
+        }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "2578d9fb-9b94-4980-81f7-52dd9b27cabe"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "" }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "dee4bca4-81c6-4324-b0ad-b731aec47b31"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "{\"command\": \"touch forbidden" }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "42556e2f-96f5-44b6-a1bf-8a34ec3fbe96"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": ".txt" }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "b31a7026-fb22-4329-97fb-6487b533e2f2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\", \"description\": \"Create an empty file"
+        }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "f5c094d1-1a90-4578-8958-2939fcaafb08"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "input_json_delta", "partial_json": "\"}" }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "20a2b930-119f-44a0-a341-a7a4a4de5215"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cgd4C8Xpw7pkV53rhoyqY",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01Bmhed7mcCfA8do9uxQFDkL",
+            "name": "Bash",
+            "input": { "command": "touch forbidden.txt", "description": "Create an empty file" },
+            "caller": { "type": "direct" }
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3552,
+          "cache_read_input_tokens": 12060,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 3552 },
+          "output_tokens": 17,
+          "service_tier": "standard",
+          "inference_geo": "global",
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "uuid": "af125ec3-576e-4a14-885d-c255416733e5",
+      "timestamp": "2026-11-01T23:13:08.950Z",
+      "request_id": "req_011Cgd4C7Ay7VWffCaT5D7es",
+      "wire_tool_inputs": {
+        "toolu_01Bmhed7mcCfA8do9uxQFDkL": {
+          "command": "touch forbidden.txt",
+          "description": "Create an empty file"
+        }
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "b9f071f6-efe4-43be-a5aa-f84889f54bf6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 3552,
+          "cache_read_input_tokens": 12060,
+          "output_tokens": 81,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 81,
+              "cache_read_input_tokens": 12060,
+              "cache_creation_input_tokens": 3552,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 3552
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "8ee217f8-d7b0-4250-874f-5aca85fd203a"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "31555b1d-ba06-4a7c-a684-e05413dd0b7c"
+    },
+    {
+      "type": "rate_limit_event",
+      "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1793583600,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "out_of_credits",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": { "utilization": 0.11, "resetsAt": 1793583600 },
+          "seven_day": { "utilization": 0.24, "resetsAt": 1793898000 }
+        }
+      },
+      "uuid": "e666fbc4-9592-4de0-bad3-7c337384de0c",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f"
+    },
+    {
+      "type": "system",
+      "subtype": "permission_denied",
+      "tool_name": "Bash",
+      "tool_use_id": "toolu_01Bmhed7mcCfA8do9uxQFDkL",
+      "decision_reason_type": "subcommandResults",
+      "message": "Permission to use Bash with command touch forbidden.txt has been denied.",
+      "uuid": "4fec8cd0-9db4-41c5-9f42-386554f017c0",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "content": "Permission to use Bash with command touch forbidden.txt has been denied.",
+            "is_error": true,
+            "tool_use_id": "toolu_01Bmhed7mcCfA8do9uxQFDkL"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "uuid": "7c221d3c-648d-45e7-ae47-b1ae4459e6c9",
+      "timestamp": "2026-11-01T23:13:08.980Z",
+      "tool_use_result": "Error: Permission to use Bash with command touch forbidden.txt has been denied.",
+      "tool_result_meta": [
+        { "id": "toolu_01Bmhed7mcCfA8do9uxQFDkL", "non_execution_kind": "permission-rule" }
+      ]
+    },
+    {
+      "type": "system",
+      "subtype": "status",
+      "status": "requesting",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "uuid": "92763f1d-7756-482b-b810-915fd29b7dd5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-5",
+          "id": "msg_011Cgd4CEheX1Hu9Z3kxtqqD",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 2257,
+            "cache_read_input_tokens": 15612,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2257 },
+            "output_tokens": 4,
+            "service_tier": "standard",
+            "inference_geo": "global",
+            "speed": "standard"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "dbf77dce-e7cb-43a2-ab35-14ad09f30a8f",
+      "ttft_ms": 960
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": { "type": "text", "text": "" }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "22b49b97-1341-4cb3-9376-688e734e6a75"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "Permission to" }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "3c2e2a80-981d-4d15-987a-b7e2e1420f95"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " run that" }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "3dee8861-f502-470a-bd4b-b4d8abf6c8d8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " command was denied, so `" }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "ddaaec08-861d-42b9-85c7-c5f8b661bd34"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": "forbidden.txt`" }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "14aa0e9f-a614-4fa0-ba72-8a2e0a877f70"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": { "type": "text_delta", "text": " was not created." }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "f96ad337-a466-4b66-aea9-fbfbede2ef10"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-5",
+        "id": "msg_011Cgd4CEheX1Hu9Z3kxtqqD",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Permission to run that command was denied, so `forbidden.txt` was not created."
+          }
+        ],
+        "container": null,
+        "stop_reason": null,
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2257,
+          "cache_read_input_tokens": 15612,
+          "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2257 },
+          "output_tokens": 4,
+          "service_tier": "standard",
+          "inference_geo": "global",
+          "speed": "standard"
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "uuid": "f9bee169-1639-4e76-ba89-31c2a2dd6462",
+      "timestamp": "2026-11-01T23:13:10.220Z",
+      "request_id": "req_011Cgd4CESX5FzPRWHaXEP2S"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "content_block_stop", "index": 0 },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "d3f6d28c-fe76-4bfc-bca6-889624821801"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "container": null
+        },
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2257,
+          "cache_read_input_tokens": 15612,
+          "output_tokens": 27,
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 27,
+              "cache_read_input_tokens": 15612,
+              "cache_creation_input_tokens": 2257,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2257
+              },
+              "type": "message"
+            }
+          ]
+        },
+        "context_management": { "applied_edits": [] }
+      },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "81d7a05a-5d3f-4985-894c-2a4456676a6f"
+    },
+    {
+      "type": "stream_event",
+      "event": { "type": "message_stop" },
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "parent_tool_use_id": null,
+      "uuid": "1d6a97eb-532f-4ada-a0ec-9aa5b5d6b4e3"
+    },
+    {
+      "duration_api_ms": 4438,
+      "stop_reason": "end_turn",
+      "session_id": "8fdbac39-ac07-4ea1-8896-848c5bd71b4f",
+      "total_cost_usd": 0.07561799999999999,
+      "usage": {
+        "input_tokens": 4,
+        "cache_creation_input_tokens": 5809,
+        "cache_read_input_tokens": 27672,
+        "output_tokens": 108,
+        "output_tokens_details": { "thinking_tokens": 0 },
+        "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+        "service_tier": "standard",
+        "cache_creation": { "ephemeral_1h_input_tokens": 5809, "ephemeral_5m_input_tokens": 0 },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 27,
+            "cache_read_input_tokens": 15612,
+            "cache_creation_input_tokens": 2257,
+            "cache_creation": { "ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 2257 },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 912,
+          "outputTokens": 12,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.0009720000000000001,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 4,
+          "outputTokens": 108,
+          "cacheReadInputTokens": 27672,
+          "cacheCreationInputTokens": 5809,
+          "webSearchRequests": 0,
+          "costUSD": 0.07464599999999999,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-opus-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "permission_denials": [
+        {
+          "tool_name": "Bash",
+          "tool_use_id": "toolu_01Bmhed7mcCfA8do9uxQFDkL",
+          "tool_input": { "command": "touch forbidden.txt", "description": "Create an empty file" }
+        }
+      ],
+      "terminal_reason": "completed",
+      "fast_mode_state": "off",
+      "fast_mode_disabled_reason": "sdk_opt_in_required",
+      "subagent_stats": {
+        "spawned": 0,
+        "requested": { "background": 0, "foreground": 0, "unset": 0 },
+        "started_in_background": 0,
+        "max_depth": 0,
+        "spawned_by_subagents": 0,
+        "completed": 0,
+        "failed": 0,
+        "killed": { "parent": 0, "user": 0, "system": 0 },
+        "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+        "by_type": {}
+      },
+      "is_error": false,
+      "num_turns": 2,
+      "subtype": "success",
+      "api_error_status": null,
+      "result": "Permission to run that command was denied, so `forbidden.txt` was not created.",
+      "ttft_ms": 2170,
+      "type": "result",
+      "duration_ms": 3476,
+      "uuid": "0940ee83-5002-4f2f-abf2-21a3a40884af",
+      "ttft_stream_ms": 1641,
+      "time_to_request_ms": 332,
+      "first_content_frame_ms": 1642,
+      "queued_turn_count": 0,
+      "result_index": 0
+    }
+  ]
+}

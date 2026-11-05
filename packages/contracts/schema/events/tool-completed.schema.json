@@ -5,6 +5,7 @@
   "description": "A tool invocation ended, from the result the engine reported. It carries no `kind` nor `label`: the `tool.started` of the same `toolUseId` always came first, live and in the history, and the client has them from it (plan 28, D-28).",
   "x-kind": "event",
   "x-type": "tool.completed",
+  "x-timeline": "conversation",
   "type": "object",
   "required": ["toolUseId", "status"],
   "properties": {
@@ -53,6 +54,46 @@
         "reason": {
           "type": "string",
           "description": "Why it was refused, on `declined`."
+        }
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "maxItems": 16,
+      "description": "Media the result carried besides its text — never raw bytes on the wire. The `summary` already has the text; this is what the text cannot be.",
+      "items": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "`image`, `link`, or `unknown` for anything else the engine's result carried. **Open**: a kind the client does not know draws as `unknown`, never an error."
+          },
+          "blockId": {
+            "type": "string",
+            "description": "On `image`: fetched by `GET /transcripts/:engine/:id/images/:blockId`, the same route a prompt's image uses."
+          },
+          "mediaType": {
+            "type": "string",
+            "description": "On `image`: as the engine declared it (`image/png`, …). Absent when it declared none."
+          },
+          "size": {
+            "type": "integer",
+            "description": "On `image`: the size in bytes, decoded. Absent when the engine did not say."
+          },
+          "uri": {
+            "type": "string",
+            "description": "On `link`: the address, shown as text with the link confirmation — `javascript:` and `data:` never become a link (F6)."
+          },
+          "title": {
+            "type": "string",
+            "description": "On `link`: a label for it, when the engine gave one."
+          },
+          "type": {
+            "type": "string",
+            "description": "On `unknown`: the engine's own, opaque name for what this was."
+          }
         }
       }
     }

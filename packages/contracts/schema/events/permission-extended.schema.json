@@ -5,6 +5,7 @@
   "description": "The deadline of a pending request moved. Fanned out to every connection, because the phone and the browser are looking at the same countdown.",
   "x-kind": "event",
   "x-type": "permission.extended",
+  "x-timeline": "silent",
   "type": "object",
   "required": ["requestId", "expiresAt", "remainingExtensions"],
   "properties": {

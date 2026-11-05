@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionMessage } from '@anthropic-ai/claude-agent-sdk';
 
-import { contentsOf } from '@adapter/outbound/engines/claude/transcript-contents';
+import { contentsOf, imagesOf } from '@adapter/outbound/engines/claude/transcript-contents';
 import { capturedTranscript } from '../../../../../fakes/agent-sdk/scripted-transcripts';
 
 /** A transcript entry of a given shape. */
@@ -77,6 +77,53 @@ describe('the contents of a conversation — plan 22, D-18', () => {
       ['u-1:1', { mediaType: 'image/png', data: 'AAAA' }],
       ['u-1:2', { mediaType: null, data: 'BBBB' }],
     ]);
+  });
+
+  it('keeps an image nested inside a tool_result, by its three-level marker — plan 27, S-53, S-59', () => {
+    const { images } = contentsOf([
+      entry({
+        message: {
+          content: [
+            { type: 'text', text: 'before' },
+            {
+              type: 'tool_result',
+              tool_use_id: 't',
+              content: [
+                {
+                  type: 'image',
+                  source: { type: 'base64', media_type: 'image/png', data: 'AAAA' },
+                },
+                { type: 'text', text: '[Resource from fixture at fixture://note.txt] a note' },
+                { type: 'resource_link' },
+              ],
+            },
+          ],
+        },
+      }),
+    ]);
+
+    expect([...images]).toEqual([['u-1:1:0', { mediaType: 'image/png', data: 'AAAA' }]]);
+  });
+
+  it('keeps the images of a subagent chain — plan 27, S-59', () => {
+    const images = imagesOf([
+      entry({
+        parent_tool_use_id: 'toolu_task',
+        message: {
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'inner',
+              content: [
+                { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'Z' } },
+              ],
+            },
+          ],
+        },
+      }),
+    ]);
+
+    expect([...images]).toEqual([['u-1:0:0', { mediaType: 'image/png', data: 'Z' }]]);
   });
 
   it('reads nothing from an answer, a prompt that is a string, or an entry with no message', () => {

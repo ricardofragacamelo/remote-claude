@@ -347,6 +347,13 @@ export function emitDart(model) {
     ...frames.map((message) => `  '${message.frameType}',`),
     '];',
     '',
+    "/// Every event's `type` that is screen state, never the conversation's timeline (plan 27, D-02).",
+    'const List<String> silentEventTypes = <String>[',
+    ...frames
+      .filter((message) => message.timeline === 'silent')
+      .map((message) => `  '${message.frameType}',`),
+    '];',
+    '',
     ...frames.flatMap((message) => [
       `/// \`kind\` of a ${message.frameType} frame.`,
       `const String ${camelCase(message.name)}Kind = '${message.frameKind}';`,

@@ -3,6 +3,7 @@ import {
   CircleCheck,
   CircleSlash,
   CircleX,
+  ExternalLink,
   LoaderCircle,
   ChevronDown,
   ChevronRight,
@@ -14,14 +15,17 @@ import { useTranslation } from 'react-i18next';
 
 import { formatBytes } from '@/features/editor';
 import { AnsweredQuestions, PermissionOutcomeLine } from '@/features/permission';
+import { DialogFrame } from '@/shared/components/DialogFrame';
 import { Button } from '@/shared/components/ui/button';
+import type { ConversationRef } from '@/shared/lib/conversation';
 import { changesFileText, commandOf } from '@/shared/lib/tool-call';
 import { toolLine } from '@/shared/lib/tool-label';
 import type { ToolLine as ToolLineText } from '@/shared/lib/tool-label';
 import { useToolResult } from '../../hooks/useToolResult';
 import type { ToolOutput, ToolResult } from '../../hooks/useToolResult';
-import type { ToolExecution, ToolStatus } from '../../types/live-session';
+import type { ToolAttachment, ToolExecution, ToolStatus } from '../../types/live-session';
 import { AnsiText } from './AnsiText';
+import { ImageMarker } from './ImageMarker';
 import { ScrollingPre } from './ScrollingPre';
 import { SubagentChildren } from './SubagentChildren';
 import type { TimelineContext } from './timeline-context';
@@ -299,6 +303,140 @@ function ExactInput({ tool }: { readonly tool: ToolExecution }): React.JSX.Eleme
   );
 }
 
+/** A URI this build will open on its own word, never a page it only pretends to be safe (plan 27,
+ * F6 · B-22): `javascript:` and `data:` stay text, whatever a link attachment's own title claims. */
+const SAFE_SCHEMES = ['http://', 'https://', 'mailto:'];
+
+function isSafeUri(uri: string): boolean {
+  return SAFE_SCHEMES.some((scheme) => uri.toLowerCase().startsWith(scheme));
+}
+
+/**
+ * A `link` attachment: plain text when there is nothing safe to open, or when there is no `uri` at
+ * all — a title alone names something, it does not open it. A safe one asks before it leaves the
+ * product, the same confirmation the markdown reader's own external link shows.
+ */
+export function LinkAttachment({
+  attachment,
+}: {
+  readonly attachment: Extract<ToolAttachment, { kind: 'link' }>;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const label = attachment.title ?? attachment.uri ?? t('sessions.toolRow.attachmentLink');
+
+  if (attachment.uri === undefined || !isSafeUri(attachment.uri)) {
+    return <p className="text-ui-sm text-muted-foreground">{label}</p>;
+  }
+
+  const uri = attachment.uri;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+        }}
+        className="flex items-center gap-1.5 self-start text-ui-sm underline underline-offset-4"
+      >
+        <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+        {label}
+      </button>
+      <DialogFrame
+        open={open}
+        onClose={() => {
+          setOpen(false);
+        }}
+        title={t('sessions.toolRow.linkConfirmTitle')}
+        description={uri}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOpen(false);
+              }}
+            >
+              {t('sessions.toolRow.linkConfirmCancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                window.open(uri, '_blank', 'noopener,noreferrer');
+                setOpen(false);
+              }}
+            >
+              {t('sessions.toolRow.linkConfirmOpen')}
+            </Button>
+          </>
+        }
+      >
+        <p className="break-all text-ui-sm">{uri}</p>
+      </DialogFrame>
+    </>
+  );
+}
+
+/** An attachment of a kind this build does not know (B-20's own survival rule, reused here). */
+export function UnknownAttachment({
+  attachment,
+}: {
+  readonly attachment: Extract<ToolAttachment, { kind: 'unknown' }>;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <p className="text-ui-xs text-muted-foreground">
+      {t('sessions.message.unknownBlock', { blockType: attachment.type ?? '' })}
+    </p>
+  );
+}
+
+/** One attachment, drawn by its own `kind` — never by guessing at a URI's scheme beforehand. */
+export function Attachment({
+  attachment,
+  conversation,
+}: {
+  readonly attachment: ToolAttachment;
+  readonly conversation: ConversationRef | null;
+}): React.JSX.Element {
+  switch (attachment.kind) {
+    case 'image':
+      return (
+        <ImageMarker
+          block={{
+            kind: 'image',
+            text: '',
+            ...(attachment.blockId === undefined ? {} : { blockId: attachment.blockId }),
+            ...(attachment.mediaType === undefined ? {} : { mediaType: attachment.mediaType }),
+            ...(attachment.size === undefined ? {} : { size: attachment.size }),
+          }}
+          conversation={conversation}
+        />
+      );
+    case 'link':
+      return <LinkAttachment attachment={attachment} />;
+    case 'unknown':
+      return <UnknownAttachment attachment={attachment} />;
+  }
+}
+
+/** The media and the links a tool's result carried besides its text (plan 27, F6 · B-22). */
+export function AttachmentsView({
+  attachments,
+  conversation,
+}: {
+  readonly attachments: readonly ToolAttachment[];
+  readonly conversation: ConversationRef | null;
+}): React.JSX.Element {
+  return (
+    <div className="flex flex-col gap-2">
+      {attachments.map((attachment, index) => (
+        <Attachment key={index} attachment={attachment} conversation={conversation} />
+      ))}
+    </div>
+  );
+}
+
 /** The exact input, how it ended, what it said, the way to the trail — and a subagent's own words. */
 function ToolDetails({
   tool,
@@ -335,6 +473,9 @@ function ToolDetails({
             </Side>
           )}
         </>
+      )}
+      {tool.attachments !== undefined && tool.attachments.length > 0 && (
+        <AttachmentsView attachments={tool.attachments} conversation={context.reference} />
       )}
       {tool.kind === 'agent' && <SubagentChildren tool={tool} context={context} />}
       {context.sessionId !== null && (

@@ -12,6 +12,8 @@ import {
   turnsEnded,
 } from './claude-panel';
 import { environment } from './environment';
+import { folderWith } from './explorer';
+import type { WorkbenchSuite } from './folder-tree';
 import type { ScenarioUser } from '../scenarios';
 
 /**
@@ -146,6 +148,25 @@ export async function sessionInTab(
   await expect(connectedStatus(page)).toBeVisible();
 
   return openFromDraft(page);
+}
+
+/**
+ * A fresh folder of the test, with [files] given, as a tab, with a session opened in it — the
+ * `gamma` folder of [suite]'s own tree, registered with [opened] so it ends after the test.
+ */
+export async function sessionInFolder(
+  page: Page,
+  suite: WorkbenchSuite,
+  user: ScenarioUser,
+  opened: (sessionId: string) => void,
+  files: Readonly<Record<string, string>> = {},
+): Promise<string> {
+  const folder = folderWith(suite.tree().gamma, files);
+  await suite.openTab(folder);
+  const sessionId = await sessionInTab(page, user, folder);
+  opened(sessionId);
+
+  return folder;
 }
 
 /**

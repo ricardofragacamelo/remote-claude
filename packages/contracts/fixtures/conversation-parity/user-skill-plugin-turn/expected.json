@@ -25,15 +25,10 @@
       "media": []
     },
     {
-      "kind": "message",
-      "owner": null,
-      "author": "user",
-      "blocks": [
-        {
-          "kind": "text",
-          "text": "Base directory for this skill: /home/user/projects/remote-claude/e2e/fixtures/user-skills-plugin/skills/fixture-fortune\n\nReply with exactly one short, invented fortune-cookie sentence, in quotes, and nothing else.\n"
-        }
-      ],
+      "kind": "injected",
+      "owner": "toolu_017uFmZqHoBYMCcnb4QDFMHh",
+      "injectedKind": "instructions",
+      "name": "fixture-user-skills:fixture-fortune",
       "neverInHistory": true
     },
     {

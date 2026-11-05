@@ -22,7 +22,12 @@
         }
       },
       "status": "succeeded",
-      "media": []
+      "media": [
+        {
+          "kind": "unknown",
+          "type": "tool_reference"
+        }
+      ]
     },
     {
       "kind": "tool",

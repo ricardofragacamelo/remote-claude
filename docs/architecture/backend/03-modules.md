@@ -842,7 +842,10 @@ estender ao HTTP.
 - **HTTP — `GET /transcripts/:engine/:id/images/:blockId`** (Bearer, plano 22 · B-12). A imagem de um
   prompt da conversa, pedida quando a pessoa a abre; no stream e na página o bloco `image` vai só com
   `mediaType` e `size` ([22 · D-09](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
-  Responde o binário com o `Content-Type` da imagem, `X-Content-Type-Options: nosniff`,
+  O `blockId` aceita dois ou três níveis: `<uuid>:<índice>` para a imagem de um prompt,
+  `<uuid>:<índice>:<subÍndice>` para uma **aninhada** dentro do `tool_result` de uma tool — inclusive
+  de uma tool de um subagent, buscada à parte quando a cadeia principal não tem o id (plano 27, B-14,
+  B-15). Responde o binário com o `Content-Type` da imagem, `X-Content-Type-Options: nosniff`,
   `Content-Disposition: inline` e `Cache-Control: private, no-store`. Só `image/png`, `image/jpeg`,
   `image/gif` e `image/webp` — SVG executa script —; outro tipo é `415` `UNSUPPORTED_MEDIA_TYPE`
   (`transcript.error.imageTypeUnsupported`). Acima de `RC_TRANSCRIPT_IMAGE_MAX_BYTES` (padrão 10 MiB) é
@@ -852,10 +855,14 @@ estender ao HTTP.
 - **O conteúdo das duas rotas tem cache próprio, menor.** A lista em cache da conversa guarda só os
   eventos, com o `summary` cortado; a saída inteira e os bytes da imagem são o que pesa no transcript.
   O adapter guarda, por `sessionId` + `lastModified`, um índice só com eles — resultado por
-  `toolUseId`, imagem por `blockId`, da cadeia principal —, de **2** conversas no máximo, preenchido
-  pela própria leitura das mensagens (que já tem o que o SDK devolveu) e, faltando, por uma releitura
-  pelo limitador e o prazo de sempre ([22 · D-18](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)).
-  Pedir a mesma saída ou a mesma imagem de novo, sem a conversa ter sido escrita, não relê nada.
+  `toolUseId`, imagem (de um prompt ou aninhada num `tool_result`) por `blockId`, da cadeia
+  principal —, de **2** conversas no máximo, preenchido pela própria leitura das mensagens (que já tem
+  o que o SDK devolveu) e, faltando, por uma releitura pelo limitador e o prazo de sempre
+  ([22 · D-18](../../plans/22-live-history/decisions.md#f1--mapeamento-e-leituras)). Pedir a mesma
+  saída ou a mesma imagem de novo, sem a conversa ter sido escrita, não relê nada. Uma imagem aninhada
+  num subagent **não** entra nesse índice — é buscada ao vivo, listando e lendo os subagents da
+  conversa, só quando a cadeia principal não tem o `blockId` pedido (plano 27, B-15): o mesmo custo de
+  abrir o card do subagent, sem cache própria.
 - **O seguidor — `transcript.follow`** (plano 22 · F2). O leitor de uma conversa que este backend não
   opera a assina pelo WebSocket ([05 §Acompanhar um transcript](../shared/05-websocket-protocol.md#acompanhar-um-transcript--transcript)),
   e o `FollowTranscriptUseCase` (`application/transcript`) a mantém:

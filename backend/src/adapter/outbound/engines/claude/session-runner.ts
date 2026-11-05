@@ -558,7 +558,11 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
     }
   }
 
-  /** One message: logged, mapped, published. An unmapped variant is a warning and nothing else. */
+  /**
+   * One message: logged, mapped, published. An unmapped variant still costs a `warn` here (plan 27,
+   * B-13) — the mapper's own `session.notice` of `kind: 'unknown'` is what reaches the client, never
+   * the SDK's payload.
+   */
   private onMessage(message: SDKMessage): void {
     const sessionId = this.start.sessionId.value;
     const mapped = this.mapper.read(message);
@@ -577,10 +581,20 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
     if (mapped.unknown !== null) {
       // The survival rule. A variant added by an SDK release costs a log line and a follow-up,
-      // never an outage on somebody's machine.
+      // never an outage on somebody's machine — and, since plan 27 · B-13, the `unknown` notice
+      // already in `mapped.events` tells the client, too.
       this.deps.logger.warn(
         { ...this.logFields('engine.output', sessionId), variant: mapped.unknown },
-        'unmapped sdk message variant — dropped',
+        'unmapped sdk message variant',
+      );
+    }
+
+    if (mapped.unknownAttachment != null) {
+      // The same rule, one level down: the message itself is mapped fine, only one block of a
+      // `tool_result` is not — already an `unknown` attachment in `mapped.events` (plan 27, B-14).
+      this.deps.logger.warn(
+        { ...this.logFields('engine.output', sessionId), blockType: mapped.unknownAttachment },
+        'unknown tool_result block',
       );
     }
 
@@ -632,8 +646,9 @@ export class SessionRunner implements AgentSessionHandle, EngineControl {
 
   /**
    * Keeps the account's rate-limit windows up to date for the usage screen (plan 16, D-09) — a side
-   * observation, never a contract event: {@link SdkMessageMapper} drops `rate_limit_event` from the
-   * stream on purpose, because it is a notice and not a transition the client should see.
+   * observation, never the `session.notice` {@link SdkMessageMapper} emits for the conversation
+   * itself (`usage.limited`, plan 27, B-09, only outside the normal state). The two read the same
+   * message for two different screens.
    */
   private noteRateLimit(message: SDKMessage): void {
     if (message.type !== 'rate_limit_event') {

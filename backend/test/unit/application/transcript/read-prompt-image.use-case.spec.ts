@@ -64,4 +64,20 @@ describe('ReadPromptImageUseCase — plan 22, B-12', () => {
   it('answers a block that is no image of a prompt as a missing conversation — S-32', async () => {
     await expect(read(`${conversationId(7)}:0`)).rejects.toThrow(TranscriptNotFoundError);
   });
+
+  it('serves a three-level blockId — an image nested in a tool_result — the same way — plan 27, S-61', async () => {
+    const nested = `${conversationId(7)}:0:0`;
+    store.addImage(conversationId(1), nested, { mediaType: 'image/svg+xml', data: 'AAAA' });
+
+    const refusal = await read(nested).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(PromptImageTypeUnsupportedError);
+  });
+
+  it('serves a three-level blockId at the ceiling, and refuses one byte more — plan 27, S-61', async () => {
+    const nested = `${conversationId(7)}:0:0`;
+    store.addImage(conversationId(1), nested, { mediaType: 'image/png', data: 'A'.repeat(16) });
+
+    expect((await read(nested, 12)).size).toBe(12);
+    await expect(read(nested, 11)).rejects.toBeInstanceOf(PromptImageTooLargeError);
+  });
 });

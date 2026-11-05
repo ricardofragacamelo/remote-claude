@@ -267,7 +267,13 @@ function coverage() {
  * texts — each with the key of either end — are one file for both, and the questions of Claude
  * both ends answer from the same recorded turn (plan 24, B-24).
  */
-const SHARED_BY_NAME = new Set(['vertical-ping', 'live-history', 'questions']);
+const SHARED_BY_NAME = new Set([
+  'vertical-ping',
+  'live-history',
+  'questions',
+  // Plan 27, F7 · B-25/B-26: the same conversation-losses roadmap, proved through both screens.
+  'conversation-losses',
+]);
 
 /**
  * The scenarios this end proves, by file name, and the version this build reports.
