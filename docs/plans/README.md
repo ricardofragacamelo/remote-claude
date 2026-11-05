@@ -95,6 +95,12 @@ Os passos com o mesmo número podem correr em qualquer ordem entre si. A depend�
 também está no `README.md` dele (**Depende de**) e na coluna **Depende de** do
 [progresso geral](progress.md#onde-o-projeto-está).
 
+Com o [27](27-conversation-losses/README.md) fechado em 2026-11-05, os passos 1…5 estão todos
+concluídos. **O passo corrente é o 6**: retomar a B-08 do [15](15-rules-management/README.md) e/ou
+começar o [14](14-audit-explained/README.md), o [16](16-usage-and-cost/README.md) e o
+[18](18-logs-and-diagnostics/README.md) — os quatro já liberados desde que o [28](28-agent-neutral-core/README.md)
+fechou, em qualquer ordem entre si.
+
 ---
 
 ## Formato obrigatório
