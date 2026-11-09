@@ -14,11 +14,13 @@ export type {
 export { PermissionRule } from './entities/permission-rule.entity';
 export type {
   PermissionRuleDraft,
+  PermissionRuleOrigin,
   PermissionRuleScope,
   PermissionRuleSnapshot,
   PermissionRuleStatus,
   RuleSubject,
 } from './entities/permission-rule.entity';
+export { projectPathReaches } from './services/project-reach';
 export { classifyRisk } from './services/risk.classifier';
 export { validateAnswers } from './services/question';
 // The questions and the plan are what an agent asks, in the `engine` domain (plan 28, B-20); the
@@ -54,15 +56,24 @@ export type {
   RulePatternProblem,
   RulePatternReach,
 } from './services/rule-pattern';
-export { answeringRule } from './services/rule-precedence';
+export { answeringRule, matchingRules } from './services/rule-precedence';
 export {
   RULE_REACHES,
   UNBOUNDED_COMMANDS,
   commandPrefix,
   isRuleReach,
+  namesInterpreterOrLauncher,
   reachesFor,
 } from './services/rule-reach';
 export type { RuleReach, RuleReachKind } from './services/rule-reach';
+export { ruleBreadth } from './services/rule-breadth';
+export { patternCovers } from './services/rule-containment';
+export type { ReachableRule } from './services/rule-containment';
+export { describeReach } from './services/rule-reach-description';
+export type { RuleReachDescription, RuleReachForm } from './services/rule-reach-description';
+export { RULE_FINDING_KINDS, analyzeRules } from './services/rule-analysis';
+export type { AnalyzableRule, RuleFinding, RuleFindingKind } from './services/rule-analysis';
+export { ruleEtag } from './services/rule-etag';
 export { commandsOf } from './services/shell-syntax';
 export type { RuleQuestion } from './services/rule-precedence';
 export {
@@ -83,6 +94,7 @@ export { PermissionReasonRequiredError } from './errors/permission-reason-requir
 export { PermissionRequestExpiredError } from './errors/permission-request-expired.error';
 export { PermissionRequestNotFoundError } from './errors/permission-request-not-found.error';
 export { PermissionScopeUnsupportedError } from './errors/permission-scope-unsupported.error';
+export { PermissionRuleTemplateUnknownError } from './errors/permission-rule-template-unknown.error';
 export { PermissionRuleExpiryTooLongError } from './errors/permission-rule-expiry-too-long.error';
 export { PermissionRulePatternInvalidError } from './errors/permission-rule-pattern-invalid.error';
 export { PermissionRuleExpiryInvalidError } from './errors/permission-rule-expiry-invalid.error';
@@ -91,3 +103,18 @@ export { PermissionRuleNotOwnedError } from './errors/permission-rule-not-owned.
 export { PermissionAnswersInvalidError } from './errors/permission-answers-invalid.error';
 export type { AnswersProblem, AnswersRule } from './errors/permission-answers-invalid.error';
 export { PermissionRuleToolInteractiveError } from './errors/permission-rule-tool-interactive.error';
+export { PermissionRuleTooBroadError } from './errors/permission-rule-too-broad.error';
+export type { PermissionRuleBreadth } from './errors/permission-rule-too-broad.error';
+export { PermissionRuleStateConflictError } from './errors/permission-rule-state-conflict.error';
+export type { PermissionRuleConflictStatus } from './errors/permission-rule-state-conflict.error';
+export { PermissionRuleChangedError } from './errors/permission-rule-changed.error';
+export { PermissionRuleIfMatchRequiredError } from './errors/permission-rule-if-match-required.error';
+export { PermissionRuleRestoreWindowClosedError } from './errors/permission-rule-restore-window-closed.error';
+export { PermissionRuleImportUnsupportedError } from './errors/permission-rule-import-unsupported.error';
+export type { ImportUnsupportedReason } from './errors/permission-rule-import-unsupported.error';
+export { PermissionRuleImportRejectedError } from './errors/permission-rule-import-rejected.error';
+export type { ImportRejection } from './errors/permission-rule-import-rejected.error';
+export { PermissionRuleImportTooLargeError } from './errors/permission-rule-import-too-large.error';
+export type { ImportSizeReason } from './errors/permission-rule-import-too-large.error';
+export { PermissionRuleImportInvalidError } from './errors/permission-rule-import-invalid.error';
+export type { ImportApplyProblem } from './errors/permission-rule-import-invalid.error';

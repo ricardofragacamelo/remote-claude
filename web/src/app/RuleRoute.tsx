@@ -1,30 +1,81 @@
-import { useParams } from '@tanstack/react-router';
+import { useCallback } from 'react';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-import { RuleDetail } from '@/features/permission';
-import { ScreenFrame } from '@/shared/components/ScreenFrame';
-import { useShellShortcuts } from './screen-shortcuts';
+import { RuleDetailPanel } from '@/features/permission';
+import type { RulesSearch } from '@/features/permission';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/shared/components/ui/sheet';
+import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
+import { RulesScreenFrame } from './RulesScreenFrame';
+import { useOpenRule } from './useOpenRule';
 
 /**
- * `/rules/:ruleId` — one rule, whatever became of it.
+ * `/rules/:ruleId` — one rule, whatever became of it, open over the same list it was opened from
+ * (S-222): a sibling route of `/rules`, not a screen of its own, so a second click on another row
+ * swaps the rule without losing the list's filters, sort or scroll underneath.
  *
- * Reached from the trail entry it answered. A revoked rule still opens here, with its state, rather
- * than as an empty page: "which rule let this run?" has an answer after the rule was taken back
+ * Reached from a row of `/rules` itself, or from the trail entry the rule answered. A revoked rule
+ * still opens here, with its state, rather than as an empty page — "which rule let this run?" has
+ * an answer after the rule was taken back
  * ([D-18](../../../docs/plans/03-rules-and-audit/decisions.md)).
  */
 export function RuleRoute(): React.JSX.Element {
-  const shortcuts = useShellShortcuts();
   const { t } = useTranslation();
   const { ruleId } = useParams({ from: '/_frame/rules/$ruleId' });
+  const search = useSearch({ from: '/_frame/rules/$ruleId' });
+  const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
+  const openRule = useOpenRule();
+
+  const onSearch = useCallback(
+    (next: RulesSearch) => {
+      void navigate({ to: '/rules/$ruleId', params: { ruleId }, search: next });
+    },
+    [navigate, ruleId],
+  );
+
+  const onOpenRule = useCallback(
+    (nextRuleId: string) => {
+      openRule(nextRuleId, search);
+    },
+    [openRule, search],
+  );
+
+  const onClose = useCallback(() => {
+    void navigate({ to: '/rules', search });
+  }, [navigate, search]);
+
+  const onShowTrail = useCallback(() => {
+    void navigate({ to: '/audit', search: { ruleId } });
+  }, [navigate, ruleId]);
+
+  const panel = (
+    <RuleDetailPanel
+      ruleId={ruleId}
+      onClose={onClose}
+      onOpenRule={onOpenRule}
+      onShowTrail={onShowTrail}
+    />
+  );
 
   return (
-    <ScreenFrame
-      title={t('rules.detail.screenTitle')}
-      purpose={t('rules.detail.purpose')}
-      help="rules.detailHelp"
-      shortcuts={shortcuts}
-    >
-      <RuleDetail ruleId={ruleId} />
-    </ScreenFrame>
+    <RulesScreenFrame search={search} onSearch={onSearch} onOpenRule={onOpenRule}>
+      {isDesktop ? (
+        <aside className="w-full max-w-md shrink-0 border-l border-border pl-4">{panel}</aside>
+      ) : (
+        // `open` is always `true` here, with no `SheetTrigger` of its own: `/rules/$ruleId` IS the
+        // open state, so the only thing Radix ever asks through `onOpenChange` is to close it
+        // (Escape, an outside click) — never to open what is already open.
+        <Sheet open onOpenChange={onClose}>
+          <SheetContent side="right">
+            <SheetTitle className="sr-only">{t('permission.ruleDetail.title')}</SheetTitle>
+            <SheetDescription className="sr-only">
+              {t('permission.ruleDetail.label')}
+            </SheetDescription>
+            {panel}
+          </SheetContent>
+        </Sheet>
+      )}
+    </RulesScreenFrame>
   );
 }

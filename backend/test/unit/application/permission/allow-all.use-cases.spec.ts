@@ -28,14 +28,15 @@ describe('Permitir tudo', () => {
   const ask = (overrides: Parameters<typeof aPermissionQuestion>[0] = {}) =>
     harness.request.execute(aPermissionQuestion({ permissionMode: 'allowAll', ...overrides }));
 
-  const grant = (overrides: Partial<GrantPermissionRuleCommand> = {}) =>
+  const grant = (overrides: Partial<Omit<GrantPermissionRuleCommand, 'projectPath'>> = {}) =>
     harness.grant.execute({
       userId: PERMISSION_OWNER,
       pattern: 'shell(rm:*)',
       decision: 'deny',
       scope: 'project',
-      projectPath: PERMISSION_PROJECT,
+      projectPath: { trusted: PERMISSION_PROJECT },
       expiresAt: null,
+      grantedVia: 'approval',
       ...overrides,
     });
 

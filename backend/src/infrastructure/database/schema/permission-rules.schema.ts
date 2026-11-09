@@ -44,6 +44,20 @@ export const permissionRules = pgTable(
     grantedAt: timestamp('granted_at', { withTimezone: true }).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    /**
+     * How the rule came to exist — `NULL` for a rule granted before this column existed (plan 15,
+     * B-07, B-09). A card still writes `approval`; `POST /permission-rules` writes `request`;
+     * importing writes `import`; undoing a revocation writes `restore`.
+     */
+    grantedVia: text('granted_via'),
+    /** The permission request a card's `approval` answered. `NULL` otherwise. */
+    grantedFromRequestId: text('granted_from_request_id'),
+    /** The catalog template this rule came from, when `grantedVia` is not `request` alone. */
+    templateId: text('template_id'),
+    /** The revoked rule this one undoes, when `grantedVia` is `restore` (plan 15, D-11). */
+    restoredFrom: text('restored_from'),
+    /** When the expiry reminder job last told the owner about this rule (plan 15, D-18). */
+    expiryRemindedAt: timestamp('expiry_reminded_at', { withTimezone: true }),
     ...auditColumns,
   },
   (table) => [
@@ -65,6 +79,10 @@ export const permissionRules = pgTable(
     check(
       'permission_rules_engine_form',
       sql`${table.engine} IS NULL OR ${table.engine} ~ '^[a-z][a-z0-9-]{0,31}$'`,
+    ),
+    check(
+      'permission_rules_granted_via_known',
+      sql`${table.grantedVia} IS NULL OR ${table.grantedVia} IN ('approval', 'request', 'import', 'restore')`,
     ),
   ],
 );

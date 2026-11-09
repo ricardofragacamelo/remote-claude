@@ -41,16 +41,29 @@ describe('permission rules', () => {
     harness = aPermissionModule();
   });
 
-  const grant = (overrides: Partial<GrantPermissionRuleCommand> = {}): Promise<PermissionRule> =>
-    harness.grant.execute({
+  /** [overrides.projectPath] takes a plain path or `null` — wrapped as `trusted` below, the way the
+   *  card's own already-resolved workspace reaches the grant routine. */
+  const grant = (
+    overrides: Partial<Omit<GrantPermissionRuleCommand, 'projectPath'>> & {
+      readonly projectPath?: string | null;
+    } = {},
+  ): Promise<PermissionRule> => {
+    const { projectPath, ...rest } = overrides;
+
+    return harness.grant.execute({
       userId: PERMISSION_OWNER,
       pattern: 'shell(git status:*)',
       decision: 'allow',
       scope: 'project',
-      projectPath: PERMISSION_PROJECT,
+      projectPath: { trusted: PERMISSION_PROJECT },
       expiresAt: null,
-      ...overrides,
+      grantedVia: 'approval',
+      ...(projectPath !== undefined && {
+        projectPath: projectPath === null ? null : { trusted: projectPath },
+      }),
+      ...rest,
     });
+  };
 
   const ask = (overrides: Parameters<typeof aPermissionQuestion>[0] = {}) =>
     harness.request.execute(
@@ -420,6 +433,7 @@ describe('permission rules', () => {
         scope: 'always',
         projectPath: null,
         expiresAt: null,
+        grantedVia: 'approval',
       });
       await harness.revoke.execute(PERMISSION_OWNER, revoked.id);
       harness.clock.advance(1);
@@ -444,6 +458,12 @@ describe('permission rules', () => {
       expect(await harness.describeRule.execute(PERMISSION_OWNER, rule.id)).toEqual({
         rule,
         status: 'active',
+        findings: [],
+        usage: { count: 0, lastUsedAt: null },
+        folderReachable: true,
+        expiryCeiling: new Date(
+          PERMISSION_NOW.getTime() + TEST_PERMISSION_SETTINGS.ruleMaxLifetimeMs,
+        ),
       });
     });
 
@@ -479,6 +499,159 @@ describe('permission rules', () => {
       await expect(harness.describeRule.execute(stranger, rule.id)).rejects.toThrow(
         PermissionRuleNotOwnedError,
       );
+    });
+  });
+
+  describe('creating a rule — plan 15, B-09', () => {
+    it('resolves a raw project path through the folder resolver, and stores what it resolves to — S-22', async () => {
+      const rule = await harness.grant.execute({
+        userId: PERMISSION_OWNER,
+        pattern: 'shell(git status:*)',
+        decision: 'allow',
+        scope: 'project',
+        projectPath: { raw: '/srv/projects/app/' },
+        expiresAt: null,
+        grantedVia: 'request',
+      });
+
+      expect(rule.projectPath).toBe('/srv/projects/app');
+      expect(harness.folders.calls).toEqual([
+        { raw: '/srv/projects/app/', userId: PERMISSION_OWNER },
+      ]);
+    });
+
+    it('does not resolve a trusted project path — the card`s own, already resolved — S-34', async () => {
+      await grant({ projectPath: PERMISSION_PROJECT });
+
+      expect(harness.folders.calls).toEqual([]);
+    });
+
+    it('propagates whatever the folder resolver refuses a raw path with — S-23…S-28', async () => {
+      const refusal = new Error('WORKSPACE_NOT_ALLOWED');
+      harness.folders.refuseWith(refusal);
+
+      await expect(
+        harness.grant.execute({
+          userId: PERMISSION_OWNER,
+          pattern: 'shell(git status:*)',
+          decision: 'allow',
+          scope: 'project',
+          projectPath: { raw: '/outside' },
+          expiresAt: null,
+          grantedVia: 'request',
+        }),
+      ).rejects.toThrow(refusal);
+    });
+
+    it('refuses an unbounded allow outright, whatever acknowledgeBroad says — S-31', async () => {
+      await expect(
+        grant({ pattern: 'shell', grantedVia: 'request', acknowledgeBroad: true }),
+      ).rejects.toMatchObject({ code: 'PERMISSION_RULE_TOO_BROAD', breadth: 'unbounded' });
+    });
+
+    it('refuses a broad allow without acknowledgeBroad, and accepts it with — S-32', async () => {
+      await expect(grant({ pattern: 'file.edit', grantedVia: 'request' })).rejects.toMatchObject({
+        code: 'PERMISSION_RULE_TOO_BROAD',
+        breadth: 'broad',
+      });
+
+      const rule = await grant({
+        pattern: 'file.edit',
+        grantedVia: 'request',
+        acknowledgeBroad: true,
+      });
+
+      expect(rule.ruleContent).toBe('file.edit');
+    });
+
+    it('accepts an unbounded or broad deny without acknowledgement — blocking wide is never unsafe — S-33', async () => {
+      const rule = await grant({ pattern: 'shell', decision: 'deny', grantedVia: 'request' });
+
+      expect(rule.ruleContent).toBe('shell');
+    });
+
+    it('never confronts the card with breadth — S-34', async () => {
+      // The card's own reach can be a single-token shell prefix (`ls -la` with `prefix` reach is
+      // `shell(ls:*)`), which the D-09 table reads as `broad` — and the card has no UI for it.
+      const rule = await grant({ pattern: 'shell(ls:*)', grantedVia: 'approval' });
+
+      expect(rule.ruleContent).toBe('shell(ls:*)');
+    });
+
+    it('gives a deny its own, longer default and ceiling than allow — S-37', async () => {
+      const denied = await grant({ decision: 'deny', expiresAt: null, grantedVia: 'request' });
+      const allowed = await grant({
+        pattern: 'shell(git status --short:*)',
+        decision: 'allow',
+        expiresAt: null,
+        grantedVia: 'request',
+      });
+
+      expect(denied.expiresAt.getTime() - PERMISSION_NOW.getTime()).toBe(
+        TEST_PERMISSION_SETTINGS.ruleDenyDefaultLifetimeMs,
+      );
+      expect(allowed.expiresAt.getTime() - PERMISSION_NOW.getTime()).toBe(
+        TEST_PERMISSION_SETTINGS.ruleDefaultLifetimeMs,
+      );
+    });
+
+    it('refuses a deny past its own, longer ceiling — S-37', async () => {
+      await expect(
+        grant({
+          decision: 'deny',
+          grantedVia: 'request',
+          expiresAt: new Date(
+            PERMISSION_NOW.getTime() + TEST_PERMISSION_SETTINGS.ruleDenyMaxLifetimeMs + 1,
+          ),
+        }),
+      ).rejects.toThrow(PermissionRuleExpiryTooLongError);
+    });
+
+    it('records where a rule came from, and what it answered — S-35', async () => {
+      const imported = await grant({
+        pattern: 'shell(pnpm test:*)',
+        grantedVia: 'import',
+        templateId: 'run-tests',
+      });
+
+      expect(imported.grantedVia).toBe('import');
+      expect(imported.templateId).toBe('run-tests');
+      expect(imported.grantedFromRequestId).toBeNull();
+    });
+
+    it('reads a rule granted before the column existed as "origin not recorded" — S-35', async () => {
+      const old = PermissionRule.restore({
+        id: 'rule-old',
+        userId: PERMISSION_OWNER,
+        sessionId: null,
+        projectPath: null,
+        pattern: 'shell(git status:*)',
+        decision: 'allow',
+        scope: 'always',
+        createdAt: PERMISSION_NOW,
+        expiresAt: new Date(PERMISSION_NOW.getTime() + 60_000),
+        revokedAt: null,
+      });
+
+      expect(old.grantedVia).toBeNull();
+    });
+
+    it('reaches the folder of a project rule and every folder inside it, never a sibling or the parent — S-30', async () => {
+      await grant({ scope: 'project', projectPath: PERMISSION_PROJECT });
+
+      const sibling = await ask({ projectPath: `${PERMISSION_PROJECT}2` });
+      const subfolder = await ask({
+        requestId: 'request-2',
+        projectPath: `${PERMISSION_PROJECT}/backend`,
+      });
+      const parent = await ask({
+        requestId: 'request-3',
+        projectPath: PERMISSION_PROJECT.split('/').slice(0, -1).join('/'),
+      });
+
+      expect(sibling.kind).toBe('pending');
+      expect(subfolder.kind).toBe('settled');
+      expect(parent.kind).toBe('pending');
     });
   });
 });

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/permission-rule-finding.json",
+  "title": "PermissionRuleFinding",
+  "description": "One thing the redundancy/overlap/conflict analysis says about a rule or a draft, against the caller's active rules (plan 15, B-15).",
+  "type": "object",
+  "required": ["kind", "ruleIds", "messageKey", "params"],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "identical",
+        "redundant",
+        "shadowedByDeny",
+        "overlapsDeny",
+        "tooBroad",
+        "unreachable"
+      ]
+    },
+    "ruleIds": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "The other rules the finding is about, besides the one it is attached to — empty for a finding that is about that rule alone (`tooBroad`, `unreachable`).",
+      "items": {
+        "type": "string"
+      }
+    },
+    "messageKey": {
+      "type": "string"
+    },
+    "params": {
+      "type": "object",
+      "description": "The parameters of the message — an open object, as every other `messageKey`/`params` pair in this contract."
+    }
+  }
+}

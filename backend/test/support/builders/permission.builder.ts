@@ -1,12 +1,15 @@
-import { RecordAuditEventUseCase } from '@application/audit';
+import { QueryAuditTrailUseCase, RecordAuditEventUseCase } from '@application/audit';
 import {
   ApplyPermissionModeUseCase,
+  ChangePermissionRuleExpiryUseCase,
   DescribePermissionUseCase,
   EndSessionPermissionsUseCase,
   ExtendPermissionUseCase,
   GrantPermissionRuleUseCase,
   DescribePermissionRuleUseCase,
   ListPermissionRulesUseCase,
+  ListRuleHistoryUseCase,
+  ListRuleInvocationsUseCase,
   PermissionAutoAnswer,
   PermissionDeadlines,
   PermissionRegistry,
@@ -14,7 +17,10 @@ import {
   PermissionSettlement,
   RequestPermissionUseCase,
   ResolvePermissionUseCase,
+  RestorePermissionRulesUseCase,
   RevokePermissionRuleUseCase,
+  RevokePermissionRulesUseCase,
+  SummarizePermissionRulesUseCase,
 } from '@application/permission';
 import type { PermissionSettings } from '@application/permission';
 import { UserId } from '@domain/auth';
@@ -22,6 +28,8 @@ import type { CanonicalTool } from '@domain/engine';
 import type { PermissionMode } from '@domain/session';
 import { SessionId } from '@domain/session';
 import { FixedClock } from '../fakes/fixed-clock';
+import { InMemoryAuditEventReader } from '../fakes/in-memory-audit-event.reader';
+import { InMemoryAuditTrailReader } from '../fakes/in-memory-audit-trail.reader';
 import { InMemoryPermissionRequestRepository } from '../fakes/in-memory-permission-request.repository';
 import { InMemoryPermissionRuleRepository } from '../fakes/in-memory-permission-rule.repository';
 import { RecordingAuditEvents } from '../fakes/recording-audit-events';
@@ -29,8 +37,12 @@ import { ManualScheduler } from '../fakes/manual-scheduler';
 import { RecordingPermissionBroadcaster } from '../fakes/recording-permission-broadcaster';
 import { RecordingPermissionEvents } from '../fakes/recording-permission-events';
 import { SequentialIds } from '../fakes/sequential-ids';
+import { StubRuleFolderResolver } from '../fakes/stub-rule-folder-resolver';
 import { SESSION_ID } from './session.builder';
-import { claudeTool } from './tool.builder';
+import { claudeClassifiers, claudeTool } from './tool.builder';
+
+/** How many days of the trail the harness's usage reads cover — matches `TEST_PERMISSION_SETTINGS`' scale. */
+const TEST_RETENTION_DAYS = 90;
 
 /**
  * The numbers a test runs with.
@@ -48,6 +60,9 @@ export const TEST_PERMISSION_SETTINGS: PermissionSettings = {
   ruleLifetimeMs: 60_000,
   ruleDefaultLifetimeMs: 3_600_000,
   ruleMaxLifetimeMs: 86_400_000,
+  ruleDenyDefaultLifetimeMs: 7_200_000,
+  ruleDenyMaxLifetimeMs: 172_800_000,
+  ruleRestoreWindowMs: 600_000,
 };
 
 /** The whole permission stack, with every edge replaced by something a test can read. */
@@ -80,8 +95,17 @@ export interface PermissionHarness {
   readonly describe: DescribePermissionUseCase;
   readonly grant: GrantPermissionRuleUseCase;
   readonly revoke: RevokePermissionRuleUseCase;
+  readonly revokeBatch: RevokePermissionRulesUseCase;
+  readonly restore: RestorePermissionRulesUseCase;
+  readonly changeExpiry: ChangePermissionRuleExpiryUseCase;
   readonly list: ListPermissionRulesUseCase;
   readonly describeRule: DescribePermissionRuleUseCase;
+  readonly summarize: SummarizePermissionRulesUseCase;
+  readonly ruleInvocations: ListRuleInvocationsUseCase;
+  readonly ruleHistory: ListRuleHistoryUseCase;
+  readonly folders: StubRuleFolderResolver;
+  readonly trailReader: InMemoryAuditTrailReader;
+  readonly eventReader: InMemoryAuditEventReader;
 }
 
 /** The session most permission tests ask about. */
@@ -120,7 +144,11 @@ export function aPermissionModule(
     lookupFailures.push(error);
   });
   const recordEvent = new RecordAuditEventUseCase(trail, ids);
-  const grant = new GrantPermissionRuleUseCase(rules, recordEvent, ids, clock, settings);
+  const folders = new StubRuleFolderResolver();
+  const trailReader = new InMemoryAuditTrailReader();
+  const eventReader = new InMemoryAuditEventReader();
+  const grant = new GrantPermissionRuleUseCase(rules, recordEvent, ids, clock, settings, folders);
+  const revokeBatch = new RevokePermissionRulesUseCase(rules, recordEvent, ids, clock);
 
   const settlement = new PermissionSettlement(
     registry,
@@ -175,9 +203,35 @@ export function aPermissionModule(
     endSession: new EndSessionPermissionsUseCase(registry, settlement, clock),
     describe: new DescribePermissionUseCase(registry, settings),
     grant,
-    revoke: new RevokePermissionRuleUseCase(rules, recordEvent, clock),
-    list: new ListPermissionRulesUseCase(rules, clock),
-    describeRule: new DescribePermissionRuleUseCase(rules, clock),
+    revokeBatch,
+    revoke: new RevokePermissionRuleUseCase(revokeBatch),
+    restore: new RestorePermissionRulesUseCase(rules, grant, clock, settings),
+    changeExpiry: new ChangePermissionRuleExpiryUseCase(rules, recordEvent, clock, settings),
+    list: new ListPermissionRulesUseCase(
+      rules,
+      clock,
+      trailReader,
+      folders,
+      TEST_RETENTION_DAYS,
+      settings,
+    ),
+    describeRule: new DescribePermissionRuleUseCase(
+      rules,
+      clock,
+      folders,
+      trailReader,
+      TEST_RETENTION_DAYS,
+      settings,
+    ),
+    summarize: new SummarizePermissionRulesUseCase(rules, clock),
+    ruleInvocations: new ListRuleInvocationsUseCase(
+      rules,
+      new QueryAuditTrailUseCase(trailReader, claudeClassifiers()),
+    ),
+    ruleHistory: new ListRuleHistoryUseCase(rules, eventReader),
+    folders,
+    trailReader,
+    eventReader,
   };
 }
 

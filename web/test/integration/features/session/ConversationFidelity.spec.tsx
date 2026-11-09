@@ -27,7 +27,7 @@ const CONVERSATION = { engine: 'claude', id: '3f2a6c1e-0000-4000-8000-0000000000
 
 beforeEach(() => {
   // The author's line names the conversation's own engine (plan 28, B-44): known here the same
-  // way `QuestionCard.spec.tsx`/`RuleList.spec.tsx` already keep it, so `t('session.role.assistant')`
+  // way `QuestionCard.spec.tsx`/`RulesScreen.spec.tsx` already keep it, so `t('session.role.assistant')`
   // below — computed with no `engine` of its own — still resolves to this suite's one engine.
   nameAgents({
     defaultEngine: CONVERSATION.engine,

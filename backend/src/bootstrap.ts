@@ -8,6 +8,7 @@ import { json } from 'express';
 import { ShutdownSignal } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 
+import { MAX_IMPORT_BYTES } from '@application/permission';
 import { APP_CONFIG, type AppConfig } from '@infra/config/environment';
 import { ENGINE_ENVIRONMENT_FIXUPS } from '@infra/modules/engines';
 import { LOGGER, type Logger } from '@shared/logging/logger';
@@ -80,6 +81,16 @@ export function configureApp(app: INestApplication): number {
     '/files',
     function filesBodyParser(request: unknown, response: unknown, next: () => void) {
       filesJson(request as never, response as never, next);
+    },
+  );
+  // Same trick, for the one other body this big: an import file is JSON inside JSON, so its own
+  // 256 KB ceiling (plan 15, D-17) needs room for the escaping — the exact ceiling is the use
+  // case's own to enforce, with the right error; this only keeps the body from being cut first.
+  const importJson = json({ limit: MAX_IMPORT_BYTES * 2 });
+  app.use(
+    '/permission-rules/import',
+    function permissionRuleImportBodyParser(request: unknown, response: unknown, next: () => void) {
+      importJson(request as never, response as never, next);
     },
   );
   app.enableCors({ origin: config.webOrigin, credentials: true });

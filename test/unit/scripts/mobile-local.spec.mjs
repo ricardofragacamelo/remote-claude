@@ -88,6 +88,18 @@ describe('localDefines', () => {
     );
   });
 
+  it('uses the port the last `pnpm dev` actually bound, when RC_WEB_PORT is not set', () => {
+    const built = localDefines(OIDC, '1.2.3', 41_337);
+
+    expect('defines' in built && built.defines['RC_INTERNAL_URL']).toBe('http://localhost:41337');
+  });
+
+  it('prefers RC_WEB_PORT over the recorded port — an explicit setting is a choice', () => {
+    const built = localDefines({ ...OIDC, RC_WEB_PORT: '5273' }, '1.2.3', 41_337);
+
+    expect('defines' in built && built.defines['RC_INTERNAL_URL']).toBe('http://localhost:5273');
+  });
+
   it('takes the addresses the .env names, as they are written', () => {
     const defines = definesOf({
       ...OIDC,

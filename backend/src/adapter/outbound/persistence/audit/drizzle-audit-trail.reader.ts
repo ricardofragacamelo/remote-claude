@@ -1,21 +1,26 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, gte, lt } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt, max, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 
 import type {
   AuditTrailPage,
   AuditTrailPageRequest,
   AuditTrailReader,
+  DecidedInvocation,
+  RuleUsage,
   SessionTrailOwnership,
 } from '@application/audit';
 import type { UserId } from '@domain/auth';
 import type { SessionId } from '@domain/session';
 import { PERSISTENCE_CONTEXT } from '@infra/database/persistence-context';
 import type { PersistenceContext } from '@infra/database/persistence-context';
-import { auditEntries } from '@infra/database/schema';
-import { runLogged } from '../query-logging';
+import { auditEntries, sessionOrigins } from '@infra/database/schema';
+import { runLogged, whenPresent } from '../query-logging';
 import { toEntity } from './audit-entry.mapper';
 import { keysetPage } from './keyset-page';
+
+/** The entries a permission rule could ever have answered — never the hook's own `recorded`. */
+const DECISIONS = ['allowed', 'denied'] as const;
 
 /**
  * `audit_entries`, read — by the query of the trail, and by nothing else.
@@ -67,6 +72,94 @@ export class DrizzleAuditTrailReader implements AuditTrailReader {
     return (await this.any('audit.ownership.any', undefined, sessionId)) ? 'others' : 'none';
   }
 
+  /**
+   * One grouped query over the partial index `(user_id, rule_id, seq DESC) WHERE rule_id IS NOT
+   * NULL` (plan 15, B-07's migration) — the trail's decision entries alone, never scanned row by
+   * row even for a thousand rules at once (S-64).
+   */
+  async usageOf(
+    userId: UserId,
+    ruleIds: readonly string[],
+    windowStart: Date,
+  ): Promise<ReadonlyMap<string, RuleUsage>> {
+    if (ruleIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await runLogged(
+      this.context.logger,
+      'audit.ruleUsage',
+      this.context.db
+        .select({
+          ruleId: auditEntries.ruleId,
+          count: sql<number>`count(*)::int`,
+          lastUsedAt: max(auditEntries.at),
+        })
+        .from(auditEntries)
+        .where(
+          and(
+            eq(auditEntries.userId, userId.value),
+            inArray(auditEntries.ruleId, [...ruleIds]),
+            gte(auditEntries.at, windowStart),
+          ),
+        )
+        .groupBy(auditEntries.ruleId),
+    );
+
+    return new Map(
+      rows
+        .filter((row): row is typeof row & { ruleId: string } => row.ruleId !== null)
+        .map((row) => [row.ruleId, { count: row.count, lastUsedAt: row.lastUsedAt }]),
+    );
+  }
+
+  /**
+   * The entries, then the folders — two reads, never a join: `session_origins` is `session`'s
+   * table, and the second query only runs over the sessions the first page actually named
+   * ([15 · B-16], D-15).
+   */
+  async decided(userId: UserId, limit: number): Promise<readonly DecidedInvocation[]> {
+    const rows = await runLogged(
+      this.context.logger,
+      'audit.decided',
+      this.context.db
+        .select()
+        .from(auditEntries)
+        .where(
+          and(eq(auditEntries.userId, userId.value), inArray(auditEntries.decision, DECISIONS)),
+        )
+        .orderBy(desc(auditEntries.seq))
+        .limit(limit),
+    );
+
+    const folders = await this.foldersOf([...new Set(rows.map((row) => row.sessionId))]);
+
+    return rows.map((row) => ({
+      record: { seq: row.seq, entry: toEntity(row), traceId: row.traceId },
+      folder: folders.get(row.sessionId) ?? null,
+    }));
+  }
+
+  private async foldersOf(sessionIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
+    if (sessionIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await runLogged(
+      this.context.logger,
+      'audit.decided.folders',
+      this.context.db
+        .selectDistinctOn([sessionOrigins.sessionId], {
+          sessionId: sessionOrigins.sessionId,
+          workspacePath: sessionOrigins.workspacePath,
+        })
+        .from(sessionOrigins)
+        .where(inArray(sessionOrigins.sessionId, [...sessionIds])),
+    );
+
+    return new Map(rows.map((row) => [row.sessionId, row.workspacePath]));
+  }
+
   private async any(
     op: string,
     condition: SQL | undefined,
@@ -90,15 +183,14 @@ export class DrizzleAuditTrailReader implements AuditTrailReader {
 function conditionsOf(request: AuditTrailPageRequest): SQL[] {
   const conditions: (SQL | null)[] = [
     eq(auditEntries.userId, request.userId.value),
-    request.sessionId === null ? null : eq(auditEntries.sessionId, request.sessionId.value),
-    request.toolName === null ? null : eq(auditEntries.toolName, request.toolName),
-    request.kind === undefined || request.kind === null
-      ? null
-      : eq(auditEntries.toolKind, request.kind),
-    request.decision === null ? null : eq(auditEntries.decision, request.decision),
-    request.from === null ? null : gte(auditEntries.at, request.from),
-    request.to === null ? null : lt(auditEntries.at, request.to),
-    request.before === null ? null : lt(auditEntries.seq, request.before),
+    whenPresent(request.sessionId, (sessionId) => eq(auditEntries.sessionId, sessionId.value)),
+    whenPresent(request.toolName, (toolName) => eq(auditEntries.toolName, toolName)),
+    whenPresent(request.kind, (kind) => eq(auditEntries.toolKind, kind)),
+    whenPresent(request.decision, (decision) => eq(auditEntries.decision, decision)),
+    whenPresent(request.from, (from) => gte(auditEntries.at, from)),
+    whenPresent(request.to, (to) => lt(auditEntries.at, to)),
+    whenPresent(request.before, (before) => lt(auditEntries.seq, before)),
+    whenPresent(request.ruleId, (ruleId) => eq(auditEntries.ruleId, ruleId)),
   ];
 
   return conditions.filter((condition): condition is SQL => condition !== null);

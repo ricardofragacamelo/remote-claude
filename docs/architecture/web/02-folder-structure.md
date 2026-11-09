@@ -55,7 +55,13 @@ web/
 │   │   │                           Workspaces com o conteúdo do barril de `workspace`)
 │   │   ├── about/                  Sobre: versões da instalação, documentação, licença
 │   │   ├── devices/                aparelhos aprovados
-│   │   ├── permission/             pedido, escolha de escopo e as regras persistidas
+│   │   ├── permission/             pedido, escolha de escopo, e a gestão de regras ([plano 15](../../plans/15-rules-management/README.md)):
+│   │   │                           `components/` — tabela, abas e filtros da lista; o painel de
+│   │   │                           detalhe; o assistente de `/rules/new`; o teste de comando e a
+│   │   │                           simulação; `hooks/` — um por rota nova (`useRules`, `useRule`,
+│   │   │                           `useRuleTemplates`, `useEvaluateRule`, `useSimulateRules`…);
+│   │   │                           `services/` — `permission-rules.service.ts` fala com a API pelos
+│   │   │                           tipos gerados de `packages/contracts/schema/http/`, nunca à mão
 │   │   ├── audit/                  consulta da trilha
 │   │   ├── transcript/
 │   │   └── auth/

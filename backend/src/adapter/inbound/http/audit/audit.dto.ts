@@ -45,6 +45,8 @@ export const auditTrailQuerySchema = z
     from: z.iso.datetime({ offset: true }).optional(),
     /** Exclusive. */
     to: z.iso.datetime({ offset: true }).optional(),
+    /** Only the entries a permission rule answered — "14 usos" opens to these lines (plan 15, B-11). */
+    ruleId: z.string().min(1).max(64).optional(),
     ...pageQuery,
   })
   // A window that ends before it starts is a client's mistake, and an empty page would hide it.

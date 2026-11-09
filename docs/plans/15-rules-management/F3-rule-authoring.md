@@ -43,9 +43,11 @@ Em `/rules/new`, com o rascunho na search ([D-19](decisions.md#d-19--rota-própr
    (S-185);
 3. **decisão** — Permitir sem perguntar / Bloquear sempre, com o que cada uma significa;
 4. **onde vale** — em todo lugar, ou numa pasta escolhida **pelo seletor do plano 06**; não existe
-   campo de texto para a pasta, e o seletor só anda dentro das raízes do usuário (S-187). Quando a
-   pasta tem subpastas com sessões ou a pasta-mãe tem regras, o passo diz que `project` é exato
-   ([D-10](decisions.md#d-10--project-alcança-as-subpastas));
+   campo de texto para a pasta, e o seletor só anda dentro das raízes do usuário (S-187). O passo diz
+   que `project` vale **nesta pasta e nas suas subpastas** — não na pasta-mãe acima dela — e, quando a
+   pasta-mãe já tem regra, avisa que ela não alcança a de baixo
+   ([D-10](decisions.md#d-10--project-alcança-as-subpastas), decidido em 2026-11-05 contra a
+   recomendação original do plano, que propunha "só nesta pasta, não nas subpastas");
 5. **validade** — atalhos e data livre, teto da decisão à vista, erro na linha acima dele (S-191);
 6. **revisão — o segundo passo**, sempre, para `allow` e `deny` (S-188): o alcance por extenso
    (padrão, onde, até quando), os achados da análise ("idêntica à regra X" desabilita salvar e oferece

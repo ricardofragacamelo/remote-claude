@@ -30,6 +30,18 @@ class RacingPermissionRuleRepository implements PermissionRuleRepository {
     return this.delegate.findApplicable(...args);
   }
 
+  listPage(...args: Parameters<PermissionRuleRepository['listPage']>) {
+    return this.delegate.listPage(...args);
+  }
+
+  listAllMatching(...args: Parameters<PermissionRuleRepository['listAllMatching']>) {
+    return this.delegate.listAllMatching(...args);
+  }
+
+  summarize(...args: Parameters<PermissionRuleRepository['summarize']>) {
+    return this.delegate.summarize(...args);
+  }
+
   async listFor(...args: Parameters<PermissionRuleRepository['listFor']>) {
     return [...(await this.delegate.listFor(...args)), ...this.alreadyRevoked];
   }
@@ -39,6 +51,14 @@ class RacingPermissionRuleRepository implements PermissionRuleRepository {
       return { rule, revoked: false };
     }
     return this.delegate.saveRevocation(rule);
+  }
+
+  saveRevocations(...args: Parameters<PermissionRuleRepository['saveRevocations']>) {
+    return this.delegate.saveRevocations(...args);
+  }
+
+  changeExpiry(...args: Parameters<PermissionRuleRepository['changeExpiry']>) {
+    return this.delegate.changeExpiry(...args);
   }
 }
 

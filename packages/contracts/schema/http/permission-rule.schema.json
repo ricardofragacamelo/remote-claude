@@ -2,13 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/http/permission-rule.json",
   "title": "PermissionRule",
-  "description": "`GET /permission-rules/:ruleId`, `POST /permission-rules` and `DELETE /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48).",
+  "description": "`GET /permission-rules/:ruleId`, `POST /permission-rules`, `DELETE /permission-rules/:ruleId` and `PATCH /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48). `PATCH` shortens or extends `expiresAt` alone (plan 15, B-12, D-01) — no other field of a rule is ever edited.",
   "x-kind": "http",
   "x-type": "permissionRules.detail",
   "x-route": [
     { "method": "GET", "path": "/permission-rules/:ruleId" },
     { "method": "POST", "path": "/permission-rules" },
-    { "method": "DELETE", "path": "/permission-rules/:ruleId" }
+    { "method": "DELETE", "path": "/permission-rules/:ruleId" },
+    { "method": "PATCH", "path": "/permission-rules/:ruleId" }
   ],
   "$ref": "../definitions/permission-rule.schema.json"
 }

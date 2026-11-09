@@ -23,6 +23,8 @@ export type {
   AuditTrailPageRequest,
   AuditTrailReader,
   AuditTrailRecord,
+  DecidedInvocation,
+  RuleUsage,
   SessionTrailOwnership,
 } from './ports/audit-trail.reader';
 export { AUDIT_TRAIL_READER } from './ports/audit-trail.reader';

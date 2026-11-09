@@ -48,6 +48,17 @@ describe('parseRulePattern', () => {
     expect(parseRulePattern(pattern)).toEqual(read);
   });
 
+  it.each<[string, RulePattern]>([
+    ['shell( git   status\t:*)', { kind: 'shell', reach: 'prefix', content: 'git status' }],
+    ['shell(git  commit  -m  x)', { kind: 'shell', reach: 'exact', content: 'git commit -m x' }],
+    ['shell(  sudo :*)', { kind: 'shell', reach: 'prefix', content: 'sudo' }],
+  ])(
+    'collapses a run of whitespace inside the matcher into one space, same as the shell would — %j — S-17 of plan 15',
+    (pattern, read) => {
+      expect(parseRulePattern(pattern)).toEqual(read);
+    },
+  );
+
   it.each([
     ['Bash(git status:*)', 'syntax', "the engine's own grammar is not the canonical one"],
     ['Bash', 'syntax', 'an engine name is not a kind'],
@@ -64,6 +75,16 @@ describe('parseRulePattern', () => {
     ['shell(echo (x))', 'parenthesis', 'a `)` inside would read back as something else'],
     ['shell(:*)', 'emptyPrefix', 'a prefix of nothing would be every command'],
     ['file.edit(src:*)', 'prefixOutsideShell', 'a path is a glob, never a prefix'],
+    [
+      'file.read(/a/src:*)',
+      'prefixOutsideShell',
+      // S-14 of plan 15 asked for this to be accepted with a `pathPrefix` finding, written before
+      // the canonical grammar existed. The F5 of plan 28 (B-31) settled the path form on the glob
+      // alone — `file.read(/a/src/**)` — and never let `:*` reach a path kind at all, so there is
+      // no ambiguous prefix left to explain: the pattern is refused here, the same as any other
+      // syntax a path cannot carry.
+      'a path is a glob, never a prefix — plan 15, D-08, revised after plan 28, B-31',
+    ],
     ['web.fetch(a.com:*)', 'prefixOutsideShell', 'a host is never a prefix'],
     ['web.fetch(https://a.com/x)', 'domainExpected', 'an exact URL is not a domain'],
     ['web.fetch(domain:)', 'domainExpected', 'a domain of nothing'],
@@ -155,6 +176,13 @@ describe('ruleMatches on a shell line', () => {
     expect(matches('git status --short')).toBe(true);
     // The hole a bare `startsWith` leaves: `git statusx` is a different command.
     expect(matches('git statusx')).toBe(false);
+  });
+
+  it('regression — the token boundary and the kind still gate everything — S-13 of plan 15', () => {
+    expect(matches('git statusx')).toBe(false);
+    expect(matches('git push --force', 'allow', parseRulePattern('shell(git status)'))).toBe(false);
+    // A shell pattern against a call whose subject carries no command at all.
+    expect(ruleMatches(pattern, canonicalTool('shell', {}), 'allow', folder)).toBe(false);
   });
 
   it('matches an exact pattern only on the exact line — S-06', () => {

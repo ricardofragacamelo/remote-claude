@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/http/permission-rule-list.json",
   "title": "PermissionRuleList",
-  "description": "`GET /permission-rules`: the caller's rules, newest first — expired ones included and marked, revoked ones gone (plan 03).",
+  "description": "`GET /permission-rules`: the caller's rules, newest first — expired ones included and marked, revoked ones gone (plan 03). Paginated by cursor over `(granted_at, id)` (plan 15, D-13, decided 2026-11-05 against the plan's own original recommendation of a flat list with a ceiling): the first page with no `cursor` is unchanged in content from before plan 15, which is what keeps the published app — which reads neither `cursor` nor `nextCursor` — on the same contract (S-01, S-02). `nextCursor` is optional here only because the cursor read is wired phase by phase (F1, B-10); the normative contract, where it is always present, is `backend/03-modules.md`'s `permission` section.",
   "x-kind": "http",
   "x-type": "permissionRules.list",
   "x-route": [{ "method": "GET", "path": "/permission-rules" }],
@@ -11,10 +11,16 @@
   "properties": {
     "rules": {
       "type": "array",
-      "maxItems": 10000,
+      "maxItems": 200,
+      "description": "One page — at most `pageSize` (default 50, ceiling 200).",
       "items": {
         "$ref": "../definitions/permission-rule.schema.json"
       }
+    },
+    "nextCursor": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Opaque to the client: send it back as `cursor` for the next page. `null` on the last one."
     }
   }
 }

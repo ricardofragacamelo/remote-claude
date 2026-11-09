@@ -74,6 +74,32 @@ nunca de `agent-settings`.
 do `dependency-cruiser` a recusa: o que o Claude escreveu chega pelo barramento interno, e a trava
 por caminho que os dois usam vem da plataforma por porta (`PATH_LOCK`).
 
+`permission` ganha três arestas de saída, nenhuma delas fechando ciclo
+([15 · B-01](../../plans/15-rules-management/F0-contract.md#b-01--backend03-modulesmd-a-superfície-nova-do-módulo-permission-)):
+
+- **`permission → workspace`** — criar uma regra `project` fora do card, testar um comando numa pasta
+  e remapear pasta na importação resolvem o caminho pelo `ResolveWorkspaceUseCase`, por uma porta
+  declarada em `application/permission/ports/` (`RuleFolderResolver`), nunca normalizando o caminho
+  cru como o controller faz hoje;
+- **`permission → audit` (leitura)** — uso, invocações, história de uma regra e simulação leem pelo
+  `AuditTrailReader`, a porta que o `AuditQueryModule` já exporta para leitura. A regra 4 abaixo
+  ("ninguém lê a trilha de dentro do fluxo") continua de pé: é a `PermissionRuleBook` — a decisão de
+  permitir ou negar — que nunca lê a trilha; só as rotas de consulta da tela de regras o fazem, fora
+  do caminho de uma invocação. A pasta de uma invocação já gravada, que a simulação precisa, vem de
+  `session_origins` por **duas leituras separadas** dentro do próprio `AuditTrailReader`
+  (`decided()`) — a trilha primeiro, depois `session_origins` só pelos `sessionId`s que apareceram —,
+  nunca um `JOIN` entre as tabelas de dois módulos;
+- **`permission → session`** (`SessionRegistry`, leitura) — testar um comando (`EvaluatePermissionUseCase`,
+  [15 · B-14](../../plans/15-rules-management/F1-rules-backend.md#b-14--testar-um-comando-)) lê o modo e
+  a pasta de uma sessão **viva** do chamador, para testar "nesta sessão" e não só "em geral". Nunca o
+  módulo `session` inteiro: só o `SessionRegistryModule`, o mesmo que `agent-settings` já consulta
+  (acima) para o registro de sessões vivas, sem reabrir o ciclo que
+  `session` importar `permission` de volta criaria.
+
+Uma quarta aresta — `permission → RuleDialect`, implementado pelo adapter de cada motor só para
+traduzir a regra canônica — já existe desde a F5 do [plano 28](../../plans/28-agent-neutral-core/F5-permission-dialect.md);
+este plano só a usa, não a cria.
+
 Regras:
 
 1. **Comunicação entre módulos é por porta**, declarada em `application/<consumidor>/ports/`,
@@ -626,6 +652,35 @@ estender ao HTTP.
     de notificar alguém
   - **a regra é de um usuário**, nunca da máquina: `userId` entra no casamento, não só na
     criação. Regra de um jamais resolve o pedido de outro
+  - **`project` alcança a pasta da sessão e as suas subpastas**, não a pasta-mãe acima dela: o
+    casamento é prefixo de caminho com fronteira de **segmento** — `/raiz/app` casa
+    `/raiz/app/backend`, não casa `/raiz/app2` nem a sessão aberta em `/raiz`
+    ([15 · D-10](../../plans/15-rules-management/decisions.md#d-10--project-alcança-as-subpastas),
+    decidido em 2026-11-05 contra a recomendação original daquele plano, que propunha igualdade
+    estrita). O caminho gravado é sempre o que a sessão carrega para a mesma pasta, resolvido pelo
+    `workspace` — nunca o que o cliente digitou cru
+  - **numa linha de `shell` composta, a decisão muda o casamento, sempre para o lado seguro**
+    ([15 · D-07](../../plans/15-rules-management/decisions.md#d-07--comando-composto-e-o-prefixo)):
+    um `allow` de prefixo só cobre uma linha com operador de shell (`;`, `&&`, `||`, `|`, `&`,
+    substituição, redirecionamento) quando **cada comando** dela tem o seu próprio `allow` — sem
+    parser de shell, a falha é fechada; o `allow` exato continua casando a string idêntica; um
+    `deny` de prefixo casa se **qualquer comando** da linha casar. A gramática completa — a lista de
+    operadores, os casos de aspas e redirecionamento neutralizados — está no dialeto do Claude
+    ([backend/04a](04a-claude.md#o-alcance-de-uma-regra-nascida-no-card)), que hoje é o único motor;
+    tornar-se genuinamente independente de motor é trabalho do segundo
+  - **a largura de um padrão é conferida em toda porta de criação de regra** — `POST`, importação,
+    restauração, modelo —, nunca só pela tela
+    ([15 · D-09](../../plans/15-rules-management/decisions.md#d-09--o-que-é-largo-demais)):
+    `unbounded` (o `kind` inteiro de `shell`, `shell` de prefixo com operador, `mcp` sem servidor,
+    interpretador/lançador como primeiro token) é recusado num `allow` com `422
+    PERMISSION_RULE_TOO_BROAD`; `broad` (`kind` inteiro fora de `shell`, `mcp(srv:tool)`/`mcp(srv:*)`,
+    prefixo de um token em `shell`, prefixo ou glob em `file.*`) exige `acknowledgeBroad: true`;
+    `narrow` (exato, prefixo de dois ou mais tokens em `shell`, um domínio em `web.fetch`) é aceito
+    sem confirmação. `deny` nunca é recusado por largura — bloquear largo nunca é menos seguro. Um
+    prefixo em `file.*` (`file.read(/a/src:*)`) é aceito e explicado, nunca oferecido pelo
+    assistente — só pela API ou pela importação — e ganha o achado `pathPrefix` dizendo o que
+    realmente cobre
+    ([15 · D-08](../../plans/15-rules-management/decisions.md#d-08--prefixo-em-tool-de-caminho))
   - o padrão usa a **gramática canônica** ([28 · B-31](../../plans/28-agent-neutral-core/F5-permission-dialect.md#b-31--a-gramática-canônica-de-regra-e-o-ruledialect-)),
     `<kind>` ou `<kind>(<matcher>)`, casada sobre o `subject` da ferramenta canônica, nunca sobre o
     input cru:
@@ -716,10 +771,54 @@ estender ao HTTP.
   para o app publicado (D-22). Uma regra **desligada** — gravada na gramática do motor e sem tradução
   inequívoca — nunca casa, aparece na lista e só pode ser revogada. Conceder e revogar entram na trilha (`permission.ruleGranted`,
   `permission.ruleRevoked`), só quando algo mudou.
+
+  **A tela de gestão de regras** ([plano 15](../../plans/15-rules-management/README.md)) acrescenta
+  campos — todos **aditivos**, o app Flutter os ignora — e rotas, sem mudar nada do que está acima:
+  `reach` (o alcance estruturado, `{ engine?, kind, form: any|exact|prefix, content, excludesCompound }`,
+  do domínio sobre o padrão canônico — é dele que a tela escreve a frase, nunca reinterpretando o
+  padrão), `breadth` (`narrow`/`broad`/`unbounded`, pela tabela acima), `legacyPattern` e
+  `disabledReason` (`messageKey`+`params`, só numa regra `disabled` — substituem o `disabled.reason`
+  opaco), `findings` (os achados da análise de redundância/sobreposição contra o restante das regras
+  ativas do chamador), `usage` (`{ count, lastUsedAt, windowDays }`, da trilha — [D-05](../../plans/15-rules-management/decisions.md#d-05--a-fonte-do-uso-e-da-simulação)),
+  `grantedVia`/`grantedFromRequestId`/`templateId`/`restoredFrom` (a origem — `null` numa regra
+  anterior à migration que os introduziu), `folderReachable` (se a pasta de uma regra `project` ainda
+  está na allowlist do chamador, pela regra pura, sem tocar o disco) e `etag` (derivado de
+  `expiresAt`/`revokedAt`, sem coluna de versão).
+
+  | Rota | Status | Quando |
+  |---|---|---|
+  | `GET /permission-rules/summary` | `200` | contagens por estado (com `disabled`), decisão e escopo, e quantas ativas expiram antes de `expiresBefore` — sobre o mesmo predicado da listagem, para as abas e o selo da navegação |
+  | `GET /permission-rules/:ruleId/invocations` | `200` `{ invocations[], nextCursor }` | as invocações que a regra respondeu, keyset descendente sobre o `seq` da trilha (`cursor`, `limit` 1–100) — os campos que a trilha deixa sair, nunca conteúdo de `Read` |
+  | `GET /permission-rules/:ruleId/history` | `200` `{ events[] }` | os eventos da própria regra em `audit_events` — concedida, validade mudada, revogada; uma regra restaurada é um `permission.ruleGranted` novo, com `restoredFrom` |
+  | `GET /permission-rules/templates` | `200` `{ templates[] }` | o catálogo de modelos ([D-16](../../plans/15-rules-management/decisions.md#d-16--onde-moram-os-modelos-de-regra-e-quais-entram)), canônico, `engine` nulo — um catálogo só, para todo motor |
+  | `GET /permission-rules/export` | `200`, `Content-Disposition: attachment` | o arquivo da [D-17](../../plans/15-rules-management/decisions.md#d-17--exportar-e-importar), com os mesmos filtros da listagem — sem corpo JSON a tipar no contrato, como `/files/archive` |
+  | `PATCH /permission-rules/:ruleId` `{ expiresAt }` com `If-Match` | `200` com a regra e o `ETag` novo | encurta ou estende a validade. A ordem das recusas é fixa: `404` → `403 PERMISSION_NOT_OWNED` → `428 PRECONDITION_REQUIRED` (sem `If-Match`) → `409 PERMISSION_RULE_STATE_CONFLICT` (regra `disabled`, revogada ou expirada) → `412 PERMISSION_RULE_CHANGED` (`If-Match` velho) → `400`/`422` de validade |
+  | `POST /permission-rules/revoke` `{ ids }` | `200` `{ rules[] }` | revoga em lote, atômico na validação e na escrita ([D-06](../../plans/15-rules-management/decisions.md#d-06--revogar-em-lote-atômico-ou-por-item)); teto de 100 ids; `400` (vazio ou acima do teto), `404`, `403` — nada revogado |
+  | `POST /permission-rules/restore` `{ ids }` | `201` `{ rules[] }` | desfaz revogações recentes pela mesma rotina de concessão ([D-11](../../plans/15-rules-management/decisions.md#d-11--desfazer-a-revogação)); `404`; `403`; `409 PERMISSION_RULE_STATE_CONFLICT`; `410 PERMISSION_RULE_RESTORE_WINDOW_CLOSED` (passou a janela); `422` de largura e teto |
+  | `POST /permission-rules/evaluate` `{ engine, kind, subject, rawInput?, folder?, mode?, sessionId?, draft? }` | `200` `{ outcome, answeringRule, matching[], reasons[], caveats[] }` | testa um comando com a mesma precedência da sessão, sem gravar nada ([D-12](../../plans/15-rules-management/decisions.md#d-12--o-que-o-teste-de-comando-considera)); as `caveats` vêm do adapter do motor — o que ele decide antes de qualquer regra nossa; `400`; `403 WORKSPACE_NOT_ALLOWED`/`FORBIDDEN` |
+  | `POST /permission-rules/preview` `{ draft }` | `200` `{ pattern, reach, breadth, findings[] }` | analisa um rascunho, sem gravar — mesma validação de gramática e largura da criação; `400 PERMISSION_RULE_PATTERN_INVALID` |
+  | `POST /permission-rules/simulate` `{ add?, remove?, folder?, limit? }` | `200` | "se estas regras mudassem, o que teria sido diferente nas últimas N invocações?" ([D-15](../../plans/15-rules-management/decisions.md#d-15--quantas-invocações-a-simulação-lê-e-o-que-ela-conta)); `400`; `403 PERMISSION_NOT_OWNED` |
+  | `POST /permission-rules/import/preview` `{ file }` | `200` `{ digest, items[] }` | um veredito por item do arquivo, sem gravar ([D-17](../../plans/15-rules-management/decisions.md#d-17--exportar-e-importar)); `400`; `413 PAYLOAD_TOO_LARGE` (acima de 500 regras/256 KB); `422 PERMISSION_RULE_IMPORT_UNSUPPORTED` |
+  | `POST /permission-rules/import` `{ file, digest, accepted[], acknowledgeBroad?, folderMap? }` | `201` `{ created[], existing[] }` | aplica os itens aceitos, um a um, pela rotina de concessão, revalidando tudo antes de escrever qualquer um; os da prévia, mais `422 PERMISSION_RULE_IMPORT_REJECTED` com `details[]` |
+
+  `GET /permission-rules`, `/summary` e `/templates` paginam ou recortam como descrito acima; a
+  listagem é por **cursor** sobre `(granted_at, id)`
+  ([D-13](../../plans/15-rules-management/decisions.md#d-13--a-listagem-pagina), decidido em
+  2026-11-05 contra a recomendação original daquele plano, que propunha lista-tudo-com-teto):
+  `{ rules[], nextCursor }`, sem parâmetro a primeira página é **idêntica em conteúdo** à de hoje
+  (S-01, S-02 do plano 15) — o app Flutter, que não lê `cursor` nem `nextCursor`, continua recebendo
+  a mesma primeira página. **A análise de redundância/sobreposição não lê por aqui**: ela roda sobre
+  uma leitura interna do repositório, sem paginação, sobre todas as regras ativas do chamador —
+  nunca sobre a página que a tela tem carregada. Teste, prévia e simulação **não têm efeito
+  colateral**: nenhuma linha em tabela nenhuma, nenhum evento, nenhum push — são `POST` porque o
+  corpo carrega comando e rascunho, que não podem ir para a query string nem para o log de acesso.
 - **Erros:** `PERMISSION_REQUEST_NOT_FOUND`, `PERMISSION_REQUEST_EXPIRED`, `PERMISSION_NOT_OWNED`,
   `PERMISSION_RULE_PATTERN_INVALID`, `PERMISSION_RULE_EXPIRY_TOO_LONG`, `PERMISSION_RULE_NOT_FOUND`,
-  `PERMISSION_ANSWERS_INVALID`, `PERMISSION_RULE_TOOL_INTERACTIVE`
-- Ver [contrato WS](../shared/05-websocket-protocol.md#o-fluxo-de-permissão).
+  `PERMISSION_ANSWERS_INVALID`, `PERMISSION_RULE_TOOL_INTERACTIVE`, `PERMISSION_RULE_TOO_BROAD`,
+  `PERMISSION_RULE_STATE_CONFLICT`, `PERMISSION_RULE_CHANGED`, `PERMISSION_RULE_RESTORE_WINDOW_CLOSED`,
+  `PERMISSION_RULE_IMPORT_UNSUPPORTED`, `PERMISSION_RULE_IMPORT_REJECTED`
+- Ver [contrato WS](../shared/05-websocket-protocol.md#o-fluxo-de-permissão) e, para a tela de gestão
+  de regras inteira, o [plano 15](../../plans/15-rules-management/README.md).
 
 ### `transcript`
 
@@ -1136,8 +1235,10 @@ de `ClaudeController`, que hoje responde só em `/engines/claude/…`.
   [plano 14](../../plans/14-audit-explained/README.md), que absorve esta leitura em vez de escrever
   outra.
 - **HTTP — `GET /audit-entries`** (Bearer). Filtros opcionais `sessionId`, `toolName`, `decision`
-  (`recorded`/`allowed`/`denied`), `from` (incluído) e `to` (excluído), em ISO 8601 com offset;
-  `cursor` opaco e `limit` de 1 a 100 (default 50).
+  (`recorded`/`allowed`/`denied`), `ruleId` (as entradas que aquela regra respondeu — pela
+  tela de regras, [15 · B-01](../../plans/15-rules-management/F0-contract.md#b-01--backend03-modulesmd-a-superfície-nova-do-módulo-permission-),
+  sobre o índice parcial `(user_id, rule_id, seq DESC) WHERE rule_id IS NOT NULL`), `from` (incluído)
+  e `to` (excluído), em ISO 8601 com offset; `cursor` opaco e `limit` de 1 a 100 (default 50).
 
   | Status | Quando |
   |---|---|

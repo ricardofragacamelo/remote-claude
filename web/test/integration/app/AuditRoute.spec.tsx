@@ -52,6 +52,8 @@ const revokedRule = {
   expiresAt: '2026-12-19T10:00:00.000Z',
   status: 'revoked',
   revokedAt: '2026-09-24T13:00:00.000Z',
+  etag: '"etag-1"',
+  expiryCeiling: '2027-09-20T10:00:00.000Z',
 };
 
 /** `/audit` and `/rules/:ruleId`, reached by their links alone — which is what routes are for. */
@@ -126,13 +128,29 @@ describe('the audit route', () => {
 
   it('opens the rule behind an entry, and shows it revoked with the state explained — S-50', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
-    vi.spyOn(api, 'get').mockImplementation((path: string) =>
-      Promise.resolve(
-        path.startsWith('/audit-entries')
-          ? { entries: [ruledEntry], nextCursor: null }
-          : revokedRule,
-      ),
-    );
+    const get = vi.spyOn(api, 'get').mockImplementation((path: string) => {
+      if (path.startsWith('/audit-entries')) {
+        return Promise.resolve({ entries: [ruledEntry], nextCursor: null });
+      }
+      if (path.includes('/permission-rules/summary')) {
+        return Promise.resolve({
+          byStatus: { active: 0, expired: 0, revoked: 1, disabled: 0 },
+          byDecision: { allow: 0, deny: 0 },
+          byScope: { project: 0, always: 0 },
+          expiringBefore: 0,
+        });
+      }
+      if (path.includes('/invocations')) {
+        return Promise.resolve({ invocations: [], nextCursor: null });
+      }
+      if (path.includes('/history')) {
+        return Promise.resolve({ events: [] });
+      }
+      if (path.endsWith('/permission-rules/rule_1')) {
+        return Promise.resolve(revokedRule);
+      }
+      return Promise.resolve({ rules: [], nextCursor: null });
+    });
     const user = userEvent.setup();
     const mounted = mountAt('/audit');
 
@@ -141,11 +159,17 @@ describe('the audit route', () => {
     await waitFor(() => {
       expect(mounted.location().pathname).toBe('/rules/rule_1');
     });
-    expect(await screen.findByText(t('rules.status.revoked'))).toBeInTheDocument();
-    expect(api.get).toHaveBeenLastCalledWith('/permission-rules/rule_1');
     expect(
-      screen.getByRole('heading', { name: t('rules.detail.screenTitle') }),
+      await screen.findByText(
+        t('rules.row.revokedOn', {
+          at: new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(
+            new Date(revokedRule.revokedAt),
+          ),
+        }),
+      ),
     ).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith('/permission-rules/rule_1');
+    expect(screen.getByRole('heading', { name: t('rules.screen.title') })).toBeInTheDocument();
   });
 
   it('lives in its own screen of the frame, with the trail of today and its help — S-136', async () => {

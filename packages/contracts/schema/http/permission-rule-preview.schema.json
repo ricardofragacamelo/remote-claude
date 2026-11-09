@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-preview.json",
+  "title": "PermissionRulePreview",
+  "description": "`POST /permission-rules/preview`: what a pattern nobody has granted yet would reach, and what it would mean against the caller's active rules (plan 15, B-15). Never refused for its breadth — that is `POST /permission-rules`'s job, only after the person decides to acknowledge it.",
+  "x-kind": "http",
+  "x-type": "permissionRules.preview",
+  "x-route": [{ "method": "POST", "path": "/permission-rules/preview" }],
+  "type": "object",
+  "required": ["pattern", "reach", "breadth", "findings"],
+  "properties": {
+    "pattern": {
+      "type": "string",
+      "description": "The pattern exactly as given, in the canonical grammar."
+    },
+    "reach": { "$ref": "../definitions/permission-rule-reach.schema.json" },
+    "breadth": {
+      "type": "string",
+      "enum": ["narrow", "broad", "unbounded"]
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 50,
+      "description": "What the redundancy/overlap/conflict analysis says about this draft, against the caller's active rules (plan 15, B-15).",
+      "items": { "$ref": "../definitions/permission-rule-finding.schema.json" }
+    }
+  }
+}

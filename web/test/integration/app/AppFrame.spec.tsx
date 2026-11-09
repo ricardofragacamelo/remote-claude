@@ -296,9 +296,21 @@ describe('the frame of the app — plan 06, B-18', () => {
 
   it('has no accessibility violation', async () => {
     signedIn();
-    vi.spyOn(api, 'get').mockResolvedValue({ rules: [] });
+    vi.spyOn(api, 'get').mockImplementation((path: unknown) => {
+      const p = String(path);
+      return Promise.resolve(
+        p.includes('/permission-rules/summary')
+          ? {
+              byStatus: { active: 0, expired: 0, revoked: 0, disabled: 0 },
+              byDecision: { allow: 0, deny: 0 },
+              byScope: { project: 0, always: 0 },
+              expiringBefore: 0,
+            }
+          : { rules: [], nextCursor: null },
+      );
+    });
     const { container } = mountApp('/rules');
-    await screen.findByText(t('rules.list.emptyTitle'));
+    await screen.findByText(t('rules.tabEmpty.activeTitle'));
 
     expect(await axe(container)).toHaveNoViolations();
   });

@@ -1,4 +1,3 @@
-import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -178,27 +177,16 @@ describe('start-local.mjs, against real docker', () => {
 });
 
 describe('start-local.mjs, when a service cannot come up', () => {
-  /** Its own project, so the failed run cannot disturb the one above. */
-  const blocked = `remote-claude-blocked-${String(process.pid)}`;
+  // Invalid on purpose: compose itself refuses it, before it ever touches a container — a fixed
+  // port already taken no longer reaches this path (`resolveAvailablePorts` swaps Postgres and
+  // Keycloak for a free one instead), so this is the everyday shape of "compose itself refuses"
+  // that is left: an invalid `--project-name`, which no port choice can route around.
+  const blocked = 'Invalid Project Name';
 
-  /** @type {net.Server} */
-  let squatter;
   /** @type {import('../../../scripts/lib/exec.mjs').RunResult} */
   let result;
 
-  beforeAll(async () => {
-    const [taken, free] = await Promise.all([findFreePort(), findFreePort()]);
-
-    // Something else already holds the port compose is about to publish. This is the everyday
-    // shape of "a service does not come up", and the script has to say so and clean up rather
-    // than hang or leave half a stack behind.
-    squatter = net.createServer();
-    await new Promise((resolve) => {
-      squatter.listen({ port: taken, host: '0.0.0.0' }, () => {
-        resolve(undefined);
-      });
-    });
-
+  beforeAll(() => {
     result = run(process.execPath, [path.join(repoRoot, 'scripts/start-local.mjs')], {
       cwd: repoRoot,
       timeoutMs: 300_000,
@@ -206,18 +194,17 @@ describe('start-local.mjs, when a service cannot come up', () => {
         ...process.env,
         NO_COLOR: '1',
         COMPOSE_PROJECT_NAME: blocked,
-        RC_POSTGRES_PORT: String(taken),
-        RC_KEYCLOAK_PORT: String(free),
       },
     });
   });
 
-  afterAll(async () => {
+  afterAll(() => {
+    // Nothing was ever created — compose refused the project name before starting anything — so
+    // this is only a defensive no-op, the same as the rest of the suite's cleanups.
     if (cli !== null) {
       const argv = composeArgv(cli, blocked, ['down', '--volumes', '--remove-orphans']);
       run(argv.command, argv.args, { cwd: repoRoot, timeoutMs: 300_000 });
     }
-    await new Promise((resolve) => squatter.close(resolve));
   });
 
   it('exits non-zero instead of pretending it came up', () => {

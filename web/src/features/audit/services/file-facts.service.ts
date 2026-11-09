@@ -1,7 +1,4 @@
-import type {
-  AuditEventPagePayload,
-  AuditEventPagePayloadEventsItem,
-} from '@remote-claude/contracts';
+import type { AuditEventPagePayload, AuditEventFact } from '@remote-claude/contracts';
 
 import { api } from '@/shared/api/api';
 import { FILE_ACTS } from '../types/file-facts';
@@ -9,10 +6,7 @@ import type { FileAct, FileFact, FileFactPage } from '../types/file-facts';
 
 /** One account fact, as `GET /audit-events` answers it — without the `subjectId`, which this
  * feature never shows: a file fact names its path, `subjectLabel`, and nothing of the real one. */
-type AuditEventDto = Pick<
-  AuditEventPagePayloadEventsItem,
-  'id' | 'kind' | 'subjectLabel' | 'details' | 'at'
->;
+type AuditEventDto = Pick<AuditEventFact, 'id' | 'kind' | 'subjectLabel' | 'details' | 'at'>;
 
 type AuditEventPageDto = Pick<AuditEventPagePayload, 'nextCursor'> & {
   readonly events: readonly AuditEventDto[];

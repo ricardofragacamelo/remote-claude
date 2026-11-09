@@ -146,6 +146,33 @@ describe('installAddresses', () => {
       installAddresses({ RC_WEB_PORT: 'nope' }, { lan: LAN, recorded: NOTHING_RECORDED }),
     ).toEqual({ problems: [expect.stringContaining('RC_WEB_PORT="nope"')] });
   });
+
+  it('builds the internal address against the recorded port, when RC_WEB_PORT is not set', () => {
+    const addresses = installAddresses(
+      {},
+      { lan: LAN, recorded: NOTHING_RECORDED, recordedWebPort: 41_337 },
+    );
+
+    expect(addresses).toMatchObject({ internal: { url: 'http://192.168.0.10:41337' } });
+  });
+
+  it('prefers RC_WEB_PORT over the recorded port — an explicit setting is a choice', () => {
+    const addresses = installAddresses(
+      { RC_WEB_PORT: '5999' },
+      { lan: LAN, recorded: NOTHING_RECORDED, recordedWebPort: 41_337 },
+    );
+
+    expect(addresses).toMatchObject({ internal: { url: 'http://192.168.0.10:5999' } });
+  });
+
+  it('falls back to the plan default when nothing is set and nothing was recorded', () => {
+    const addresses = installAddresses(
+      {},
+      { lan: LAN, recorded: NOTHING_RECORDED, recordedWebPort: null },
+    );
+
+    expect(addresses).toMatchObject({ internal: { url: 'http://192.168.0.10:5173' } });
+  });
 });
 
 describe('usbDevices', () => {

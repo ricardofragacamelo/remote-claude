@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import { localInputOf } from '@/shared/lib/local-input';
 import { AUDIT_DECISIONS } from '../types/audit';
 import type { AuditDecision, AuditFilters } from '../types/audit';
 
@@ -25,17 +26,7 @@ export interface AuditFilterDraft {
 
 /** An ISO instant as a `datetime-local` value, in this browser's zone. `''` for none. */
 export function toLocalInput(iso: string | undefined): string {
-  if (iso === undefined) {
-    return '';
-  }
-
-  const instant = new Date(iso);
-  if (Number.isNaN(instant.getTime())) {
-    return '';
-  }
-
-  const local = new Date(instant.getTime() - instant.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
+  return localInputOf(iso, 16);
 }
 
 /** A `datetime-local` value as the ISO instant the server filters by. `undefined` for none. */

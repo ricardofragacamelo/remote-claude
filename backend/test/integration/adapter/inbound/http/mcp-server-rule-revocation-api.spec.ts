@@ -83,6 +83,9 @@ describe('a changed or removed MCP server revoking the permission rules that rea
       pattern,
       decision: 'allow',
       scope: 'always',
+      // `mcp(<server>:*)` is `broad` by the D-09 table (plan 15, B-09) — acknowledged here since
+      // this suite is about revocation on a server change, not about breadth confirmation.
+      acknowledgeBroad: true,
     });
     expect(granted.status).toBe(201);
     return String(granted.body.id);

@@ -13,7 +13,7 @@
  * `RC_EXTERNAL_URL`, when the developer has one; empty, its radio is off (D-12).
  */
 
-import { MOBILE_REDIRECT_URL, defineArgs, resolvePorts, webOrigin } from './stack.mjs';
+import { MOBILE_REDIRECT_URL, defineArgs, resolveWebPort, webOrigin } from './stack.mjs';
 
 /** The Android application id, as `mobile/android/app/build.gradle.kts` declares it. */
 export const ANDROID_PACKAGE = 'com.remoteclaude.remote_claude';
@@ -63,9 +63,10 @@ function urlOrNull(raw) {
  *
  * @param {NodeJS.ProcessEnv} env the repository `.env`, already loaded
  * @param {string} appVersion
+ * @param {number | null} [recordedWebPort] what `readRecordedPorts` found for `web`, or `null`
  * @returns {{ defines: Record<string, string> } | { problems: string[] }}
  */
-export function localDefines(env, appVersion) {
+export function localDefines(env, appVersion, recordedWebPort = null) {
   /** @type {string[]} */
   const problems = [];
   const oidc = oidcDefines(env, problems);
@@ -73,7 +74,7 @@ export function localDefines(env, appVersion) {
 
   let web = '';
   try {
-    web = webOrigin(resolvePorts(env).web);
+    web = webOrigin(resolveWebPort(env, recordedWebPort));
   } catch (error) {
     problems.push(/** @type {Error} */ (error).message);
   }

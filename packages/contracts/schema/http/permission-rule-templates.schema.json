@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-templates.json",
+  "title": "PermissionRuleTemplates",
+  "description": "`GET /permission-rules/templates`: the catalog of pre-built rule bundles, canonical and the same for every engine (plan 15, B-17, D-16). Applying one is an import (B-18), by `templateId`.",
+  "x-kind": "http",
+  "x-type": "permissionRules.templates",
+  "x-route": [{ "method": "GET", "path": "/permission-rules/templates" }],
+  "type": "object",
+  "required": ["templates"],
+  "properties": {
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "rules"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "$ref": "../definitions/translated-message.schema.json" },
+          "description": { "$ref": "../definitions/translated-message.schema.json" },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["pattern", "decision", "reach", "breadth"],
+              "properties": {
+                "pattern": {
+                  "type": "string",
+                  "description": "The pattern exactly as the catalog wrote it, in the canonical grammar."
+                },
+                "decision": { "type": "string", "enum": ["allow", "deny"] },
+                "reach": { "$ref": "../definitions/permission-rule-reach.schema.json" },
+                "breadth": {
+                  "type": "string",
+                  "enum": ["narrow", "broad", "unbounded"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

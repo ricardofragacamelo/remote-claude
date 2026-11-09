@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-11-05
+**Última atualização:** 2026-11-09
 
 ```
 00-bootstrap                  ████████████████████ 100%   ✅ concluído
@@ -32,7 +32,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 12-integrated-terminal        ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
 13-claude-settings            ████████████████████ 100%   ✅ concluído
 14-audit-explained            ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-15-rules-management           ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
+15-rules-management           ████████████░░░░░░░░  58%   ⛔ bloqueado
 16-usage-and-cost             ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 17-devices                    ██░░░░░░░░░░░░░░░░░░   9%   🔄 em andamento
 18-logs-and-diagnostics       ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
@@ -71,7 +71,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [12 — Terminal integrado](12-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 14/14 | 🔄 |
 | [13 — Configuração do Claude](13-claude-settings/README.md) | 5/5 | 47/47 | 207/216 | 31/31 | ✅ |
 | [14 — Auditoria explicada](14-audit-explained/README.md) | 0/5 | 0/38 | 0/152 | 1/15 | 🔲 |
-| [15 — Gestão de regras](15-rules-management/README.md) | 0/5 | 0/36 | 8/226 | 2/20 | 🔄 |
+| [15 — Gestão de regras](15-rules-management/README.md) | 1/5 | 21/36 | 93/226 | 20/20 | ⛔ |
 | [16 — Uso e custo](16-usage-and-cost/README.md) | 0/5 | 0/33 | 0/123 | 1/16 | 🔲 |
 | [17 — Dispositivos](17-devices/README.md) | 1/5 | 3/32 | 13/132 | 4/16 | 🔄 |
 | [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 3/17 | 🔲 |
@@ -85,7 +85,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 8/8 | 26/26 | 78/78 | 35/35 | ✅ |
 | [27 — Perdas da conversa](27-conversation-losses/README.md) | 9/9 | 31/31 | 119/124 | 15/15 | ✅ |
 | [28 — Agent neutral core](28-agent-neutral-core/README.md) | 8/8 | 48/48 | 118/136 | 51/51 | ✅ |
-| **Total** | **141/178** | **739/980** | **2835/3987** | **522/603** | 🔄 |
+| **Total** | **142/178** | **760/980** | **2920/3987** | **540/603** | ⛔ |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 
@@ -290,7 +290,7 @@ empacota o que todos eles entregam, e por isso é o último:
 | [12 — Terminal integrado](12-integrated-terminal/README.md) | um terminal na pasta aberta, desligado por padrão | 06 |
 | [13 — Configuração do Claude](13-claude-settings/README.md) | ver e mudar modelos, padrões, MCPs, skills e a configuração de projeto numa tela própria | 06, 07, 08; F2…F4 depois do 26 e do 28 |
 | [14 — Auditoria explicada](14-audit-explained/README.md) | ler cada invocação inteira — pedido, decisão, desfecho — com ajuda | 06, 28 |
-| [15 — Gestão de regras](15-rules-management/README.md) | criar, testar, simular, ajustar e revogar regras numa tela própria | 06, 28 (a B-08 espera a F5 do 28) |
+| [15 — Gestão de regras](15-rules-management/README.md) | criar, testar, simular, ajustar e revogar regras numa tela própria | 06, 28 — ambos concluídos; as 20 decisões foram tomadas em 2026-11-05, nenhum bloqueio resta |
 | [16 — Uso e custo](16-usage-and-cost/README.md) | saber quanto se gasta, onde e com o quê, com orçamento | 06, 28 |
 | [17 — Dispositivos](17-devices/README.md) | gerir os aparelhos que respondem permissão | 06 |
 | [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | ler os logs por `traceId` e ver a saúde da instalação | 06, 28 |
@@ -327,7 +327,6 @@ O que está em aberto **hoje** é a tabela gerada abaixo — uma linha por plano
 |---|---|---|
 | [10-mobile-chat-layout](10-mobile-chat-layout/decisions.md) | D-19 | 1 |
 | [14-audit-explained](14-audit-explained/decisions.md) | D-01…D-14 | 14 |
-| [15-rules-management](15-rules-management/decisions.md) | D-01…D-06, D-08…D-19 | 18 |
 | [16-usage-and-cost](16-usage-and-cost/decisions.md) | D-01…D-15 | 15 |
 | [17-devices](17-devices/decisions.md) | D-01…D-12 | 12 |
 | [18-logs-and-diagnostics](18-logs-and-diagnostics/decisions.md) | D-02…D-10, D-12…D-16 | 14 |

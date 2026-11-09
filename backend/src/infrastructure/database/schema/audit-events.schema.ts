@@ -40,7 +40,7 @@ export const auditEvents = pgTable(
     index('audit_events_at_idx').on(table.at),
     check(
       'audit_events_kind_known',
-      sql`${table.kind} IN ('device.registered', 'device.approved', 'device.revoked', 'device.expired', 'permission.ruleGranted', 'permission.ruleRevoked', 'session.resumed', 'session.forked', 'session.filesRewound', 'file.created', 'file.written', 'file.moved', 'file.copied', 'file.deleted', 'file.failed', 'file.downloaded', 'file.restored', 'agentSettings.defaultsChanged', 'mcp.serverAdded', 'mcp.serverChanged', 'mcp.serverRemoved', 'mcp.serverToggled', 'mcp.serverTested', 'mcp.projectServerApproved', 'mcp.projectServerRejected', 'engine.pluginAdded', 'engine.pluginUpdated', 'engine.pluginToggled', 'engine.pluginRemoved', 'engine.skillSourceToggled', 'engine.diagnosticsProbed')`,
+      sql`${table.kind} IN ('device.registered', 'device.approved', 'device.revoked', 'device.expired', 'permission.ruleGranted', 'permission.ruleRevoked', 'permission.ruleExpiryChanged', 'permission.rulesExported', 'permission.rulesImported', 'session.resumed', 'session.forked', 'session.filesRewound', 'file.created', 'file.written', 'file.moved', 'file.copied', 'file.deleted', 'file.failed', 'file.downloaded', 'file.restored', 'agentSettings.defaultsChanged', 'mcp.serverAdded', 'mcp.serverChanged', 'mcp.serverRemoved', 'mcp.serverToggled', 'mcp.serverTested', 'mcp.projectServerApproved', 'mcp.projectServerRejected', 'engine.pluginAdded', 'engine.pluginUpdated', 'engine.pluginToggled', 'engine.pluginRemoved', 'engine.skillSourceToggled', 'engine.diagnosticsProbed')`,
     ),
   ],
 );

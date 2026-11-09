@@ -338,9 +338,45 @@
       "ruleExpiryTooLong": "That rule would last longer than this installation allows.",
       "ruleNotFound": "That rule does not exist.",
       "ruleNotOwned": "That rule belongs to somebody else.",
-      "ruleExpiryInvalid": "A rule has to expire after it is created.",
+      "ruleExpiryInvalid": "A rule has to expire in the future.",
       "answersInvalid": "Those answers do not fit the question. Check each one and send again.",
-      "ruleToolInteractive": "{{agent}}'s questions and plans always come to you: no rule answers them, to allow or to refuse."
+      "ruleToolInteractive": "{{agent}}'s questions and plans always come to you: no rule answers them, to allow or to refuse.",
+      "ruleTooBroad": "That pattern reaches too much for an allow rule of this breadth ({{breadth}}).",
+      "ruleStateConflict": "That rule is {{status}}, which does not accept this action.",
+      "ruleChanged": "That rule changed since you opened it. Reload it and try again.",
+      "ruleIfMatchRequired": "Reload that rule before changing its validity, so nothing is overwritten blind.",
+      "ruleRestoreWindowClosed": "The window to undo that revocation has closed.",
+      "ruleImportUnsupported": "That file cannot be read as a rule export ({{reason}}).",
+      "ruleImportRejected": "One or more of the accepted rules can no longer be created. Nothing was imported.",
+      "ruleTemplateUnknown": "This build does not have that template.",
+      "ruleImportTooLarge": "That file is over the limit of {{limit}} {{reason}}.",
+      "ruleImportInvalid": "That is not the file the preview showed — reload it and try again."
+    },
+    "ruleFinding": {
+      "identical": "Identical to another active rule",
+      "redundant": "Already covered by a wider rule with the same decision",
+      "shadowedByDeny": "Never answers — a deny rule covers it entirely",
+      "overlapsDeny": "Partly covered by a deny rule",
+      "tooBroad": "Wider than what's allowed to create today ({{breadth}})",
+      "unreachable": "This folder is no longer in your allowed list"
+    },
+    "evaluateCaveat": {
+      "engineMayDecideFirst": "{{engine}} may decide some calls before any rule of yours is asked.",
+      "acceptEdits": "File edits are accepted automatically in this mode; only the rest asks."
+    },
+    "ruleTemplate": {
+      "runTestsName": "Run the tests",
+      "runTestsDescription": "Allow pnpm, npm and yarn test commands.",
+      "gitReadOnlyName": "Git, read-only",
+      "gitReadOnlyDescription": "Allow status, diff, log, show and listing branches — nothing that changes the repository.",
+      "lintAndFormatName": "Lint and format",
+      "lintAndFormatDescription": "Allow pnpm lint, format and typecheck.",
+      "blockNetworkName": "Block network access",
+      "blockNetworkDescription": "Deny fetching or searching the web, and curl/wget.",
+      "blockDestructiveGitName": "Block destructive git",
+      "blockDestructiveGitDescription": "Deny force-push, hard reset and clean.",
+      "blockBulkDeleteName": "Block bulk delete",
+      "blockBulkDeleteDescription": "Deny rm -rf and rm -fr."
     },
     "persist": {
       "title": "Stop asking about this?",
@@ -405,6 +441,74 @@
       "pending": "Waiting for an answer",
       "declined": "Not answered: {{reason}}",
       "answeredElsewhere": "Answered elsewhere"
+    },
+    "ruleSentence": {
+      "allow": "Allows {{agent}} to {{action}}, {{scope}}, without asking, until {{until}}.",
+      "deny": "Blocks {{agent}}: {{action}}, {{scope}}, until {{until}}.",
+      "actionAny": "use `{{kind}}` freely",
+      "actionExact": "do exactly `{{content}}`",
+      "actionPrefix": "do `{{content}}`, and whatever comes after it separated by a space",
+      "actionPrefixExcludesCompound": "do `{{content}}`, and whatever comes after it separated by a space — but never a command chained with `&&`, `;`, `|` or similar",
+      "scopeAlways": "in any of your folders",
+      "scopeProject": "in `{{folder}}`, and its subfolders"
+    },
+    "ruleOrigin": {
+      "approval": "Granted answering a request, by {{who}}, on {{at}}.",
+      "request": "Granted from this screen, by {{who}}, on {{at}}.",
+      "import": "Imported, on {{at}}.",
+      "restore": "Restored after being revoked, on {{at}}.",
+      "notRecorded": "Origin not recorded — granted before this was tracked, on {{at}}."
+    },
+    "ruleHistory": {
+      "granted": "Granted",
+      "revoked": "Revoked",
+      "expiryChanged": "Validity changed",
+      "exported": "Exported",
+      "imported": "Imported",
+      "other": "Changed"
+    },
+    "ruleDetail": {
+      "label": "Details of the rule",
+      "title": "Rule",
+      "close": "Close",
+      "alertsTitle": "Alerts",
+      "openInvolvedRule": "Open this rule",
+      "validityTitle": "Validity",
+      "usageTitle": "Usage",
+      "originTitle": "Origin",
+      "restore": "Restore",
+      "invocationsLoading": "Loading invocations…",
+      "invocationsEmptyTitle": "No invocations",
+      "invocationsEmptyDescription": "This rule has not answered anything yet.",
+      "invocationsTitle": "Invocations",
+      "invocationsLoadMore": "Load more invocations",
+      "showTrail": "See this rule in the trail",
+      "historyTitle": "History",
+      "historyLoading": "Loading history…",
+      "historyEmptyTitle": "No history",
+      "historyEmptyDescription": "Nothing recorded yet for this rule.",
+      "copyId": "Copy the rule's id"
+    },
+    "ruleExpiry": {
+      "shortcuts": "How much longer",
+      "shortcut7": "7 days",
+      "shortcut30": "30 days",
+      "shortcut90": "90 days",
+      "shortcut365": "1 year",
+      "freeDate": "Or pick a date",
+      "ceiling": "Can reach as far as {{at}}",
+      "invalid": "Pick a date first.",
+      "mustBeLater": "An extension has to be later than the validity it already has.",
+      "mustBeSooner": "A shortening has to be sooner than the validity it already has, and still in the future.",
+      "shortenTitle": "Shorten the validity",
+      "extendTitle": "Extend the validity",
+      "cancel": "Cancel",
+      "back": "Back",
+      "continue": "Continue",
+      "apply": "Apply",
+      "undo": "Undo",
+      "shortenedToast": "Shortened.",
+      "extendedToast": "Extended."
     }
   },
   "audit": {
@@ -537,13 +641,6 @@
       "title": "Your rules",
       "purpose": "What you authorised in advance — and where you take it back."
     },
-    "list": {
-      "title": "Rules you granted",
-      "description": "What {{agent}} may do on this machine without asking you first. Revoking takes effect on the next request, in every open session.",
-      "loading": "Loading your rules…",
-      "emptyTitle": "No rules yet",
-      "emptyDescription": "A rule is created when you answer a request with “don't ask again”. Until then, {{agent}} asks you every time."
-    },
     "scope": {
       "project": "In one project",
       "always": "In every project"
@@ -552,45 +649,86 @@
       "allow": "runs without asking",
       "deny": "refused without asking"
     },
-    "status": {
-      "active": "Active",
-      "expired": "Expired",
-      "revoked": "Revoked",
-      "disabled": "Disabled"
-    },
     "row": {
-      "label": "Rule {{pattern}}",
-      "toolDecision": "{{tool}} · {{decision}}",
-      "project": "Project: {{path}}",
-      "granted": "Granted by {{who}} on {{at}}",
-      "validUntil": "Valid until {{at}}",
       "expiredOn": "Expired on {{at}}. {{agent}} asks you again.",
-      "expiringSoon": "Expires soon: after {{at}}, {{agent}} will ask you again.",
-      "revokedOn": "Revoked on {{at}}. It no longer answers anything.",
-      "disabled": "Written for {{agent}} in a form this version cannot translate: it no longer applies. Create it again if you still want it."
+      "revokedOn": "Revoked on {{at}}. It no longer answers anything."
     },
     "action": {
       "revoke": "Revoke",
-      "revoking": "Revoking…"
+      "revoking": "Revoking…",
+      "open": "Open"
     },
     "detail": {
-      "screenTitle": "A rule you granted",
-      "title": "The rule",
-      "description": "What this rule lets {{agent}} do, and whether it still does.",
-      "loading": "Loading the rule…",
-      "emptyTitle": "No rule",
-      "emptyDescription": "There is no rule to show.",
-      "purpose": "One rule you granted, whatever became of it."
+      "loading": "Loading the rule…"
     },
     "help": {
       "what": "Every rule you granted from a permission request: which tool, which pattern, where it applies and until when. Revoking is one click, and the next matching request asks you again.",
       "states": "An active rule answers requests without asking. A rule close to expiring — less than seven days left — is marked. An expired rule stays listed, marked as such; a revoked one leaves the list. A revocation that fails keeps the row, with the reason beside it. A rule written for an agent in a form this version cannot translate is listed as disabled, with the pattern it had: it answers nothing, and revoking is all it offers.",
       "notRecorded": "Rules that only last a session are not listed: they end with it. This screen does not show which requests a rule answered — the audit trail does."
     },
-    "detailHelp": {
-      "what": "One rule, opened from the audit trail or from the list: what it allows, where, since when and until when.",
-      "states": "Active, with the way to revoke it; expired; or revoked, saying when — never an empty page.",
-      "notRecorded": "It does not list the requests the rule answered; the audit trail does."
+    "tabs": {
+      "label": "Rule status",
+      "active": "Active",
+      "expiringSoon": "Expiring soon",
+      "expired": "Expired",
+      "revoked": "Revoked",
+      "all": "All"
+    },
+    "tabEmpty": {
+      "activeTitle": "No active rules",
+      "activeDescription": "A rule is created when you answer a request with “don't ask again”. Create one here, or start from a template.",
+      "expiringSoonTitle": "Nothing expiring soon",
+      "expiringSoonDescription": "No active rule stops answering in the next seven days.",
+      "expiredTitle": "No expired rules",
+      "expiredDescription": "Rules that stopped answering on their own show up here.",
+      "revokedTitle": "No revoked rules",
+      "revokedDescription": "Rules you took back show up here.",
+      "allTitle": "No rules yet",
+      "allDescription": "A rule is created when you answer a request with “don't ask again”. Create one here, or start from a template."
+    },
+    "filters": {
+      "label": "Filter the rules",
+      "kind": "Tool type",
+      "anyKind": "Any type",
+      "folder": "Folder",
+      "anyFolder": "Any folder",
+      "withAlert": "With an alert",
+      "search": "Search the pattern or the folder",
+      "apply": "Apply"
+    },
+    "table": {
+      "caption": "Your rules, filtered and sorted",
+      "loading": "Loading the rules…",
+      "columnSelect": "Select",
+      "columnDecision": "Decision",
+      "columnType": "Type",
+      "columnPattern": "Pattern",
+      "columnFolder": "Where it applies",
+      "columnValidity": "Valid until",
+      "columnUsage": "Use",
+      "columnLastUsed": "Last used",
+      "columnCreated": "Created",
+      "columnAlerts": "Alerts",
+      "copyPattern": "Copy the pattern",
+      "mcpServerTool": "{{server}}: {{tool}}",
+      "notApplicable": "—",
+      "never": "Never",
+      "useCount": "{{count}} · {{days}} days",
+      "hasAlert": "Alerts about this rule: {{count}}",
+      "rowMenuLabel": "Actions for the rule {{pattern}}",
+      "rowSelect": "Select the rule {{pattern}}",
+      "loadMore": "Load more",
+      "loadingMore": "Loading more…"
+    },
+    "disabled": {
+      "banner": "Rules the update could not carry over, and no longer answer anything: {{count}}",
+      "open": "See the list",
+      "title": "Rules the update could not translate",
+      "description": "Each kept its old pattern, and why it was switched off. Revoking or recreating are the only things left to do with one.",
+      "loading": "Loading…",
+      "retry": "Try again",
+      "recreate": "Recreate",
+      "scopeDecision": "{{scope}} · {{decision}}"
     }
   },
   "transcript": {

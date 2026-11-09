@@ -166,6 +166,9 @@ export function testEnvironment(
   process.env['RC_PERMISSION_RULE_LIFETIME_MS'] = '60000';
   process.env['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS'] = '3600000';
   process.env['RC_PERMISSION_RULE_MAX_LIFETIME_MS'] = '86400000';
+  process.env['RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS'] = '7200000';
+  process.env['RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS'] = '172800000';
+  process.env['RC_PERMISSION_RULE_RESTORE_WINDOW_MS'] = '600000';
   // A push provider that does not exist, on purpose: a suite that is not about notifications
   // must never reach one, and an endpoint under `.invalid` cannot resolve by accident. The suite
   // that **is** about them overrides the sender.

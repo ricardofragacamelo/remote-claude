@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { UserId } from '@domain/auth';
-import { PermissionRule, answeredByRule, answeringRule } from '@domain/permission';
+import { PermissionRule, answeredByRule, answeringRule, matchingRules } from '@domain/permission';
 import type { PermissionRuleDraft, RuleQuestion } from '@domain/permission';
 import type { PermissionMode } from '@domain/session';
 import { SessionId } from '@domain/session';
@@ -81,6 +81,14 @@ describe('answeringRule', () => {
 
   it('never auto-approves in `readOnly`, and still refuses there — S-56', () => {
     // Whoever put the session into planning did not ask for an old rule to execute for them.
+    expect(answeringRule([allowAlways, allowSession], question('readOnly'))).toBeNull();
+    expect(answeringRule([allowAlways, denyProject], question('readOnly'))).toBe(denyProject);
+  });
+
+  it('regression — the composite-shell matcher of plan 15 changes nothing about precedence — S-19 of plan 15', () => {
+    const denyAlways = rule('deny-always', { decision: 'deny' });
+
+    expect(answeringRule([allowAlways, denyAlways], question())).toBe(denyAlways);
     expect(answeringRule([allowAlways, allowSession], question('readOnly'))).toBeNull();
     expect(answeringRule([allowAlways, denyProject], question('readOnly'))).toBe(denyProject);
   });
@@ -181,5 +189,34 @@ describe('a rule and the engine — S-94', () => {
 
     expect(answeringRule([onlyClaude], shellOf('claude'))).toBe(onlyClaude);
     expect(answeringRule([onlyClaude], shellOf('test-engine'))).toBeNull();
+  });
+});
+
+/**
+ * Every rule that matches, not only the one that answers — what "testar um comando" shows beside
+ * the refusal, so the person sees the `allow` that did not win (plan 15, B-14).
+ */
+describe('matchingRules', () => {
+  it('lists every rule that matches, deny and allow alike, in the order given', () => {
+    expect(matchingRules([allowAlways, denyProject], question())).toEqual([
+      allowAlways,
+      denyProject,
+    ]);
+  });
+
+  it('is the same predicate answeringRule picks its winner from', () => {
+    const matching = matchingRules([allowAlways, denyProject], question());
+
+    expect(answeringRule([allowAlways, denyProject], question())).toBe(
+      matching.find((candidate) => candidate.decision === 'deny'),
+    );
+  });
+
+  it('returns nothing a human-only kind could never be answered by', () => {
+    const humanOnly: RuleQuestion = { ...question(), tool: claudeTool('Bash', {}, project) };
+
+    expect(
+      matchingRules([allowAlways], { ...humanOnly, tool: { ...humanOnly.tool, kind: 'plan' } }),
+    ).toEqual([]);
   });
 });

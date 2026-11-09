@@ -234,14 +234,25 @@ repetição pura, e é onde o formato começa a divergir.
 
 | Serviço | `start-local` (fixa) | `run-e2e-local` |
 |---|---|---|
-| PostgreSQL | 5432 | aleatória |
-| Keycloak | 8180 | aleatória |
-| Backend | 3000 | aleatória |
-| Web | 5173 | aleatória |
+| PostgreSQL | 5432 — ou outra livre, se esta estiver em uso | aleatória |
+| Keycloak | 8180 — ou outra livre, se esta estiver em uso | aleatória |
+| Backend | 3000 — ou outra livre, se esta estiver em uso | aleatória |
+| Web | 5173 — ou outra livre, se esta estiver em uso | aleatória |
 
 O `docker-compose.yml` lê **toda** porta de variável com default, e `run-e2e-local.mjs` usa
 `--project-name` único por execução. É o que permite rodar e2e com a stack de desenvolvimento
 de pé, e duas suítes em paralelo no CI.
+
+Nenhuma das quatro portas fixas trava mais `pnpm dev`/`pnpm dev:public` quando já está em uso —
+por exemplo, por um stack Docker de outro projeto, ou um processo qualquer na máquina:
+`start-local.mjs` troca a porta fixa por uma livre (`resolveAvailablePorts`, em
+`scripts/lib/stack.mjs`) e avisa qual trocou. Web e Backend têm uma complicação a mais que
+Postgres e Keycloak: `pnpm mobile:install` e `pnpm mobile:local` resolvem a porta do Web sozinhos,
+a partir do `.env`, em **outro processo**, que nunca veria uma troca feita aqui — por isso
+`start-local.mjs` grava as portas que esta execução realmente usou em `.run/local-ports`
+(`recordLocalPorts`/`readRecordedPorts`), e os dois comandos do mobile leem esse arquivo antes de
+cair no padrão fixo. Uma `RC_WEB_PORT` explícita no `.env` continua tendo prioridade sobre o que
+foi gravado (`resolveWebPort`) — é uma escolha do desenvolvedor, não um acidente de porta ocupada.
 
 ---
 

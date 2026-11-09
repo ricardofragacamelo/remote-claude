@@ -5,6 +5,10 @@
  * authorising a command, and `08-authentication` puts them in the trail for that reason. So are
  * granting and revoking a permission rule: a rule is an authorisation given in advance, and "who
  * allowed this to run without asking, and when did they stop" has to be answerable from the trail.
+ * So is shortening or extending one's validity (plan 15, B-12), and exporting or importing a set of
+ * them (plan 15, B-18): the second is the set of things the agent may do on this machine without
+ * asking, leaving — knowing when is cheap and the file carries no secret of its own. A restored rule
+ * is a fresh `permission.ruleGranted` with `restoredFrom` in `details`, not a kind of its own.
  *
  * So is picking a conversation up again: a resume hands whoever asks the context of everything said
  * before, and a fork of one begun in the editor gives it a second life under a new id.
@@ -43,6 +47,9 @@ export const AUDIT_EVENT_KINDS = [
   'device.expired',
   'permission.ruleGranted',
   'permission.ruleRevoked',
+  'permission.ruleExpiryChanged',
+  'permission.rulesExported',
+  'permission.rulesImported',
   'session.resumed',
   'session.forked',
   'session.filesRewound',

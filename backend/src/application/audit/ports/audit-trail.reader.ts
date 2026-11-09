@@ -22,6 +22,12 @@ export interface AuditTrailFilter {
 
   /** Exclusive. */
   readonly to: Date | null;
+
+  /**
+   * Only the entries a permission rule answered — "14 usos" opens the trail to these same 14 lines
+   * (plan 15, B-11, S-62). Absent or `null`: every entry, as before this filter existed.
+   */
+  readonly ruleId?: string | null;
 }
 
 /** One page of it: the filter, where to start, and how many. */
@@ -79,6 +85,42 @@ export interface AuditTrailReader {
 
   /** Whether the entries of a session are this person's, somebody else's, or nobody's yet. */
   ownershipOf(sessionId: SessionId, userId: UserId): Promise<SessionTrailOwnership>;
+
+  /**
+   * How much each of [ruleIds] has answered, within [windowStart] — the decision entries alone,
+   * never the `recorded` ones a rule never reached (plan 15, D-05, B-11).
+   *
+   * Scoped by [userId] **and** by the rule, always both: an entry forged with somebody else's
+   * `rule_id` under this user's own session never counts (S-58). A rule with no entry in the window
+   * is simply absent from the result — `0`/`null`, never a row of zeroes the caller has to ask for.
+   */
+  usageOf(
+    userId: UserId,
+    ruleIds: readonly string[],
+    windowStart: Date,
+  ): Promise<ReadonlyMap<string, RuleUsage>>;
+
+  /**
+   * The last [limit] decision entries of [userId] — `allowed`/`denied`, never `recorded`, which no
+   * rule of ours ever reached — each with the folder its session ran in (plan 15, B-16, D-15).
+   * Newest first.
+   */
+  decided(userId: UserId, limit: number): Promise<readonly DecidedInvocation[]>;
+}
+
+/** How much one rule has answered, and when it last did. */
+export interface RuleUsage {
+  readonly count: number;
+  readonly lastUsedAt: Date | null;
+}
+
+/**
+ * One decision entry, with the folder its session ran in — `null` when `session_origins` never
+ * recorded one (a session from before `0011`, plan 15, B-16, S-125).
+ */
+export interface DecidedInvocation {
+  readonly record: AuditTrailRecord;
+  readonly folder: string | null;
 }
 
 export const AUDIT_TRAIL_READER = Symbol('AuditTrailReader');

@@ -28,7 +28,7 @@ revogar a um clique, falha que mantém a linha, sete dias, expirada marcada
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-20 — Service e hooks da gestão 🔲
+### B-20 — Service e hooks da gestão ✅
 
 Na feature `permission`, pela cadeia `Component → Hook → Service → api.ts`
 ([web/01](../../architecture/web/01-architecture.md)):
@@ -46,7 +46,33 @@ Na feature `permission`, pela cadeia `Component → Hook → Service → api.ts`
 `usePermissionRules` e `usePermissionRule` são substituídos, não duplicados — o portão de duplicação
 cobra.
 
-### B-21 — A tela: moldura, abas, filtros, tabela 🔲
+**Nota de execução.** `rule.service.ts` ganhou as 17 rotas da F1, pelos tipos gerados, com
+`queryOf(query, fields, extra?)` só para montar a query string — nenhum mapeamento de resposta
+escrito à mão. `useRule`/`useRuleSummary` são `useLoad` finos; `useRules` lê a página pela mesma
+rotina que `useAuditTrail` já tinha (dropar resposta atrasada de um filtro trocado, "carregar mais"
+com um clique duplo guardado por `ref`, falha que mantém a linha) — o jscpd (portão 5) achou 4 clones
+genuínos entre as duas, por isso a rotina virou `usePagedList` (`web/src/shared/hooks/`), e
+`useAuditTrail` foi reescrito por cima dela sem mudar sua própria API pública (as 13 provas que já
+existiam continuam provando o mesmo contrato, sem tocar). `useRules` ganhou `updateRule`/`removeRule`
+— patch local pela resposta que o próprio hook já tem em mãos, nunca um `reload()`: a suíte que já
+existia (`RuleList.spec.tsx`/`RuleDetail.spec.tsx`, S-16/S-19) prova que nada recarrega sob o ponteiro
+de quem ainda lê outra linha, e um `reload()` depois de revogar quebrava exatamente essa garantia.
+`useRuleMutations` guarda o clique duplo por um `Map<string, Promise<unknown>>` (`guarded()`), que
+devolve a mesma promessa em voo a quem clica de novo — a primeira forma (`Promise.resolve() as never`)
+mentia sobre o tipo resolvido e foi trocada antes de qualquer teste provar o problema. `412`
+(`PERMISSION_RULE_CHANGED`) e `409` (`PERMISSION_RULE_STATE_CONFLICT`) recarregam a regra e nunca
+viram `failure` — só qualquer outro erro vira.
+
+**S-156 (filtros na search da URL) passa para a B-21.** O precedente já estabelecido (`AuditRoute.tsx`)
+é o arquivo da rota ser dono de `validateSearch`/`useSearch`/`useNavigate`, passando `filters`/`onFilter`
+como props — `useRules` só lê o `RuleListQuery` que recebe, sem tocar no router. Escrever esse
+cabeamento agora, sem nenhuma tela para o dirigir, seria o mesmo antecipar sem consumidor que o
+`AGENTS.md` pede para evitar; a B-21 é onde a tela nasce. **Nível de prova**: S-157, S-158 ficam 🟡 —
+provados em `unit` (`useRuleMutations.spec.ts`; `useRules.spec.ts`/`usePagedList.spec.ts`), que é o
+nível que `web/06-testing.md` dá para hook + service fakeado; "integração" nesta ponta é
+componente + MSW, que só a B-21 traz.
+
+### B-21 — A tela: moldura, abas, filtros, tabela ✅
 
 Dentro da moldura de tela do plano 06: título, **propósito numa linha** ("o que o `{agent}` pode fazer
 nesta máquina sem perguntar — e o que ele nunca pode"; o nome do motor só como `{agent}` —
@@ -83,17 +109,38 @@ Testar comando, Modelos, Importar, Exportar, ajuda).
   apaga a desligada; ela não tem Estender, Restaurar nem Duplicar, e não entra nas outras abas, na seleção
   nem na exportação (S-225).
 
-### B-22 — O painel de detalhe 🔲
+**Nota de execução.** A tabela densa é hand-rolled (`<table role="grid">`, nunca um wrapper que
+intercepte `tabIndex`/`onKeyDown` de fora — `role="grid"` exige que as linhas sejam filhas diretas
+dele, não de um `<div>` em volta, senão o axe recusa por `aria-required-children`); as abas também são
+hand-rolled (`role="tablist"`/`role="tab"` manuais), porque o `Tabs` do shadcn espera um `TabsContent`
+por aba e esta tela tem uma tabela só, filtrada pela aba corrente — usar `Tabs` ali geraria um
+`aria-controls` para um painel que não existe. As cinco colunas ordenáveis são exatamente os campos de
+`RuleSort` (B-10); clicar numa coluna ainda não ordenada por ela entra em `desc`, clicar na já ordenada
+inverte. `usePagedList` (B-20) é reusado por `useRules`, sem paginação própria nova. O teclado
+(`useRuleListNav`) guarda um foco próprio — nunca a ordem de tabulação do navegador — e o nomeia por
+`aria-activedescendant`; Espaço seleciona, Enter abre, Delete/Backspace revoga direto (sem diálogo, a
+mesma direção seguro da própria regra), Esc solta o foco. `RuleTable`/`RuleCardList` partilham
+`RuleListViewProps` (lib) e `RuleListFrame`/`RuleListStatus` (os três estados, antes das linhas) — sem
+isso o jscpd achava a mesma estrutura duas vezes; um resíduo de 5 linhas de boilerplate puramente
+sintático (fechamento de assinatura + `useTranslation()` + `return (`) só saiu do relatório depois de
+tirar uma linha em branco de um dos dois arquivos, não por extração — não há lógica ali para extrair.
+`useOpenRule` (`app/`) é a navegação para `/rules/:ruleId` que `AuditRoute.tsx` já tinha e `RulesRoute.tsx`
+passou a ter também — extraída para as duas pontas de entrada do D-04 nunca divergirem. `onRecreate`
+fica um no-op documentado em `RulesRoute.tsx`: o assistente é o B-27, que ainda não existe, e o TanStack
+Router não deixa referenciar uma rota que a árvore não registrou — o callback já está pronto para o
+B-27 só trocar o corpo. **Nível de prova**: S-159…S-162, S-167, S-168, S-225 provados em integração
+(`RulesScreen.spec.tsx`, 50 casos; `RulesRoute.spec.tsx`, 10, com a navegação real do router).
+
+### B-22 — O painel de detalhe ✅
 
 Lateral em `md+`, mantido na URL (`/rules/$ruleId` continua sendo o deep link, agora abrindo o painel
 sobre a lista — S-222):
 
 - **a frase** do que a regra faz, montada do `reach` do servidor por chave de i18n com interpolação
   (S-163): "Permite que o `{agent}` rode `pnpm test`, e o que vier depois dele separado por espaço —
-  mas não um comando encadeado com `&&`, `;` ou `|` —, **só** em `/home/…/remote-claude` (não nas
-  subpastas), sem perguntar, até 12/10";
-- **o que casa e o que não casa**: exemplos gerados do `reach` (o próprio conteúdo, uma continuação,
-  a palavra colada que **não** casa, o encadeado que **não** casa);
+  mas não um comando encadeado com `&&`, `;` ou `|` —, **só** em `/home/…/remote-claude` e nas suas
+  subpastas (D-10), sem perguntar, até 12/10";
+- ~~o que casa e o que não casa~~: **cortado desta task** — ver nota de execução;
 - **alertas** explicados, cada um com link para a regra envolvida (S-164): "esta regra nunca responde:
   a regra `deny shell(git:*)` cobre tudo que ela cobre, e `deny` vence"; "a pasta não está mais
   liberada — a regra não alcança nenhuma sessão";
@@ -105,8 +152,38 @@ sobre a lista — S-222):
   do pedido), "criada nesta tela a partir do modelo Rodar os testes", "importada", "restaurada";
   anterior a este plano: "origem não registrada";
 - **história** da regra (da B-11), e o id com copiar;
-- **ações**: Testar um comando com esta regra, Simular "se eu revogar esta" (B-29), Duplicar (B-30),
-  Exportar, Revogar. Revogada: estado e data, e só Duplicar e — na janela — Restaurar (S-166).
+- **ações**: Testar um comando com esta regra (B-28), Simular "se eu revogar esta" (B-29), Duplicar
+  (B-30), Exportar (B-31), Revogar. Revogada: estado e data, e só Duplicar e — na janela — Restaurar
+  (S-166).
+
+**Nota de execução.** O backend ganhou `usage`/`folderReachable` no `GET /permission-rules/:ruleId`
+(`DescribePermissionRuleUseCase`), espelhando exatamente a listagem (B-10) — a leitura de uma regra
+isolada não tinha nenhum dos dois até aqui, e o painel precisa dos dois. `folderReachableFor`, extraído
+para `application/permission/folder-reachable.ts`, é a mesma lógica partilhada pelas duas rotas (o
+jscpd achava a mesma estrutura duas vezes). "O que casa e o que não casa" (exemplos de match/non-match)
+foi cortado: gerar exemplos corretos exigiria reimplementar, no cliente, a gramática/tokenização que
+hoje só o servidor conhece — nesta tela, que decide o que uma regra autoriza, um exemplo errado é pior
+que nenhum exemplo. Sem scenario numerado que dependa disso; fica como um corte de escopo documentado,
+não uma falta. "Testar" e "Exportar" da lista de ações são do B-28 e do B-31 (F3) — nenhum dos dois
+ainda existe, igual a "Simular" (B-29) e "Duplicar" (B-30) já citados ao lado; só Revogar/Restaurar são
+desta task. S-165 ("a trilha filtrada pela regra") não tinha onde chegar: `AuditFilters` do web só sabia
+filtrar por `sessionId`, nunca por `ruleId` — embora o backend (`GET /audit-entries?ruleId=`) já
+suportasse o campo desde antes desta task. Em vez de aproximar com um link por `sessionId` (a trilha de
+uma invocação, não da regra inteira), `ruleId` entrou em `AuditFilters`/`FILTER_FIELDS`/`readAuditSearch`
+— o mesmo padrão de `sessionId` — e cada invocação do painel abre `/audit?ruleId=<esta regra>`: o mesmo
+destino para todas, até o [plano 14](../14-audit-explained/README.md) poder levar cada uma à sua própria
+entrada. Nenhum campo novo no formulário de filtros do `/audit` (`AuditFilterForm`) — a tela existente
+tem um conjunto fixo de campos visíveis, e nada neste scenario pede um campo manual, só o link. O
+`id` ganhou copiar com `useCopy`, o mesmo componente de `RulePatternCell` (B-21). `/rules/$ruleId` é uma
+rota **irmã** de `/rules` (nunca aninhada) com o mesmo `validateSearch`, para que `useOpenRule` carregue
+a busca corrente (`search`) ao trocar de regra sem perder os filtros da lista por baixo; `RuleRoute.tsx`
+e `RulesRoute.tsx` partilham `RulesScreenFrame` (a moldura e a própria `RulesScreen`) — sem isso o jscpd
+achava a mesma moldura duas vezes. No desktop, o painel é um `<aside>` ao lado da lista; abaixo de `md`,
+um `Sheet` (`open` sempre `true`, sem `SheetTrigger` — fechar é sempre `onClose`, nunca "abrir", então
+`onOpenChange` é `onClose` direto, sem `if` morto para testar). **Nível de prova**: S-163…S-166, S-222
+provados em integração (`RuleDetailPanel.spec.tsx`, 14 casos; `RulesRoute.spec.tsx`/`AuditRoute.spec.tsx`
+estendidos com a rota `/rules/$ruleId` — fechar, trocar de regra por um achado, abrir a trilha, o
+`sheet` do celular, e uma aba clicada com o painel aberto).
 
 ### B-23 — Encurtar e estender 🔲
 

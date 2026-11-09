@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -24,7 +25,11 @@ import {
   loadDotEnv,
   projectName,
   issuerThrough,
+  readRecordedPorts,
+  recordLocalPorts,
+  resolveAvailablePorts,
   resolvePorts,
+  resolveWebPort,
   serviceUrls,
   watchEnvironment,
   webLoopbackOrigin,
@@ -32,21 +37,43 @@ import {
   withWebIssuer,
   workspaceStatus,
 } from '../../../scripts/lib/stack.mjs';
+import { findFreePort, isPortFree } from '../../../scripts/lib/ports.mjs';
 import { ALLOWLIST_FILE } from '../../../scripts/lib/workspaces.mjs';
 
 /** @type {string[]} */
 const temporary = [];
 
-afterEach(() => {
+/** @type {net.Server[]} */
+const servers = [];
+
+afterEach(async () => {
   for (const dir of temporary.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+
+  await Promise.all(
+    servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 
 function tempDir() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-stack-'));
   temporary.push(dir);
   return dir;
+}
+
+/**
+ * Binds a port so a probe of it reports taken, the way another project's container would.
+ *
+ * @param {number} port
+ * @returns {Promise<void>}
+ */
+function occupy(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    servers.push(server);
+    server.listen({ port, host: '127.0.0.1', exclusive: true }, () => resolve());
+  });
 }
 
 describe('resolvePorts', () => {
@@ -82,6 +109,165 @@ describe('resolvePorts', () => {
 
   it('refuses a fractional port', () => {
     expect(() => resolvePorts({ RC_BACKEND_PORT: '3000.5' })).toThrow(/not a valid TCP port/);
+  });
+});
+
+describe('resolveAvailablePorts', () => {
+  /**
+   * An environment with every fixed port pointed at one the OS says is free right now — so a test
+   * never depends on 5432 or 8180 being free on the machine it runs on, the way `pnpm doctor`
+   * reported both taken on this one.
+   *
+   * @returns {Promise<Record<string, string>>}
+   */
+  async function freeEnv() {
+    return Object.fromEntries(
+      await Promise.all(
+        PORT_VARIABLES.map(async ({ variable }) => [variable, String(await findFreePort())]),
+      ),
+    );
+  }
+
+  it('leaves every port alone when all four are free', async () => {
+    const env = await freeEnv();
+    const before = resolvePorts(env);
+
+    const { ports, reassigned } = await resolveAvailablePorts(env);
+
+    expect(ports).toEqual(before);
+    expect(reassigned.size).toBe(0);
+  });
+
+  it('swaps Postgres for a free port when the fixed one is taken — the clash `pnpm doctor` warns about', async () => {
+    const env = await freeEnv();
+    const taken = Number(env.RC_POSTGRES_PORT);
+    await occupy(taken);
+
+    const { ports, reassigned } = await resolveAvailablePorts(env);
+
+    expect(ports.postgres).not.toBe(taken);
+    await expect(isPortFree(ports.postgres)).resolves.toBe(true);
+    expect(reassigned).toEqual(new Map([['postgres', ports.postgres]]));
+  });
+
+  it('writes the swapped port back onto the given environment, for compose to inherit', async () => {
+    const env = await freeEnv();
+    await occupy(Number(env.RC_KEYCLOAK_PORT));
+
+    const { ports } = await resolveAvailablePorts(env);
+
+    expect(env.RC_KEYCLOAK_PORT).toBe(String(ports.keycloak));
+  });
+
+  it('also swaps Backend or Web when they are taken — `recordLocalPorts` is what tells mobile tooling', async () => {
+    const env = await freeEnv();
+    const takenBackend = Number(env.RC_BACKEND_PORT);
+    const takenWeb = Number(env.RC_WEB_PORT);
+    await Promise.all([occupy(takenBackend), occupy(takenWeb)]);
+
+    const { ports, reassigned } = await resolveAvailablePorts(env);
+
+    expect(ports.backend).not.toBe(takenBackend);
+    expect(ports.web).not.toBe(takenWeb);
+    expect(reassigned.size).toBe(2);
+  });
+
+  it('swaps every taken port independently when all four are taken at once', async () => {
+    const env = await freeEnv();
+    const taken = { ...env };
+    await Promise.all(Object.values(taken).map((port) => occupy(Number(port))));
+
+    const { ports, reassigned } = await resolveAvailablePorts(env);
+
+    expect(reassigned.size).toBe(4);
+    const assigned = Object.values(/** @type {Record<string, number>} */ (ports));
+    expect(new Set(assigned).size).toBe(4);
+    expect(assigned).not.toContain(Number(taken.RC_POSTGRES_PORT));
+    expect(assigned).not.toContain(Number(taken.RC_KEYCLOAK_PORT));
+    expect(assigned).not.toContain(Number(taken.RC_BACKEND_PORT));
+    expect(assigned).not.toContain(Number(taken.RC_WEB_PORT));
+  });
+
+  it('is idempotent: running it again on its own output finds nothing left to swap', async () => {
+    const env = await freeEnv();
+    await occupy(Number(env.RC_POSTGRES_PORT));
+    const first = await resolveAvailablePorts(env);
+
+    const second = await resolveAvailablePorts(env);
+
+    expect(second.ports).toEqual(first.ports);
+    expect(second.reassigned.size).toBe(0);
+  });
+
+  it('still refuses a port that is not valid, before probing anything', async () => {
+    const env = await freeEnv();
+    env.RC_WEB_PORT = 'nope';
+
+    await expect(resolveAvailablePorts(env)).rejects.toThrow(/RC_WEB_PORT="nope"/);
+  });
+});
+
+describe('recordLocalPorts and readRecordedPorts', () => {
+  const ports = { postgres: 54_321, keycloak: 54_322, backend: 54_323, web: 54_324 };
+
+  it('reads back exactly what it wrote', () => {
+    const file = path.join(tempDir(), 'local-ports');
+
+    recordLocalPorts(file, ports);
+
+    expect(readRecordedPorts(file)).toEqual(ports);
+  });
+
+  it('creates the directory of the file when it does not exist yet', () => {
+    const file = path.join(tempDir(), 'nested', 'run', 'local-ports');
+
+    expect(() => recordLocalPorts(file, ports)).not.toThrow();
+    expect(readRecordedPorts(file)).toEqual(ports);
+  });
+
+  it('overwrites the previous record instead of appending to it', () => {
+    const file = path.join(tempDir(), 'local-ports');
+    recordLocalPorts(file, ports);
+
+    recordLocalPorts(file, { ...ports, web: 9999 });
+
+    expect(readRecordedPorts(file)?.web).toBe(9999);
+  });
+
+  it('answers null when there is no file yet', () => {
+    expect(readRecordedPorts(path.join(tempDir(), 'does-not-exist'))).toBeNull();
+  });
+
+  it('answers null when a port is missing — a hand-edited file, not a run of `pnpm dev`', () => {
+    const file = path.join(tempDir(), 'local-ports');
+    fs.writeFileSync(file, 'postgres=54321\nkeycloak=54322\nbackend=54323\n');
+
+    expect(readRecordedPorts(file)).toBeNull();
+  });
+
+  it('answers null when a value is not a valid port', () => {
+    const file = path.join(tempDir(), 'local-ports');
+    fs.writeFileSync(file, 'postgres=54321\nkeycloak=54322\nbackend=54323\nweb=nope\n');
+
+    expect(readRecordedPorts(file)).toBeNull();
+  });
+});
+
+describe('resolveWebPort', () => {
+  it('uses the plan default when nothing is set and nothing was recorded', () => {
+    expect(resolveWebPort({}, null)).toBe(5173);
+  });
+
+  it('uses what was recorded when RC_WEB_PORT is not set', () => {
+    expect(resolveWebPort({}, 41_337)).toBe(41_337);
+  });
+
+  it('prefers RC_WEB_PORT over the recorded port — an explicit setting is a choice', () => {
+    expect(resolveWebPort({ RC_WEB_PORT: '6000' }, 41_337)).toBe(6000);
+  });
+
+  it('still refuses an RC_WEB_PORT that is not a valid port', () => {
+    expect(() => resolveWebPort({ RC_WEB_PORT: 'nope' }, 41_337)).toThrow(/RC_WEB_PORT="nope"/);
   });
 });
 

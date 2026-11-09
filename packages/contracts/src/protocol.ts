@@ -112,6 +112,49 @@ export interface AgentModel {
   readonly supportsEffort: boolean;
 }
 
+/** One account fact, as the client sees it — shared by `GET /audit-events` (plan 06, B-40; plan 07, B-17) and `GET /permission-rules/:ruleId/history` (plan 15, B-11), which reads the same facts filtered by `subjectId`. The owner is the caller, so it is not here. */
+export interface AuditEventFact {
+  readonly id: string;
+  /** A genuinely open vocabulary — `file.`, `file.written`, a device or a rule event — never a fixed enum. */
+  readonly kind: string;
+  /** What the fact is about — for a file, its real path; for a rule's own history, the rule itself. */
+  readonly subjectId: string;
+  /** How to show the subject — for a file, its path; for a rule, its pattern at the moment of the fact. */
+  readonly subjectLabel: string;
+  /** Sizes, hashes, origin and destination, before/after values — never the contents of a file. Open: shaped by the kind. */
+  readonly details: Readonly<Record<string, unknown>> | null;
+  readonly at: string;
+}
+
+/** What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one. */
+export interface AuditTrailEntryVerdict {
+  readonly requestId: string;
+  readonly auto: boolean;
+  readonly ruleId: string | null;
+  readonly scope: 'once' | 'session' | 'project' | 'always';
+  readonly resolvedBy: string | null;
+  readonly resolvedFrom: string | null;
+}
+
+/** One entry of the trail, as the client sees it — shared by `GET /audit-entries` (plan 03) and `GET /permission-rules/:ruleId/invocations` (plan 15, B-11), which reads the same entries filtered by `ruleId`. The owner is not here: it is always the caller. */
+export interface AuditTrailEntry {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly toolUseId: string | null;
+  /** The engine's own name of the tool, kept beside the kind. */
+  readonly toolName: string;
+  /** The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33). */
+  readonly kind: string;
+  /** Exactly as the tool was called — except a `file.read`, which shows its path and window alone. Open: shaped by the tool, never fixed. */
+  readonly input: Readonly<Record<string, unknown>>;
+  readonly decision: 'recorded' | 'allowed' | 'denied';
+  readonly at: string;
+  /** What leads from the entry to the log and the events of the same turn. */
+  readonly traceId: string | null;
+  /** What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one. */
+  readonly verdict: AuditTrailEntryVerdict | null;
+}
+
 /** One component's version, for `GET /diag/versions` (plan 06, B-12; plan 28, B-37): the number, or `null` and a closed, stable reason — never a failure, because the screen exists precisely for when something is wrong. */
 export interface ComponentVersion {
   readonly version: string | null;
@@ -417,12 +460,52 @@ export interface OpenFolderEntry {
   readonly state: 'available' | 'notAllowed' | 'missing';
 }
 
+/** One thing the redundancy/overlap/conflict analysis says about a rule or a draft, against the caller's active rules (plan 15, B-15). */
+export interface PermissionRuleFinding {
+  readonly kind: 'identical' | 'redundant' | 'shadowedByDeny' | 'overlapsDeny' | 'tooBroad' | 'unreachable';
+  /** The other rules the finding is about, besides the one it is attached to — empty for a finding that is about that rule alone (`tooBroad`, `unreachable`). */
+  readonly ruleIds: readonly string[];
+  readonly messageKey: string;
+  /** The parameters of the message — an open object, as every other `messageKey`/`params` pair in this contract. */
+  readonly params: Readonly<Record<string, unknown>>;
+}
+
+/** What a rule's pattern reaches, structured by the domain over the canonical grammar (`describeReach`) — what a screen writes its sentence from, never the client reinterpreting the pattern (plan 03, D-12; plan 15, B-02). */
+export interface PermissionRuleReach {
+  /** The engine the reach is bounded to, or absent/`null` when the rule's `kind` reaches every engine that has it. */
+  readonly engine?: string | null;
+  /** The canonical kind, repeated here so the reach is self-contained. */
+  readonly kind: string;
+  /** `any` — the whole kind, no matcher; `exact` — the literal matcher; `prefix` — a `:*` or glob prefix, bounded at a token or path-segment edge. */
+  readonly form: 'any' | 'exact' | 'prefix';
+  /** The matcher's own text (the command, the path glob, the domain, the MCP server/tool) — `null` on `form: any`. */
+  readonly content: string | null;
+  /** `true` when an `allow` prefix in `shell` does not cover a command carrying a shell operator (plan 15, D-07) — the one case where the reach says less than the prefix reads. */
+  readonly excludesCompound: boolean;
+}
+
+/** Deprecated in favour of `legacyPattern` and `disabledReason` below (plan 15, D-20 revision): `reason` is an opaque string, not translatable. Kept so the current `PermissionRulesController` keeps compiling until F1 rewires it to the two richer fields. */
 export interface PermissionRuleDisabled {
   /** Why the rule was switched off — a rule written in an engine's grammar that had no unambiguous canonical translation. */
   readonly reason: string;
 }
 
-/** One rule that outlives a session, as the client sees it (plan 03; plan 28, B-33). `status` is computed at the moment of the answer, because the list shows an expired rule marked and not missing. */
+/** A `messageKey` and its `params` — never a string the server already rendered. Whoever shows it translates (plan 15, B-02: a rule's disabled reason, an evaluation's reasons and caveats, a draft's findings). */
+export interface TranslatedMessage {
+  readonly messageKey: string;
+  /** The parameters of the message — an open object, as every other `messageKey`/`params` pair in this contract. */
+  readonly params: Readonly<Record<string, unknown>>;
+}
+
+/** How much this rule has answered, from the trail (plan 15, D-05) — absent until the route that fills it exists. */
+export interface PermissionRuleUsage {
+  readonly count: number;
+  readonly lastUsedAt: string | null;
+  /** The retention window the count is scoped to — 90, today. */
+  readonly windowDays: number;
+}
+
+/** One rule that outlives a session, as the client sees it (plan 03; plan 28, B-33; plan 15, B-02). `status` is computed at the moment of the answer, because the list shows an expired rule marked and not missing. The fields below `disabled` are plan 15's additions to the management screen: every one of them is optional here because the routes that fill them in are implemented phase by phase (F1); the normative contract — where each is always present — is `backend/03-modules.md`'s `permission` section, not this flag. */
 export interface PermissionRule {
   readonly id: string;
   /** The scope of a granted rule. `session` is part of the domain's type but every rule reachable from these routes is `project` or `always`: a `session` rule lives in memory only and is never persisted or listed here. */
@@ -443,7 +526,34 @@ export interface PermissionRule {
   readonly expiresAt: string;
   readonly status: 'active' | 'expired' | 'revoked' | 'disabled';
   readonly revokedAt: string | null;
+  /** Deprecated in favour of `legacyPattern` and `disabledReason` below (plan 15, D-20 revision): `reason` is an opaque string, not translatable. Kept so the current `PermissionRulesController` keeps compiling until F1 rewires it to the two richer fields. */
   readonly disabled: PermissionRuleDisabled | null;
+  /** Absent on a rule a route has not been taught to fill yet, and always absent on a `disabled` rule, which has no canonical pattern to describe. */
+  readonly reach?: PermissionRuleReach | null;
+  /** How wide the pattern reaches, by the domain's table per `kind` (plan 15, D-09). Absent on a route that has not been taught to fill it yet, and always absent/`null` on a `disabled` rule. */
+  readonly breadth?: 'narrow' | 'broad' | 'unbounded' | null;
+  /** On a `disabled` rule only: the pattern exactly as it was written, in the engine's own grammar — opaque text, never reparsed (plan 15, D-20 revision). `null`/absent on every other rule. */
+  readonly legacyPattern?: string | null;
+  /** On a `disabled` rule only: why the plan 28 migration could not translate it — translatable, unlike `disabled.reason` above. `null`/absent on every other rule. */
+  readonly disabledReason?: TranslatedMessage | null;
+  /** What the redundancy/overlap/conflict analysis (plan 15, B-15) says about this rule against the caller's other active rules — absent until that route exists. */
+  readonly findings?: readonly PermissionRuleFinding[];
+  /** How much this rule has answered, from the trail (plan 15, D-05) — absent until the route that fills it exists. */
+  readonly usage?: PermissionRuleUsage | null;
+  /** How the rule came to exist — `null` for a rule granted before this column existed (plan 15, B-07). Absent until the route that fills it exists. */
+  readonly grantedVia?: 'approval' | 'request' | 'import' | 'restore' | null;
+  /** The permission request the card answered, when `grantedVia` is `approval` — `null`/absent otherwise. */
+  readonly grantedFromRequestId?: string | null;
+  /** The catalog template this rule came from, when it was granted via a template — `null`/absent otherwise. */
+  readonly templateId?: string | null;
+  /** The revoked rule this one restores, when `grantedVia` is `restore` — `null`/absent otherwise (plan 15, D-11). */
+  readonly restoredFrom?: string | null;
+  /** Whether a `project` rule's folder is still in the caller's allowlist, checked by the pure rule without touching disk — `null`/absent on an `always` rule, and absent until the route that fills it exists. */
+  readonly folderReachable?: boolean | null;
+  /** Derived from `expiresAt` and `revokedAt` — there is no version column. What `PATCH /permission-rules/:ruleId` conditions its write on. Absent until the route that fills it exists. */
+  readonly etag?: string | null;
+  /** How far `PATCH /permission-rules/:ruleId` may extend this rule's validity, counted from the moment it was read (plan 15, D-14) — the installation's ceiling for this `decision`, `deny` living longer than `allow` (D-04). `null`/absent on a `disabled` rule, which answers nothing and has no validity to extend. Absent until the route that fills it exists. */
+  readonly expiryCeiling?: string | null;
 }
 
 /** What was approved, for `state` `approved` or `changed` — `null` for `pending`/`rejected`, and for a decision recorded before this field existed (plan 13, B-28, D-80). The screen diffs this against the fields above, the current content, for a `changed` entry. */
@@ -1347,59 +1457,16 @@ export interface WorkspaceWatchStoppedPayload {
   readonly reason: 'allowlistChanged' | 'folderDeleted' | 'systemLimit';
 }
 
-/** One fact, as the client sees it. The owner is the caller, so it is not here. */
-export interface AuditEventPagePayloadEventsItem {
-  readonly id: string;
-  /** A genuinely open vocabulary — `file.`, `file.written`, a device or a rule event — never a fixed enum. */
-  readonly kind: string;
-  /** What the fact is about — for a file, its real path. */
-  readonly subjectId: string;
-  /** How to show the subject — for a file, its path relative to the open folder. */
-  readonly subjectLabel: string;
-  /** Sizes, hashes, origin and destination, counts — never the contents of a file. Open: shaped by the kind. */
-  readonly details: Readonly<Record<string, unknown>> | null;
-  readonly at: string;
-}
-
 /** `GET /audit-events`: the account facts, read — devices, rules, conversations, undos, file writes (plan 06, B-40; plan 07, B-17). */
 export interface AuditEventPagePayload {
-  readonly events: readonly AuditEventPagePayloadEventsItem[];
+  readonly events: readonly AuditEventFact[];
   /** Opaque to the client: send it back as `cursor`. `null` on the last page. */
   readonly nextCursor: string | null;
 }
 
-/** What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one. */
-export interface AuditTrailPagePayloadEntriesItemVerdict {
-  readonly requestId: string;
-  readonly auto: boolean;
-  readonly ruleId: string | null;
-  readonly scope: 'once' | 'session' | 'project' | 'always';
-  readonly resolvedBy: string | null;
-  readonly resolvedFrom: string | null;
-}
-
-/** One entry of the trail, as the client sees it. The owner is not here: it is always the caller. */
-export interface AuditTrailPagePayloadEntriesItem {
-  readonly id: string;
-  readonly sessionId: string;
-  readonly toolUseId: string | null;
-  /** The engine's own name of the tool, kept beside the kind. */
-  readonly toolName: string;
-  /** The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33). */
-  readonly kind: string;
-  /** Exactly as the tool was called — except a `file.read`, which shows its path and window alone. Open: shaped by the tool, never fixed. */
-  readonly input: Readonly<Record<string, unknown>>;
-  readonly decision: 'recorded' | 'allowed' | 'denied';
-  readonly at: string;
-  /** What leads from the entry to the log and the events of the same turn. */
-  readonly traceId: string | null;
-  /** What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one. */
-  readonly verdict: AuditTrailPagePayloadEntriesItemVerdict | null;
-}
-
 /** `GET /audit-entries`: the caller's trail, newest first, one page at a time — "what ran on my machine, and who let it?" (plan 03). */
 export interface AuditTrailPagePayload {
-  readonly entries: readonly AuditTrailPagePayloadEntriesItem[];
+  readonly entries: readonly AuditTrailEntry[];
   /** Opaque to the client: send it back as `cursor` for the next page. `null` on the last one. */
   readonly nextCursor: string | null;
 }
@@ -1916,9 +1983,176 @@ export interface OpenFoldersPayload {
   readonly folders: readonly OpenFolderEntry[];
 }
 
-/** `GET /permission-rules`: the caller's rules, newest first — expired ones included and marked, revoked ones gone (plan 03). */
-export interface PermissionRuleListPayload {
+/** `POST /permission-rules/revoke` and `POST /permission-rules/restore`: several rules from one call, atomic in validation and in the write (plan 15, B-13, D-06, D-11) — every id is checked before anything is written, and the rules this call touched come back together, each the same shape `GET /permission-rules/:ruleId` returns. */
+export interface PermissionRuleBatchPayload {
+  /** One entry per id given, in the same order — a rule already revoked (or already restored) is idempotent and still comes back. */
   readonly rules: readonly PermissionRule[];
+}
+
+/** `POST /permission-rules/evaluate`: testing a command without running it — the same precedence a live session uses, over the caller's own rules (plan 15, B-14). No effect of any kind: nothing is stored, no event, no push. */
+export interface PermissionRuleEvaluationPayload {
+  readonly outcome: 'allow' | 'deny' | 'ask';
+  /** The rule that answers, `null` when no rule does — the mode may still answer (see `reasons`). */
+  readonly answeringRule: PermissionRule | null;
+  /** Every rule that matched, the one that answered included — what explains "why my allow did not win". */
+  readonly matching: readonly PermissionRule[];
+  readonly reasons: readonly ('ruleAnswers' | 'denyWins' | 'readOnlyMode' | 'allowAllMode' | 'noRule')[];
+  /** What the engine decides before any rule of ours is even asked (plan 15, D-12) — declared by the engine's adapter, never guessed here. */
+  readonly caveats: readonly TranslatedMessage[];
+}
+
+export interface PermissionRuleExportPayloadRulesItem {
+  /** Absent for a canonical rule — present only when restricted to one engine. */
+  readonly engine?: string;
+  readonly pattern: string;
+  readonly decision: 'allow' | 'deny';
+  readonly scope: 'project' | 'always';
+  readonly projectPath: string | null;
+  /** Informative only — ignored on import (D-17). */
+  readonly expiresAt: string;
+}
+
+/** `GET /permission-rules/export`: the caller's own rules, in the `remote-claude.permission-rules` file format (plan 15, B-18, D-17). No `id`, no `userId`, no origin; a `disabled` rule never leaves. */
+export interface PermissionRuleExportPayload {
+  readonly format: 'remote-claude.permission-rules';
+  readonly version: 1;
+  readonly exportedAt: string;
+  readonly rules: readonly PermissionRuleExportPayloadRulesItem[];
+}
+
+/** `GET /permission-rules/:ruleId/history`: the events of one rule — granted, validity changed, revoked, restored (plan 15, B-11). A restored rule is a fresh `permission.ruleGranted`, with `restoredFrom` in `details`, not a kind of its own. The same facts `GET /audit-events` shows, filtered by this rule's id as the subject. */
+export interface PermissionRuleHistoryPayload {
+  readonly events: readonly AuditEventFact[];
+}
+
+export interface PermissionRuleImportPreviewPayloadItemsItem {
+  readonly index: number;
+  readonly pattern: string;
+  readonly decision: string;
+  readonly scope: string;
+  readonly verdict: 'new' | 'existing' | 'invalid';
+  /** Present for `new`/`existing` — absent for `invalid`. */
+  readonly breadth?: 'narrow' | 'broad' | 'unbounded';
+  /** Present for `invalid` — the code applying this item would answer with. */
+  readonly code?: string;
+}
+
+/** `POST /permission-rules/import/preview`: one verdict per item of an import file — `new`, `existing`, or `invalid` with the code that would refuse it (plan 15, B-18, D-17). Read only — nothing is written, and a `project` item's path is not resolved yet (no `folderMap` until applying). */
+export interface PermissionRuleImportPreviewPayload {
+  /** Of the file's own bytes — sent back on apply, to prove it is the same file (S-143). */
+  readonly digest: string;
+  readonly items: readonly PermissionRuleImportPreviewPayloadItemsItem[];
+}
+
+export interface PermissionRuleImportResultPayloadCounts {
+  readonly created: number;
+  /** Already active before this call — the grant routine's own idempotency, not a second write. */
+  readonly existing: number;
+}
+
+/** `POST /permission-rules/import`: what applying an accepted lot of an import file actually created (plan 15, B-18, D-17). Revalidated against this installation right before writing — an item accepted at preview that would now be refused fails the whole call, nothing written. */
+export interface PermissionRuleImportResultPayload {
+  readonly counts: PermissionRuleImportResultPayloadCounts;
+  /** Every accepted item's rule, in the order it was accepted. */
+  readonly rules: readonly PermissionRule[];
+}
+
+/** `GET /permission-rules/:ruleId/invocations`: the invocations a rule answered, keyset descendent over the trail's own `seq` — the same entries `GET /audit-entries` shows, filtered by this rule's id (plan 15, B-11, S-61, S-62). */
+export interface PermissionRuleInvocationPagePayload {
+  readonly invocations: readonly AuditTrailEntry[];
+  /** Opaque: echo it as `cursor` for the page after this one. `null` once there is none. */
+  readonly nextCursor: string | null;
+}
+
+/** `GET /permission-rules`: the caller's rules, newest first — expired ones included and marked, revoked ones gone (plan 03). Paginated by cursor over `(granted_at, id)` (plan 15, D-13, decided 2026-11-05 against the plan's own original recommendation of a flat list with a ceiling): the first page with no `cursor` is unchanged in content from before plan 15, which is what keeps the published app — which reads neither `cursor` nor `nextCursor` — on the same contract (S-01, S-02). `nextCursor` is optional here only because the cursor read is wired phase by phase (F1, B-10); the normative contract, where it is always present, is `backend/03-modules.md`'s `permission` section. */
+export interface PermissionRuleListPayload {
+  /** One page — at most `pageSize` (default 50, ceiling 200). */
+  readonly rules: readonly PermissionRule[];
+  /** Opaque to the client: send it back as `cursor` for the next page. `null` on the last one. */
+  readonly nextCursor?: string | null;
+}
+
+/** `POST /permission-rules/preview`: what a pattern nobody has granted yet would reach, and what it would mean against the caller's active rules (plan 15, B-15). Never refused for its breadth — that is `POST /permission-rules`'s job, only after the person decides to acknowledge it. */
+export interface PermissionRulePreviewPayload {
+  /** The pattern exactly as given, in the canonical grammar. */
+  readonly pattern: string;
+  readonly reach: PermissionRuleReach;
+  readonly breadth: 'narrow' | 'broad' | 'unbounded';
+  /** What the redundancy/overlap/conflict analysis says about this draft, against the caller's active rules (plan 15, B-15). */
+  readonly findings: readonly PermissionRuleFinding[];
+}
+
+export interface PermissionRuleSimulationPayloadCounts {
+  readonly unchanged: number;
+  readonly wouldAutoAllow: number;
+  readonly wouldAutoDeny: number;
+  readonly wouldAsk: number;
+}
+
+export interface PermissionRuleSimulationPayloadChangesItem {
+  readonly before: 'allow' | 'deny';
+  readonly after: 'allow' | 'deny' | 'ask';
+  readonly entry: AuditTrailEntry;
+  /** The rule that would answer now — `null` when none would (the mode may still answer). */
+  readonly answeringRule: PermissionRule | null;
+}
+
+/** `POST /permission-rules/simulate`: what adding or removing rules would have changed in the caller's last invocations, against the trail's own record of what was actually decided (plan 15, B-16, D-15). Read only — nothing is stored, no event, no push. The mode is never in the trail, so every invocation is read under the canonical `ask`. */
+export interface PermissionRuleSimulationPayload {
+  readonly counts: PermissionRuleSimulationPayloadCounts;
+  /** Only the invocations whose verdict would change — the trail shows the rest unmoved. */
+  readonly changes: readonly PermissionRuleSimulationPayloadChangesItem[];
+  /** Invocations with no folder on record — too old for `session_origins` (S-125). */
+  readonly withoutFolder: number;
+  /** The mode every invocation is read under, since the trail never kept the real one (D-15). */
+  readonly assumedMode: 'ask';
+}
+
+export interface PermissionRuleSummaryPayloadByStatus {
+  readonly active: number;
+  readonly expired: number;
+  readonly revoked: number;
+  /** The rules the plan 28 migration switched off (plan 15, D-20 revision). */
+  readonly disabled: number;
+}
+
+export interface PermissionRuleSummaryPayloadByDecision {
+  readonly allow: number;
+  readonly deny: number;
+}
+
+export interface PermissionRuleSummaryPayloadByScope {
+  readonly project: number;
+  readonly always: number;
+}
+
+/** `GET /permission-rules/summary`: counts over the same predicate the listing reads — for the tabs and the navigation badge (plan 15, B-10). */
+export interface PermissionRuleSummaryPayload {
+  readonly byStatus: PermissionRuleSummaryPayloadByStatus;
+  readonly byDecision: PermissionRuleSummaryPayloadByDecision;
+  readonly byScope: PermissionRuleSummaryPayloadByScope;
+  /** Active rules expiring before the `expiresBefore` filter — `0` when it was not given. */
+  readonly expiringBefore: number;
+}
+
+export interface PermissionRuleTemplatesPayloadTemplatesItemRulesItem {
+  /** The pattern exactly as the catalog wrote it, in the canonical grammar. */
+  readonly pattern: string;
+  readonly decision: 'allow' | 'deny';
+  readonly reach: PermissionRuleReach;
+  readonly breadth: 'narrow' | 'broad' | 'unbounded';
+}
+
+export interface PermissionRuleTemplatesPayloadTemplatesItem {
+  readonly id: string;
+  readonly name: TranslatedMessage;
+  readonly description: TranslatedMessage;
+  readonly rules: readonly PermissionRuleTemplatesPayloadTemplatesItemRulesItem[];
+}
+
+/** `GET /permission-rules/templates`: the catalog of pre-built rule bundles, canonical and the same for every engine (plan 15, B-17, D-16). Applying one is an import (B-18), by `templateId`. */
+export interface PermissionRuleTemplatesPayload {
+  readonly templates: readonly PermissionRuleTemplatesPayloadTemplatesItem[];
 }
 
 export interface PermissionStatePayloadAnswersItem {
@@ -2263,6 +2497,16 @@ export const MCP_SERVER_LIMITS = {
   headerNames: { maxItems: 64 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link PermissionRuleFinding}. */
+export const PERMISSION_RULE_FINDING_LIMITS = {
+  ruleIds: { maxItems: 20 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRule}. */
+export const PERMISSION_RULE_LIMITS = {
+  findings: { maxItems: 50 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link ProjectMcpServerApprovedSnapshot}. */
 export const PROJECT_MCP_SERVER_APPROVED_SNAPSHOT_LIMITS = {
   args: { maxItems: 64 },
@@ -2544,9 +2788,61 @@ export const OPEN_FOLDERS_PAYLOAD_LIMITS = {
   folders: { maxItems: 256 },
 } as const;
 
+/** The bounds the schema gives the fields of {@link PermissionRuleBatchPayload}. */
+export const PERMISSION_RULE_BATCH_PAYLOAD_LIMITS = {
+  rules: { maxItems: 100 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRuleEvaluationPayload}. */
+export const PERMISSION_RULE_EVALUATION_PAYLOAD_LIMITS = {
+  matching: { maxItems: 100 },
+  reasons: { maxItems: 5 },
+  caveats: { maxItems: 10 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRuleHistoryPayload}. */
+export const PERMISSION_RULE_HISTORY_PAYLOAD_LIMITS = {
+  events: { maxItems: 100 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRuleImportPreviewPayloadItemsItem}. */
+export const PERMISSION_RULE_IMPORT_PREVIEW_PAYLOAD_ITEMS_ITEM_LIMITS = {
+  index: { minimum: 0 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRuleImportResultPayloadCounts}. */
+export const PERMISSION_RULE_IMPORT_RESULT_PAYLOAD_COUNTS_LIMITS = {
+  created: { minimum: 0 },
+  existing: { minimum: 0 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRuleInvocationPagePayload}. */
+export const PERMISSION_RULE_INVOCATION_PAGE_PAYLOAD_LIMITS = {
+  invocations: { maxItems: 100 },
+} as const;
+
 /** The bounds the schema gives the fields of {@link PermissionRuleListPayload}. */
 export const PERMISSION_RULE_LIST_PAYLOAD_LIMITS = {
-  rules: { maxItems: 10000 },
+  rules: { maxItems: 200 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRulePreviewPayload}. */
+export const PERMISSION_RULE_PREVIEW_PAYLOAD_LIMITS = {
+  findings: { maxItems: 50 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRuleSimulationPayloadCounts}. */
+export const PERMISSION_RULE_SIMULATION_PAYLOAD_COUNTS_LIMITS = {
+  unchanged: { minimum: 0 },
+  wouldAutoAllow: { minimum: 0 },
+  wouldAutoDeny: { minimum: 0 },
+  wouldAsk: { minimum: 0 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link PermissionRuleSimulationPayload}. */
+export const PERMISSION_RULE_SIMULATION_PAYLOAD_LIMITS = {
+  changes: { maxItems: 100 },
+  withoutFolder: { minimum: 0 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link PermissionStatePayloadAnswersItem}. */
@@ -2700,6 +2996,70 @@ export function isAgentModel(value: unknown): value is AgentModel {
     Array.isArray(record['supportedEffortLevels']),
     typeof record['supportsEffort'] === 'boolean',
     withinMaxItems(record['supportedEffortLevels'], 16),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link AuditEventFact}. Unknown fields are accepted.
+ */
+export function isAuditEventFact(value: unknown): value is AuditEventFact {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['kind'] === 'string',
+    typeof record['subjectId'] === 'string',
+    typeof record['subjectLabel'] === 'string',
+    nullOr(record['details'], isNonNullObject(record['details'])),
+    typeof record['at'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link AuditTrailEntryVerdict}. Unknown fields are accepted.
+ */
+export function isAuditTrailEntryVerdict(value: unknown): value is AuditTrailEntryVerdict {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['requestId'] === 'string',
+    typeof record['auto'] === 'boolean',
+    nullOr(record['ruleId'], typeof record['ruleId'] === 'string'),
+    typeof record['scope'] === 'string',
+    nullOr(record['resolvedBy'], typeof record['resolvedBy'] === 'string'),
+    nullOr(record['resolvedFrom'], typeof record['resolvedFrom'] === 'string'),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link AuditTrailEntry}. Unknown fields are accepted.
+ */
+export function isAuditTrailEntry(value: unknown): value is AuditTrailEntry {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    typeof record['sessionId'] === 'string',
+    nullOr(record['toolUseId'], typeof record['toolUseId'] === 'string'),
+    typeof record['toolName'] === 'string',
+    typeof record['kind'] === 'string',
+    isNonNullObject(record['input']),
+    typeof record['decision'] === 'string',
+    typeof record['at'] === 'string',
+    nullOr(record['traceId'], typeof record['traceId'] === 'string'),
+    nullOr(record['verdict'], isAuditTrailEntryVerdict(record['verdict'])),
   ].every(Boolean);
 }
 
@@ -3195,6 +3555,43 @@ export function isOpenFolderEntry(value: unknown): value is OpenFolderEntry {
 }
 
 /**
+ * Whether `value` carries every required field of {@link PermissionRuleFinding}. Unknown fields are accepted.
+ */
+export function isPermissionRuleFinding(value: unknown): value is PermissionRuleFinding {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['kind'] === 'string',
+    Array.isArray(record['ruleIds']),
+    typeof record['messageKey'] === 'string',
+    isNonNullObject(record['params']),
+    withinMaxItems(record['ruleIds'], 20),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleReach}. Unknown fields are accepted.
+ */
+export function isPermissionRuleReach(value: unknown): value is PermissionRuleReach {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['kind'] === 'string',
+    typeof record['form'] === 'string',
+    nullOr(record['content'], typeof record['content'] === 'string'),
+    typeof record['excludesCompound'] === 'boolean',
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link PermissionRuleDisabled}. Unknown fields are accepted.
  */
 export function isPermissionRuleDisabled(value: unknown): value is PermissionRuleDisabled {
@@ -3206,6 +3603,39 @@ export function isPermissionRuleDisabled(value: unknown): value is PermissionRul
 
   return [
     typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link TranslatedMessage}. Unknown fields are accepted.
+ */
+export function isTranslatedMessage(value: unknown): value is TranslatedMessage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['messageKey'] === 'string',
+    isNonNullObject(record['params']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleUsage}. Unknown fields are accepted.
+ */
+export function isPermissionRuleUsage(value: unknown): value is PermissionRuleUsage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['count'] === 'number',
+    nullOr(record['lastUsedAt'], typeof record['lastUsedAt'] === 'string'),
+    typeof record['windowDays'] === 'number',
   ].every(Boolean);
 }
 
@@ -3234,6 +3664,7 @@ export function isPermissionRule(value: unknown): value is PermissionRule {
     typeof record['status'] === 'string',
     nullOr(record['revokedAt'], typeof record['revokedAt'] === 'string'),
     nullOr(record['disabled'], isPermissionRuleDisabled(record['disabled'])),
+    withinMaxItems(record['findings'], 50),
   ].every(Boolean);
 }
 
@@ -4711,26 +5142,6 @@ export function isWorkspaceWatchStoppedPayload(value: unknown): value is Workspa
 }
 
 /**
- * Whether `value` carries every required field of {@link AuditEventPagePayloadEventsItem}. Unknown fields are accepted.
- */
-export function isAuditEventPagePayloadEventsItem(value: unknown): value is AuditEventPagePayloadEventsItem {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const record = value as Readonly<Record<string, unknown>>;
-
-  return [
-    typeof record['id'] === 'string',
-    typeof record['kind'] === 'string',
-    typeof record['subjectId'] === 'string',
-    typeof record['subjectLabel'] === 'string',
-    nullOr(record['details'], isNonNullObject(record['details'])),
-    typeof record['at'] === 'string',
-  ].every(Boolean);
-}
-
-/**
  * Whether `value` carries every required field of {@link AuditEventPagePayload}. Unknown fields are accepted.
  */
 export function isAuditEventPagePayload(value: unknown): value is AuditEventPagePayload {
@@ -4744,50 +5155,6 @@ export function isAuditEventPagePayload(value: unknown): value is AuditEventPage
     Array.isArray(record['events']),
     nullOr(record['nextCursor'], typeof record['nextCursor'] === 'string'),
     withinMaxItems(record['events'], 100),
-  ].every(Boolean);
-}
-
-/**
- * Whether `value` carries every required field of {@link AuditTrailPagePayloadEntriesItemVerdict}. Unknown fields are accepted.
- */
-export function isAuditTrailPagePayloadEntriesItemVerdict(value: unknown): value is AuditTrailPagePayloadEntriesItemVerdict {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const record = value as Readonly<Record<string, unknown>>;
-
-  return [
-    typeof record['requestId'] === 'string',
-    typeof record['auto'] === 'boolean',
-    nullOr(record['ruleId'], typeof record['ruleId'] === 'string'),
-    typeof record['scope'] === 'string',
-    nullOr(record['resolvedBy'], typeof record['resolvedBy'] === 'string'),
-    nullOr(record['resolvedFrom'], typeof record['resolvedFrom'] === 'string'),
-  ].every(Boolean);
-}
-
-/**
- * Whether `value` carries every required field of {@link AuditTrailPagePayloadEntriesItem}. Unknown fields are accepted.
- */
-export function isAuditTrailPagePayloadEntriesItem(value: unknown): value is AuditTrailPagePayloadEntriesItem {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const record = value as Readonly<Record<string, unknown>>;
-
-  return [
-    typeof record['id'] === 'string',
-    typeof record['sessionId'] === 'string',
-    nullOr(record['toolUseId'], typeof record['toolUseId'] === 'string'),
-    typeof record['toolName'] === 'string',
-    typeof record['kind'] === 'string',
-    isNonNullObject(record['input']),
-    typeof record['decision'] === 'string',
-    typeof record['at'] === 'string',
-    nullOr(record['traceId'], typeof record['traceId'] === 'string'),
-    nullOr(record['verdict'], isAuditTrailPagePayloadEntriesItemVerdict(record['verdict'])),
   ].every(Boolean);
 }
 
@@ -5920,6 +6287,184 @@ export function isOpenFoldersPayload(value: unknown): value is OpenFoldersPayloa
 }
 
 /**
+ * Whether `value` carries every required field of {@link PermissionRuleBatchPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleBatchPayload(value: unknown): value is PermissionRuleBatchPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['rules']),
+    withinMaxItems(record['rules'], 100),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleEvaluationPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleEvaluationPayload(value: unknown): value is PermissionRuleEvaluationPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['outcome'] === 'string',
+    nullOr(record['answeringRule'], isPermissionRule(record['answeringRule'])),
+    Array.isArray(record['matching']),
+    Array.isArray(record['reasons']),
+    Array.isArray(record['caveats']),
+    withinMaxItems(record['matching'], 100),
+    withinMaxItems(record['reasons'], 5),
+    withinMaxItems(record['caveats'], 10),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleExportPayloadRulesItem}. Unknown fields are accepted.
+ */
+export function isPermissionRuleExportPayloadRulesItem(value: unknown): value is PermissionRuleExportPayloadRulesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['pattern'] === 'string',
+    typeof record['decision'] === 'string',
+    typeof record['scope'] === 'string',
+    nullOr(record['projectPath'], typeof record['projectPath'] === 'string'),
+    typeof record['expiresAt'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleExportPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleExportPayload(value: unknown): value is PermissionRuleExportPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    record['format'] === 'remote-claude.permission-rules',
+    record['version'] === 1,
+    typeof record['exportedAt'] === 'string',
+    Array.isArray(record['rules']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleHistoryPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleHistoryPayload(value: unknown): value is PermissionRuleHistoryPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['events']),
+    withinMaxItems(record['events'], 100),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleImportPreviewPayloadItemsItem}. Unknown fields are accepted.
+ */
+export function isPermissionRuleImportPreviewPayloadItemsItem(value: unknown): value is PermissionRuleImportPreviewPayloadItemsItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['index'] === 'number',
+    typeof record['pattern'] === 'string',
+    typeof record['decision'] === 'string',
+    typeof record['scope'] === 'string',
+    typeof record['verdict'] === 'string',
+    atLeast(record['index'], 0),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleImportPreviewPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleImportPreviewPayload(value: unknown): value is PermissionRuleImportPreviewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['digest'] === 'string',
+    Array.isArray(record['items']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleImportResultPayloadCounts}. Unknown fields are accepted.
+ */
+export function isPermissionRuleImportResultPayloadCounts(value: unknown): value is PermissionRuleImportResultPayloadCounts {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['created'] === 'number',
+    typeof record['existing'] === 'number',
+    atLeast(record['created'], 0),
+    atLeast(record['existing'], 0),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleImportResultPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleImportResultPayload(value: unknown): value is PermissionRuleImportResultPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isPermissionRuleImportResultPayloadCounts(record['counts']),
+    Array.isArray(record['rules']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleInvocationPagePayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleInvocationPagePayload(value: unknown): value is PermissionRuleInvocationPagePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['invocations']),
+    nullOr(record['nextCursor'], typeof record['nextCursor'] === 'string'),
+    withinMaxItems(record['invocations'], 100),
+  ].every(Boolean);
+}
+
+/**
  * Whether `value` carries every required field of {@link PermissionRuleListPayload}. Unknown fields are accepted.
  */
 export function isPermissionRuleListPayload(value: unknown): value is PermissionRuleListPayload {
@@ -5931,7 +6476,205 @@ export function isPermissionRuleListPayload(value: unknown): value is Permission
 
   return [
     Array.isArray(record['rules']),
-    withinMaxItems(record['rules'], 10000),
+    withinMaxItems(record['rules'], 200),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRulePreviewPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRulePreviewPayload(value: unknown): value is PermissionRulePreviewPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['pattern'] === 'string',
+    isPermissionRuleReach(record['reach']),
+    typeof record['breadth'] === 'string',
+    Array.isArray(record['findings']),
+    withinMaxItems(record['findings'], 50),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleSimulationPayloadCounts}. Unknown fields are accepted.
+ */
+export function isPermissionRuleSimulationPayloadCounts(value: unknown): value is PermissionRuleSimulationPayloadCounts {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['unchanged'] === 'number',
+    typeof record['wouldAutoAllow'] === 'number',
+    typeof record['wouldAutoDeny'] === 'number',
+    typeof record['wouldAsk'] === 'number',
+    atLeast(record['unchanged'], 0),
+    atLeast(record['wouldAutoAllow'], 0),
+    atLeast(record['wouldAutoDeny'], 0),
+    atLeast(record['wouldAsk'], 0),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleSimulationPayloadChangesItem}. Unknown fields are accepted.
+ */
+export function isPermissionRuleSimulationPayloadChangesItem(value: unknown): value is PermissionRuleSimulationPayloadChangesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['before'] === 'string',
+    typeof record['after'] === 'string',
+    isAuditTrailEntry(record['entry']),
+    nullOr(record['answeringRule'], isPermissionRule(record['answeringRule'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleSimulationPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleSimulationPayload(value: unknown): value is PermissionRuleSimulationPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isPermissionRuleSimulationPayloadCounts(record['counts']),
+    Array.isArray(record['changes']),
+    typeof record['withoutFolder'] === 'number',
+    typeof record['assumedMode'] === 'string',
+    withinMaxItems(record['changes'], 100),
+    atLeast(record['withoutFolder'], 0),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleSummaryPayloadByStatus}. Unknown fields are accepted.
+ */
+export function isPermissionRuleSummaryPayloadByStatus(value: unknown): value is PermissionRuleSummaryPayloadByStatus {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['active'] === 'number',
+    typeof record['expired'] === 'number',
+    typeof record['revoked'] === 'number',
+    typeof record['disabled'] === 'number',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleSummaryPayloadByDecision}. Unknown fields are accepted.
+ */
+export function isPermissionRuleSummaryPayloadByDecision(value: unknown): value is PermissionRuleSummaryPayloadByDecision {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['allow'] === 'number',
+    typeof record['deny'] === 'number',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleSummaryPayloadByScope}. Unknown fields are accepted.
+ */
+export function isPermissionRuleSummaryPayloadByScope(value: unknown): value is PermissionRuleSummaryPayloadByScope {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['project'] === 'number',
+    typeof record['always'] === 'number',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleSummaryPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleSummaryPayload(value: unknown): value is PermissionRuleSummaryPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isPermissionRuleSummaryPayloadByStatus(record['byStatus']),
+    isPermissionRuleSummaryPayloadByDecision(record['byDecision']),
+    isPermissionRuleSummaryPayloadByScope(record['byScope']),
+    typeof record['expiringBefore'] === 'number',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleTemplatesPayloadTemplatesItemRulesItem}. Unknown fields are accepted.
+ */
+export function isPermissionRuleTemplatesPayloadTemplatesItemRulesItem(value: unknown): value is PermissionRuleTemplatesPayloadTemplatesItemRulesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['pattern'] === 'string',
+    typeof record['decision'] === 'string',
+    isPermissionRuleReach(record['reach']),
+    typeof record['breadth'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleTemplatesPayloadTemplatesItem}. Unknown fields are accepted.
+ */
+export function isPermissionRuleTemplatesPayloadTemplatesItem(value: unknown): value is PermissionRuleTemplatesPayloadTemplatesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['id'] === 'string',
+    isTranslatedMessage(record['name']),
+    isTranslatedMessage(record['description']),
+    Array.isArray(record['rules']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link PermissionRuleTemplatesPayload}. Unknown fields are accepted.
+ */
+export function isPermissionRuleTemplatesPayload(value: unknown): value is PermissionRuleTemplatesPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['templates']),
   ].every(Boolean);
 }
 
@@ -6458,7 +7201,7 @@ export type OpenFolderEntryPayload = OpenFolderEntry;
 /** Whether `value` is a {@link OpenFolderEntryPayload}. */
 export const isOpenFolderEntryPayload = isOpenFolderEntry;
 
-/** `GET /permission-rules/:ruleId`, `POST /permission-rules` and `DELETE /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48). */
+/** `GET /permission-rules/:ruleId`, `POST /permission-rules`, `DELETE /permission-rules/:ruleId` and `PATCH /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48). `PATCH` shortens or extends `expiresAt` alone (plan 15, B-12, D-01) — no other field of a rule is ever edited. */
 export type PermissionRulePayload = PermissionRule;
 
 /** Whether `value` is a {@link PermissionRulePayload}. */

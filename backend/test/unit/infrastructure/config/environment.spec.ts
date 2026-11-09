@@ -6,7 +6,9 @@ import { describe, expect, it } from 'vitest';
 import { ConfigurationError } from '@remote-claude/config';
 import {
   AUDIT_PURGE_MIN_INTERVAL_MS,
+  RULE_DENY_LIFETIME_CEILING_MS,
   RULE_LIFETIME_CEILING_MS,
+  RULE_RESTORE_WINDOW_CEILING_MS,
   SESSION_IDLE_TTL_FLOOR_MS,
   loadConfig,
   loadDatabaseConfig,
@@ -54,6 +56,9 @@ const complete: RawEnvironment = {
   RC_PERMISSION_RULE_LIFETIME_MS: '28800000',
   RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS: '7776000000',
   RC_PERMISSION_RULE_MAX_LIFETIME_MS: '7776000000',
+  RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS: '31536000000',
+  RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS: '157680000000',
+  RC_PERMISSION_RULE_RESTORE_WINDOW_MS: '600000',
   RC_PUSH_ENDPOINT: 'https://push.example.test/v1/messages:send',
   RC_PUSH_CREDENTIALS_FILE: '/etc/remote-claude/push.json',
   RC_PUSH_SCOPE: 'https://push.example.test/auth/messaging',
@@ -137,6 +142,9 @@ describe('loadConfig', () => {
         ruleLifetimeMs: 28_800_000,
         ruleDefaultLifetimeMs: 7_776_000_000,
         ruleMaxLifetimeMs: 7_776_000_000,
+        ruleDenyDefaultLifetimeMs: 31_536_000_000,
+        ruleDenyMaxLifetimeMs: 157_680_000_000,
+        ruleRestoreWindowMs: 600_000,
       },
       push: {
         endpoint: 'https://push.example.test/v1/messages:send',
@@ -236,6 +244,9 @@ describe('loadConfig', () => {
     'RC_SESSION_DEFAULT_PERMISSION_MODE',
     'RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS',
     'RC_PERMISSION_RULE_MAX_LIFETIME_MS',
+    'RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS',
+    'RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS',
+    'RC_PERMISSION_RULE_RESTORE_WINDOW_MS',
     'RC_CHECKPOINT_DIR',
     'RC_CHECKPOINT_MAX_FILE_BYTES',
     'RC_CHECKPOINT_MAX_STORE_BYTES',
@@ -381,6 +392,9 @@ describe('loadConfig', () => {
     ['RC_CHECKPOINT_MAX_STORE_BYTES', '-1'],
     ['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS', '0'],
     ['RC_PERMISSION_RULE_MAX_LIFETIME_MS', '0'],
+    ['RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS', '0'],
+    ['RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS', '0'],
+    ['RC_PERMISSION_RULE_RESTORE_WINDOW_MS', '0'],
     ['RC_FILES_TREE_MAX_ENTRIES', '0'],
     ['RC_FILES_LARGE_FILE_BYTES', '0'],
     ['RC_FILES_MAX_EDIT_BYTES', '0'],
@@ -589,6 +603,78 @@ describe('loadConfig', () => {
 
     it('accepts a default equal to the ceiling', () => {
       expect(loadConfig(complete).permission.ruleDefaultLifetimeMs).toBe(7_776_000_000);
+    });
+  });
+
+  describe('the lifetime of a persisted deny rule — plan 15, D-04, S-37, S-38', () => {
+    it('reads its own default and ceiling, apart from allow', () => {
+      expect(loadConfig(complete).permission).toMatchObject({
+        ruleDenyDefaultLifetimeMs: 31_536_000_000,
+        ruleDenyMaxLifetimeMs: 157_680_000_000,
+      });
+    });
+
+    it('accepts a ceiling exactly at what the code allows — five years', () => {
+      const atCeiling = String(RULE_DENY_LIFETIME_CEILING_MS);
+
+      expect(
+        loadConfig(withChange({ RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS: atCeiling })).permission
+          .ruleDenyMaxLifetimeMs,
+      ).toBe(RULE_DENY_LIFETIME_CEILING_MS);
+    });
+
+    it('refuses a ceiling one millisecond past what the code allows — the boot goes down', () => {
+      const overCeiling = String(RULE_DENY_LIFETIME_CEILING_MS + 1);
+
+      expect(() =>
+        loadConfig(
+          withChange({
+            RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS: overCeiling,
+            RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS: '1000',
+          }),
+        ),
+      ).toThrow(ConfigurationError);
+    });
+
+    it('refuses a default above its own ceiling, and names the variable', () => {
+      expect.assertions(2);
+
+      try {
+        loadConfig(
+          withChange({
+            RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS: '157680000001',
+            RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS: '157680000000',
+          }),
+        );
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigurationError);
+        expect((error as ConfigurationError).problems[0]).toContain(
+          'RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS',
+        );
+      }
+    });
+  });
+
+  describe('the undo window of a revocation — plan 15, D-11', () => {
+    it('reads it', () => {
+      expect(loadConfig(complete).permission.ruleRestoreWindowMs).toBe(600_000);
+    });
+
+    it('accepts a window exactly at what the code allows — one hour', () => {
+      const atCeiling = String(RULE_RESTORE_WINDOW_CEILING_MS);
+
+      expect(
+        loadConfig(withChange({ RC_PERMISSION_RULE_RESTORE_WINDOW_MS: atCeiling })).permission
+          .ruleRestoreWindowMs,
+      ).toBe(RULE_RESTORE_WINDOW_CEILING_MS);
+    });
+
+    it('refuses a window one millisecond past what the code allows — the boot goes down', () => {
+      const overCeiling = String(RULE_RESTORE_WINDOW_CEILING_MS + 1);
+
+      expect(() =>
+        loadConfig(withChange({ RC_PERMISSION_RULE_RESTORE_WINDOW_MS: overCeiling })),
+      ).toThrow(ConfigurationError);
     });
   });
 

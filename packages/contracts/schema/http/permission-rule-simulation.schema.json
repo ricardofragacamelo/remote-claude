@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-simulation.json",
+  "title": "PermissionRuleSimulation",
+  "description": "`POST /permission-rules/simulate`: what adding or removing rules would have changed in the caller's last invocations, against the trail's own record of what was actually decided (plan 15, B-16, D-15). Read only — nothing is stored, no event, no push. The mode is never in the trail, so every invocation is read under the canonical `ask`.",
+  "x-kind": "http",
+  "x-type": "permissionRules.simulation",
+  "x-route": [{ "method": "POST", "path": "/permission-rules/simulate" }],
+  "type": "object",
+  "required": ["counts", "changes", "withoutFolder", "assumedMode"],
+  "properties": {
+    "counts": {
+      "type": "object",
+      "required": ["unchanged", "wouldAutoAllow", "wouldAutoDeny", "wouldAsk"],
+      "properties": {
+        "unchanged": { "type": "integer", "minimum": 0 },
+        "wouldAutoAllow": { "type": "integer", "minimum": 0 },
+        "wouldAutoDeny": { "type": "integer", "minimum": 0 },
+        "wouldAsk": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "changes": {
+      "type": "array",
+      "maxItems": 100,
+      "description": "Only the invocations whose verdict would change — the trail shows the rest unmoved.",
+      "items": {
+        "type": "object",
+        "required": ["before", "after", "entry", "answeringRule"],
+        "properties": {
+          "before": { "type": "string", "enum": ["allow", "deny"] },
+          "after": { "type": "string", "enum": ["allow", "deny", "ask"] },
+          "entry": { "$ref": "../definitions/audit-trail-entry.schema.json" },
+          "answeringRule": {
+            "$ref": "../definitions/permission-rule.schema.json",
+            "x-nullable": true,
+            "description": "The rule that would answer now — `null` when none would (the mode may still answer)."
+          }
+        }
+      }
+    },
+    "withoutFolder": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Invocations with no folder on record — too old for `session_origins` (S-125)."
+    },
+    "assumedMode": {
+      "type": "string",
+      "enum": ["ask"],
+      "description": "The mode every invocation is read under, since the trail never kept the real one (D-15)."
+    }
+  }
+}

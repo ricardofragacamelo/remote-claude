@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/permission-rule-reach.json",
+  "title": "PermissionRuleReach",
+  "description": "What a rule's pattern reaches, structured by the domain over the canonical grammar (`describeReach`) — what a screen writes its sentence from, never the client reinterpreting the pattern (plan 03, D-12; plan 15, B-02).",
+  "type": "object",
+  "required": ["kind", "form", "content", "excludesCompound"],
+  "properties": {
+    "engine": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The engine the reach is bounded to, or absent/`null` when the rule's `kind` reaches every engine that has it."
+    },
+    "kind": {
+      "type": "string",
+      "description": "The canonical kind, repeated here so the reach is self-contained."
+    },
+    "form": {
+      "type": "string",
+      "enum": ["any", "exact", "prefix"],
+      "description": "`any` — the whole kind, no matcher; `exact` — the literal matcher; `prefix` — a `:*` or glob prefix, bounded at a token or path-segment edge."
+    },
+    "content": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The matcher's own text (the command, the path glob, the domain, the MCP server/tool) — `null` on `form: any`."
+    },
+    "excludesCompound": {
+      "type": "boolean",
+      "description": "`true` when an `allow` prefix in `shell` does not cover a command carrying a shell operator (plan 15, D-07) — the one case where the reach says less than the prefix reads."
+    }
+  }
+}

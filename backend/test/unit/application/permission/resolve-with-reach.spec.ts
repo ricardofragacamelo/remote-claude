@@ -143,6 +143,7 @@ describe('ResolvePermissionUseCase — the reach', () => {
       scope: 'always',
       projectPath: null,
       expiresAt: null,
+      grantedVia: 'approval',
     });
     await ask('request-1', { command: 'git push && rm -rf x' });
     harness.trail.failAt = { attempt: 1, error: new Error('trail down') };
@@ -162,6 +163,7 @@ describe('ResolvePermissionUseCase — the reach', () => {
           scope: 'always',
           projectPath: null,
           expiresAt: null,
+          grantedVia: 'approval',
         },
         {
           userId: PERMISSION_OWNER,
@@ -170,6 +172,7 @@ describe('ResolvePermissionUseCase — the reach', () => {
           scope: 'always',
           projectPath: null,
           expiresAt: null,
+          grantedVia: 'approval',
         },
       ]),
     ).rejects.toThrow();

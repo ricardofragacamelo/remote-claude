@@ -274,8 +274,6 @@
     "sessions.kind.plan": "sessionKindPlan",
     "sessions.kind.tasks": "sessionKindTasks",
     "sessions.kind.other": "sessionKindOther",
-    "rules.status.disabled": "rulesStatusDisabled",
-    "rules.row.disabled": "rulesDisabledExplanation",
     "permission.tool.fileRead": "permissionToolFileRead",
     "permission.tool.fileEdit": "permissionToolFileEdit",
     "permission.tool.fileWrite": "permissionToolFileWrite",

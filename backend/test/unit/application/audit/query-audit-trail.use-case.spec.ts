@@ -5,6 +5,8 @@ import type {
   AuditTrailPage,
   AuditTrailPageRequest,
   AuditTrailReader,
+  DecidedInvocation,
+  RuleUsage,
   SessionTrailOwnership,
 } from '@application/audit';
 import { ToolClassifiers } from '@application/engine';
@@ -39,6 +41,14 @@ class ScriptedReader implements AuditTrailReader {
   ownershipOf(session: SessionId): Promise<SessionTrailOwnership> {
     this.ownershipLookups.push(session.value);
     return Promise.resolve(this.ownership);
+  }
+
+  usageOf(): Promise<ReadonlyMap<string, RuleUsage>> {
+    return Promise.resolve(new Map());
+  }
+
+  decided(): Promise<readonly DecidedInvocation[]> {
+    return Promise.resolve([]);
   }
 }
 

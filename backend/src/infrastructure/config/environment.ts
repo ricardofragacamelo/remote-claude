@@ -31,6 +31,27 @@ export const RULE_LIFETIME_CEILING_MS = 365 * 24 * 60 * 60 * 1000;
 const ruleLifetime = z.coerce.number().int().positive().max(RULE_LIFETIME_CEILING_MS);
 
 /**
+ * The longest a persisted `deny` rule may live — its own ceiling, five times the `allow` one.
+ *
+ * A forgotten `deny` recuses something the owner would allow today; it never exposes anything, so
+ * it earns a longer leash than `allow` rather than the same one
+ * ([15 · D-04](../../../../docs/plans/15-rules-management/decisions.md#d-04--deny-sem-validade)).
+ */
+export const RULE_DENY_LIFETIME_CEILING_MS = 5 * RULE_LIFETIME_CEILING_MS;
+
+const ruleDenyLifetime = z.coerce.number().int().positive().max(RULE_DENY_LIFETIME_CEILING_MS);
+
+/**
+ * The longest the window to undo a revocation with no second step may be set to.
+ *
+ * An hour: long enough to notice a mistake made a moment ago, short enough that "undo" never
+ * drifts into "a second way to grant" ([15 · D-11](../../../../docs/plans/15-rules-management/decisions.md#d-11--desfazer-a-revogação)).
+ */
+export const RULE_RESTORE_WINDOW_CEILING_MS = 60 * 60 * 1000;
+
+const ruleRestoreWindow = z.coerce.number().int().positive().max(RULE_RESTORE_WINDOW_CEILING_MS);
+
+/**
  * The shortest interval the purge job may run at.
  *
  * A minute: the cadence is not what keeps the floor — the trigger is — and a job configured to run
@@ -155,6 +176,13 @@ export const environmentSchema = z.object({
   RC_PERMISSION_RULE_LIFETIME_MS: z.coerce.number().int().positive(),
   RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS: ruleLifetime,
   RC_PERMISSION_RULE_MAX_LIFETIME_MS: ruleLifetime,
+  // A `deny` rule's own default and ceiling — longer-lived than `allow`'s, never shorter (plan 15,
+  // D-04): a forgotten `deny` recuses, never exposes.
+  RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS: ruleDenyLifetime,
+  RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS: ruleDenyLifetime,
+  // How long after a revocation "undo" still works with no second step (plan 15, D-11) — bounded by
+  // RULE_RESTORE_WINDOW_CEILING_MS so undo never drifts into a second way to grant.
+  RC_PERMISSION_RULE_RESTORE_WINDOW_MS: ruleRestoreWindow,
   RC_PUSH_ENDPOINT: z.url(),
   RC_PUSH_CREDENTIALS_FILE: z.string().min(1),
   RC_PUSH_SCOPE: z.string().min(1),
@@ -231,6 +259,15 @@ const consistentEnvironment = environmentSchema
     {
       path: ['RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS'],
       message: 'must not be greater than RC_PERMISSION_RULE_MAX_LIFETIME_MS',
+    },
+  )
+  .refine(
+    (env) =>
+      env.RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS <=
+      env.RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS,
+    {
+      path: ['RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS'],
+      message: 'must not be greater than RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS',
     },
   )
   // A floor above the ceiling is a capacity nobody can compute: refused at boot, not resolved in
@@ -379,6 +416,12 @@ export interface AppConfig {
     readonly ruleDefaultLifetimeMs: number;
     /** The longest one may live — itself bounded by {@link RULE_LIFETIME_CEILING_MS}. */
     readonly ruleMaxLifetimeMs: number;
+    /** How long a `deny` rule lives when nobody said how long — its own, longer, default. */
+    readonly ruleDenyDefaultLifetimeMs: number;
+    /** The longest a `deny` may live — bounded by {@link RULE_DENY_LIFETIME_CEILING_MS}. */
+    readonly ruleDenyMaxLifetimeMs: number;
+    /** How long "undo" a revocation works with no second step — bounded by {@link RULE_RESTORE_WINDOW_CEILING_MS}. */
+    readonly ruleRestoreWindowMs: number;
   };
 
   /**
@@ -574,6 +617,9 @@ export function loadConfig(
       ruleLifetimeMs: env.RC_PERMISSION_RULE_LIFETIME_MS,
       ruleDefaultLifetimeMs: env.RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS,
       ruleMaxLifetimeMs: env.RC_PERMISSION_RULE_MAX_LIFETIME_MS,
+      ruleDenyDefaultLifetimeMs: env.RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS,
+      ruleDenyMaxLifetimeMs: env.RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS,
+      ruleRestoreWindowMs: env.RC_PERMISSION_RULE_RESTORE_WINDOW_MS,
     },
     push: {
       endpoint: env.RC_PUSH_ENDPOINT,

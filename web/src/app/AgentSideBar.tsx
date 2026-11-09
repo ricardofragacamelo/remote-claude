@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
+import { DEFAULT_RULES_SEARCH } from '@/features/permission';
 import { AgentPanel, SESSION_LINK_GONE } from '@/features/session';
 import { useFolderTab } from '@/features/workbench';
 import { ErrorState } from '@/shared/components/ErrorState';
@@ -28,7 +29,7 @@ export function AgentSideBar({ folder }: AgentSideBarProps): React.JSX.Element {
   // The way from a "don't ask again" to the list that takes it back — one of the two entrances
   // plan 03's D-04 requires.
   const openRules = useCallback(() => {
-    void navigate({ to: '/rules' });
+    void navigate({ to: '/rules', search: DEFAULT_RULES_SEARCH });
   }, [navigate]);
 
   if (tab.linkRefused) {

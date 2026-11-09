@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 /**
- * The development stack, on the fixed ports of docs/plans/00-bootstrap/README.md#portas.
+ * The development stack, on the fixed ports of docs/plans/00-bootstrap/README.md#portas — except
+ * each one falls back to a free one when the fixed port is already taken by something else on the
+ * machine, so a stray container (or process) from another project is a warning here, not a failed
+ * `compose up` (see `resolveAvailablePorts`). The actual ports of the run are written to
+ * `LOCAL_PORTS_FILE`, which is how `pnpm mobile:install`/`pnpm mobile:local` — run later, in a
+ * separate process — learn of a `web` swapped away from its default instead of building the app
+ * against a port nothing answers on.
  *
  *   compose up -d  →  wait for Postgres and the Keycloak realm  →  backend (watch)
  *                  →  web (watch)  →  wait for both to answer  →  print the URL board
@@ -53,11 +59,13 @@ import {
 } from './lib/public-url.mjs';
 import {
   HEALTH_PATH,
+  LOCAL_PORTS_FILE,
   boardRows,
   loadDotEnv,
   REALM,
   projectName,
-  resolvePorts,
+  recordLocalPorts,
+  resolveAvailablePorts,
   serviceUrls,
   watchEnvironment,
   withWebIssuer,
@@ -136,6 +144,17 @@ const compose = composeRunner(composeCli, project, {
   cwd: repoRoot,
   files: composeFiles(publicMode),
 });
+
+/**
+ * Says which fixed ports `resolveAvailablePorts` had to swap, and for what.
+ *
+ * @param {Map<string, number>} reassigned
+ */
+function reportReassignedPorts(reassigned) {
+  for (const [service, port] of reassigned) {
+    warn(`port for ${service}`, `already taken — using ${String(port)} instead`);
+  }
+}
 
 /**
  * Waits for each started workspace to answer, and says which ones did not.
@@ -357,7 +376,11 @@ const shutdown = cleanupOnce(async () => {
 async function main() {
   title(publicMode ? 'dev — public stack' : 'dev — local stack');
 
-  const ports = resolvePorts(process.env);
+  const { ports, reassigned } = await resolveAvailablePorts(process.env);
+  reportReassignedPorts(reassigned);
+  // So `pnpm mobile:install`/`pnpm mobile:local`, run later in another process, learn of a `web`
+  // swapped away from its default instead of building the app against a port nothing answers on.
+  recordLocalPorts(path.join(repoRoot, LOCAL_PORTS_FILE), ports);
   const urls = serviceUrls(ports);
 
   // The phone signs in through the web's origin, which forwards the realm in local mode too, and

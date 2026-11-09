@@ -43,7 +43,7 @@ import { prepareMermaid } from './lib/mermaid-asset.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { cleanupOnce, onTermination, runToExit } from './lib/proc.mjs';
 import { PUBLIC_ORIGIN_FILE, readRecordedOrigin } from './lib/public-url.mjs';
-import { HEALTH_PATH, loadDotEnv } from './lib/stack.mjs';
+import { HEALTH_PATH, LOCAL_PORTS_FILE, loadDotEnv, readRecordedPorts } from './lib/stack.mjs';
 import { cyan, dim, fail, fatal, hint, info, line, ok, title, warn } from './lib/ui.mjs';
 import { answers } from './lib/wait.mjs';
 
@@ -199,7 +199,8 @@ function resolveBuild() {
   const loaded = loadDotEnv(repoRoot);
   const lan = resolveLanAddress(process.env);
   const version = pubspecVersion(fs.readFileSync(path.join(mobileDir, 'pubspec.yaml'), 'utf8'));
-  const built = localDefines(process.env, version);
+  const recordedWebPort = readRecordedPorts(path.join(repoRoot, LOCAL_PORTS_FILE))?.web ?? null;
+  const built = localDefines(process.env, version, recordedWebPort);
   const addresses =
     'problem' in lan
       ? { problems: [lan.problem] }
@@ -209,6 +210,7 @@ function resolveBuild() {
             origin: readRecordedOrigin(path.join(repoRoot, PUBLIC_ORIGIN_FILE)),
             file: PUBLIC_ORIGIN_FILE,
           },
+          recordedWebPort,
         });
 
   if ('problems' in built || 'problems' in addresses) {

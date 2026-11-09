@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://remote-claude.local/schema/definitions/permission-rule.json",
   "title": "PermissionRule",
-  "description": "One rule that outlives a session, as the client sees it (plan 03; plan 28, B-33). `status` is computed at the moment of the answer, because the list shows an expired rule marked and not missing.",
+  "description": "One rule that outlives a session, as the client sees it (plan 03; plan 28, B-33; plan 15, B-02). `status` is computed at the moment of the answer, because the list shows an expired rule marked and not missing. The fields below `disabled` are plan 15's additions to the management screen: every one of them is optional here because the routes that fill them in are implemented phase by phase (F1); the normative contract — where each is always present — is `backend/03-modules.md`'s `permission` section, not this flag.",
   "type": "object",
   "required": [
     "id",
@@ -77,12 +77,97 @@
       "type": "object",
       "x-nullable": true,
       "required": ["reason"],
+      "description": "Deprecated in favour of `legacyPattern` and `disabledReason` below (plan 15, D-20 revision): `reason` is an opaque string, not translatable. Kept so the current `PermissionRulesController` keeps compiling until F1 rewires it to the two richer fields.",
       "properties": {
         "reason": {
           "type": "string",
           "description": "Why the rule was switched off — a rule written in an engine's grammar that had no unambiguous canonical translation."
         }
       }
+    },
+    "reach": {
+      "$ref": "permission-rule-reach.schema.json",
+      "x-nullable": true,
+      "description": "Absent on a rule a route has not been taught to fill yet, and always absent on a `disabled` rule, which has no canonical pattern to describe."
+    },
+    "breadth": {
+      "type": "string",
+      "x-nullable": true,
+      "enum": ["narrow", "broad", "unbounded"],
+      "description": "How wide the pattern reaches, by the domain's table per `kind` (plan 15, D-09). Absent on a route that has not been taught to fill it yet, and always absent/`null` on a `disabled` rule."
+    },
+    "legacyPattern": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "On a `disabled` rule only: the pattern exactly as it was written, in the engine's own grammar — opaque text, never reparsed (plan 15, D-20 revision). `null`/absent on every other rule."
+    },
+    "disabledReason": {
+      "$ref": "translated-message.schema.json",
+      "x-nullable": true,
+      "description": "On a `disabled` rule only: why the plan 28 migration could not translate it — translatable, unlike `disabled.reason` above. `null`/absent on every other rule."
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 50,
+      "description": "What the redundancy/overlap/conflict analysis (plan 15, B-15) says about this rule against the caller's other active rules — absent until that route exists.",
+      "items": {
+        "$ref": "permission-rule-finding.schema.json"
+      }
+    },
+    "usage": {
+      "type": "object",
+      "x-nullable": true,
+      "description": "How much this rule has answered, from the trail (plan 15, D-05) — absent until the route that fills it exists.",
+      "required": ["count", "lastUsedAt", "windowDays"],
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "windowDays": {
+          "type": "integer",
+          "description": "The retention window the count is scoped to — 90, today."
+        }
+      }
+    },
+    "grantedVia": {
+      "type": "string",
+      "x-nullable": true,
+      "enum": ["approval", "request", "import", "restore"],
+      "description": "How the rule came to exist — `null` for a rule granted before this column existed (plan 15, B-07). Absent until the route that fills it exists."
+    },
+    "grantedFromRequestId": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The permission request the card answered, when `grantedVia` is `approval` — `null`/absent otherwise."
+    },
+    "templateId": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The catalog template this rule came from, when it was granted via a template — `null`/absent otherwise."
+    },
+    "restoredFrom": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "The revoked rule this one restores, when `grantedVia` is `restore` — `null`/absent otherwise (plan 15, D-11)."
+    },
+    "folderReachable": {
+      "type": "boolean",
+      "x-nullable": true,
+      "description": "Whether a `project` rule's folder is still in the caller's allowlist, checked by the pure rule without touching disk — `null`/absent on an `always` rule, and absent until the route that fills it exists."
+    },
+    "etag": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Derived from `expiresAt` and `revokedAt` — there is no version column. What `PATCH /permission-rules/:ruleId` conditions its write on. Absent until the route that fills it exists."
+    },
+    "expiryCeiling": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "How far `PATCH /permission-rules/:ruleId` may extend this rule's validity, counted from the moment it was read (plan 15, D-14) — the installation's ceiling for this `decision`, `deny` living longer than `allow` (D-04). `null`/absent on a `disabled` rule, which answers nothing and has no validity to extend. Absent until the route that fills it exists."
     }
   }
 }

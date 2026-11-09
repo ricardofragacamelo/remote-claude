@@ -13,6 +13,7 @@ import {
   sectionsForEngine,
 } from '@/features/agent-settings';
 import { CALLBACK_PATH } from '@/features/auth';
+import { readRulesSearch } from '@/features/permission';
 import { firstSectionId, settingsSections } from '@/features/settings';
 import { AboutRoute } from './AboutRoute';
 import { AgentSettingsRoute } from './AgentSettingsRoute';
@@ -95,13 +96,20 @@ const workbenchRoute = createRoute({
 const rulesRoute = createRoute({
   getParentRoute: () => frameRoute,
   path: '/rules',
+  validateSearch: readRulesSearch,
   component: RulesRoute,
 });
 
-/** One rule by id, in any state — where a trail entry leads to the rule that answered it. */
+/**
+ * One rule by id, in any state — where a trail entry leads to the rule that answered it.
+ *
+ * A sibling of `/rules`, not nested under it, opened over the same list (S-222): the same
+ * `validateSearch` as `/rules`, so the list underneath keeps the filters the rule was opened from.
+ */
 const ruleRoute = createRoute({
   getParentRoute: () => frameRoute,
   path: '/rules/$ruleId',
+  validateSearch: readRulesSearch,
   component: RuleRoute,
 });
 

@@ -6,6 +6,7 @@ import { AUDIT_DECISIONS, AuditTrail, FileFacts } from '@/features/audit';
 import type { AuditDecision, AuditFilters } from '@/features/audit';
 import { ScreenFrame } from '@/shared/components/ScreenFrame';
 import { useShellShortcuts } from './screen-shortcuts';
+import { useOpenRule } from './useOpenRule';
 
 /** A search parameter as a non-empty string, or nothing. */
 function text(value: unknown): string | undefined {
@@ -26,17 +27,20 @@ function isDecision(value: unknown): value is AuditDecision {
 export function readAuditSearch(search: Readonly<Record<string, unknown>>): AuditFilters {
   const filters: {
     sessionId?: string;
+    ruleId?: string;
     toolName?: string;
     decision?: AuditDecision;
     from?: string;
     to?: string;
   } = {};
   const sessionId = text(search['sessionId']);
+  const ruleId = text(search['ruleId']);
   const toolName = text(search['toolName']);
   const from = text(search['from']);
   const to = text(search['to']);
 
   if (sessionId !== undefined) filters.sessionId = sessionId;
+  if (ruleId !== undefined) filters.ruleId = ruleId;
   if (toolName !== undefined) filters.toolName = toolName;
   if (isDecision(search['decision'])) filters.decision = search['decision'];
   if (from !== undefined) filters.from = from;
@@ -65,12 +69,7 @@ export function AuditRoute(): React.JSX.Element {
     [navigate],
   );
 
-  const openRule = useCallback(
-    (ruleId: string) => {
-      void navigate({ to: '/rules/$ruleId', params: { ruleId } });
-    },
-    [navigate],
-  );
+  const openRule = useOpenRule();
 
   return (
     <ScreenFrame

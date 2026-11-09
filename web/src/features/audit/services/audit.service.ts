@@ -2,7 +2,7 @@ import { api } from '@/shared/api/api';
 import type { AuditFilters, AuditPage } from '../types/audit';
 
 /** The filters in the order the query string carries them, so the same filter is the same URL. */
-const FILTER_FIELDS = ['sessionId', 'toolName', 'decision', 'from', 'to'] as const;
+const FILTER_FIELDS = ['sessionId', 'ruleId', 'toolName', 'decision', 'from', 'to'] as const;
 
 /**
  * One page of the caller's trail, newest first.

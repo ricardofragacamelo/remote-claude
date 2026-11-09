@@ -21,6 +21,25 @@ export interface RuleQuestion {
 }
 
 /**
+ * Every rule that matches an invocation, in the order it was given — not only the one that answers.
+ *
+ * What "testar um comando" ([15 · B-14](../../../../../docs/plans/15-rules-management/F1-rules-backend.md#b-14--testar-um-comando))
+ * needs to explain "why my `allow` did not win": the caller sees the `deny` beside it, not just the
+ * refusal. The same predicate {@link answeringRule} picks its winner from — written once so the two
+ * never drift.
+ */
+export function matchingRules(
+  rules: readonly PermissionRule[],
+  question: RuleQuestion,
+): readonly PermissionRule[] {
+  return rules.filter(
+    (rule) =>
+      answeredByRule(rule.decision, question.tool.kind) &&
+      rule.matches(question.subject, question.tool, question.now),
+  );
+}
+
+/**
  * The rule that answers an invocation, or `null` when a human has to.
  *
  * **No `allow` answers a call that asks the person** — a `question`, a `plan`
@@ -50,11 +69,7 @@ export function answeringRule(
   rules: readonly PermissionRule[],
   question: RuleQuestion,
 ): PermissionRule | null {
-  const matching = rules.filter(
-    (rule) =>
-      answeredByRule(rule.decision, question.tool.kind) &&
-      rule.matches(question.subject, question.tool, question.now),
-  );
+  const matching = matchingRules(rules, question);
 
   const refusal = matching.find((rule) => rule.decision === 'deny');
   if (refusal !== undefined) {

@@ -31,6 +31,9 @@
     "packages/contracts/schema/definitions/component-version.schema.json",
     "packages/contracts/schema/definitions/read-version.schema.json",
     "packages/contracts/schema/definitions/project-mcp-server.schema.json",
-    "packages/contracts/schema/http/engines/claude/project-config-view.schema.json"
+    "packages/contracts/schema/http/engines/claude/project-config-view.schema.json",
+    "packages/contracts/schema/http/permission-rule-invocation-page.schema.json",
+    "backend/src/adapter/outbound/files/workspace-module.folder-resolver.ts",
+    "backend/src/adapter/outbound/permission/workspace-module.rule-folder-resolver.ts"
   ]
 }

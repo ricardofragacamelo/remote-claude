@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-batch.json",
+  "title": "PermissionRuleBatch",
+  "description": "`POST /permission-rules/revoke` and `POST /permission-rules/restore`: several rules from one call, atomic in validation and in the write (plan 15, B-13, D-06, D-11) — every id is checked before anything is written, and the rules this call touched come back together, each the same shape `GET /permission-rules/:ruleId` returns.",
+  "x-kind": "http",
+  "x-type": "permissionRules.batch",
+  "x-route": [
+    { "method": "POST", "path": "/permission-rules/revoke" },
+    { "method": "POST", "path": "/permission-rules/restore" }
+  ],
+  "type": "object",
+  "required": ["rules"],
+  "properties": {
+    "rules": {
+      "type": "array",
+      "maxItems": 100,
+      "description": "One entry per id given, in the same order — a rule already revoked (or already restored) is idempotent and still comes back.",
+      "items": {
+        "$ref": "../definitions/permission-rule.schema.json"
+      }
+    }
+  }
+}

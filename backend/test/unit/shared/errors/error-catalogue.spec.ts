@@ -54,6 +54,15 @@ import {
   TranscriptFollowLimitError,
   TranscriptFollowLiveHereError,
 } from '@domain/transcript';
+import {
+  PermissionRuleChangedError,
+  PermissionRuleIfMatchRequiredError,
+  PermissionRuleImportRejectedError,
+  PermissionRuleImportUnsupportedError,
+  PermissionRuleRestoreWindowClosedError,
+  PermissionRuleStateConflictError,
+  PermissionRuleTooBroadError,
+} from '@domain/permission';
 
 describe('httpStatusFor', () => {
   it.each([
@@ -414,5 +423,112 @@ describe('the codes the live history adds — plan 22, B-01', () => {
       httpEquivalent: 413,
       params: { size: 11, limit: 10 },
     });
+  });
+});
+
+/** The codes the rules-management screen adds — plan 15, B-04 (F0 — contract). */
+describe('the codes the rules-management screen adds — plan 15, B-04', () => {
+  const repository = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../../..');
+  const keyOf = (catalogue: string, key: string): unknown =>
+    key
+      .split('.')
+      .reduce<unknown>(
+        (node, part) => (node as Record<string, unknown> | undefined)?.[part],
+        JSON.parse(
+          readFileSync(path.join(repository, 'web/src/shared/i18n/locales', catalogue), 'utf8'),
+        ) as unknown,
+      );
+
+  const errors = [
+    new PermissionRuleTooBroadError('broad'),
+    new PermissionRuleStateConflictError('rule-1', 'revoked'),
+    new PermissionRuleChangedError('rule-1', '"abc"'),
+    new PermissionRuleIfMatchRequiredError('rule-1'),
+    new PermissionRuleRestoreWindowClosedError('rule-1'),
+    new PermissionRuleImportUnsupportedError('version'),
+    new PermissionRuleImportRejectedError([{ index: 0, code: 'PERMISSION_RULE_TOO_BROAD' }]),
+  ];
+
+  it.each(errors.map((error) => [error.code, error] as const))(
+    'carries %s with the status doc 04 declares, and a sentence in both languages',
+    (code, error) => {
+      expect(documentedStatuses().get(code)).toBe(httpStatusFor(code));
+      expect(error.messageKey).toMatch(/^permission\.error\.[a-zA-Z]+$/);
+      expect(keyOf('en.json', error.messageKey)).toEqual(expect.any(String));
+      expect(keyOf('pt-BR.json', error.messageKey)).toEqual(expect.any(String));
+    },
+  );
+
+  it('an allow too broad names the breadth that needed acknowledgement — S-31, S-32', () => {
+    expect(toErrorEnvelope(new PermissionRuleTooBroadError('unbounded'), 't').error).toEqual({
+      code: 'PERMISSION_RULE_TOO_BROAD',
+      messageKey: 'permission.error.ruleTooBroad',
+      params: { breadth: 'unbounded' },
+      traceId: 't',
+      httpEquivalent: 422,
+    });
+  });
+
+  it('a state conflict names the status that refused the operation', () => {
+    expect(
+      toErrorEnvelope(new PermissionRuleStateConflictError('rule-1', 'disabled'), 't').error,
+    ).toEqual({
+      code: 'PERMISSION_RULE_STATE_CONFLICT',
+      messageKey: 'permission.error.ruleStateConflict',
+      params: { status: 'disabled' },
+      traceId: 't',
+      httpEquivalent: 409,
+    });
+  });
+
+  it('a stale If-Match on a rule carries the current ETag, like a file does — 07 · D-03', () => {
+    expect(etagFor(toErrorEnvelope(new PermissionRuleChangedError('rule-1', '"v2"'), 't'))).toBe(
+      '"v2"',
+    );
+  });
+
+  it('needs an If-Match before changing validity — the same 428 the files domain answers with', () => {
+    expect(httpStatusFor('PRECONDITION_REQUIRED')).toBe(428);
+    expect(toErrorEnvelope(new PermissionRuleIfMatchRequiredError('rule-1'), 't').error).toEqual({
+      code: 'PRECONDITION_REQUIRED',
+      messageKey: 'permission.error.ruleIfMatchRequired',
+      params: { ruleId: 'rule-1' },
+      traceId: 't',
+      httpEquivalent: 428,
+    });
+  });
+
+  it('a closed restore window never comes back — 410, no retry promised', () => {
+    const envelope = toErrorEnvelope(new PermissionRuleRestoreWindowClosedError('rule-1'), 't');
+
+    expect(envelope.error).toMatchObject({
+      code: 'PERMISSION_RULE_RESTORE_WINDOW_CLOSED',
+      httpEquivalent: 410,
+    });
+    expect(retryAfterFor(410, envelope)).toBeNull();
+  });
+
+  it('an unsupported import file names why it was refused outright', () => {
+    expect(
+      toErrorEnvelope(new PermissionRuleImportUnsupportedError('malformed'), 't').error,
+    ).toEqual({
+      code: 'PERMISSION_RULE_IMPORT_UNSUPPORTED',
+      messageKey: 'permission.error.ruleImportUnsupported',
+      params: { reason: 'malformed' },
+      traceId: 't',
+      httpEquivalent: 422,
+    });
+  });
+
+  it('a rejected import lists every item by its index and its own code, nothing written', () => {
+    const error = new PermissionRuleImportRejectedError([
+      { index: 0, code: 'PERMISSION_RULE_TOO_BROAD' },
+      { index: 2, code: 'WORKSPACE_NOT_ALLOWED' },
+    ]);
+
+    expect(toErrorEnvelope(error, 't').error.details).toEqual([
+      { field: 'rules[0]', rule: 'PERMISSION_RULE_TOO_BROAD' },
+      { field: 'rules[2]', rule: 'WORKSPACE_NOT_ALLOWED' },
+    ]);
   });
 });

@@ -9,7 +9,7 @@
 
 import { ANDROID_PACKAGE } from './mobile-local.mjs';
 import { ORIGIN_REFUSALS, PUBLIC_URL_VARIABLE, parsePublicOrigin } from './public-url.mjs';
-import { defineArgs, lanOrigin, resolvePorts } from './stack.mjs';
+import { defineArgs, lanOrigin, resolveWebPort } from './stack.mjs';
 
 /** The APK `flutter build apk --debug` writes, relative to `mobile/`. */
 export const DEBUG_APK = 'build/app/outputs/flutter-apk/app-debug.apk';
@@ -58,9 +58,10 @@ export function parseInstallArgs(argv) {
  *
  * @param {NodeJS.ProcessEnv} env
  * @param {{ address: string | null, source: string }} lan
+ * @param {number | null} recordedWebPort what `readRecordedPorts` found for `web`, or `null`
  * @returns {Address}
  */
-function internalAddress(env, lan) {
+function internalAddress(env, lan, recordedWebPort) {
   const written = (env['RC_INTERNAL_URL'] ?? '').trim();
 
   if (written !== '') {
@@ -72,7 +73,7 @@ function internalAddress(env, lan) {
   }
 
   return {
-    url: lanOrigin(lan.address, resolvePorts(env).web),
+    url: lanOrigin(lan.address, resolveWebPort(env, recordedWebPort)),
     source: `local network — ${lan.source}`,
   };
 }
@@ -114,7 +115,8 @@ function externalAddress(env, recorded) {
  *
  * @param {NodeJS.ProcessEnv} env the repository `.env`, already loaded
  * @param {{ lan: { address: string | null, source: string },
- *           recorded: { origin: string | null, file: string } }} found
+ *           recorded: { origin: string | null, file: string },
+ *           recordedWebPort?: number | null }} found
  * @returns {{ internal: Address, external: Address } | { problems: string[] }}
  */
 export function installAddresses(env, found) {
@@ -124,7 +126,7 @@ export function installAddresses(env, found) {
   /** @type {Address} */
   let internal = { url: '', source: '' };
   try {
-    internal = internalAddress(env, found.lan);
+    internal = internalAddress(env, found.lan, found.recordedWebPort ?? null);
   } catch (error) {
     problems.push(/** @type {Error} */ (error).message);
   }

@@ -640,6 +640,179 @@ bool agentModelLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
+/// One account fact, as the client sees it — shared by `GET /audit-events` (plan 06, B-40; plan 07, B-17) and `GET /permission-rules/:ruleId/history` (plan 15, B-11), which reads the same facts filtered by `subjectId`. The owner is the caller, so it is not here.
+class AuditEventFact {
+  const AuditEventFact({
+    required this.id,
+    required this.kind,
+    required this.subjectId,
+    required this.subjectLabel,
+    required this.details,
+    required this.at,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AuditEventFact.fromJson(Map<String, Object?> json) => AuditEventFact(
+        id: json['id']! as String,
+        kind: json['kind']! as String,
+        subjectId: json['subjectId']! as String,
+        subjectLabel: json['subjectLabel']! as String,
+        details: json['details'] as Map<String, Object?>?,
+        at: json['at']! as String,
+      );
+
+  final String id;
+
+  /// A genuinely open vocabulary — `file.`, `file.written`, a device or a rule event — never a fixed enum.
+  final String kind;
+
+  /// What the fact is about — for a file, its real path; for a rule's own history, the rule itself.
+  final String subjectId;
+
+  /// How to show the subject — for a file, its path; for a rule, its pattern at the moment of the fact.
+  final String subjectLabel;
+
+  /// Sizes, hashes, origin and destination, before/after values — never the contents of a file. Open: shaped by the kind.
+  final Map<String, Object?>? details;
+
+  final String at;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'kind': kind,
+      'subjectId': subjectId,
+      'subjectLabel': subjectLabel,
+      'details': details,
+      'at': at,
+    };
+
+    return json;
+  }
+}
+
+/// What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one.
+class AuditTrailEntryVerdict {
+  const AuditTrailEntryVerdict({
+    required this.requestId,
+    required this.auto,
+    required this.ruleId,
+    required this.scope,
+    required this.resolvedBy,
+    required this.resolvedFrom,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AuditTrailEntryVerdict.fromJson(Map<String, Object?> json) => AuditTrailEntryVerdict(
+        requestId: json['requestId']! as String,
+        auto: json['auto']! as bool,
+        ruleId: json['ruleId'] as String?,
+        scope: json['scope']! as String,
+        resolvedBy: json['resolvedBy'] as String?,
+        resolvedFrom: json['resolvedFrom'] as String?,
+      );
+
+  final String requestId;
+
+  final bool auto;
+
+  final String? ruleId;
+
+  final String scope;
+
+  final String? resolvedBy;
+
+  final String? resolvedFrom;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'requestId': requestId,
+      'auto': auto,
+      'ruleId': ruleId,
+      'scope': scope,
+      'resolvedBy': resolvedBy,
+      'resolvedFrom': resolvedFrom,
+    };
+
+    return json;
+  }
+}
+
+/// One entry of the trail, as the client sees it — shared by `GET /audit-entries` (plan 03) and `GET /permission-rules/:ruleId/invocations` (plan 15, B-11), which reads the same entries filtered by `ruleId`. The owner is not here: it is always the caller.
+class AuditTrailEntry {
+  const AuditTrailEntry({
+    required this.id,
+    required this.sessionId,
+    required this.toolUseId,
+    required this.toolName,
+    required this.kind,
+    required this.input,
+    required this.decision,
+    required this.at,
+    required this.traceId,
+    required this.verdict,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory AuditTrailEntry.fromJson(Map<String, Object?> json) => AuditTrailEntry(
+        id: json['id']! as String,
+        sessionId: json['sessionId']! as String,
+        toolUseId: json['toolUseId'] as String?,
+        toolName: json['toolName']! as String,
+        kind: json['kind']! as String,
+        input: json['input']! as Map<String, Object?>,
+        decision: json['decision']! as String,
+        at: json['at']! as String,
+        traceId: json['traceId'] as String?,
+        verdict: json['verdict'] == null ? null : AuditTrailEntryVerdict.fromJson(json['verdict']! as Map<String, Object?>),
+      );
+
+  final String id;
+
+  final String sessionId;
+
+  final String? toolUseId;
+
+  /// The engine's own name of the tool, kept beside the kind.
+  final String toolName;
+
+  /// The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33).
+  final String kind;
+
+  /// Exactly as the tool was called — except a `file.read`, which shows its path and window alone. Open: shaped by the tool, never fixed.
+  final Map<String, Object?> input;
+
+  final String decision;
+
+  final String at;
+
+  /// What leads from the entry to the log and the events of the same turn.
+  final String? traceId;
+
+  /// What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one.
+  final AuditTrailEntryVerdict? verdict;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'sessionId': sessionId,
+      'toolUseId': toolUseId,
+      'toolName': toolName,
+      'kind': kind,
+      'input': input,
+      'decision': decision,
+      'at': at,
+      'traceId': traceId,
+      'verdict': verdict?.toJson(),
+    };
+
+    return json;
+  }
+}
+
 /// One component's version, for `GET /diag/versions` (plan 06, B-12; plan 28, B-37): the number, or `null` and a closed, stable reason — never a failure, because the screen exists precisely for when something is wrong.
 class ComponentVersion {
   const ComponentVersion({
@@ -2087,6 +2260,107 @@ class OpenFolderEntry {
   }
 }
 
+/// One thing the redundancy/overlap/conflict analysis says about a rule or a draft, against the caller's active rules (plan 15, B-15).
+class PermissionRuleFinding {
+  const PermissionRuleFinding({
+    required this.kind,
+    required this.ruleIds,
+    required this.messageKey,
+    required this.params,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleFinding.fromJson(Map<String, Object?> json) => PermissionRuleFinding(
+        kind: json['kind']! as String,
+        ruleIds: (json['ruleIds']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        messageKey: json['messageKey']! as String,
+        params: json['params']! as Map<String, Object?>,
+      );
+
+  final String kind;
+
+  /// The other rules the finding is about, besides the one it is attached to — empty for a finding that is about that rule alone (`tooBroad`, `unreachable`).
+  final List<String> ruleIds;
+
+  final String messageKey;
+
+  /// The parameters of the message — an open object, as every other `messageKey`/`params` pair in this contract.
+  final Map<String, Object?> params;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kind': kind,
+      'ruleIds': ruleIds,
+      'messageKey': messageKey,
+      'params': params,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleFinding].
+bool permissionRuleFindingLimitsHold(Map<String, Object?> json) {
+  if (json['ruleIds'] is List<Object?> && (json['ruleIds']! as List<Object?>).length > 20) {
+    return false;
+  }
+
+  return true;
+}
+
+/// What a rule's pattern reaches, structured by the domain over the canonical grammar (`describeReach`) — what a screen writes its sentence from, never the client reinterpreting the pattern (plan 03, D-12; plan 15, B-02).
+class PermissionRuleReach {
+  const PermissionRuleReach({
+    this.engine,
+    required this.kind,
+    required this.form,
+    required this.content,
+    required this.excludesCompound,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleReach.fromJson(Map<String, Object?> json) => PermissionRuleReach(
+        engine: json['engine'] as String?,
+        kind: json['kind']! as String,
+        form: json['form']! as String,
+        content: json['content'] as String?,
+        excludesCompound: json['excludesCompound']! as bool,
+      );
+
+  /// The engine the reach is bounded to, or absent/`null` when the rule's `kind` reaches every engine that has it.
+  final String? engine;
+
+  /// The canonical kind, repeated here so the reach is self-contained.
+  final String kind;
+
+  /// `any` — the whole kind, no matcher; `exact` — the literal matcher; `prefix` — a `:*` or glob prefix, bounded at a token or path-segment edge.
+  final String form;
+
+  /// The matcher's own text (the command, the path glob, the domain, the MCP server/tool) — `null` on `form: any`.
+  final String? content;
+
+  /// `true` when an `allow` prefix in `shell` does not cover a command carrying a shell operator (plan 15, D-07) — the one case where the reach says less than the prefix reads.
+  final bool excludesCompound;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'kind': kind,
+      'form': form,
+      'content': content,
+      'excludesCompound': excludesCompound,
+    };
+
+    if (engine != null) {
+      json['engine'] = engine;
+    }
+
+    return json;
+  }
+}
+
+/// Deprecated in favour of `legacyPattern` and `disabledReason` below (plan 15, D-20 revision): `reason` is an opaque string, not translatable. Kept so the current `PermissionRulesController` keeps compiling until F1 rewires it to the two richer fields.
 class PermissionRuleDisabled {
   const PermissionRuleDisabled({
     required this.reason,
@@ -2110,7 +2384,70 @@ class PermissionRuleDisabled {
   }
 }
 
-/// One rule that outlives a session, as the client sees it (plan 03; plan 28, B-33). `status` is computed at the moment of the answer, because the list shows an expired rule marked and not missing.
+/// A `messageKey` and its `params` — never a string the server already rendered. Whoever shows it translates (plan 15, B-02: a rule's disabled reason, an evaluation's reasons and caveats, a draft's findings).
+class TranslatedMessage {
+  const TranslatedMessage({
+    required this.messageKey,
+    required this.params,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory TranslatedMessage.fromJson(Map<String, Object?> json) => TranslatedMessage(
+        messageKey: json['messageKey']! as String,
+        params: json['params']! as Map<String, Object?>,
+      );
+
+  final String messageKey;
+
+  /// The parameters of the message — an open object, as every other `messageKey`/`params` pair in this contract.
+  final Map<String, Object?> params;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'messageKey': messageKey,
+      'params': params,
+    };
+
+    return json;
+  }
+}
+
+/// How much this rule has answered, from the trail (plan 15, D-05) — absent until the route that fills it exists.
+class PermissionRuleUsage {
+  const PermissionRuleUsage({
+    required this.count,
+    required this.lastUsedAt,
+    required this.windowDays,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleUsage.fromJson(Map<String, Object?> json) => PermissionRuleUsage(
+        count: json['count']! as int,
+        lastUsedAt: json['lastUsedAt'] as String?,
+        windowDays: json['windowDays']! as int,
+      );
+
+  final int count;
+
+  final String? lastUsedAt;
+
+  /// The retention window the count is scoped to — 90, today.
+  final int windowDays;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'count': count,
+      'lastUsedAt': lastUsedAt,
+      'windowDays': windowDays,
+    };
+
+    return json;
+  }
+}
+
+/// One rule that outlives a session, as the client sees it (plan 03; plan 28, B-33; plan 15, B-02). `status` is computed at the moment of the answer, because the list shows an expired rule marked and not missing. The fields below `disabled` are plan 15's additions to the management screen: every one of them is optional here because the routes that fill them in are implemented phase by phase (F1); the normative contract — where each is always present — is `backend/03-modules.md`'s `permission` section, not this flag.
 class PermissionRule {
   const PermissionRule({
     required this.id,
@@ -2127,6 +2464,19 @@ class PermissionRule {
     required this.status,
     required this.revokedAt,
     required this.disabled,
+    this.reach,
+    this.breadth,
+    this.legacyPattern,
+    this.disabledReason,
+    this.findings,
+    this.usage,
+    this.grantedVia,
+    this.grantedFromRequestId,
+    this.templateId,
+    this.restoredFrom,
+    this.folderReachable,
+    this.etag,
+    this.expiryCeiling,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
@@ -2145,6 +2495,19 @@ class PermissionRule {
         status: json['status']! as String,
         revokedAt: json['revokedAt'] as String?,
         disabled: json['disabled'] == null ? null : PermissionRuleDisabled.fromJson(json['disabled']! as Map<String, Object?>),
+        reach: json['reach'] == null ? null : PermissionRuleReach.fromJson(json['reach']! as Map<String, Object?>),
+        breadth: json['breadth'] as String?,
+        legacyPattern: json['legacyPattern'] as String?,
+        disabledReason: json['disabledReason'] == null ? null : TranslatedMessage.fromJson(json['disabledReason']! as Map<String, Object?>),
+        findings: json['findings'] == null ? null : (json['findings']! as List<Object?>).map((item) => PermissionRuleFinding.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        usage: json['usage'] == null ? null : PermissionRuleUsage.fromJson(json['usage']! as Map<String, Object?>),
+        grantedVia: json['grantedVia'] as String?,
+        grantedFromRequestId: json['grantedFromRequestId'] as String?,
+        templateId: json['templateId'] as String?,
+        restoredFrom: json['restoredFrom'] as String?,
+        folderReachable: json['folderReachable'] as bool?,
+        etag: json['etag'] as String?,
+        expiryCeiling: json['expiryCeiling'] as String?,
       );
 
   final String id;
@@ -2179,7 +2542,47 @@ class PermissionRule {
 
   final String? revokedAt;
 
+  /// Deprecated in favour of `legacyPattern` and `disabledReason` below (plan 15, D-20 revision): `reason` is an opaque string, not translatable. Kept so the current `PermissionRulesController` keeps compiling until F1 rewires it to the two richer fields.
   final PermissionRuleDisabled? disabled;
+
+  /// Absent on a rule a route has not been taught to fill yet, and always absent on a `disabled` rule, which has no canonical pattern to describe.
+  final PermissionRuleReach? reach;
+
+  /// How wide the pattern reaches, by the domain's table per `kind` (plan 15, D-09). Absent on a route that has not been taught to fill it yet, and always absent/`null` on a `disabled` rule.
+  final String? breadth;
+
+  /// On a `disabled` rule only: the pattern exactly as it was written, in the engine's own grammar — opaque text, never reparsed (plan 15, D-20 revision). `null`/absent on every other rule.
+  final String? legacyPattern;
+
+  /// On a `disabled` rule only: why the plan 28 migration could not translate it — translatable, unlike `disabled.reason` above. `null`/absent on every other rule.
+  final TranslatedMessage? disabledReason;
+
+  /// What the redundancy/overlap/conflict analysis (plan 15, B-15) says about this rule against the caller's other active rules — absent until that route exists.
+  final List<PermissionRuleFinding>? findings;
+
+  /// How much this rule has answered, from the trail (plan 15, D-05) — absent until the route that fills it exists.
+  final PermissionRuleUsage? usage;
+
+  /// How the rule came to exist — `null` for a rule granted before this column existed (plan 15, B-07). Absent until the route that fills it exists.
+  final String? grantedVia;
+
+  /// The permission request the card answered, when `grantedVia` is `approval` — `null`/absent otherwise.
+  final String? grantedFromRequestId;
+
+  /// The catalog template this rule came from, when it was granted via a template — `null`/absent otherwise.
+  final String? templateId;
+
+  /// The revoked rule this one restores, when `grantedVia` is `restore` — `null`/absent otherwise (plan 15, D-11).
+  final String? restoredFrom;
+
+  /// Whether a `project` rule's folder is still in the caller's allowlist, checked by the pure rule without touching disk — `null`/absent on an `always` rule, and absent until the route that fills it exists.
+  final bool? folderReachable;
+
+  /// Derived from `expiresAt` and `revokedAt` — there is no version column. What `PATCH /permission-rules/:ruleId` conditions its write on. Absent until the route that fills it exists.
+  final String? etag;
+
+  /// How far `PATCH /permission-rules/:ruleId` may extend this rule's validity, counted from the moment it was read (plan 15, D-14) — the installation's ceiling for this `decision`, `deny` living longer than `allow` (D-04). `null`/absent on a `disabled` rule, which answers nothing and has no validity to extend. Absent until the route that fills it exists.
+  final String? expiryCeiling;
 
   /// A JSON map with the absent optional fields left out.
   Map<String, Object?> toJson() {
@@ -2200,8 +2603,69 @@ class PermissionRule {
       'disabled': disabled?.toJson(),
     };
 
+    if (reach != null) {
+      json['reach'] = reach?.toJson();
+    }
+
+    if (breadth != null) {
+      json['breadth'] = breadth;
+    }
+
+    if (legacyPattern != null) {
+      json['legacyPattern'] = legacyPattern;
+    }
+
+    if (disabledReason != null) {
+      json['disabledReason'] = disabledReason?.toJson();
+    }
+
+    if (findings != null) {
+      json['findings'] = findings?.map((item) => item.toJson()).toList(growable: false);
+    }
+
+    if (usage != null) {
+      json['usage'] = usage?.toJson();
+    }
+
+    if (grantedVia != null) {
+      json['grantedVia'] = grantedVia;
+    }
+
+    if (grantedFromRequestId != null) {
+      json['grantedFromRequestId'] = grantedFromRequestId;
+    }
+
+    if (templateId != null) {
+      json['templateId'] = templateId;
+    }
+
+    if (restoredFrom != null) {
+      json['restoredFrom'] = restoredFrom;
+    }
+
+    if (folderReachable != null) {
+      json['folderReachable'] = folderReachable;
+    }
+
+    if (etag != null) {
+      json['etag'] = etag;
+    }
+
+    if (expiryCeiling != null) {
+      json['expiryCeiling'] = expiryCeiling;
+    }
+
     return json;
   }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRule].
+bool permissionRuleLimitsHold(Map<String, Object?> json) {
+  if (json['findings'] is List<Object?> && (json['findings']! as List<Object?>).length > 50) {
+    return false;
+  }
+
+  return true;
 }
 
 /// What was approved, for `state` `approved` or `changed` — `null` for `pending`/`rejected`, and for a decision recorded before this field existed (plan 13, B-28, D-80). The screen diffs this against the fields above, the current content, for a `changed` entry.
@@ -6289,58 +6753,6 @@ class WorkspaceWatchStoppedPayload {
   }
 }
 
-/// One fact, as the client sees it. The owner is the caller, so it is not here.
-class AuditEventPagePayloadEventsItem {
-  const AuditEventPagePayloadEventsItem({
-    required this.id,
-    required this.kind,
-    required this.subjectId,
-    required this.subjectLabel,
-    required this.details,
-    required this.at,
-  });
-
-  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory AuditEventPagePayloadEventsItem.fromJson(Map<String, Object?> json) => AuditEventPagePayloadEventsItem(
-        id: json['id']! as String,
-        kind: json['kind']! as String,
-        subjectId: json['subjectId']! as String,
-        subjectLabel: json['subjectLabel']! as String,
-        details: json['details'] as Map<String, Object?>?,
-        at: json['at']! as String,
-      );
-
-  final String id;
-
-  /// A genuinely open vocabulary — `file.`, `file.written`, a device or a rule event — never a fixed enum.
-  final String kind;
-
-  /// What the fact is about — for a file, its real path.
-  final String subjectId;
-
-  /// How to show the subject — for a file, its path relative to the open folder.
-  final String subjectLabel;
-
-  /// Sizes, hashes, origin and destination, counts — never the contents of a file. Open: shaped by the kind.
-  final Map<String, Object?>? details;
-
-  final String at;
-
-  /// A JSON map with the absent optional fields left out.
-  Map<String, Object?> toJson() {
-    final Map<String, Object?> json = <String, Object?>{
-      'id': id,
-      'kind': kind,
-      'subjectId': subjectId,
-      'subjectLabel': subjectLabel,
-      'details': details,
-      'at': at,
-    };
-
-    return json;
-  }
-}
-
 /// `GET /audit-events`: the account facts, read — devices, rules, conversations, undos, file writes (plan 06, B-40; plan 07, B-17).
 class AuditEventPagePayload {
   const AuditEventPagePayload({
@@ -6350,11 +6762,11 @@ class AuditEventPagePayload {
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory AuditEventPagePayload.fromJson(Map<String, Object?> json) => AuditEventPagePayload(
-        events: (json['events']! as List<Object?>).map((item) => AuditEventPagePayloadEventsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        events: (json['events']! as List<Object?>).map((item) => AuditEventFact.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         nextCursor: json['nextCursor'] as String?,
       );
 
-  final List<AuditEventPagePayloadEventsItem> events;
+  final List<AuditEventFact> events;
 
   /// Opaque to the client: send it back as `cursor`. `null` on the last page.
   final String? nextCursor;
@@ -6379,127 +6791,6 @@ bool auditEventPagePayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
-/// What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one.
-class AuditTrailPagePayloadEntriesItemVerdict {
-  const AuditTrailPagePayloadEntriesItemVerdict({
-    required this.requestId,
-    required this.auto,
-    required this.ruleId,
-    required this.scope,
-    required this.resolvedBy,
-    required this.resolvedFrom,
-  });
-
-  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory AuditTrailPagePayloadEntriesItemVerdict.fromJson(Map<String, Object?> json) => AuditTrailPagePayloadEntriesItemVerdict(
-        requestId: json['requestId']! as String,
-        auto: json['auto']! as bool,
-        ruleId: json['ruleId'] as String?,
-        scope: json['scope']! as String,
-        resolvedBy: json['resolvedBy'] as String?,
-        resolvedFrom: json['resolvedFrom'] as String?,
-      );
-
-  final String requestId;
-
-  final bool auto;
-
-  final String? ruleId;
-
-  final String scope;
-
-  final String? resolvedBy;
-
-  final String? resolvedFrom;
-
-  /// A JSON map with the absent optional fields left out.
-  Map<String, Object?> toJson() {
-    final Map<String, Object?> json = <String, Object?>{
-      'requestId': requestId,
-      'auto': auto,
-      'ruleId': ruleId,
-      'scope': scope,
-      'resolvedBy': resolvedBy,
-      'resolvedFrom': resolvedFrom,
-    };
-
-    return json;
-  }
-}
-
-/// One entry of the trail, as the client sees it. The owner is not here: it is always the caller.
-class AuditTrailPagePayloadEntriesItem {
-  const AuditTrailPagePayloadEntriesItem({
-    required this.id,
-    required this.sessionId,
-    required this.toolUseId,
-    required this.toolName,
-    required this.kind,
-    required this.input,
-    required this.decision,
-    required this.at,
-    required this.traceId,
-    required this.verdict,
-  });
-
-  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory AuditTrailPagePayloadEntriesItem.fromJson(Map<String, Object?> json) => AuditTrailPagePayloadEntriesItem(
-        id: json['id']! as String,
-        sessionId: json['sessionId']! as String,
-        toolUseId: json['toolUseId'] as String?,
-        toolName: json['toolName']! as String,
-        kind: json['kind']! as String,
-        input: json['input']! as Map<String, Object?>,
-        decision: json['decision']! as String,
-        at: json['at']! as String,
-        traceId: json['traceId'] as String?,
-        verdict: json['verdict'] == null ? null : AuditTrailPagePayloadEntriesItemVerdict.fromJson(json['verdict']! as Map<String, Object?>),
-      );
-
-  final String id;
-
-  final String sessionId;
-
-  final String? toolUseId;
-
-  /// The engine's own name of the tool, kept beside the kind.
-  final String toolName;
-
-  /// The canonical kind of the call — `shell`, `file.edit` (plan 28, B-33).
-  final String kind;
-
-  /// Exactly as the tool was called — except a `file.read`, which shows its path and window alone. Open: shaped by the tool, never fixed.
-  final Map<String, Object?> input;
-
-  final String decision;
-
-  final String at;
-
-  /// What leads from the entry to the log and the events of the same turn.
-  final String? traceId;
-
-  /// What was decided. `null` on a `recorded` entry, and on a decision written before the trail kept one.
-  final AuditTrailPagePayloadEntriesItemVerdict? verdict;
-
-  /// A JSON map with the absent optional fields left out.
-  Map<String, Object?> toJson() {
-    final Map<String, Object?> json = <String, Object?>{
-      'id': id,
-      'sessionId': sessionId,
-      'toolUseId': toolUseId,
-      'toolName': toolName,
-      'kind': kind,
-      'input': input,
-      'decision': decision,
-      'at': at,
-      'traceId': traceId,
-      'verdict': verdict?.toJson(),
-    };
-
-    return json;
-  }
-}
-
 /// `GET /audit-entries`: the caller's trail, newest first, one page at a time — "what ran on my machine, and who let it?" (plan 03).
 class AuditTrailPagePayload {
   const AuditTrailPagePayload({
@@ -6509,11 +6800,11 @@ class AuditTrailPagePayload {
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
   factory AuditTrailPagePayload.fromJson(Map<String, Object?> json) => AuditTrailPagePayload(
-        entries: (json['entries']! as List<Object?>).map((item) => AuditTrailPagePayloadEntriesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        entries: (json['entries']! as List<Object?>).map((item) => AuditTrailEntry.fromJson(item! as Map<String, Object?>)).toList(growable: false),
         nextCursor: json['nextCursor'] as String?,
       );
 
-  final List<AuditTrailPagePayloadEntriesItem> entries;
+  final List<AuditTrailEntry> entries;
 
   /// Opaque to the client: send it back as `cursor` for the next page. `null` on the last one.
   final String? nextCursor;
@@ -9070,17 +9361,18 @@ bool openFoldersPayloadLimitsHold(Map<String, Object?> json) {
   return true;
 }
 
-/// `GET /permission-rules`: the caller's rules, newest first — expired ones included and marked, revoked ones gone (plan 03).
-class PermissionRuleListPayload {
-  const PermissionRuleListPayload({
+/// `POST /permission-rules/revoke` and `POST /permission-rules/restore`: several rules from one call, atomic in validation and in the write (plan 15, B-13, D-06, D-11) — every id is checked before anything is written, and the rules this call touched come back together, each the same shape `GET /permission-rules/:ruleId` returns.
+class PermissionRuleBatchPayload {
+  const PermissionRuleBatchPayload({
     required this.rules,
   });
 
   /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
-  factory PermissionRuleListPayload.fromJson(Map<String, Object?> json) => PermissionRuleListPayload(
+  factory PermissionRuleBatchPayload.fromJson(Map<String, Object?> json) => PermissionRuleBatchPayload(
         rules: (json['rules']! as List<Object?>).map((item) => PermissionRule.fromJson(item! as Map<String, Object?>)).toList(growable: false),
       );
 
+  /// One entry per id given, in the same order — a rule already revoked (or already restored) is idempotent and still comes back.
   final List<PermissionRule> rules;
 
   /// A JSON map with the absent optional fields left out.
@@ -9093,13 +9385,874 @@ class PermissionRuleListPayload {
   }
 }
 
-/// Whether [json] keeps within the bounds the schema gives [PermissionRuleListPayload].
-bool permissionRuleListPayloadLimitsHold(Map<String, Object?> json) {
-  if (json['rules'] is List<Object?> && (json['rules']! as List<Object?>).length > 10000) {
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleBatchPayload].
+bool permissionRuleBatchPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['rules'] is List<Object?> && (json['rules']! as List<Object?>).length > 100) {
     return false;
   }
 
   return true;
+}
+
+/// `POST /permission-rules/evaluate`: testing a command without running it — the same precedence a live session uses, over the caller's own rules (plan 15, B-14). No effect of any kind: nothing is stored, no event, no push.
+class PermissionRuleEvaluationPayload {
+  const PermissionRuleEvaluationPayload({
+    required this.outcome,
+    required this.answeringRule,
+    required this.matching,
+    required this.reasons,
+    required this.caveats,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleEvaluationPayload.fromJson(Map<String, Object?> json) => PermissionRuleEvaluationPayload(
+        outcome: json['outcome']! as String,
+        answeringRule: json['answeringRule'] == null ? null : PermissionRule.fromJson(json['answeringRule']! as Map<String, Object?>),
+        matching: (json['matching']! as List<Object?>).map((item) => PermissionRule.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        reasons: (json['reasons']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        caveats: (json['caveats']! as List<Object?>).map((item) => TranslatedMessage.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final String outcome;
+
+  /// The rule that answers, `null` when no rule does — the mode may still answer (see `reasons`).
+  final PermissionRule? answeringRule;
+
+  /// Every rule that matched, the one that answered included — what explains "why my allow did not win".
+  final List<PermissionRule> matching;
+
+  final List<String> reasons;
+
+  /// What the engine decides before any rule of ours is even asked (plan 15, D-12) — declared by the engine's adapter, never guessed here.
+  final List<TranslatedMessage> caveats;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'outcome': outcome,
+      'answeringRule': answeringRule?.toJson(),
+      'matching': matching.map((item) => item.toJson()).toList(growable: false),
+      'reasons': reasons,
+      'caveats': caveats.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleEvaluationPayload].
+bool permissionRuleEvaluationPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['matching'] is List<Object?> && (json['matching']! as List<Object?>).length > 100) {
+    return false;
+  }
+
+  if (json['reasons'] is List<Object?> && (json['reasons']! as List<Object?>).length > 5) {
+    return false;
+  }
+
+  if (json['caveats'] is List<Object?> && (json['caveats']! as List<Object?>).length > 10) {
+    return false;
+  }
+
+  return true;
+}
+
+class PermissionRuleExportPayloadRulesItem {
+  const PermissionRuleExportPayloadRulesItem({
+    this.engine,
+    required this.pattern,
+    required this.decision,
+    required this.scope,
+    required this.projectPath,
+    required this.expiresAt,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleExportPayloadRulesItem.fromJson(Map<String, Object?> json) => PermissionRuleExportPayloadRulesItem(
+        engine: json['engine'] as String?,
+        pattern: json['pattern']! as String,
+        decision: json['decision']! as String,
+        scope: json['scope']! as String,
+        projectPath: json['projectPath'] as String?,
+        expiresAt: json['expiresAt']! as String,
+      );
+
+  /// Absent for a canonical rule — present only when restricted to one engine.
+  final String? engine;
+
+  final String pattern;
+
+  final String decision;
+
+  final String scope;
+
+  final String? projectPath;
+
+  /// Informative only — ignored on import (D-17).
+  final String expiresAt;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'pattern': pattern,
+      'decision': decision,
+      'scope': scope,
+      'projectPath': projectPath,
+      'expiresAt': expiresAt,
+    };
+
+    if (engine != null) {
+      json['engine'] = engine;
+    }
+
+    return json;
+  }
+}
+
+/// `GET /permission-rules/export`: the caller's own rules, in the `remote-claude.permission-rules` file format (plan 15, B-18, D-17). No `id`, no `userId`, no origin; a `disabled` rule never leaves.
+class PermissionRuleExportPayload {
+  const PermissionRuleExportPayload({
+    required this.format,
+    required this.version,
+    required this.exportedAt,
+    required this.rules,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleExportPayload.fromJson(Map<String, Object?> json) => PermissionRuleExportPayload(
+        format: json['format']! as String,
+        version: json['version']! as int,
+        exportedAt: json['exportedAt']! as String,
+        rules: (json['rules']! as List<Object?>).map((item) => PermissionRuleExportPayloadRulesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final String format;
+
+  final int version;
+
+  final String exportedAt;
+
+  final List<PermissionRuleExportPayloadRulesItem> rules;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'format': format,
+      'version': version,
+      'exportedAt': exportedAt,
+      'rules': rules.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /permission-rules/:ruleId/history`: the events of one rule — granted, validity changed, revoked, restored (plan 15, B-11). A restored rule is a fresh `permission.ruleGranted`, with `restoredFrom` in `details`, not a kind of its own. The same facts `GET /audit-events` shows, filtered by this rule's id as the subject.
+class PermissionRuleHistoryPayload {
+  const PermissionRuleHistoryPayload({
+    required this.events,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleHistoryPayload.fromJson(Map<String, Object?> json) => PermissionRuleHistoryPayload(
+        events: (json['events']! as List<Object?>).map((item) => AuditEventFact.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<AuditEventFact> events;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'events': events.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleHistoryPayload].
+bool permissionRuleHistoryPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['events'] is List<Object?> && (json['events']! as List<Object?>).length > 100) {
+    return false;
+  }
+
+  return true;
+}
+
+class PermissionRuleImportPreviewPayloadItemsItem {
+  const PermissionRuleImportPreviewPayloadItemsItem({
+    required this.index,
+    required this.pattern,
+    required this.decision,
+    required this.scope,
+    required this.verdict,
+    this.breadth,
+    this.code,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleImportPreviewPayloadItemsItem.fromJson(Map<String, Object?> json) => PermissionRuleImportPreviewPayloadItemsItem(
+        index: json['index']! as int,
+        pattern: json['pattern']! as String,
+        decision: json['decision']! as String,
+        scope: json['scope']! as String,
+        verdict: json['verdict']! as String,
+        breadth: json['breadth'] as String?,
+        code: json['code'] as String?,
+      );
+
+  final int index;
+
+  final String pattern;
+
+  final String decision;
+
+  final String scope;
+
+  final String verdict;
+
+  /// Present for `new`/`existing` — absent for `invalid`.
+  final String? breadth;
+
+  /// Present for `invalid` — the code applying this item would answer with.
+  final String? code;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'index': index,
+      'pattern': pattern,
+      'decision': decision,
+      'scope': scope,
+      'verdict': verdict,
+    };
+
+    if (breadth != null) {
+      json['breadth'] = breadth;
+    }
+
+    if (code != null) {
+      json['code'] = code;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleImportPreviewPayloadItemsItem].
+bool permissionRuleImportPreviewPayloadItemsItemLimitsHold(Map<String, Object?> json) {
+  if (json['index'] is int && (json['index']! as int) < 0) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `POST /permission-rules/import/preview`: one verdict per item of an import file — `new`, `existing`, or `invalid` with the code that would refuse it (plan 15, B-18, D-17). Read only — nothing is written, and a `project` item's path is not resolved yet (no `folderMap` until applying).
+class PermissionRuleImportPreviewPayload {
+  const PermissionRuleImportPreviewPayload({
+    required this.digest,
+    required this.items,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleImportPreviewPayload.fromJson(Map<String, Object?> json) => PermissionRuleImportPreviewPayload(
+        digest: json['digest']! as String,
+        items: (json['items']! as List<Object?>).map((item) => PermissionRuleImportPreviewPayloadItemsItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// Of the file's own bytes — sent back on apply, to prove it is the same file (S-143).
+  final String digest;
+
+  final List<PermissionRuleImportPreviewPayloadItemsItem> items;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'digest': digest,
+      'items': items.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+class PermissionRuleImportResultPayloadCounts {
+  const PermissionRuleImportResultPayloadCounts({
+    required this.created,
+    required this.existing,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleImportResultPayloadCounts.fromJson(Map<String, Object?> json) => PermissionRuleImportResultPayloadCounts(
+        created: json['created']! as int,
+        existing: json['existing']! as int,
+      );
+
+  final int created;
+
+  /// Already active before this call — the grant routine's own idempotency, not a second write.
+  final int existing;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'created': created,
+      'existing': existing,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleImportResultPayloadCounts].
+bool permissionRuleImportResultPayloadCountsLimitsHold(Map<String, Object?> json) {
+  if (json['created'] is int && (json['created']! as int) < 0) {
+    return false;
+  }
+
+  if (json['existing'] is int && (json['existing']! as int) < 0) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `POST /permission-rules/import`: what applying an accepted lot of an import file actually created (plan 15, B-18, D-17). Revalidated against this installation right before writing — an item accepted at preview that would now be refused fails the whole call, nothing written.
+class PermissionRuleImportResultPayload {
+  const PermissionRuleImportResultPayload({
+    required this.counts,
+    required this.rules,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleImportResultPayload.fromJson(Map<String, Object?> json) => PermissionRuleImportResultPayload(
+        counts: PermissionRuleImportResultPayloadCounts.fromJson(json['counts']! as Map<String, Object?>),
+        rules: (json['rules']! as List<Object?>).map((item) => PermissionRule.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final PermissionRuleImportResultPayloadCounts counts;
+
+  /// Every accepted item's rule, in the order it was accepted.
+  final List<PermissionRule> rules;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'counts': counts.toJson(),
+      'rules': rules.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /permission-rules/:ruleId/invocations`: the invocations a rule answered, keyset descendent over the trail's own `seq` — the same entries `GET /audit-entries` shows, filtered by this rule's id (plan 15, B-11, S-61, S-62).
+class PermissionRuleInvocationPagePayload {
+  const PermissionRuleInvocationPagePayload({
+    required this.invocations,
+    required this.nextCursor,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleInvocationPagePayload.fromJson(Map<String, Object?> json) => PermissionRuleInvocationPagePayload(
+        invocations: (json['invocations']! as List<Object?>).map((item) => AuditTrailEntry.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        nextCursor: json['nextCursor'] as String?,
+      );
+
+  final List<AuditTrailEntry> invocations;
+
+  /// Opaque: echo it as `cursor` for the page after this one. `null` once there is none.
+  final String? nextCursor;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'invocations': invocations.map((item) => item.toJson()).toList(growable: false),
+      'nextCursor': nextCursor,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleInvocationPagePayload].
+bool permissionRuleInvocationPagePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['invocations'] is List<Object?> && (json['invocations']! as List<Object?>).length > 100) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `GET /permission-rules`: the caller's rules, newest first — expired ones included and marked, revoked ones gone (plan 03). Paginated by cursor over `(granted_at, id)` (plan 15, D-13, decided 2026-11-05 against the plan's own original recommendation of a flat list with a ceiling): the first page with no `cursor` is unchanged in content from before plan 15, which is what keeps the published app — which reads neither `cursor` nor `nextCursor` — on the same contract (S-01, S-02). `nextCursor` is optional here only because the cursor read is wired phase by phase (F1, B-10); the normative contract, where it is always present, is `backend/03-modules.md`'s `permission` section.
+class PermissionRuleListPayload {
+  const PermissionRuleListPayload({
+    required this.rules,
+    this.nextCursor,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleListPayload.fromJson(Map<String, Object?> json) => PermissionRuleListPayload(
+        rules: (json['rules']! as List<Object?>).map((item) => PermissionRule.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        nextCursor: json['nextCursor'] as String?,
+      );
+
+  /// One page — at most `pageSize` (default 50, ceiling 200).
+  final List<PermissionRule> rules;
+
+  /// Opaque to the client: send it back as `cursor` for the next page. `null` on the last one.
+  final String? nextCursor;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'rules': rules.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    if (nextCursor != null) {
+      json['nextCursor'] = nextCursor;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleListPayload].
+bool permissionRuleListPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['rules'] is List<Object?> && (json['rules']! as List<Object?>).length > 200) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `POST /permission-rules/preview`: what a pattern nobody has granted yet would reach, and what it would mean against the caller's active rules (plan 15, B-15). Never refused for its breadth — that is `POST /permission-rules`'s job, only after the person decides to acknowledge it.
+class PermissionRulePreviewPayload {
+  const PermissionRulePreviewPayload({
+    required this.pattern,
+    required this.reach,
+    required this.breadth,
+    required this.findings,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRulePreviewPayload.fromJson(Map<String, Object?> json) => PermissionRulePreviewPayload(
+        pattern: json['pattern']! as String,
+        reach: PermissionRuleReach.fromJson(json['reach']! as Map<String, Object?>),
+        breadth: json['breadth']! as String,
+        findings: (json['findings']! as List<Object?>).map((item) => PermissionRuleFinding.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// The pattern exactly as given, in the canonical grammar.
+  final String pattern;
+
+  final PermissionRuleReach reach;
+
+  final String breadth;
+
+  /// What the redundancy/overlap/conflict analysis says about this draft, against the caller's active rules (plan 15, B-15).
+  final List<PermissionRuleFinding> findings;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'pattern': pattern,
+      'reach': reach.toJson(),
+      'breadth': breadth,
+      'findings': findings.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRulePreviewPayload].
+bool permissionRulePreviewPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['findings'] is List<Object?> && (json['findings']! as List<Object?>).length > 50) {
+    return false;
+  }
+
+  return true;
+}
+
+class PermissionRuleSimulationPayloadCounts {
+  const PermissionRuleSimulationPayloadCounts({
+    required this.unchanged,
+    required this.wouldAutoAllow,
+    required this.wouldAutoDeny,
+    required this.wouldAsk,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleSimulationPayloadCounts.fromJson(Map<String, Object?> json) => PermissionRuleSimulationPayloadCounts(
+        unchanged: json['unchanged']! as int,
+        wouldAutoAllow: json['wouldAutoAllow']! as int,
+        wouldAutoDeny: json['wouldAutoDeny']! as int,
+        wouldAsk: json['wouldAsk']! as int,
+      );
+
+  final int unchanged;
+
+  final int wouldAutoAllow;
+
+  final int wouldAutoDeny;
+
+  final int wouldAsk;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'unchanged': unchanged,
+      'wouldAutoAllow': wouldAutoAllow,
+      'wouldAutoDeny': wouldAutoDeny,
+      'wouldAsk': wouldAsk,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleSimulationPayloadCounts].
+bool permissionRuleSimulationPayloadCountsLimitsHold(Map<String, Object?> json) {
+  if (json['unchanged'] is int && (json['unchanged']! as int) < 0) {
+    return false;
+  }
+
+  if (json['wouldAutoAllow'] is int && (json['wouldAutoAllow']! as int) < 0) {
+    return false;
+  }
+
+  if (json['wouldAutoDeny'] is int && (json['wouldAutoDeny']! as int) < 0) {
+    return false;
+  }
+
+  if (json['wouldAsk'] is int && (json['wouldAsk']! as int) < 0) {
+    return false;
+  }
+
+  return true;
+}
+
+class PermissionRuleSimulationPayloadChangesItem {
+  const PermissionRuleSimulationPayloadChangesItem({
+    required this.before,
+    required this.after,
+    required this.entry,
+    required this.answeringRule,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleSimulationPayloadChangesItem.fromJson(Map<String, Object?> json) => PermissionRuleSimulationPayloadChangesItem(
+        before: json['before']! as String,
+        after: json['after']! as String,
+        entry: AuditTrailEntry.fromJson(json['entry']! as Map<String, Object?>),
+        answeringRule: json['answeringRule'] == null ? null : PermissionRule.fromJson(json['answeringRule']! as Map<String, Object?>),
+      );
+
+  final String before;
+
+  final String after;
+
+  final AuditTrailEntry entry;
+
+  /// The rule that would answer now — `null` when none would (the mode may still answer).
+  final PermissionRule? answeringRule;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'before': before,
+      'after': after,
+      'entry': entry.toJson(),
+      'answeringRule': answeringRule?.toJson(),
+    };
+
+    return json;
+  }
+}
+
+/// `POST /permission-rules/simulate`: what adding or removing rules would have changed in the caller's last invocations, against the trail's own record of what was actually decided (plan 15, B-16, D-15). Read only — nothing is stored, no event, no push. The mode is never in the trail, so every invocation is read under the canonical `ask`.
+class PermissionRuleSimulationPayload {
+  const PermissionRuleSimulationPayload({
+    required this.counts,
+    required this.changes,
+    required this.withoutFolder,
+    required this.assumedMode,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleSimulationPayload.fromJson(Map<String, Object?> json) => PermissionRuleSimulationPayload(
+        counts: PermissionRuleSimulationPayloadCounts.fromJson(json['counts']! as Map<String, Object?>),
+        changes: (json['changes']! as List<Object?>).map((item) => PermissionRuleSimulationPayloadChangesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        withoutFolder: json['withoutFolder']! as int,
+        assumedMode: json['assumedMode']! as String,
+      );
+
+  final PermissionRuleSimulationPayloadCounts counts;
+
+  /// Only the invocations whose verdict would change — the trail shows the rest unmoved.
+  final List<PermissionRuleSimulationPayloadChangesItem> changes;
+
+  /// Invocations with no folder on record — too old for `session_origins` (S-125).
+  final int withoutFolder;
+
+  /// The mode every invocation is read under, since the trail never kept the real one (D-15).
+  final String assumedMode;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'counts': counts.toJson(),
+      'changes': changes.map((item) => item.toJson()).toList(growable: false),
+      'withoutFolder': withoutFolder,
+      'assumedMode': assumedMode,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [PermissionRuleSimulationPayload].
+bool permissionRuleSimulationPayloadLimitsHold(Map<String, Object?> json) {
+  if (json['changes'] is List<Object?> && (json['changes']! as List<Object?>).length > 100) {
+    return false;
+  }
+
+  if (json['withoutFolder'] is int && (json['withoutFolder']! as int) < 0) {
+    return false;
+  }
+
+  return true;
+}
+
+class PermissionRuleSummaryPayloadByStatus {
+  const PermissionRuleSummaryPayloadByStatus({
+    required this.active,
+    required this.expired,
+    required this.revoked,
+    required this.disabled,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleSummaryPayloadByStatus.fromJson(Map<String, Object?> json) => PermissionRuleSummaryPayloadByStatus(
+        active: json['active']! as int,
+        expired: json['expired']! as int,
+        revoked: json['revoked']! as int,
+        disabled: json['disabled']! as int,
+      );
+
+  final int active;
+
+  final int expired;
+
+  final int revoked;
+
+  /// The rules the plan 28 migration switched off (plan 15, D-20 revision).
+  final int disabled;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'active': active,
+      'expired': expired,
+      'revoked': revoked,
+      'disabled': disabled,
+    };
+
+    return json;
+  }
+}
+
+class PermissionRuleSummaryPayloadByDecision {
+  const PermissionRuleSummaryPayloadByDecision({
+    required this.allow,
+    required this.deny,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleSummaryPayloadByDecision.fromJson(Map<String, Object?> json) => PermissionRuleSummaryPayloadByDecision(
+        allow: json['allow']! as int,
+        deny: json['deny']! as int,
+      );
+
+  final int allow;
+
+  final int deny;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'allow': allow,
+      'deny': deny,
+    };
+
+    return json;
+  }
+}
+
+class PermissionRuleSummaryPayloadByScope {
+  const PermissionRuleSummaryPayloadByScope({
+    required this.project,
+    required this.always,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleSummaryPayloadByScope.fromJson(Map<String, Object?> json) => PermissionRuleSummaryPayloadByScope(
+        project: json['project']! as int,
+        always: json['always']! as int,
+      );
+
+  final int project;
+
+  final int always;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'project': project,
+      'always': always,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /permission-rules/summary`: counts over the same predicate the listing reads — for the tabs and the navigation badge (plan 15, B-10).
+class PermissionRuleSummaryPayload {
+  const PermissionRuleSummaryPayload({
+    required this.byStatus,
+    required this.byDecision,
+    required this.byScope,
+    required this.expiringBefore,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleSummaryPayload.fromJson(Map<String, Object?> json) => PermissionRuleSummaryPayload(
+        byStatus: PermissionRuleSummaryPayloadByStatus.fromJson(json['byStatus']! as Map<String, Object?>),
+        byDecision: PermissionRuleSummaryPayloadByDecision.fromJson(json['byDecision']! as Map<String, Object?>),
+        byScope: PermissionRuleSummaryPayloadByScope.fromJson(json['byScope']! as Map<String, Object?>),
+        expiringBefore: json['expiringBefore']! as int,
+      );
+
+  final PermissionRuleSummaryPayloadByStatus byStatus;
+
+  final PermissionRuleSummaryPayloadByDecision byDecision;
+
+  final PermissionRuleSummaryPayloadByScope byScope;
+
+  /// Active rules expiring before the `expiresBefore` filter — `0` when it was not given.
+  final int expiringBefore;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'byStatus': byStatus.toJson(),
+      'byDecision': byDecision.toJson(),
+      'byScope': byScope.toJson(),
+      'expiringBefore': expiringBefore,
+    };
+
+    return json;
+  }
+}
+
+class PermissionRuleTemplatesPayloadTemplatesItemRulesItem {
+  const PermissionRuleTemplatesPayloadTemplatesItemRulesItem({
+    required this.pattern,
+    required this.decision,
+    required this.reach,
+    required this.breadth,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleTemplatesPayloadTemplatesItemRulesItem.fromJson(Map<String, Object?> json) => PermissionRuleTemplatesPayloadTemplatesItemRulesItem(
+        pattern: json['pattern']! as String,
+        decision: json['decision']! as String,
+        reach: PermissionRuleReach.fromJson(json['reach']! as Map<String, Object?>),
+        breadth: json['breadth']! as String,
+      );
+
+  /// The pattern exactly as the catalog wrote it, in the canonical grammar.
+  final String pattern;
+
+  final String decision;
+
+  final PermissionRuleReach reach;
+
+  final String breadth;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'pattern': pattern,
+      'decision': decision,
+      'reach': reach.toJson(),
+      'breadth': breadth,
+    };
+
+    return json;
+  }
+}
+
+class PermissionRuleTemplatesPayloadTemplatesItem {
+  const PermissionRuleTemplatesPayloadTemplatesItem({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.rules,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleTemplatesPayloadTemplatesItem.fromJson(Map<String, Object?> json) => PermissionRuleTemplatesPayloadTemplatesItem(
+        id: json['id']! as String,
+        name: TranslatedMessage.fromJson(json['name']! as Map<String, Object?>),
+        description: TranslatedMessage.fromJson(json['description']! as Map<String, Object?>),
+        rules: (json['rules']! as List<Object?>).map((item) => PermissionRuleTemplatesPayloadTemplatesItemRulesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final String id;
+
+  final TranslatedMessage name;
+
+  final TranslatedMessage description;
+
+  final List<PermissionRuleTemplatesPayloadTemplatesItemRulesItem> rules;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'id': id,
+      'name': name.toJson(),
+      'description': description.toJson(),
+      'rules': rules.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// `GET /permission-rules/templates`: the catalog of pre-built rule bundles, canonical and the same for every engine (plan 15, B-17, D-16). Applying one is an import (B-18), by `templateId`.
+class PermissionRuleTemplatesPayload {
+  const PermissionRuleTemplatesPayload({
+    required this.templates,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory PermissionRuleTemplatesPayload.fromJson(Map<String, Object?> json) => PermissionRuleTemplatesPayload(
+        templates: (json['templates']! as List<Object?>).map((item) => PermissionRuleTemplatesPayloadTemplatesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  final List<PermissionRuleTemplatesPayloadTemplatesItem> templates;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'templates': templates.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
 }
 
 class PermissionStatePayloadAnswersItem {
@@ -10368,7 +11521,7 @@ typedef NotificationPayload = Notification;
 /// `POST /workspaces/open-folders`: `201` with the new tab, `200` with the one already open — the same shape as one entry of `OpenFolders.folders`, named again rather than declared twice (plan 28, B-48).
 typedef OpenFolderEntryPayload = OpenFolderEntry;
 
-/// `GET /permission-rules/:ruleId`, `POST /permission-rules` and `DELETE /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48).
+/// `GET /permission-rules/:ruleId`, `POST /permission-rules`, `DELETE /permission-rules/:ruleId` and `PATCH /permission-rules/:ruleId`: one rule, whatever its state — the same shape as one entry of `PermissionRuleList.rules`, named again rather than declared twice (plan 28, B-48). `PATCH` shortens or extends `expiresAt` alone (plan 15, B-12, D-01) — no other field of a rule is ever edited.
 typedef PermissionRulePayload = PermissionRule;
 
 /// `PUT /engines/:engine/project-mcp-approvals`: the entry just approved, at the digest the body carried (plan 13, B-24; D-11). `DELETE` of the same resource rejects an entry and answers `204` with no body — see `scripts/contracts-route-exceptions.json`.

@@ -42,6 +42,7 @@ export class AuditController {
       to: query.to === undefined ? null : new Date(query.to),
       before: query.cursor === undefined ? null : Number(query.cursor),
       limit: query.limit ?? DEFAULT_PAGE_SIZE,
+      ruleId: query.ruleId ?? null,
     });
 
     return toAuditTrailPageDto(page);

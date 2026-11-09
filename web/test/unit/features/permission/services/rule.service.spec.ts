@@ -1,127 +1,270 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchRule, fetchRules, revokeRule } from '@/features/permission/services/rule.service';
+import {
+  applyRuleImport,
+  changeRuleExpiry,
+  evaluateRule,
+  fetchRule,
+  fetchRuleExport,
+  fetchRuleHistory,
+  fetchRuleInvocations,
+  fetchRuleSummary,
+  fetchRuleTemplates,
+  fetchRules,
+  grantRule,
+  previewRule,
+  previewRuleImport,
+  restoreRules,
+  revokeRule,
+  revokeRules,
+  simulateRules,
+} from '@/features/permission/services/rule.service';
 import { api } from '@/shared/api/api';
-
-/** A rule as the screens know it. */
-const rule = {
-  id: 'rule_1',
-  scope: 'always',
-  kind: 'shell',
-  pattern: 'shell(git status)',
-  decision: 'allow',
-  projectPath: null,
-  grantedBy: 'user-1',
-  grantedAt: '2026-09-24T10:00:00.000Z',
-  expiresAt: '2026-12-23T10:00:00.000Z',
-  status: 'active',
-  revokedAt: null,
-  engine: null,
-  disabled: null,
-};
-
-/** The same rule as the backend sends it: with the `toolName` it keeps for the published app. */
-const wire = { ...rule, toolName: 'shell' };
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe('fetchRules', () => {
-  it('asks the one endpoint there is', async () => {
+  it('asks the listing with no query when no filter or sort is given', async () => {
     const get = vi.spyOn(api, 'get').mockResolvedValue({ rules: [] });
 
-    await fetchRules();
+    await fetchRules({}, null);
 
     expect(get).toHaveBeenCalledWith('/permission-rules');
   });
 
-  it('unwraps the envelope, so nothing above it knows the response has one', async () => {
-    vi.spyOn(api, 'get').mockResolvedValue({ rules: [wire] });
+  it('carries every filter and the sort, in the query — plan 15, B-20', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ rules: [] });
 
-    expect(await fetchRules()).toEqual([rule]);
-  });
-
-  it('drops the native tool name: the screens name a rule by its kind — plan 28 F5', async () => {
-    vi.spyOn(api, 'get').mockResolvedValue({ rules: [wire] });
-
-    const [listed] = await fetchRules();
-
-    expect(listed).not.toHaveProperty('toolName');
-  });
-
-  it('reads a disabled rule: its old pattern, no kind, the engine and the reason', async () => {
-    const disabled = {
-      ...wire,
-      kind: null,
-      toolName: 'Bash',
-      pattern: 'Bash(npm run *)',
-      status: 'disabled',
-      engine: 'claude',
-      disabled: { reason: 'untranslatable' },
-    };
-    vi.spyOn(api, 'get').mockResolvedValue({ rules: [disabled] });
-
-    expect(await fetchRules()).toEqual([
+    await fetchRules(
       {
-        ...rule,
-        kind: null,
-        pattern: 'Bash(npm run *)',
-        status: 'disabled',
+        status: ['active', 'expired'],
+        scope: 'project',
+        decision: 'deny',
         engine: 'claude',
-        disabled: { reason: 'untranslatable' },
+        kind: 'shell',
+        folder: '/srv/app',
+        q: 'git',
+        expiresBefore: '2026-12-01T00:00:00.000Z',
+        sort: 'expiresAt',
+        order: 'asc',
       },
-    ]);
+      null,
+    );
+
+    const [path] = get.mock.calls[0] as [string];
+    const query = new URLSearchParams(path.split('?')[1]);
+
+    expect(query.get('status')).toBe('active,expired');
+    expect(query.get('scope')).toBe('project');
+    expect(query.get('decision')).toBe('deny');
+    expect(query.get('engine')).toBe('claude');
+    expect(query.get('kind')).toBe('shell');
+    expect(query.get('folder')).toBe('/srv/app');
+    expect(query.get('q')).toBe('git');
+    expect(query.get('expiresBefore')).toBe('2026-12-01T00:00:00.000Z');
+    expect(query.get('sort')).toBe('expiresAt');
+    expect(query.get('order')).toBe('asc');
   });
 
-  it('reads a backend from before the kind as a rule of no kind, every engine, not disabled', async () => {
-    const older = { ...wire, kind: undefined, engine: undefined, disabled: undefined };
-    vi.spyOn(api, 'get').mockResolvedValue({ rules: [older] });
+  it('carries the cursor, opaque, as the previous page gave it', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ rules: [] });
 
-    expect(await fetchRules()).toEqual([{ ...rule, kind: null }]);
+    await fetchRules({}, 'opaque-cursor');
+
+    expect(get).toHaveBeenCalledWith('/permission-rules?cursor=opaque-cursor');
+  });
+
+  it('answers the page, defaulting a missing `nextCursor` to null', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue({ rules: [] });
+
+    expect(await fetchRules({}, null)).toEqual({ rules: [], nextCursor: null });
   });
 
   it('lets the failure through, already translated into an app error by the client', async () => {
     const failure = { code: 'INTERNAL_ERROR', messageKey: 'common.error.unexpected', traceId: 't' };
     vi.spyOn(api, 'get').mockRejectedValue(failure);
 
-    await expect(fetchRules()).rejects.toBe(failure);
+    await expect(fetchRules({}, null)).rejects.toBe(failure);
   });
 });
 
-describe('revokeRule', () => {
-  it('deletes the rule, and answers it as it now stands', async () => {
-    const send = vi.spyOn(api, 'request').mockResolvedValue({ ...wire, revokedAt: 'now' });
+describe('fetchRuleSummary', () => {
+  it('reads the same filters the listing takes, and nothing of its sort or page', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({});
 
-    const revoked = await revokeRule('rule_1');
+    await fetchRuleSummary({ scope: 'always', decision: 'allow' });
 
-    expect(send).toHaveBeenCalledWith('/permission-rules/rule_1', { method: 'DELETE' });
-    expect(revoked).toEqual({ ...rule, revokedAt: 'now' });
+    expect(get).toHaveBeenCalledWith('/permission-rules/summary?scope=always&decision=allow');
   });
 
-  it('escapes an id, so nothing a backend answered can build a path of its own', async () => {
-    const send = vi.spyOn(api, 'request').mockResolvedValue(wire);
+  it('asks the summary with no query when there is no filter', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({});
 
-    await revokeRule('rule/../other');
+    await fetchRuleSummary({});
 
-    expect(send).toHaveBeenCalledWith('/permission-rules/rule%2F..%2Fother', { method: 'DELETE' });
+    expect(get).toHaveBeenCalledWith('/permission-rules/summary');
   });
 });
 
 describe('fetchRule', () => {
   it('opens one rule by id, whatever its state', async () => {
-    const revoked = { status: 'revoked', revokedAt: '2026-09-24T11:00:00.000Z' };
-    const get = vi.spyOn(api, 'get').mockResolvedValue({ ...wire, ...revoked });
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ id: 'rule_1' });
 
-    expect(await fetchRule('rule_1')).toEqual({ ...rule, ...revoked });
+    await fetchRule('rule_1');
+
     expect(get).toHaveBeenCalledWith('/permission-rules/rule_1');
   });
 
   it('escapes the id, so it cannot build a path of its own', async () => {
-    const get = vi.spyOn(api, 'get').mockResolvedValue(wire);
+    const get = vi.spyOn(api, 'get').mockResolvedValue({});
 
     await fetchRule('rule/../other');
 
     expect(get).toHaveBeenCalledWith('/permission-rules/rule%2F..%2Fother');
+  });
+});
+
+describe('fetchRuleInvocations', () => {
+  it('asks with no cursor for the first page, and with one for the next', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ invocations: [], nextCursor: null });
+
+    await fetchRuleInvocations('rule_1', null);
+    expect(get).toHaveBeenLastCalledWith('/permission-rules/rule_1/invocations');
+
+    await fetchRuleInvocations('rule_1', 7);
+    expect(get).toHaveBeenLastCalledWith('/permission-rules/rule_1/invocations?cursor=7');
+  });
+});
+
+describe('fetchRuleHistory', () => {
+  it('reads the events of one rule', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ events: [] });
+
+    await fetchRuleHistory('rule_1');
+
+    expect(get).toHaveBeenCalledWith('/permission-rules/rule_1/history');
+  });
+});
+
+describe('grantRule', () => {
+  it('posts exactly what it was given', async () => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue({ id: 'rule_1' });
+    const input = {
+      pattern: 'shell(git status:*)',
+      decision: 'allow' as const,
+      scope: 'always' as const,
+    };
+
+    await grantRule(input);
+
+    expect(post).toHaveBeenCalledWith('/permission-rules', input);
+  });
+});
+
+describe('revokeRule', () => {
+  it('deletes the rule, and answers it as it now stands', async () => {
+    const del = vi.spyOn(api, 'delete').mockResolvedValue({ id: 'rule_1', revokedAt: 'now' });
+
+    const revoked = await revokeRule('rule_1');
+
+    expect(del).toHaveBeenCalledWith('/permission-rules/rule_1');
+    expect(revoked).toEqual({ id: 'rule_1', revokedAt: 'now' });
+  });
+
+  it('escapes an id, so nothing a backend answered can build a path of its own', async () => {
+    const del = vi.spyOn(api, 'delete').mockResolvedValue({});
+
+    await revokeRule('rule/../other');
+
+    expect(del).toHaveBeenCalledWith('/permission-rules/rule%2F..%2Fother');
+  });
+});
+
+describe('changeRuleExpiry', () => {
+  it('sends `If-Match` with the rule’s own etag — plan 15, B-12', async () => {
+    const patch = vi.spyOn(api, 'patch').mockResolvedValue({ id: 'rule_1' });
+
+    await changeRuleExpiry({
+      ruleId: 'rule_1',
+      etag: '"abc"',
+      expiresAt: '2026-12-01T00:00:00.000Z',
+    });
+
+    expect(patch).toHaveBeenCalledWith(
+      '/permission-rules/rule_1',
+      { expiresAt: '2026-12-01T00:00:00.000Z' },
+      { headers: { 'if-match': '"abc"' } },
+    );
+  });
+});
+
+describe('revokeRules and restoreRules', () => {
+  it('posts the ids of the lot, in the order given', async () => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue({ rules: [] });
+
+    await revokeRules(['a', 'b']);
+    expect(post).toHaveBeenLastCalledWith('/permission-rules/revoke', { ids: ['a', 'b'] });
+
+    await restoreRules(['a', 'b']);
+    expect(post).toHaveBeenLastCalledWith('/permission-rules/restore', { ids: ['a', 'b'] });
+  });
+});
+
+describe('evaluateRule, previewRule and simulateRules', () => {
+  it('post exactly what each was given, to its own route — plan 15, B-14, B-15, B-16', async () => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue({});
+
+    await evaluateRule({ kind: 'shell', subject: { command: 'git status' } });
+    expect(post).toHaveBeenLastCalledWith('/permission-rules/evaluate', {
+      kind: 'shell',
+      subject: { command: 'git status' },
+    });
+
+    await previewRule({ pattern: 'shell(ls)', decision: 'allow', scope: 'always' });
+    expect(post).toHaveBeenLastCalledWith('/permission-rules/preview', {
+      pattern: 'shell(ls)',
+      decision: 'allow',
+      scope: 'always',
+    });
+
+    await simulateRules({ remove: ['rule_1'] });
+    expect(post).toHaveBeenLastCalledWith('/permission-rules/simulate', { remove: ['rule_1'] });
+  });
+});
+
+describe('fetchRuleTemplates', () => {
+  it('reads the catalog', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ templates: [] });
+
+    await fetchRuleTemplates();
+
+    expect(get).toHaveBeenCalledWith('/permission-rules/templates');
+  });
+});
+
+describe('fetchRuleExport', () => {
+  it('reads the same filters the listing takes', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ rules: [] });
+
+    await fetchRuleExport({ decision: 'deny' });
+
+    expect(get).toHaveBeenCalledWith('/permission-rules/export?decision=deny');
+  });
+});
+
+describe('previewRuleImport and applyRuleImport', () => {
+  it('preview posts the file; apply posts the file, digest and what was accepted', async () => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue({});
+
+    await previewRuleImport('{"format":"remote-claude.permission-rules"}');
+    expect(post).toHaveBeenLastCalledWith('/permission-rules/import/preview', {
+      file: '{"format":"remote-claude.permission-rules"}',
+    });
+
+    const input = { file: 'the-file', digest: 'abc', accept: [0, 1] };
+    await applyRuleImport(input);
+    expect(post).toHaveBeenLastCalledWith('/permission-rules/import', input);
   });
 });

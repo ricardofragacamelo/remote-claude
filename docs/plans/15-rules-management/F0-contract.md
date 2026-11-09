@@ -29,7 +29,7 @@ de virar teste.
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — `backend/03-modules.md`: a superfície nova do módulo `permission` 🔲
+### B-01 — `backend/03-modules.md`: a superfície nova do módulo `permission` ✅
 
 A seção [`permission`](../../architecture/backend/03-modules.md#permission) ganha as rotas das B-02 e
 B-03, com a tabela de status de cada uma, e as regras que as governam: só validade se edita
@@ -55,14 +55,14 @@ implementado pelo adapter de cada motor só para traduzir a regra canônica — 
 A seção [`audit`](../../architecture/backend/03-modules.md#audit) ganha o filtro `ruleId` em
 `GET /audit-entries` (S-62) e os kinds da B-05.
 
-### B-02 — Contrato das rotas de leitura 🔲
+### B-02 — Contrato das rotas de leitura ✅
 
 Todas sob `Bearer`, escopadas pelo chamador, com o log de I/O em `debug` sem padrão, comando nem
 caminho no corpo do log — só contagens, ids e status ([03-logging](../../architecture/shared/03-logging.md)).
 
 | Rota | O que devolve |
 |---|---|
-| `GET /permission-rules` | a listagem. **Sem parâmetro, idêntica à de hoje** (S-01): ativas e expiradas, sem revogadas, mais novas primeiro. Filtros opcionais `status` (`active`,`expired`,`revoked`,`disabled`, múltiplo — `disabled` é a regra que a migração do [plano 28](../28-agent-neutral-core/F5-permission-dialect.md) desligou, e também fica fora sem parâmetro), `scope`, `decision`, `engine`, `kind` (o canônico), `folder`, `expiresBefore`, `q` (literal, sem curinga — S-45); `sort` (`grantedAt`, `expiresAt`, `lastUsedAt`, `useCount`, `pattern`) e `order`; teto de 1000 com `truncated` ([D-13](decisions.md#d-13--a-listagem-pagina)) |
+| `GET /permission-rules` | a listagem. **Sem parâmetro, idêntica à de hoje** (S-01): ativas e expiradas, sem revogadas, mais novas primeiro. Filtros opcionais `status` (`active`,`expired`,`revoked`,`disabled`, múltiplo — `disabled` é a regra que a migração do [plano 28](../28-agent-neutral-core/F5-permission-dialect.md) desligou, e também fica fora sem parâmetro), `scope`, `decision`, `engine`, `kind` (o canônico), `folder`, `expiresBefore`, `q` (literal, sem curinga — S-45); `sort` (`grantedAt`, `expiresAt`, `lastUsedAt`, `useCount`, `pattern`) e `order`; pagina por **cursor** (`cursor` opaco, `pageSize` 1–200, default 50), `{ rules, nextCursor }`, `nextCursor: null` na última página ([D-13](decisions.md#d-13--a-listagem-pagina), decidido em 2026-11-05 contra a recomendação original do plano, que propunha lista-tudo-com-teto). O cursor é sobre `(granted_at, id)`, como a trilha usa `seq`. Sem parâmetro, a primeira página (50) é **idêntica à de hoje** em conteúdo — o app Flutter, que não lê `cursor` nem `nextCursor`, continua recebendo a mesma primeira página (S-01, S-02). **A análise de redundância/sobreposição (B-15) não lê por aqui**: ela roda sobre a leitura interna do repositório — todas as regras ativas do chamador, sem paginação —, nunca sobre a página que a tela tem carregada |
 | `GET /permission-rules/summary` | contagens por estado (com `disabled`), decisão e escopo, e quantas ativas expiram antes de `expiresBefore` — para as abas e o selo da navegação |
 | `GET /permission-rules/:ruleId` | a regra enriquecida, em qualquer estado, com o cabeçalho `ETag` |
 | `GET /permission-rules/:ruleId/invocations` | as invocações que a regra respondeu, keyset descendente sobre o `seq` da trilha (`cursor`, `limit` 1–100), com os campos que a trilha deixa sair (nunca conteúdo de `Read`) |
@@ -96,7 +96,7 @@ Os campos **acrescentados** à regra — aditivos, o app Flutter os ignora (S-02
 O `grantedBy` continua (é o `sub` do dono, como hoje) — a tela passa a dizer "você", e a origem diz
 de onde.
 
-### B-03 — Contrato das rotas de escrita, de teste e de simulação 🔲
+### B-03 — Contrato das rotas de escrita, de teste e de simulação ✅
 
 | Rota | O que faz | Recusas |
 |---|---|---|
@@ -123,7 +123,18 @@ pôs as de `/permission-rules` que já existem —, com o tipo gerado para TypeS
 `contracts:check` reprova a rota sem schema (S-135 do 28). Os limites de taxa das rotas novas
 entram nos [limites do plano 05](../05-hardening-operations/README.md).
 
-### B-04 — Códigos de erro novos no catálogo e nas três pontas 🔲
+**Descoberto na execução (2026-11-05, ciclo 3 do [progress.md](progress.md#histórico-de-validação)):**
+o mesmo portão órfão-de-rota/órfão-de-schema não aceita o inverso — um schema cujo `x-route` nomeia
+uma rota que nenhum controller ainda registra também é recusado (`unknownSchemaRoute`), sem exceção
+para "documentado antes de implementado". Como nenhuma rota desta B-02/B-03 tem controller na F0, o
+arquivo JSON Schema + o registro `x-route` de cada rota nova nascem **junto com o controller que a
+implementa**, na fase que o entrega (F1 para a maioria; ver a tarefa correspondente de cada rota em
+[F1-rules-backend.md](F1-rules-backend.md)) — nunca nesta F0. O contrato da F0 para estas rotas fica
+pinado em **prosa**, no [`backend/03-modules.md` · `permission`](../../architecture/backend/03-modules.md#permission)
+(já escrito: campos, status, ordem de recusas, tudo), que não passa por este portão. B-01, B-04, B-05,
+B-06 e B-07 não são afetados — nenhum deles registra rota nova no pacote `contracts`.
+
+### B-04 — Códigos de erro novos no catálogo e nas três pontas ✅
 
 No [catálogo](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio), no
 `error-catalogue.ts` e com `messageKey` em en e pt-BR — o texto diz **o que fazer**, não só o que
@@ -143,7 +154,7 @@ O teste de paridade (S-03) confere as três fontes. O status de cada um segue a
 [tabela do doc 04](../../architecture/shared/04-errors-and-http.md#erro-do-cliente); `412` e `428`
 entram nela.
 
-### B-05 — Kinds novos na trilha, e os `details` dos que existem 🔲
+### B-05 — Kinds novos na trilha, e os `details` dos que existem ✅
 
 `audit_events` ganha, por migration versionada nova que reescreve o `CHECK` de `kind` (S-04):
 `permission.ruleExpiryChanged` (`details`: `from`, `to`), `permission.rulesExported` (`count`,
@@ -155,7 +166,7 @@ Nunca input de tool, conteúdo de arquivo, nem nada de outra pessoa (S-05). Docu
 [backend/05](../../architecture/backend/05-persistence.md#a-trilha-de-auditoria) e na seção `audit`
 do `backend/03`.
 
-### B-06 — `web/03-ui-system.md` e `web/02`: a tela de gestão de regras 🔲
+### B-06 — `web/03-ui-system.md` e `web/02`: a tela de gestão de regras ✅
 
 A seção [Regras](../../architecture/web/03-ui-system.md#regras--onde-a-autorização-é-retirada) é
 reescrita para a tela deste plano — sem perder nada do que ela garante (rota própria, os dois pontos
@@ -179,7 +190,7 @@ E corrige o que está errado lá hoje: a linha "A linha mostra escopo, tool, pad
 **validade**" aparece **duas vezes** seguidas. `web/02-folder-structure.md` ganha as pastas novas
 da feature `permission`.
 
-### B-07 — O documento da gramática e o `backend/05`: a gramática endurecida e as colunas novas 🔲
+### B-07 — O documento da gramática e o `backend/05`: a gramática endurecida e as colunas novas ✅
 
 A gramática é a **canônica**, do domínio ([D-20](decisions.md#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect), revisão de 2026-10-10). A
 [F5 do plano 28](../28-agent-neutral-core/F5-permission-dialect.md) a escreve em
@@ -192,7 +203,10 @@ a leitura do código mostrou faltar (e no ADR-025 só o que mudar o contrato del
   assimetria `allow`/`deny`, a falha fechada entre aspas, e o "lombada, não sandbox" do `deny`;
 - o prefixo em `file.*` ([D-08](decisions.md#d-08--prefixo-em-tool-de-caminho));
 - a largura por `kind` ([D-09](decisions.md#d-09--o-que-é-largo-demais)) e onde ela é conferida;
-- `project` é a pasta exata da sessão, não a raiz nem as subpastas ([D-10](decisions.md#d-10--project-alcança-as-subpastas)).
+- `project` alcança a pasta da sessão **e as suas subpastas** — não a raiz acima dela — pelo
+  casamento de prefixo de caminho com fronteira de segmento (`/raiz/app` casa `/raiz/app/backend`,
+  não casa `/raiz/app2`) ([D-10](decisions.md#d-10--project-alcança-as-subpastas), decidido em
+  2026-11-05 contra a recomendação original do plano, que propunha manter o casamento exato).
 
 [As regras de permissão](../../architecture/backend/05-persistence.md#as-regras-de-permissão) ganham
 as colunas `granted_via`, `granted_from_request_id`, `template_id`, `restored_from` e

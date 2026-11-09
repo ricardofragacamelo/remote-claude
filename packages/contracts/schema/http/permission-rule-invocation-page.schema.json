@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-invocation-page.json",
+  "title": "PermissionRuleInvocationPage",
+  "description": "`GET /permission-rules/:ruleId/invocations`: the invocations a rule answered, keyset descendent over the trail's own `seq` — the same entries `GET /audit-entries` shows, filtered by this rule's id (plan 15, B-11, S-61, S-62).",
+  "x-kind": "http",
+  "x-type": "permissionRules.invocationPage",
+  "x-route": [{ "method": "GET", "path": "/permission-rules/:ruleId/invocations" }],
+  "type": "object",
+  "required": ["invocations", "nextCursor"],
+  "properties": {
+    "invocations": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "../definitions/audit-trail-entry.schema.json"
+      }
+    },
+    "nextCursor": {
+      "type": "string",
+      "x-nullable": true,
+      "description": "Opaque: echo it as `cursor` for the page after this one. `null` once there is none."
+    }
+  }
+}

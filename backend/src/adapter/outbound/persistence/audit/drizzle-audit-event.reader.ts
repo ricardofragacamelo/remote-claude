@@ -45,6 +45,9 @@ function conditionsOf(request: AuditEventPageRequest): SQL[] {
   const conditions: (SQL | null)[] = [
     eq(auditEvents.userId, request.userId.value),
     request.kindPrefix === null ? null : like(auditEvents.kind, `${request.kindPrefix}%`),
+    request.subjectId === undefined || request.subjectId === null
+      ? null
+      : eq(auditEvents.subjectId, request.subjectId),
     request.before === null ? null : lt(auditEvents.seq, request.before),
   ];
 

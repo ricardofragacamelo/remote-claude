@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-summary.json",
+  "title": "PermissionRuleSummary",
+  "description": "`GET /permission-rules/summary`: counts over the same predicate the listing reads — for the tabs and the navigation badge (plan 15, B-10).",
+  "x-kind": "http",
+  "x-type": "permissionRules.summary",
+  "x-route": [{ "method": "GET", "path": "/permission-rules/summary" }],
+  "type": "object",
+  "required": ["byStatus", "byDecision", "byScope", "expiringBefore"],
+  "properties": {
+    "byStatus": {
+      "type": "object",
+      "required": ["active", "expired", "revoked", "disabled"],
+      "properties": {
+        "active": { "type": "integer" },
+        "expired": { "type": "integer" },
+        "revoked": { "type": "integer" },
+        "disabled": {
+          "type": "integer",
+          "description": "The rules the plan 28 migration switched off (plan 15, D-20 revision)."
+        }
+      }
+    },
+    "byDecision": {
+      "type": "object",
+      "required": ["allow", "deny"],
+      "properties": {
+        "allow": { "type": "integer" },
+        "deny": { "type": "integer" }
+      }
+    },
+    "byScope": {
+      "type": "object",
+      "required": ["project", "always"],
+      "properties": {
+        "project": { "type": "integer" },
+        "always": { "type": "integer" }
+      }
+    },
+    "expiringBefore": {
+      "type": "integer",
+      "description": "Active rules expiring before the `expiresBefore` filter — `0` when it was not given."
+    }
+  }
+}

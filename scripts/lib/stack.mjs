@@ -3,10 +3,11 @@
  * ports produce.
  *
  * `start-local` and `run-e2e-local` differ in exactly one thing — the first uses the fixed ports
- * of docs/plans/00-bootstrap/README.md#portas, the second allocates random ones. Everything
- * downstream of that choice is the same, so it is described once, here, as a pure function of
- * the ports — with the one exception of the MCP secret key below, which has to exist on disk
- * before the backend can use it, not merely be named.
+ * of docs/plans/00-bootstrap/README.md#portas (falling back to a free one for whichever is
+ * already taken, see `resolveAvailablePorts`), the second always allocates random ones.
+ * Everything downstream of that choice is the same, so it is described once, here, as a pure
+ * function of the ports — with the one exception of the MCP secret key below, which has to exist
+ * on disk before the backend can use it, not merely be named.
  */
 
 import { randomBytes } from 'node:crypto';
@@ -15,6 +16,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { repoRoot } from './paths.mjs';
+import { findFreePort, isPortFree } from './ports.mjs';
 import { ALLOWLIST_FILE } from './workspaces.mjs';
 
 /**
@@ -152,6 +154,9 @@ export const E2E_POSTGRES = {
  * @property {string} RC_PERMISSION_RULE_LIFETIME_MS
  * @property {string} RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS
  * @property {string} RC_PERMISSION_RULE_MAX_LIFETIME_MS
+ * @property {string} RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS
+ * @property {string} RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS
+ * @property {string} RC_PERMISSION_RULE_RESTORE_WINDOW_MS
  * @property {string} RC_PUSH_ENDPOINT
  * @property {string} RC_PUSH_CREDENTIALS_FILE
  * @property {string} RC_PUSH_SCOPE
@@ -297,6 +302,9 @@ export function ephemeralEnvironment(ports, options = {}) {
     RC_PERMISSION_RULE_LIFETIME_MS: '600000',
     RC_PERMISSION_RULE_DEFAULT_LIFETIME_MS: '3600000',
     RC_PERMISSION_RULE_MAX_LIFETIME_MS: '86400000',
+    RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS: '7200000',
+    RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS: '172800000',
+    RC_PERMISSION_RULE_RESTORE_WINDOW_MS: '600000',
 
     // The CLI's configuration — the trust marks among it, and the login. The hermetic run keeps
     // it away from the developer's own, because the backend clears a directory's trust mark
@@ -700,6 +708,115 @@ export function resolvePorts(env) {
   }
 
   return /** @type {StackPorts} */ (/** @type {unknown} */ (ports));
+}
+
+/**
+ * {@link resolvePorts}, with a free substitute for any of the four that is already taken — the
+ * fixed ports of the plan are the point, so this only ever departs from them when binding the
+ * fixed one would fail anyway.
+ *
+ * A swapped `web` or `backend` is invisible to `pnpm mobile:install`/`pnpm mobile:local`, which
+ * resolve it on their own from `.env`, in a separate process — that is what {@link recordLocalPorts}
+ * is for; `start-local` writes this run's actual ports there for them to read instead.
+ *
+ * @param {NodeJS.ProcessEnv} env mutated: a reassigned port's variable is set on it, so `compose` —
+ *   which inherits this process's environment — binds the same port this returns
+ * @returns {Promise<{ ports: StackPorts, reassigned: Map<string, number> }>}
+ * @throws {Error} {@link resolvePorts}'s, when a variable already set is not a valid port
+ */
+export async function resolveAvailablePorts(env) {
+  const ports = resolvePorts(env);
+  const byKey = /** @type {Record<string, number>} */ (/** @type {unknown} */ (ports));
+
+  const picks = await Promise.all(
+    PORT_VARIABLES.map(async ({ key, variable }) => {
+      if (await isPortFree(/** @type {number} */ (byKey[key]))) {
+        return null;
+      }
+      return { key, variable, free: await findFreePort() };
+    }),
+  );
+
+  /** @type {Map<string, number>} */
+  const reassigned = new Map();
+  for (const pick of picks) {
+    if (pick === null) {
+      continue;
+    }
+    byKey[pick.key] = pick.free;
+    env[pick.variable] = String(pick.free);
+    reassigned.set(pick.key, pick.free);
+  }
+
+  return { ports, reassigned };
+}
+
+/**
+ * Where `start-local` writes the ports it actually bound, relative to the repository root — under
+ * `.run/`, which git ignores. A port `resolveAvailablePorts` had to swap is otherwise invisible to
+ * a process started later: this is how `pnpm mobile:install` and `pnpm mobile:local` find the real
+ * `web` port instead of the plan's default (plan 10, D-22).
+ */
+export const LOCAL_PORTS_FILE = '.run/local-ports';
+
+/**
+ * Keeps the ports this run actually bound, for the next `pnpm mobile:install`/`pnpm mobile:local`.
+ *
+ * @param {string} file absolute path
+ * @param {StackPorts} ports
+ */
+export function recordLocalPorts(file, ports) {
+  const byKey = /** @type {Record<string, number>} */ (/** @type {unknown} */ (ports));
+  const body = PORT_VARIABLES.map(({ key }) => `${key}=${String(byKey[key])}`).join('\n');
+
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${body}\n`);
+}
+
+/**
+ * The ports the last `pnpm dev`/`pnpm dev:public` actually bound, or `null` — no file, or one
+ * missing a port, or holding something that is not a valid one, which a hand or another tool wrote
+ * and nobody should build an app against.
+ *
+ * @param {string} file absolute path
+ * @returns {StackPorts | null}
+ */
+export function readRecordedPorts(file) {
+  if (!fs.existsSync(file)) {
+    return null;
+  }
+
+  const parsed = parseEnv(fs.readFileSync(file, 'utf8'));
+  /** @type {Record<string, number>} */
+  const ports = {};
+
+  for (const { key } of PORT_VARIABLES) {
+    const value = Number(parsed[key]);
+    if (!Number.isInteger(value) || value < 1 || value > 65_535) {
+      return null;
+    }
+    ports[key] = value;
+  }
+
+  return /** @type {StackPorts} */ (/** @type {unknown} */ (ports));
+}
+
+/**
+ * The web port to build the app against: the `.env`'s `RC_WEB_PORT`, when set, else what the last
+ * `pnpm dev` actually bound ({@link readRecordedPorts}), else the plan's fixed default — in that
+ * order, because an explicit setting is a choice, and a stale record from a run that is not up any
+ * more is still a better guess than the default it was itself a swap away from.
+ *
+ * @param {NodeJS.ProcessEnv} env
+ * @param {number | null} recordedWebPort what {@link readRecordedPorts} found for `web`, or `null`
+ * @returns {number}
+ * @throws {Error} {@link resolvePorts}'s, when `RC_WEB_PORT` is set to something that is not a port
+ */
+export function resolveWebPort(env, recordedWebPort) {
+  const explicit = (env['RC_WEB_PORT'] ?? '').trim() !== '';
+  const fallback = resolvePorts(env).web;
+
+  return explicit || recordedWebPort === null ? fallback : recordedWebPort;
 }
 
 /**

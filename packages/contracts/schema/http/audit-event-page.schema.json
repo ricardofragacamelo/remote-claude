@@ -13,34 +13,7 @@
       "type": "array",
       "maxItems": 100,
       "items": {
-        "type": "object",
-        "required": ["id", "kind", "subjectId", "subjectLabel", "details", "at"],
-        "description": "One fact, as the client sees it. The owner is the caller, so it is not here.",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string",
-            "description": "A genuinely open vocabulary — `file.`, `file.written`, a device or a rule event — never a fixed enum."
-          },
-          "subjectId": {
-            "type": "string",
-            "description": "What the fact is about — for a file, its real path."
-          },
-          "subjectLabel": {
-            "type": "string",
-            "description": "How to show the subject — for a file, its path relative to the open folder."
-          },
-          "details": {
-            "type": "object",
-            "x-nullable": true,
-            "description": "Sizes, hashes, origin and destination, counts — never the contents of a file. Open: shaped by the kind."
-          },
-          "at": {
-            "type": "string"
-          }
-        }
+        "$ref": "../definitions/audit-event-fact.schema.json"
       }
     },
     "nextCursor": {

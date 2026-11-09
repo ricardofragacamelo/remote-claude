@@ -1,5 +1,5 @@
 import { PermissionRule, isPersistedPermissionScope } from '@domain/permission';
-import type { PermissionDecision } from '@domain/permission';
+import type { PermissionDecision, PermissionRuleOrigin } from '@domain/permission';
 import { UserId } from '@domain/auth';
 import type { permissionRules } from '@infra/database/schema';
 
@@ -54,7 +54,15 @@ export function toEntity(row: PermissionRuleRow): PermissionRule {
     expiresAt: row.expiresAt,
     revokedAt: row.revokedAt,
     disabledReason: row.grammar === 'native' ? UNMIGRATED : row.disabledReason,
+    grantedVia: isOrigin(row.grantedVia) ? row.grantedVia : null,
+    grantedFromRequestId: row.grantedFromRequestId,
+    templateId: row.templateId,
+    restoredFrom: row.restoredFrom,
   });
+}
+
+function isOrigin(value: string | null): value is PermissionRuleOrigin {
+  return value === 'approval' || value === 'request' || value === 'import' || value === 'restore';
 }
 
 /**
@@ -78,6 +86,10 @@ export function toRow(rule: PermissionRule, now: Date): PermissionRuleInsert {
     grantedAt: snapshot.createdAt,
     expiresAt: snapshot.expiresAt,
     revokedAt: snapshot.revokedAt,
+    grantedVia: snapshot.grantedVia ?? null,
+    grantedFromRequestId: snapshot.grantedFromRequestId ?? null,
+    templateId: snapshot.templateId ?? null,
+    restoredFrom: snapshot.restoredFrom ?? null,
     updatedAt: now,
   };
 }

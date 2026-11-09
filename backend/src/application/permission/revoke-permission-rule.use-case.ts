@@ -1,31 +1,15 @@
 import type { PermissionRule } from '@domain/permission';
 import type { UserId } from '@domain/auth';
-import type { Clock } from '@domain/shared';
-import type { RecordAuditEventUseCase } from '@application/audit';
-import { ownedRule } from './owned-rule';
-import type { PermissionRuleRepository } from './ports/permission-rule.repository';
+import type { RevokePermissionRulesUseCase } from './revoke-permission-rules.use-case';
 
 /**
- * Taking a rule back, with effect on the very next request.
- *
- * Nothing has to be told about it, and that is by design: the rules are read on every request and
- * never cached, so a session that is already running asks again the next time — which is the
- * whole promise of revoking. A rule that kept applying until a restart would not be revoked.
- *
- * **Twice is once.** The domain hands back the same rule when it was already revoked; then nothing
- * is written and nothing is recorded, and the caller gets the revoked rule either way (S-55).
- *
- * **At the same moment is once, too.** Two clients revoking together both read the rule as active,
- * so the domain cannot tell — only the store can. The one whose write it keeps is the revocation
- * and is recorded; the other records nothing and answers with the winner's instant, so both ends
- * are told the same rule (S-46).
+ * Taking one rule back — the batch of one
+ * ([15 · D-06](../../../../docs/plans/15-rules-management/decisions.md#d-06--revogar-em-lote-atômico-ou-por-item)):
+ * `DELETE /permission-rules/:ruleId` and `POST /permission-rules/revoke` share this one
+ * implementation, so neither is the copy that quietly stops matching the other.
  */
 export class RevokePermissionRuleUseCase {
-  constructor(
-    private readonly rules: PermissionRuleRepository,
-    private readonly trail: RecordAuditEventUseCase,
-    private readonly clock: Clock,
-  ) {}
+  constructor(private readonly batch: RevokePermissionRulesUseCase) {}
 
   /**
    * @throws {import('@domain/permission').PermissionRuleNotFoundError} no rule with that id
@@ -33,28 +17,10 @@ export class RevokePermissionRuleUseCase {
    *   stays exactly as it was
    */
   async execute(userId: UserId, ruleId: string): Promise<PermissionRule> {
-    const rule = await ownedRule(this.rules, userId, ruleId);
-    const at = this.clock.now();
-    const revoked = rule.revoke(at);
+    const [rule] = await this.batch.execute(userId, [ruleId]);
 
-    if (revoked === rule) {
-      return rule;
-    }
-
-    const stored = await this.rules.saveRevocation(revoked);
-
-    if (!stored.revoked) {
-      return stored.rule;
-    }
-
-    await this.trail.execute({
-      userId,
-      kind: 'permission.ruleRevoked',
-      subjectId: revoked.id,
-      subjectLabel: revoked.ruleContent,
-      at,
-    });
-
-    return stored.rule;
+    // A lot of exactly one id always comes back with exactly one rule — `execute` throws before
+    // this line otherwise.
+    return rule as PermissionRule;
   }
 }

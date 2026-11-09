@@ -74,6 +74,15 @@ function unbounded(prefix: string): boolean {
 }
 
 /**
+ * Whether `token` alone names an interpreter, launcher or elevation (plan 15, D-09) — the one list
+ * [15 · B-08](../../../../../docs/plans/15-rules-management/F1-rules-backend.md) reads rather than
+ * writing a second one.
+ */
+export function namesInterpreterOrLauncher(token: string): boolean {
+  return UNBOUNDED_COMMANDS.has(token) || PYTHON.test(token);
+}
+
+/**
  * The prefix a command is covered by: its first token, plus the second when it is a subcommand —
  * `git push`, `pnpm test`, but `ls` for `ls -la` and `cat` for `cat file.txt`
  * ([23 · D-08](../../../../../docs/plans/23-fluid-permissions/decisions.md)).

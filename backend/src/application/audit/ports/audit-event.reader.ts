@@ -8,6 +8,9 @@ export interface AuditEventPageRequest {
   /** Only kinds that start with this — `file.` for every fact about the person's files. */
   readonly kindPrefix: string | null;
 
+  /** Only facts about this subject — a permission rule's history reads by its id (plan 15, B-11). */
+  readonly subjectId?: string | null;
+
   /** Keyset cursor: only facts with a `seq` **below** it. `null` is the newest. */
   readonly before: number | null;
 

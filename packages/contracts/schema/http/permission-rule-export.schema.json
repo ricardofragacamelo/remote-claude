@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-export.json",
+  "title": "PermissionRuleExport",
+  "description": "`GET /permission-rules/export`: the caller's own rules, in the `remote-claude.permission-rules` file format (plan 15, B-18, D-17). No `id`, no `userId`, no origin; a `disabled` rule never leaves.",
+  "x-kind": "http",
+  "x-type": "permissionRules.export",
+  "x-route": [{ "method": "GET", "path": "/permission-rules/export" }],
+  "type": "object",
+  "required": ["format", "version", "exportedAt", "rules"],
+  "properties": {
+    "format": { "type": "string", "const": "remote-claude.permission-rules" },
+    "version": { "type": "integer", "const": 1 },
+    "exportedAt": { "type": "string" },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pattern", "decision", "scope", "projectPath", "expiresAt"],
+        "properties": {
+          "engine": {
+            "type": "string",
+            "description": "Absent for a canonical rule — present only when restricted to one engine."
+          },
+          "pattern": { "type": "string" },
+          "decision": { "type": "string", "enum": ["allow", "deny"] },
+          "scope": { "type": "string", "enum": ["project", "always"] },
+          "projectPath": { "type": "string", "x-nullable": true },
+          "expiresAt": {
+            "type": "string",
+            "description": "Informative only — ignored on import (D-17)."
+          }
+        }
+      }
+    }
+  }
+}

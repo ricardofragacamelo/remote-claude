@@ -326,6 +326,57 @@ describe('reading the audit trail', () => {
     });
   });
 
+  describe('decided — plan 15, B-16', () => {
+    /** Records that a session ran in a folder, the way `session` writes `session_origins`. */
+    async function recordOrigin(sessionId: SessionId, workspacePath: string): Promise<void> {
+      await connection.db.execute(sql`
+        INSERT INTO session_origins (engine, conversation_id, session_id, user_id, workspace_path, opened_at)
+        VALUES ('claude', ${`conv-${sessionId.value}`}, ${sessionId.value}, ${owner.value}, ${workspacePath}, ${T0.toISOString()})
+        ON CONFLICT DO NOTHING
+      `);
+    }
+
+    it('reads the last decision entries, newest first, never a `recorded` one', async () => {
+      await write({ decision: 'recorded', at: minutes(1) });
+      await write({ decision: 'allowed', at: minutes(2) });
+      await write({ decision: 'denied', at: minutes(3) });
+
+      const decided = await reader().decided(owner, 10);
+
+      expect(decided.map((item) => item.record.entry.decision)).toEqual(['denied', 'allowed']);
+    });
+
+    it('scopes to the caller — another user`s entries never come back', async () => {
+      await write({ userId: stranger, sessionId: strangerSession, decision: 'allowed' });
+
+      expect(await reader().decided(owner, 10)).toEqual([]);
+    });
+
+    it('respects the limit', async () => {
+      await write({ decision: 'allowed', at: minutes(1) });
+      await write({ decision: 'allowed', at: minutes(2) });
+
+      expect(await reader().decided(owner, 1)).toHaveLength(1);
+    });
+
+    it('carries the folder from `session_origins`, by session — not a `JOIN`, two reads', async () => {
+      await recordOrigin(session, '/srv/projects/app');
+      await write({ decision: 'allowed', sessionId: session });
+
+      const [decided] = await reader().decided(owner, 10);
+
+      expect(decided?.folder).toBe('/srv/projects/app');
+    });
+
+    it('answers `null` for a session `session_origins` never recorded — S-125', async () => {
+      await write({ decision: 'allowed', sessionId: otherSession });
+
+      const [decided] = await reader().decided(owner, 10);
+
+      expect(decided?.folder).toBeNull();
+    });
+  });
+
   describe('the plan the database picks — S-28, B-14', () => {
     /**
      * A trail that has stopped being small: two people, a hundred sessions, forty thousand rows —

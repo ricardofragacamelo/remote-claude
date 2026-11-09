@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-history.json",
+  "title": "PermissionRuleHistory",
+  "description": "`GET /permission-rules/:ruleId/history`: the events of one rule — granted, validity changed, revoked, restored (plan 15, B-11). A restored rule is a fresh `permission.ruleGranted`, with `restoredFrom` in `details`, not a kind of its own. The same facts `GET /audit-events` shows, filtered by this rule's id as the subject.",
+  "x-kind": "http",
+  "x-type": "permissionRules.history",
+  "x-route": [{ "method": "GET", "path": "/permission-rules/:ruleId/history" }],
+  "type": "object",
+  "required": ["events"],
+  "properties": {
+    "events": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "../definitions/audit-event-fact.schema.json"
+      }
+    }
+  }
+}

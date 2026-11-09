@@ -18,7 +18,7 @@ AuditEntryPage? auditEntryPageFrom(Object? body) {
 
     return AuditEntryPage(
       entries: <AuditEntry>[
-        for (final AuditTrailPagePayloadEntriesItem entry in payload.entries) ?_entryFrom(entry),
+        for (final AuditTrailEntry entry in payload.entries) ?_entryFrom(entry),
       ],
       nextCursor: payload.nextCursor,
     );
@@ -29,7 +29,7 @@ AuditEntryPage? auditEntryPageFrom(Object? body) {
 
 /// [entry] as an [AuditEntry], or `null` when its decision or its instant is not one this build can
 /// read.
-AuditEntry? _entryFrom(AuditTrailPagePayloadEntriesItem entry) {
+AuditEntry? _entryFrom(AuditTrailEntry entry) {
   final AuditDecision? decision = switch (entry.decision) {
     'recorded' => AuditDecision.recorded,
     'allowed' => AuditDecision.allowed,
@@ -45,7 +45,7 @@ AuditEntry? _entryFrom(AuditTrailPagePayloadEntriesItem entry) {
   return AuditEntry(id: entry.id, at: at, decision: decision, verdict: _verdictFrom(entry.verdict));
 }
 
-AuditVerdict? _verdictFrom(AuditTrailPagePayloadEntriesItemVerdict? verdict) => verdict == null
+AuditVerdict? _verdictFrom(AuditTrailEntryVerdict? verdict) => verdict == null
     ? null
     : AuditVerdict(
         auto: verdict.auto,

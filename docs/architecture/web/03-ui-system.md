@@ -225,26 +225,81 @@ marcada, as outras esmaecidas e o texto do "Outro"; recusada mostra o motivo; se
 ### Regras — onde a autorização é retirada
 
 Regra de permissão é autorização **antecipada** para executar comando na máquina do usuário.
-`always` significa, na prática, "não me pergunte mais".
+`always` significa, na prática, "não me pergunte mais". A tela de gestão de regras
+([plano 15](../../plans/15-rules-management/README.md)) dá a esta lista controles de verdade — o que
+cada regra deixa o agente fazer, em palavras; onde ela vale e quanto foi usada; criar, testar e
+simular antes de gravar; revogar, com desfazer — sem perder nada do que o plano 03 entregou.
+
+**O que não muda:**
 
 - A lista mora em **rota própria** (`/rules`), não numa seção de configurações. A promessa é que
   revogar está a um clique; dentro de configurações fica a três.
 - Dois pontos de entrada, e não só a rota: a **escolha de escopo** na tela de permissão, e a
   entrada com `auto: true` na **trilha** — os dois lugares onde a dúvida de fato nasce.
-- A linha mostra escopo, tool, padrão, autor, data e **validade**, com sinal para a regra perto
-  de expirar. Sem o aviso, a sessão volta a perguntar sem explicação: perde-se a comodidade e não
-  se explica a perda.
-- A linha mostra escopo, tool, padrão, autor, data e **validade**; "perto de expirar" é **menos de
-  sete dias**, calculado no cliente sobre o `expiresAt` do servidor
-  ([03 · D-13](../../plans/03-rules-and-audit/decisions.md#d-13--perto-de-expirar-é-sete-dias)).
-- Regra **expirada continua listada**, marcada como tal. Regra revogada some.
-- Revogar é ação direta, idempotente na UI: duplo clique revoga uma vez. Falha ao revogar
-  **mantém a linha**, com o erro traduzido ao lado — a regra continua respondendo, e é isso que a
-  tela existe para mostrar.
+- Regra **expirada continua listada**, marcada como tal. Regra revogada some da listagem, por padrão
+  (ver "Revogar e desfazer" abaixo).
 - **Escolher `project` ou `always` pede um segundo passo, qualquer que seja o risco**, e o segundo
   passo diz o alcance por extenso: os padrões exatos que serão gravados, onde valem e por quanto tempo —
   os dois vindos da sugestão do servidor, nunca calculados aqui. Dele se chega a `/rules`
   ([03 · D-14](../../plans/03-rules-and-audit/decisions.md#d-14--escopo-persistido-sempre-pede-o-segundo-passo)).
+- A regra aberta da trilha mora em `/rules/$ruleId`, em qualquer estado.
+
+**A moldura e a navegação** são as do [plano 06](../../plans/06-workbench/README.md): título, propósito numa
+linha, gaveta de ajuda, e a entrada "Regras" da navegação global com um selo de quantas regras
+expiram nos próximos sete dias (também uma entrada na central de notificações — [D-18](../../plans/15-rules-management/decisions.md#d-18--por-onde-o-lembrete-de-expiração-chega)).
+
+**A tela: abas, filtros, tabela, detalhe.**
+
+- Abas por estado — `active` (default), `expired`, `revoked`, e `disabled` com as regras que a
+  migração do [plano 28](../../plans/28-agent-neutral-core/F5-permission-dialect.md) desligou, listadas
+  com o padrão antigo e o motivo, só para a pessoa recriar — nunca voltam a valer por `PATCH` nem por
+  restauração. Filtros na **search** (escopo, decisão, `engine`, `kind`, pasta, busca livre, "expira
+  antes de"), como `/audit`: o link sobrevive ao login.
+- Tabela densa: escopo, `kind`, padrão, decisão, autor ("você", sempre), origem, data, **validade**
+  com sinal de "perto de expirar" (menos de sete dias, calculado no cliente sobre o `expiresAt` do
+  servidor — [03 · D-13](../../plans/03-rules-and-audit/decisions.md#d-13--perto-de-expirar-é-sete-dias)),
+  uso e achados. Ordenação e busca no servidor; a listagem pagina por cursor, "carregar mais"
+  acrescenta a página seguinte.
+- Seleção com checkbox e menu de contexto (duplicar, testar, revogar, exportar). Atalhos de teclado e
+  a paleta de comandos chegam às mesmas ações.
+- Painel de detalhe lateral: a frase do que a regra faz — vem do `reach` que o servidor manda,
+  **nunca** de reinterpretar o padrão no cliente ([03 · D-12](../../plans/03-rules-and-audit/decisions.md#d-12--o-alcance-vem-na-pergunta));
+  a validade, com os atalhos de encurtar/estender; o uso (contagem, última vez, janela de 90 dias);
+  os achados ("idêntica à regra X", "nunca responde: a regra Y bloqueia tudo que ela cobre"); as
+  invocações que respondeu e a história da própria regra (concedida, validade mudada, revogada).
+
+**O que se edita numa regra é só a validade** ([D-01](../../plans/15-rules-management/decisions.md#d-01--o-que-se-edita-numa-regra)):
+mudar o padrão, o escopo ou a decisão é duplicar (o assistente abre preenchido) e revogar a original —
+nunca um `PATCH` que troca o que uma entrada antiga da trilha diz que respondeu.
+
+**Revogar e desfazer** ([D-02](../../plans/15-rules-management/decisions.md#d-02--revogadas-somem-ou-ficam-consultáveis),
+[D-11](../../plans/15-rules-management/decisions.md#d-11--desfazer-a-revogação)): revogar avulso
+continua **direto**, idempotente na UI, com "desfazer" no aviso — não uma confirmação antes, porque
+revogar é a direção segura. Revogar em lote mostra a prévia (quantas, quais) antes, por ser efeito
+amplo, e também oferece desfazer. A janela de desfazer é curta; depois dela, o caminho é duplicar pelo
+assistente, com segundo passo. Falha ao revogar **mantém a linha**, com o erro traduzido ao lado — a
+regra continua respondendo, e é isso que a tela existe para mostrar. Uma regra revogada continua
+aberta em `/rules/$ruleId`, com a aba "Revogadas" para achá-la de novo.
+
+**O assistente de criação, `/rules/new`** ([D-19](../../plans/15-rules-management/decisions.md#d-19--rota-própria-para-o-assistente)):
+rota própria, com o rascunho na search — é por onde a trilha ("criar regra a partir desta invocação"),
+duplicar e os modelos chegam, e o link sobrevive ao login. Passos: tipo (pelo `kind` canônico, com o
+nome traduzido — o web não conhece nome de ferramenta de motor); padrão (prévia do servidor, debounced,
+que mostra a frase, a largura e os exemplos do que casa e não casa antes de gravar); decisão; onde vale
+(todo lugar, ou uma pasta pelo seletor do plano 06 — `project` vale nela **e nas subpastas**, nunca na
+pasta-mãe acima, [D-10](../../plans/15-rules-management/decisions.md#d-10--project-alcança-as-subpastas));
+validade; e a revisão — sempre o segundo passo, para `allow` e `deny`
+([D-03](../../plans/15-rules-management/decisions.md#d-03--segundo-passo-e-step-up-ao-criar-pela-tela)),
+com o alcance por extenso, os achados, o resumo da simulação e, para um `allow` largo, a confirmação
+explícita (`unbounded` é bloqueado, nunca só avisado). Testar um comando e simular contra a trilha são
+as mesmas ações, acessíveis também fora do assistente, sem gravar nada. Modelos prontos e exportar/
+importar (com prévia e segundo passo) passam pela mesma validação de gramática e largura de uma regra
+qualquer — aplicar um modelo **é** uma importação.
+
+**A gramática e a ajuda:** o texto do núcleo nomeia o agente como `{agent}`; a gramática canônica
+(`shell(git status:*)`, o que um prefixo não cobre, "lombada, não sandbox") é ajuda do núcleo; o que só
+vale para o Claude — a forma `Tool(x:*)` de antes da migração, o que o CLI decide antes de perguntar —
+é registrado por `web/src/engines/claude/` ([D-20](../../plans/15-rules-management/decisions.md#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect)).
 
 ### Trilha de auditoria
 

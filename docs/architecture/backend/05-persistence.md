@@ -225,6 +225,15 @@ A F7 e a F8 do plano 07 acrescentam dois kinds, cada um por migration nova: `fil
 `file.restored` (`0018_file_history`), a restauração de uma versão do histórico local. O upload
 grava os `file.created`/`file.written` de sempre, com `details.source: upload`.
 
+**A gestão de regras** ([plano 15](../../plans/15-rules-management/README.md), B-05) acrescenta três
+kinds pela `0029_rules_management`: `permission.ruleExpiryChanged` (`details`: `from`, `to` — encurtar
+ou estender a validade), `permission.rulesExported` (`details`: `count`, os filtros usados) e
+`permission.rulesImported` (`details`: `count`, `created`, `existing`). Os que já existem ganham
+`details` quando há o que dizer: `permission.ruleGranted` com `grantedVia`, `templateId`,
+`restoredFrom`; `permission.ruleRevoked` com `batchId`. Uma regra restaurada não tem kind próprio — é
+um `permission.ruleGranted` novo, com `restoredFrom` apontando para a que foi desfeita. Nunca input de
+tool, conteúdo de arquivo, nem padrão ou pasta de outra pessoa.
+
 **A configuração do Claude** ([plano 13](../../plans/13-claude-settings/README.md)) acrescenta os kinds
 `claude.defaultsChanged`, `claude.mcpServerAdded`, `claude.mcpServerChanged`, `claude.mcpServerRemoved`,
 `claude.mcpServerToggled`, `claude.mcpServerTested`, `claude.mcpProjectServerApproved`,
@@ -291,6 +300,13 @@ regra de `session` fica em memória e morre com o subprocesso, que é o que ela 
   estar ativa depende do relógio, que um índice não lê. O repositório serializa a concessão da
   mesma regra com um *advisory lock* de transação sobre usuário, escopo, projeto, padrão e decisão.
 - O escopo e o projeto concordam por `CHECK`: `project` tem `project_path`, `always` não.
+- Cinco colunas anuláveis, da `0029` ([plano 15](../../plans/15-rules-management/README.md), B-07):
+  `granted_via` (`approval`/`request`/`import`/`restore`, por `CHECK`; `NULL` numa regra anterior à
+  migration — "origem não registrada", nunca um palpite), `granted_from_request_id` (o pedido que um
+  card respondeu), `template_id` (o modelo do catálogo, se veio de um), `restored_from` (a regra
+  revogada que um `restore` desfaz — [D-11](../../plans/15-rules-management/decisions.md#d-11--desfazer-a-revogação))
+  e `expiry_reminded_at` (quando o job de lembrete avisou por último sobre esta regra — estender a
+  regra a limpa, como uma concessão nova nunca a grava — [D-18](../../plans/15-rules-management/decisions.md#d-18--por-onde-o-lembrete-de-expiração-chega)).
 
 Ver [a F0 do plano 03](../../plans/03-rules-and-audit/F0-rules.md) e a
 [D-10](../../plans/03-rules-and-audit/decisions.md#d-10--dois-caminhos-para-nascer-uma-rotina).
@@ -389,6 +405,12 @@ São colunas anuláveis, acrescentadas pela `0009` sem reescrever linha
 `CHECK` repetem no banco o que o domínio garante: entrada `recorded` não tem veredito, e só decisão
 automática aponta regra. O `trace_id` é carimbado pelo repositório, a partir do contexto: o domínio
 não sabe o que é um trace.
+
+Um índice parcial novo, da `0029` ([plano 15](../../plans/15-rules-management/README.md), D-05):
+`(user_id, rule_id, seq DESC) WHERE rule_id IS NOT NULL`. O uso de uma regra e o histórico de
+invocações que ela respondeu leem exatamente este recorte, e a maioria das entradas não tem
+`rule_id` — `CREATE INDEX` não reescreve linha nem dispara a trigger de `UPDATE`, seguro de rodar
+numa tabela que já tem dado.
 
 ---
 

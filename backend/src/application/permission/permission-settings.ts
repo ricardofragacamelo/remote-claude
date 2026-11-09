@@ -38,4 +38,24 @@ export interface PermissionSettings {
    * ([D-02](../../../../docs/plans/03-rules-and-audit/decisions.md)).
    */
   readonly ruleMaxLifetimeMs: number;
+
+  /**
+   * How long a `deny` rule lives when nobody said how long — its own, longer, default.
+   *
+   * A forgotten `deny` recuses something the owner would allow today; it never exposes anything, so
+   * it earns a longer leash than `allow`, never the same one
+   * ([15 · D-04](../../../../docs/plans/15-rules-management/decisions.md#d-04--deny-sem-validade)).
+   */
+  readonly ruleDenyDefaultLifetimeMs: number;
+
+  /** The longest a `deny` rule may live. Asking for more is refused, never cut. */
+  readonly ruleDenyMaxLifetimeMs: number;
+
+  /**
+   * How long after a revocation it may still be undone with no second step
+   * ([15 · D-11](../../../../docs/plans/15-rules-management/decisions.md#d-11--desfazer-a-revogação)).
+   * Past it, the rule does not come back by restoring — duplicating it through the assistant, with
+   * its own second step, is the path.
+   */
+  readonly ruleRestoreWindowMs: number;
 }

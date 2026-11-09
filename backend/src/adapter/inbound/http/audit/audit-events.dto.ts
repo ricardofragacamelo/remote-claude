@@ -22,7 +22,10 @@ export const auditEventsQuerySchema = z.object({
 
 export type AuditEventsQuery = z.infer<typeof auditEventsQuerySchema>;
 
-function toAuditEventDto({ event }: AuditEventRecord): AuditEventPagePayload['events'][number] {
+/** Shared with `GET /permission-rules/:ruleId/history` (plan 15, B-11) — the same facts, filtered. */
+export function toAuditEventDto({
+  event,
+}: AuditEventRecord): AuditEventPagePayload['events'][number] {
   return {
     id: event.id,
     kind: event.kind,

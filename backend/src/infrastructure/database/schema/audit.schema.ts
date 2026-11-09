@@ -60,6 +60,12 @@ export const auditEntries = pgTable(
       table.toolKind,
       desc(table.seq),
     ),
+    // A rule's usage and its invocation history walk the entries it answered, newest first — only
+    // the entries that name a rule need it (plan 15, D-05). `CREATE INDEX` does not rewrite a row
+    // or fire the `UPDATE` trigger, so this is safe to add long after the table has data.
+    index('audit_entries_user_id_rule_id_seq_idx')
+      .on(table.userId, table.ruleId, desc(table.seq))
+      .where(sql`${table.ruleId} IS NOT NULL`),
     // One record per invocation **per fact**. A redelivered tool call writes `recorded` again and
     // collides with the entry it repeats, so the trail never claims a command ran twice; a
     // permission decision about the same invocation is a different fact and gets its own row.

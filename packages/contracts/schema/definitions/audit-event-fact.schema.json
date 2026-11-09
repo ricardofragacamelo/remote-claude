@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/audit-event-fact.json",
+  "title": "AuditEventFact",
+  "description": "One account fact, as the client sees it — shared by `GET /audit-events` (plan 06, B-40; plan 07, B-17) and `GET /permission-rules/:ruleId/history` (plan 15, B-11), which reads the same facts filtered by `subjectId`. The owner is the caller, so it is not here.",
+  "type": "object",
+  "required": ["id", "kind", "subjectId", "subjectLabel", "details", "at"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "description": "A genuinely open vocabulary — `file.`, `file.written`, a device or a rule event — never a fixed enum."
+    },
+    "subjectId": {
+      "type": "string",
+      "description": "What the fact is about — for a file, its real path; for a rule's own history, the rule itself."
+    },
+    "subjectLabel": {
+      "type": "string",
+      "description": "How to show the subject — for a file, its path; for a rule, its pattern at the moment of the fact."
+    },
+    "details": {
+      "type": "object",
+      "x-nullable": true,
+      "description": "Sizes, hashes, origin and destination, before/after values — never the contents of a file. Open: shaped by the kind."
+    },
+    "at": {
+      "type": "string"
+    }
+  }
+}

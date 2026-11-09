@@ -48,7 +48,7 @@ import {
 import { prepareMermaid } from './lib/mermaid-asset.mjs';
 import { repoRoot } from './lib/paths.mjs';
 import { cleanupOnce, kill, onTermination, runToExit, startProc } from './lib/proc.mjs';
-import { HEALTH_PATH, loadDotEnv } from './lib/stack.mjs';
+import { HEALTH_PATH, LOCAL_PORTS_FILE, loadDotEnv, readRecordedPorts } from './lib/stack.mjs';
 import { bold, cyan, dim, fail, fatal, hint, info, line, ok, title, warn } from './lib/ui.mjs';
 import { answers } from './lib/wait.mjs';
 
@@ -203,6 +203,17 @@ function runApp(serial, defines) {
   });
 }
 
+/**
+ * The build's defines, from the `.env` and the ports the last `pnpm dev` actually bound.
+ *
+ * @returns {ReturnType<typeof localDefines>}
+ */
+function buildDefines() {
+  const version = pubspecVersion(fs.readFileSync(path.join(mobileDir, 'pubspec.yaml'), 'utf8'));
+  const recordedWebPort = readRecordedPorts(path.join(repoRoot, LOCAL_PORTS_FILE))?.web ?? null;
+  return localDefines(process.env, version, recordedWebPort);
+}
+
 /** @returns {Promise<number>} the exit code of the run */
 async function main() {
   title('dev:mobile — the app against the local stack');
@@ -211,8 +222,7 @@ async function main() {
   // named one by one below — the same file `pnpm dev` reads, and the same rule it follows.
   const loaded = loadDotEnv(repoRoot);
 
-  const version = pubspecVersion(fs.readFileSync(path.join(mobileDir, 'pubspec.yaml'), 'utf8'));
-  const built = localDefines(process.env, version);
+  const built = buildDefines();
   if ('problems' in built) {
     fatal('the .env cannot configure the app');
     for (const problem of built.problems) {

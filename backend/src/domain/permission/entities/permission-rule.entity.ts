@@ -1,13 +1,24 @@
 import type { UserId } from '@domain/auth';
 import type { CanonicalTool } from '@domain/engine';
 import type { SessionId } from '@domain/session';
+import type { PermissionRuleBreadth } from '../errors/permission-rule-too-broad.error';
 import { PermissionRuleExpiryInvalidError } from '../errors/permission-rule-expiry-invalid.error';
 import { PermissionRuleExpiryTooLongError } from '../errors/permission-rule-expiry-too-long.error';
 import { PermissionScopeUnsupportedError } from '../errors/permission-scope-unsupported.error';
+import { projectPathReaches } from '../services/project-reach';
+import { ruleBreadth } from '../services/rule-breadth';
 import { parseRulePattern, ruleMatches } from '../services/rule-pattern';
 import type { RuleKind, RulePattern } from '../services/rule-pattern';
 import type { PermissionScope } from '../value-objects/permission-scope.value-object';
 import type { PermissionDecision } from './permission-request.entity';
+
+/**
+ * How a rule came to exist, as far as the installation can honestly say
+ * ([15 · B-09](../../../../../docs/plans/15-rules-management/F1-rules-backend.md#b-09--criar-regra-pasta-pela-allowlist-largura-validade-de-deny-origem)).
+ * `null` — absent on a draft, `undefined` read back — is a rule granted before this column existed:
+ * "origin not recorded", never a guess.
+ */
+export type PermissionRuleOrigin = 'approval' | 'request' | 'import' | 'restore';
 
 /** The scopes a rule can have. `once` leaves nothing behind, so there is no rule of it. */
 export type PermissionRuleScope = Exclude<PermissionScope, 'once'>;
@@ -59,6 +70,18 @@ export interface PermissionRuleDraft {
 
   /** When it stops resolving anything. Every rule expires; there is no permanent one. */
   readonly expiresAt: Date;
+
+  /** How this rule came to exist — absent (`null`) for one granted before the column existed. */
+  readonly grantedVia?: PermissionRuleOrigin | null;
+
+  /** The permission request a card's `approval` answered — set only then. */
+  readonly grantedFromRequestId?: string | null;
+
+  /** The catalog template this rule came from, when it did. */
+  readonly templateId?: string | null;
+
+  /** The revoked rule this one undoes, when `grantedVia` is `restore` ([15 · D-11]). */
+  readonly restoredFrom?: string | null;
 }
 
 /** A rule as it was stored, including whether it has been taken back. */
@@ -112,6 +135,10 @@ export class PermissionRule {
     readonly createdAt: Date,
     readonly expiresAt: Date,
     readonly revokedAt: Date | null,
+    readonly grantedVia: PermissionRuleOrigin | null,
+    readonly grantedFromRequestId: string | null,
+    readonly templateId: string | null,
+    readonly restoredFrom: string | null,
   ) {}
 
   /**
@@ -165,6 +192,10 @@ export class PermissionRule {
       snapshot.createdAt,
       snapshot.expiresAt,
       snapshot.revokedAt,
+      snapshot.grantedVia ?? null,
+      snapshot.grantedFromRequestId ?? null,
+      snapshot.templateId ?? null,
+      snapshot.restoredFrom ?? null,
     );
   }
 
@@ -185,6 +216,14 @@ export class PermissionRule {
     return this.pattern?.kind ?? null;
   }
 
+  /**
+   * How far the pattern reaches, on its own — `null` on a disabled rule, whose pattern is not read
+   * ([15 · D-09](../../../../../docs/plans/15-rules-management/decisions.md#d-09--o-que-é-largo-demais)).
+   */
+  get breadth(): PermissionRuleBreadth | null {
+    return this.pattern === null ? null : ruleBreadth(this.pattern);
+  }
+
   /** Whether the rule still applies at `now`: neither expired, revoked nor disabled. */
   isActiveAt(now: Date): boolean {
     return this.statusAt(now) === 'active';
@@ -202,6 +241,35 @@ export class PermissionRule {
     }
 
     return PermissionRule.restore({ ...this.snapshot(), revokedAt: at });
+  }
+
+  /**
+   * Shortens or extends — the only thing about a rule that is ever edited under its own id
+   * ([15 · D-01](../../../../../docs/plans/15-rules-management/decisions.md#d-01--o-que-se-edita-numa-regra)).
+   * Returns the **same** instance when `at` is the validity it already has, so a `PATCH` that
+   * changes nothing writes nothing and records nothing (S-73). Whether the rule is in a state this
+   * may be done to — not revoked, not disabled, not already expired — is the caller's question, the
+   * same way {@link revoke}'s caller is the one who checks ownership.
+   *
+   * @param maxLifetimeMs the ceiling the installation puts on a rule's life, counted from `now`
+   *   ([15 · D-14](../../../../../docs/plans/15-rules-management/decisions.md#d-14--o-teto-da-extensão-conta-de-quando))
+   * @throws {PermissionRuleExpiryInvalidError} `at` is not strictly after `now`
+   * @throws {PermissionRuleExpiryTooLongError} `at` is further than `now` plus the ceiling
+   */
+  withExpiry(at: Date, now: Date, maxLifetimeMs: number): PermissionRule {
+    if (at.getTime() === this.expiresAt.getTime()) {
+      return this;
+    }
+
+    if (at.getTime() <= now.getTime()) {
+      throw new PermissionRuleExpiryInvalidError(at);
+    }
+
+    if (at.getTime() - now.getTime() > maxLifetimeMs) {
+      throw new PermissionRuleExpiryTooLongError(maxLifetimeMs);
+    }
+
+    return PermissionRule.restore({ ...this.snapshot(), expiresAt: at });
   }
 
   /**
@@ -259,16 +327,29 @@ export class PermissionRule {
       expiresAt: this.expiresAt,
       revokedAt: this.revokedAt,
       disabledReason: this.disabledReason,
+      grantedVia: this.grantedVia,
+      grantedFromRequestId: this.grantedFromRequestId,
+      templateId: this.templateId,
+      restoredFrom: this.restoredFrom,
     };
   }
 
-  /** Whether the scope covers the place the request comes from. */
+  /**
+   * Whether the scope covers the place the request comes from.
+   *
+   * `project` reaches its folder **and every folder inside it**, at a `/` boundary — never a
+   * sibling, never a parent ([15 · D-10](../../../../../docs/plans/15-rules-management/decisions.md#d-10--project-alcança-as-subpastas)).
+   */
   private reaches(subject: RuleSubject): boolean {
     switch (this.scope) {
       case 'session':
         return sameSession(this.sessionId, subject.sessionId);
       case 'project':
-        return subject.projectPath !== null && this.projectPath === subject.projectPath;
+        return (
+          subject.projectPath !== null &&
+          this.projectPath !== null &&
+          projectPathReaches(this.projectPath, subject.projectPath)
+        );
       case 'always':
         return true;
     }

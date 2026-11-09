@@ -43,6 +43,17 @@ export async function runLogged<T>(
   return result;
 }
 
+/**
+ * Builds one condition from [value], or skips it — a filter nobody asked for adds nothing to a
+ * `WHERE`, rather than one more branch for the function building it to carry.
+ */
+export function whenPresent<T, Result>(
+  value: T | null | undefined,
+  build: (value: T) => Result,
+): Result | null {
+  return value === null || value === undefined ? null : build(value);
+}
+
 /** A raw statement Drizzle executes: awaitable, and able to show its SQL — under another name. */
 export interface ExecutedStatement<T> extends PromiseLike<T> {
   getQuery(): { sql: string; params: unknown[] };

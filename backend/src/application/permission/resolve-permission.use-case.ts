@@ -149,8 +149,12 @@ export class ResolvePermissionUseCase {
         pattern,
         decision,
         scope,
-        projectPath: request.projectPath,
+        // The session's own workspace, resolved moments ago when it was opened — trusted here,
+        // never re-resolved against the allowlist (D-10's reach change applies the same either way).
+        projectPath: request.projectPath === null ? null : { trusted: request.projectPath },
         expiresAt: null,
+        grantedVia: 'approval',
+        grantedFromRequestId: request.id,
       })),
     );
   }

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/definitions/translated-message.json",
+  "title": "TranslatedMessage",
+  "description": "A `messageKey` and its `params` — never a string the server already rendered. Whoever shows it translates (plan 15, B-02: a rule's disabled reason, an evaluation's reasons and caveats, a draft's findings).",
+  "type": "object",
+  "required": ["messageKey", "params"],
+  "properties": {
+    "messageKey": {
+      "type": "string"
+    },
+    "params": {
+      "type": "object",
+      "description": "The parameters of the message — an open object, as every other `messageKey`/`params` pair in this contract."
+    }
+  }
+}

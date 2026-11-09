@@ -229,6 +229,13 @@ Nem toda repetição é duplicação. Estas ficam fora da medição:
 - **Fixtures e builders de teste** — repetição explícita em teste costuma ser mais legível que
   a abstração que a elimina.
 - **Estrutura de wiring** (`*.module.ts`) — é declaração repetitiva por natureza.
+- **Adapter de saída que só delega a uma função compartilhada**, implementando o mesmo método de
+  dois `port`s de módulos diferentes (`files.FolderResolver` e `permission.RuleFolderResolver`,
+  cada um resolvendo pela própria porta para `workspace`, nunca um pelo outro — são módulos
+  separados de propósito). A regra em si já está extraída (`resolveViaWorkspace`); o que sobra é a
+  sintaxe de implementar a interface, idêntica porque a assinatura é, não porque o módulo é —
+  exclusão nomeada (`workspace-module.folder-resolver.ts`,
+  `workspace-module.rule-folder-resolver.ts`).
 - **Duplicação entre pontas.** Web e mobile implementam a mesma tela em linguagens diferentes;
   isso não é duplicação, é tradução. O que precisa ser único é o **contrato**, e ele já é —
   ver [07-repository-layout.md](07-repository-layout.md).
@@ -245,7 +252,13 @@ Nem toda repetição é duplicação. Estas ficam fora da medição:
   `engine-capabilities.schema.json`/`engine-models.schema.json` (`permissionModes`: um array de
   `enum`, e `$ref` não resolve para um `enum` sozinho) e `component-version.schema.json`/
   `read-version.schema.json` (o mesmo campo `version`, mas o `reason` de cada um é uma regra
-  diferente — fechado num, aberto no outro — e por isso continuam duas definições, não uma).
+  diferente — fechado num, aberto no outro — e por isso continuam duas definições, não uma) e
+  `permission-rule-invocation-page.schema.json` (o mesmo envelope de página com cursor que
+  `audit-trail-page.schema.json` já usa — `array` + `maxItems: 100` + `nextCursor` — mas o nome do
+  campo da lista é `invocations` num e `entries` no outro, o que o $ref de um objeto não consegue
+  expressar sem forçar os dois nomes a serem o mesmo; o item de cada array **já** é um `$ref`
+  compartilhado (`audit-trail-entry.schema.json`, plano 15, B-11) — só o envelope em volta dele
+  coincide).
 
 Exclusão é declarada no config, com justificativa. Nunca por comentário espalhado no código.
 

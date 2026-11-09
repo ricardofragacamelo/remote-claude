@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-evaluation.json",
+  "title": "PermissionRuleEvaluation",
+  "description": "`POST /permission-rules/evaluate`: testing a command without running it — the same precedence a live session uses, over the caller's own rules (plan 15, B-14). No effect of any kind: nothing is stored, no event, no push.",
+  "x-kind": "http",
+  "x-type": "permissionRules.evaluation",
+  "x-route": [{ "method": "POST", "path": "/permission-rules/evaluate" }],
+  "type": "object",
+  "required": ["outcome", "answeringRule", "matching", "reasons", "caveats"],
+  "properties": {
+    "outcome": {
+      "type": "string",
+      "enum": ["allow", "deny", "ask"]
+    },
+    "answeringRule": {
+      "$ref": "../definitions/permission-rule.schema.json",
+      "x-nullable": true,
+      "description": "The rule that answers, `null` when no rule does — the mode may still answer (see `reasons`)."
+    },
+    "matching": {
+      "type": "array",
+      "maxItems": 100,
+      "description": "Every rule that matched, the one that answered included — what explains \"why my allow did not win\".",
+      "items": { "$ref": "../definitions/permission-rule.schema.json" }
+    },
+    "reasons": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "enum": ["ruleAnswers", "denyWins", "readOnlyMode", "allowAllMode", "noRule"]
+      }
+    },
+    "caveats": {
+      "type": "array",
+      "maxItems": 10,
+      "description": "What the engine decides before any rule of ours is even asked (plan 15, D-12) — declared by the engine's adapter, never guessed here.",
+      "items": { "$ref": "../definitions/translated-message.schema.json" }
+    }
+  }
+}

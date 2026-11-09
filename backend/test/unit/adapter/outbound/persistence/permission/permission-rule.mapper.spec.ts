@@ -23,6 +23,11 @@ const row = {
   grantedAt: new Date('2026-09-24T10:00:00.000Z'),
   expiresAt: new Date('2026-12-23T10:00:00.000Z'),
   revokedAt: null,
+  grantedVia: null,
+  grantedFromRequestId: null,
+  templateId: null,
+  restoredFrom: null,
+  expiryRemindedAt: null,
   createdAt: now,
   updatedAt: now,
 };
@@ -60,8 +65,35 @@ describe('the permission rule mapper', () => {
       grantedAt: row.grantedAt,
       expiresAt: row.expiresAt,
       revokedAt: null,
+      grantedVia: null,
+      grantedFromRequestId: null,
+      templateId: null,
+      restoredFrom: null,
       updatedAt: now,
     });
+  });
+
+  it('keeps the origin a rule was granted with, both ways — S-35', () => {
+    const rule = toEntity({
+      ...row,
+      grantedVia: 'approval',
+      grantedFromRequestId: 'req-1',
+      templateId: null,
+      restoredFrom: null,
+    });
+
+    expect(rule.grantedVia).toBe('approval');
+    expect(rule.grantedFromRequestId).toBe('req-1');
+    expect(toRow(rule, now)).toMatchObject({
+      grantedVia: 'approval',
+      grantedFromRequestId: 'req-1',
+    });
+  });
+
+  it('reads a value the schema does not know as "origin not recorded", never a guess', () => {
+    const rule = toEntity({ ...row, grantedVia: 'something-else' });
+
+    expect(rule.grantedVia).toBeNull();
   });
 
   it('keeps the engine a rule is restricted to, both ways — S-94', () => {

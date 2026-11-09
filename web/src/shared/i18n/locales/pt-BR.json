@@ -338,9 +338,45 @@
       "ruleExpiryTooLong": "Essa regra duraria mais do que esta instalação permite.",
       "ruleNotFound": "Essa regra não existe.",
       "ruleNotOwned": "Essa regra é de outra pessoa.",
-      "ruleExpiryInvalid": "Uma regra precisa expirar depois de ser criada.",
+      "ruleExpiryInvalid": "Uma regra precisa expirar no futuro.",
       "answersInvalid": "Essas respostas não servem para a pergunta. Confira cada uma e envie de novo.",
-      "ruleToolInteractive": "As perguntas e os planos do {{agent}} sempre chegam a você: nenhuma regra os responde, nem para permitir nem para recusar."
+      "ruleToolInteractive": "As perguntas e os planos do {{agent}} sempre chegam a você: nenhuma regra os responde, nem para permitir nem para recusar.",
+      "ruleTooBroad": "Esse padrão alcança largo demais para uma regra de permitir dessa largura ({{breadth}}).",
+      "ruleStateConflict": "Essa regra está {{status}}, e essa ação não aceita esse estado.",
+      "ruleChanged": "Essa regra mudou desde que você a abriu. Recarregue e tente de novo.",
+      "ruleIfMatchRequired": "Recarregue essa regra antes de mudar a validade, para nada ser sobrescrito às cegas.",
+      "ruleRestoreWindowClosed": "A janela para desfazer aquela revogação já fechou.",
+      "ruleImportUnsupported": "Esse arquivo não pôde ser lido como uma exportação de regras ({{reason}}).",
+      "ruleImportRejected": "Uma ou mais das regras aceitas não puderam ser criadas. Nada foi importado.",
+      "ruleTemplateUnknown": "Esta versão não tem esse modelo.",
+      "ruleImportTooLarge": "Esse arquivo está acima do limite de {{limit}} {{reason}}.",
+      "ruleImportInvalid": "Esse não é o arquivo que a prévia mostrou — recarregue e tente de novo."
+    },
+    "ruleFinding": {
+      "identical": "Idêntica a outra regra ativa",
+      "redundant": "Já coberta por uma regra mais larga, com a mesma decisão",
+      "shadowedByDeny": "Nunca responde — uma regra de negar a cobre inteira",
+      "overlapsDeny": "Parcialmente coberta por uma regra de negar",
+      "tooBroad": "Mais larga do que hoje seria permitido criar ({{breadth}})",
+      "unreachable": "Esta pasta não está mais na sua lista de permitidas"
+    },
+    "evaluateCaveat": {
+      "engineMayDecideFirst": "O {{engine}} pode decidir algumas chamadas antes de qualquer regra sua ser perguntada.",
+      "acceptEdits": "Edições de arquivo são aceitas automaticamente neste modo; só o resto pergunta."
+    },
+    "ruleTemplate": {
+      "runTestsName": "Rodar os testes",
+      "runTestsDescription": "Permite os comandos de teste do pnpm, npm e yarn.",
+      "gitReadOnlyName": "Git só leitura",
+      "gitReadOnlyDescription": "Permite status, diff, log, show e listar branches — nada que altera o repositório.",
+      "lintAndFormatName": "Lint e formatação",
+      "lintAndFormatDescription": "Permite o lint, a formatação e a checagem de tipos do pnpm.",
+      "blockNetworkName": "Bloquear acesso à rede",
+      "blockNetworkDescription": "Nega buscar ou pesquisar na web, e curl/wget.",
+      "blockDestructiveGitName": "Bloquear git destrutivo",
+      "blockDestructiveGitDescription": "Nega push forçado, reset duro e limpeza.",
+      "blockBulkDeleteName": "Bloquear apagar em massa",
+      "blockBulkDeleteDescription": "Nega rm -rf e rm -fr."
     },
     "persist": {
       "title": "Parar de perguntar sobre isto?",
@@ -405,6 +441,74 @@
       "pending": "Aguardando resposta",
       "declined": "Não respondida: {{reason}}",
       "answeredElsewhere": "Respondida em outro lugar"
+    },
+    "ruleSentence": {
+      "allow": "Permite que {{agent}} {{action}}, {{scope}}, sem perguntar, até {{until}}.",
+      "deny": "Bloqueia {{agent}}: {{action}}, {{scope}}, até {{until}}.",
+      "actionAny": "usar `{{kind}}` livremente",
+      "actionExact": "fazer exatamente `{{content}}`",
+      "actionPrefix": "fazer `{{content}}`, e o que vier depois dele separado por espaço",
+      "actionPrefixExcludesCompound": "fazer `{{content}}`, e o que vier depois dele separado por espaço — mas nunca um comando encadeado com `&&`, `;`, `|` ou similares",
+      "scopeAlways": "em qualquer pasta sua",
+      "scopeProject": "em `{{folder}}`, e nas subpastas dela"
+    },
+    "ruleOrigin": {
+      "approval": "Concedida ao responder um pedido, por {{who}}, em {{at}}.",
+      "request": "Concedida diretamente nesta tela, por {{who}}, em {{at}}.",
+      "import": "Importada, em {{at}}.",
+      "restore": "Restaurada depois de revogada, em {{at}}.",
+      "notRecorded": "Origem não registrada — concedida antes de isso ser rastreado, em {{at}}."
+    },
+    "ruleHistory": {
+      "granted": "Concedida",
+      "revoked": "Revogada",
+      "expiryChanged": "Validade alterada",
+      "exported": "Exportada",
+      "imported": "Importada",
+      "other": "Alterada"
+    },
+    "ruleDetail": {
+      "label": "Detalhes da regra",
+      "title": "Regra",
+      "close": "Fechar",
+      "alertsTitle": "Alertas",
+      "openInvolvedRule": "Abrir esta regra",
+      "validityTitle": "Validade",
+      "usageTitle": "Uso",
+      "originTitle": "Origem",
+      "restore": "Restaurar",
+      "invocationsLoading": "Carregando invocações…",
+      "invocationsEmptyTitle": "Sem invocações",
+      "invocationsEmptyDescription": "Esta regra ainda não respondeu a nada.",
+      "invocationsTitle": "Invocações",
+      "invocationsLoadMore": "Carregar mais invocações",
+      "showTrail": "Ver esta regra na trilha",
+      "historyTitle": "Histórico",
+      "historyLoading": "Carregando histórico…",
+      "historyEmptyTitle": "Sem histórico",
+      "historyEmptyDescription": "Nada registrado ainda para esta regra.",
+      "copyId": "Copiar o id da regra"
+    },
+    "ruleExpiry": {
+      "shortcuts": "Até quando",
+      "shortcut7": "7 dias",
+      "shortcut30": "30 dias",
+      "shortcut90": "90 dias",
+      "shortcut365": "1 ano",
+      "freeDate": "Ou escolha uma data",
+      "ceiling": "Pode ir até {{at}}",
+      "invalid": "Escolha uma data primeiro.",
+      "mustBeLater": "Uma extensão tem que ser mais tarde que a validade que a regra já tem.",
+      "mustBeSooner": "Um encurtamento tem que ser mais cedo que a validade que a regra já tem, e ainda no futuro.",
+      "shortenTitle": "Encurtar a validade",
+      "extendTitle": "Estender a validade",
+      "cancel": "Cancelar",
+      "back": "Voltar",
+      "continue": "Continuar",
+      "apply": "Aplicar",
+      "undo": "Desfazer",
+      "shortenedToast": "Encurtada.",
+      "extendedToast": "Estendida."
     }
   },
   "audit": {
@@ -537,13 +641,6 @@
       "title": "Suas regras",
       "purpose": "O que você autorizou de antemão — e onde você retira."
     },
-    "list": {
-      "title": "Regras que você concedeu",
-      "description": "O que o {{agent}} pode fazer nesta máquina sem perguntar a você antes. A revogação vale no próximo pedido, em toda sessão aberta.",
-      "loading": "Carregando suas regras…",
-      "emptyTitle": "Nenhuma regra ainda",
-      "emptyDescription": "Uma regra nasce quando você responde um pedido com “não perguntar de novo”. Até lá, o {{agent}} pergunta toda vez."
-    },
     "scope": {
       "project": "Em um projeto",
       "always": "Em todos os projetos"
@@ -552,45 +649,86 @@
       "allow": "executa sem perguntar",
       "deny": "recusado sem perguntar"
     },
-    "status": {
-      "active": "Ativa",
-      "expired": "Expirada",
-      "revoked": "Revogada",
-      "disabled": "Desligada"
-    },
     "row": {
-      "label": "Regra {{pattern}}",
-      "toolDecision": "{{tool}} · {{decision}}",
-      "project": "Projeto: {{path}}",
-      "granted": "Concedida por {{who}} em {{at}}",
-      "validUntil": "Válida até {{at}}",
       "expiredOn": "Expirou em {{at}}. O {{agent}} volta a perguntar.",
-      "expiringSoon": "Expira em breve: depois de {{at}}, o {{agent}} volta a perguntar.",
-      "revokedOn": "Revogada em {{at}}. Ela não responde mais nada.",
-      "disabled": "Escrita para o {{agent}} numa forma que esta versão não traduz: não vale mais. Crie de novo se ainda quiser."
+      "revokedOn": "Revogada em {{at}}. Ela não responde mais nada."
     },
     "action": {
       "revoke": "Revogar",
-      "revoking": "Revogando…"
+      "revoking": "Revogando…",
+      "open": "Abrir"
     },
     "detail": {
-      "screenTitle": "Uma regra que você concedeu",
-      "title": "A regra",
-      "description": "O que esta regra deixa o {{agent}} fazer, e se ainda deixa.",
-      "loading": "Carregando a regra…",
-      "emptyTitle": "Nenhuma regra",
-      "emptyDescription": "Não há regra para mostrar.",
-      "purpose": "Uma regra que você concedeu, seja qual for o destino dela."
+      "loading": "Carregando a regra…"
     },
     "help": {
       "what": "Cada regra que você concedeu a partir de um pedido de permissão: qual tool, qual padrão, onde vale e até quando. Revogar é um clique, e o próximo pedido que casar volta a perguntar.",
       "states": "Uma regra ativa responde aos pedidos sem perguntar. Uma regra perto de expirar — menos de sete dias — fica marcada. Uma regra expirada continua na lista, marcada como tal; uma revogada sai da lista. Uma revogação que falha mantém a linha, com o motivo ao lado. Uma regra escrita para um agente numa forma que esta versão não traduz aparece como desligada, com o padrão que tinha: ela não responde nada, e só oferece a revogação.",
       "notRecorded": "Regras que só valem para uma sessão não aparecem: elas acabam com ela. Esta tela não mostra quais pedidos uma regra respondeu — a trilha de auditoria mostra."
     },
-    "detailHelp": {
-      "what": "Uma regra, aberta pela trilha de auditoria ou pela lista: o que ela permite, onde, desde quando e até quando.",
-      "states": "Ativa, com o caminho para revogá-la; expirada; ou revogada, dizendo quando — nunca uma página vazia.",
-      "notRecorded": "Ela não lista os pedidos que a regra respondeu; a trilha de auditoria lista."
+    "tabs": {
+      "label": "Estado da regra",
+      "active": "Ativas",
+      "expiringSoon": "Perto de expirar",
+      "expired": "Expiradas",
+      "revoked": "Revogadas",
+      "all": "Todas"
+    },
+    "tabEmpty": {
+      "activeTitle": "Nenhuma regra ativa",
+      "activeDescription": "Uma regra nasce quando você responde a um pedido com “não perguntar de novo”. Crie uma aqui, ou a partir de um modelo.",
+      "expiringSoonTitle": "Nada perto de expirar",
+      "expiringSoonDescription": "Nenhuma regra ativa para de responder nos próximos sete dias.",
+      "expiredTitle": "Nenhuma regra expirada",
+      "expiredDescription": "Regras que pararam de responder sozinhas aparecem aqui.",
+      "revokedTitle": "Nenhuma regra revogada",
+      "revokedDescription": "Regras que você retirou aparecem aqui.",
+      "allTitle": "Nenhuma regra ainda",
+      "allDescription": "Uma regra nasce quando você responde a um pedido com “não perguntar de novo”. Crie uma aqui, ou a partir de um modelo."
+    },
+    "filters": {
+      "label": "Filtrar as regras",
+      "kind": "Tipo de ferramenta",
+      "anyKind": "Qualquer tipo",
+      "folder": "Pasta",
+      "anyFolder": "Qualquer pasta",
+      "withAlert": "Com alerta",
+      "search": "Buscar no padrão ou na pasta",
+      "apply": "Aplicar"
+    },
+    "table": {
+      "caption": "Suas regras, filtradas e ordenadas",
+      "loading": "Carregando as regras…",
+      "columnSelect": "Selecionar",
+      "columnDecision": "Decisão",
+      "columnType": "Tipo",
+      "columnPattern": "Padrão",
+      "columnFolder": "Onde vale",
+      "columnValidity": "Válida até",
+      "columnUsage": "Uso",
+      "columnLastUsed": "Última vez",
+      "columnCreated": "Criada",
+      "columnAlerts": "Alertas",
+      "copyPattern": "Copiar o padrão",
+      "mcpServerTool": "{{server}}: {{tool}}",
+      "notApplicable": "—",
+      "never": "Nunca",
+      "useCount": "{{count}} · {{days}} dias",
+      "hasAlert": "Alertas desta regra: {{count}}",
+      "rowMenuLabel": "Ações da regra {{pattern}}",
+      "rowSelect": "Selecionar a regra {{pattern}}",
+      "loadMore": "Carregar mais",
+      "loadingMore": "Carregando mais…"
+    },
+    "disabled": {
+      "banner": "Regras que a atualização não conseguiu trazer, e não respondem mais a nada: {{count}}",
+      "open": "Ver a lista",
+      "title": "Regras que a atualização não traduziu",
+      "description": "Cada uma manteve o padrão antigo, e o motivo de ter sido desligada. Revogar ou recriar são as únicas ações possíveis para uma delas.",
+      "loading": "Carregando…",
+      "retry": "Tentar de novo",
+      "recreate": "Recriar",
+      "scopeDecision": "{{scope}} · {{decision}}"
     }
   },
   "transcript": {

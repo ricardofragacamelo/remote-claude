@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-import.json",
+  "title": "PermissionRuleImportResult",
+  "description": "`POST /permission-rules/import`: what applying an accepted lot of an import file actually created (plan 15, B-18, D-17). Revalidated against this installation right before writing — an item accepted at preview that would now be refused fails the whole call, nothing written.",
+  "x-kind": "http",
+  "x-type": "permissionRules.import",
+  "x-route": [{ "method": "POST", "path": "/permission-rules/import" }],
+  "type": "object",
+  "required": ["counts", "rules"],
+  "properties": {
+    "counts": {
+      "type": "object",
+      "required": ["created", "existing"],
+      "properties": {
+        "created": { "type": "integer", "minimum": 0 },
+        "existing": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Already active before this call — the grant routine's own idempotency, not a second write."
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "Every accepted item's rule, in the order it was accepted.",
+      "items": { "$ref": "../definitions/permission-rule.schema.json" }
+    }
+  }
+}

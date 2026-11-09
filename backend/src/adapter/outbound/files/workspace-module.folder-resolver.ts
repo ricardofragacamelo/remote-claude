@@ -4,6 +4,7 @@ import type { FolderResolver } from '@application/files';
 import { ResolveWorkspaceUseCase } from '@application/workspace';
 import type { UserId } from '@domain/auth';
 import type { WorkspacePath } from '@domain/workspace';
+import { resolveViaWorkspace } from '../workspace/resolve-via-workspace';
 
 /**
  * `files` asking `workspace` for the folder of a tab — the whole of the coupling between the two
@@ -20,6 +21,6 @@ export class WorkspaceModuleFolderResolver implements FolderResolver {
   ) {}
 
   async resolve(raw: string, userId: UserId): Promise<WorkspacePath> {
-    return (await this.workspaces.execute(raw, userId)).path;
+    return resolveViaWorkspace(this.workspaces, raw, userId);
   }
 }

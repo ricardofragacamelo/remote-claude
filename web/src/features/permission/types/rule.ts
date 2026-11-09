@@ -1,6 +1,18 @@
-import type { PermissionRule as ContractPermissionRule } from '@remote-claude/contracts';
+import type {
+  PermissionRule as ContractPermissionRule,
+  PermissionRuleBatchPayload,
+  PermissionRuleEvaluationPayload,
+  PermissionRuleExportPayload,
+  PermissionRuleHistoryPayload,
+  PermissionRuleImportPreviewPayload,
+  PermissionRuleImportResultPayload,
+  PermissionRulePreviewPayload,
+  PermissionRuleSimulationPayload,
+  PermissionRuleSummaryPayload,
+  PermissionRuleTemplatesPayload,
+} from '@remote-claude/contracts';
 
-import type { PersistedScope } from './permission';
+import type { PermissionDecision, PersistedScope } from './permission';
 
 /**
  * Whether a rule still answers.
@@ -56,4 +68,107 @@ export interface ListedRule {
 export interface RowFailure {
   readonly messageKey: string;
   readonly params: Readonly<Record<string, unknown>>;
+}
+
+/** The field the listing sorts by — the backend's own set, nothing added here (plan 15, B-10). */
+export type RuleSort = 'grantedAt' | 'expiresAt' | 'lastUsedAt' | 'useCount' | 'pattern';
+export type RuleOrder = 'asc' | 'desc';
+
+/**
+ * Every filter the listing, the summary and the export share — in the URL's search, so a filtered
+ * list is a link (plan 15, B-20).
+ *
+ * `status` is plural: more than one tab's worth at once is what "Perto de expirar" needs — it is
+ * `active`, narrowed further on the client by `expiresAt` (plan 03, D-13), never its own server
+ * status.
+ */
+export interface RuleFilters {
+  readonly status?: readonly RuleStatus[];
+  readonly scope?: PersistedScope;
+  readonly decision?: PermissionDecision;
+  readonly engine?: string;
+  readonly kind?: string;
+  readonly folder?: string;
+  readonly q?: string;
+  readonly expiresBefore?: string;
+}
+
+/** `RuleFilters`, plus how the listing orders what it reads — the export and the summary take only the filters. */
+export interface RuleListQuery extends RuleFilters {
+  readonly sort?: RuleSort;
+  readonly order?: RuleOrder;
+}
+
+/** One page of the listing. */
+export interface RulePage {
+  readonly rules: readonly PermissionRule[];
+  readonly nextCursor: string | null;
+}
+
+/** The field names `PermissionRuleSummaryPayload` counts — re-exported so a hook never imports the wire type. */
+export type RuleSummary = PermissionRuleSummaryPayload;
+
+/** `POST /permission-rules`: what creating a rule by hand sends. */
+export interface GrantRuleInput {
+  readonly pattern: string;
+  readonly engine?: string;
+  readonly decision: PermissionDecision;
+  readonly scope: PersistedScope;
+  readonly projectPath?: string;
+  readonly expiresAt?: string;
+  readonly acknowledgeBroad?: boolean;
+  readonly templateId?: string;
+}
+
+/** `PATCH /permission-rules/:ruleId`: encurtar or estender — the new validity, `If-Match`'d. */
+export interface ChangeRuleExpiryInput {
+  readonly ruleId: string;
+  readonly etag: string;
+  readonly expiresAt: string;
+}
+
+export type RuleBatch = PermissionRuleBatchPayload;
+export type RuleHistory = PermissionRuleHistoryPayload;
+export type RuleEvaluation = PermissionRuleEvaluationPayload;
+export type RulePreview = PermissionRulePreviewPayload;
+export type RuleSimulation = PermissionRuleSimulationPayload;
+export type RuleTemplates = PermissionRuleTemplatesPayload;
+export type RuleExport = PermissionRuleExportPayload;
+export type RuleImportPreview = PermissionRuleImportPreviewPayload;
+export type RuleImportResult = PermissionRuleImportResultPayload;
+
+/** `POST /permission-rules/evaluate`: testing a command, the engine, its canonical `kind` and subject (B-14). */
+export interface EvaluateRuleInput {
+  readonly engine?: string;
+  readonly kind: string;
+  readonly subject: Readonly<Record<string, unknown>>;
+  readonly folder?: string;
+  readonly mode?: string;
+}
+
+/** `POST /permission-rules/preview`: a pattern nobody has granted yet (plan 15, B-15). */
+export interface PreviewRuleInput {
+  readonly pattern: string;
+  readonly engine?: string;
+  readonly decision: PermissionDecision;
+  readonly scope: PersistedScope;
+  readonly projectPath?: string;
+}
+
+/** `POST /permission-rules/simulate`: a lot of drafts and removals, weighed (plan 15, B-16). */
+export interface SimulateRulesInput {
+  readonly add?: readonly { pattern: string; decision: PermissionDecision; engine?: string }[];
+  readonly remove?: readonly string[];
+  readonly folder?: string;
+  readonly limit?: number;
+}
+
+/** `POST /permission-rules/import`: the file the preview read, its digest, and what was accepted (B-18). */
+export interface ApplyRuleImportInput {
+  readonly file: string;
+  readonly digest: string;
+  readonly accept: readonly number[];
+  readonly acknowledgeBroad?: readonly number[];
+  readonly folderMap?: Readonly<Record<string, string>>;
+  readonly expiresAt?: string;
 }

@@ -22,19 +22,19 @@ Decisão em aberto **não** impede planejar; impede **começar a fase** que depe
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-01 | O que se edita numa regra: só a validade, ou também padrão, escopo e decisão | se a trilha precisa contar "a regra X passou a permitir outra coisa" como fato próprio | B-03, B-12 | — | 🔲 |
-| D-02 | Regra revogada some da tela, ou fica consultável num histórico | se alguém volta para procurar o que retirou; o custo é nenhum — a linha nunca é apagada | B-02, B-10, B-21 | — | 🔲 |
-| D-03 | Criar regra pela tela pede segundo passo sempre? Pede reautenticação (step-up)? | quanto atrito o usuário aceita numa tela a que ele foi de propósito; step-up depende de `max_age` do OIDC, que ninguém implementou | B-27 | — | 🔲 |
-| D-04 | `deny` pode ser sem validade? | o "toda regra expira" do plano 03 foi escrito pensando em `allow`; um `deny` velho incomoda, não expõe | B-09 | — | 🔲 |
-| D-05 | De onde vêm o uso por regra e a simulação: da trilha, de `permission_requests`, ou de um contador | se os números da tela precisam bater com os da trilha; custo da consulta; a retenção de 90 dias contra a validade de até 365 | B-11, B-16 | — | 🔲 |
-| D-06 | Revogar em lote é atômico ou por item | o que a tela faz com "revoguei 7 de 9" | B-13 | — | 🔲 |
+| D-01 | O que se edita numa regra: só a validade, ou também padrão, escopo e decisão | se a trilha precisa contar "a regra X passou a permitir outra coisa" como fato próprio | B-03, B-12 | 2026-11-05 · só a validade. Padrão, escopo e decisão não se editam: mudar é revogar e criar; a tela oferece duplicar (assistente preenchido) e revogar a original | ✅ |
+| D-02 | Regra revogada some da tela, ou fica consultável num histórico | se alguém volta para procurar o que retirou; o custo é nenhum — a linha nunca é apagada | B-02, B-10, B-21 | 2026-11-05 · consultável, por opção: `status=revoked` na listagem e aba "Revogadas" na tela; o default (e o que o app Flutter lê) continua sem elas | ✅ |
+| D-03 | Criar regra pela tela pede segundo passo sempre? Pede reautenticação (step-up)? | quanto atrito o usuário aceita numa tela a que ele foi de propósito; step-up depende de `max_age` do OIDC, que ninguém implementou | B-27 | 2026-11-05 · segundo passo sempre, para `allow` e `deny`. Step-up fica fora do plano, como mecanismo ainda inexistente (planos 05/12) | ✅ |
+| D-04 | `deny` pode ser sem validade? | o "toda regra expira" do plano 03 foi escrito pensando em `allow`; um `deny` velho incomoda, não expõe | B-09 | 2026-11-05 · `deny` continua expirando, com default e teto **próprios** (`RC_PERMISSION_RULE_DENY_DEFAULT_LIFETIME_MS`, `RC_PERMISSION_RULE_DENY_MAX_LIFETIME_MS`), teto de cinco anos, mesmo invariante do banco | ✅ |
+| D-05 | De onde vêm o uso por regra e a simulação: da trilha, de `permission_requests`, ou de um contador | se os números da tela precisam bater com os da trilha; custo da consulta; a retenção de 90 dias contra a validade de até 365 | B-11, B-16 | 2026-11-05 · a trilha (`audit_entries`), escopado por usuário e regra, janela de 90 dias, índice parcial novo | ✅ |
+| D-06 | Revogar em lote é atômico ou por item | o que a tela faz com "revoguei 7 de 9" | B-13 | 2026-11-05 · atômico: toda validação antes de qualquer escrita, uma instrução de `UPDATE`, teto de 100 ids | ✅ |
 | D-07 | Comando composto e o prefixo: `allow Bash(git status:*)` hoje cobre `git status && curl … \| sh` | se endurecer o matcher do plano 03 quebra algum uso legítimo; o quanto o Claude realmente encadeia comandos | B-08 | 2026-09-26 · **a recomendação**, aplicada antes do plano a pedido do usuário: `allow` de prefixo em linha de shell só cobre comando único (operador, mesmo entre aspas, tira do alcance); `allow` exato casa a string idêntica; `deny` casa por segmento. Lista de operadores única em `shell-syntax.ts`, lida também pelo classificador de risco — que passou a separar no `&` simples | ✅ |
-| D-08 | Prefixo em tool de caminho: `Read(/a/src:*)` não cobre `/a/src/x.ts` | se vale oferecer caminho por prefixo, ou esperar uma gramática de caminho. Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect) (revisão de 2026-10-10), a decisão é sobre a gramática canônica do domínio (`file.read(/a/src:*)`), e a forma de caminho `file.edit(src/**)` vem da B-31 do [plano 28](../28-agent-neutral-core/F5-permission-dialect.md) **Atualização (2026-10-10):** a [28 · B-31](../28-agent-neutral-core/F5-permission-dialect.md) fixou a forma do caminho: glob relativo à pasta (`file.read(src/**)`), e o `:*` só existe no `shell` — a forma `file.read(/a/src:*)` deixa de existir, e a decisão restante é só se a tela oferece o glob por prefixo de pasta | B-08, B-27 | — | 🔲 |
-| D-09 | O que é "largo demais", e o que acontece com um padrão assim | a lista de interpretadores e lançadores; se a regra vale para toda porta de criação ou só para a tela. Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect) (revisão de 2026-10-10), a tabela é do domínio, por `kind` canônico | B-08, B-09 | — | 🔲 |
-| D-10 | `project` alcança as subpastas? | o plano 06 abre qualquer subpasta como pasta de trabalho; hoje o casamento de pasta é exato | B-09, B-14 | — | 🔲 |
-| D-11 | Desfazer a revogação, ou confirmar antes de revogar | se "restaurar" pode dispensar o segundo passo que conceder exige | B-13, B-24 | — | 🔲 |
-| D-12 | O que o teste de comando considera: só as regras persistidas, ou também as `session` e o modo da sessão viva | se o usuário testa "em geral" ou "nesta sessão". Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect), o modo é o canônico e as ressalvas vêm do adapter do motor | B-14 | — | 🔲 |
-| D-13 | A listagem pagina? | quantas regras um usuário real acumula — não medido | B-10 | — | 🔲 |
+| D-08 | Prefixo em tool de caminho: `Read(/a/src:*)` não cobre `/a/src/x.ts` | se vale oferecer caminho por prefixo, ou esperar uma gramática de caminho. Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect) (revisão de 2026-10-10), a decisão é sobre a gramática canônica do domínio (`file.read(/a/src:*)`), e a forma de caminho `file.edit(src/**)` vem da B-31 do [plano 28](../28-agent-neutral-core/F5-permission-dialect.md) **Atualização (2026-10-10):** a [28 · B-31](../28-agent-neutral-core/F5-permission-dialect.md) fixou a forma do caminho: glob relativo à pasta (`file.read(src/**)`), e o `:*` só existe no `shell` — a forma `file.read(/a/src:*)` deixa de existir, e a decisão restante é só se a tela oferece o glob por prefixo de pasta | B-08, B-27 | 2026-11-05 · **superada pelo código**: a B-08 confirmou que a F5 do plano 28 (B-31), já concluída, nunca deixou `:*` alcançar um `kind` de caminho — `file.read(/a/src:*)` é recusado na criação (`prefixOutsideShell`), igual a qualquer outra sintaxe fora da gramática. Não há padrão ambíguo a "aceitar e explicar": a recomendação original supunha uma porta que o plano 28 fechou antes deste. O achado `pathPrefix` sai do escopo da B-15 (nada a calcular); a ajuda da B-27 oferece só o glob para `file.*`, nunca um prefixo | ✅ |
+| D-09 | O que é "largo demais", e o que acontece com um padrão assim | a lista de interpretadores e lançadores; se a regra vale para toda porta de criação ou só para a tela. Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect) (revisão de 2026-10-10), a tabela é do domínio, por `kind` canônico | B-08, B-09 | 2026-11-05 · `ruleBreadth` vale para **toda** porta de criação — `POST`, importação, restauração, modelo —, nunca só a tela | ✅ |
+| D-10 | `project` alcança as subpastas? | o plano 06 abre qualquer subpasta como pasta de trabalho; hoje o casamento de pasta é exato | B-09, B-14 | 2026-11-05 · **contra a recomendação do plano**: `project` passa a alcançar a pasta **e as subpastas**, não só a pasta exata da sessão. Efeito em cascata, registrado aqui para quem escrever a B-09: (1) o casamento de pasta no domínio deixa de ser igualdade estrita e passa a ser prefixo de caminho (com fronteira de segmento, para `/raiz/app` não casar `/raiz/app2`); (2) **todas as regras `project` já concedidas passam a valer em mais lugares por efeito da migration**, sem decisão individual de quem as concedeu — isso precisa de uma nota explícita na trilha/changelog da migration e de aviso ao usuário na tela (B-21), porque é exatamente o "alargar autorização por migration" que a recomendação original evitava; (3) o teste de comando (B-14, S-30, S-100) passa a mostrar "esta pasta e as subpastas" em vez de "só esta pasta" | ✅ |
+| D-11 | Desfazer a revogação, ou confirmar antes de revogar | se "restaurar" pode dispensar o segundo passo que conceder exige | B-13, B-24 | 2026-11-05 · revogar avulso continua direto, com "desfazer" no aviso; revogar em lote mostra prévia e também oferece desfazer; janela de restauração curta (~10 min), só por quem revogou, sem segundo passo dentro da janela | ✅ |
+| D-12 | O que o teste de comando considera: só as regras persistidas, ou também as `session` e o modo da sessão viva | se o usuário testa "em geral" ou "nesta sessão". Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect), o modo é o canônico e as ressalvas vêm do adapter do motor | B-14 | 2026-11-05 · por padrão, só as regras persistidas do chamador, na pasta e modo informados; com `sessionId` de uma sessão viva do chamador, acrescenta as regras `session` dela e usa o modo atual, com as ressalvas do adapter do motor | ✅ |
+| D-13 | A listagem pagina? | quantas regras um usuário real acumula — não medido | B-10 | 2026-11-05 · **contra a recomendação do plano**: paginação por cursor **desde a F0**, não lista-tudo-com-teto-de-1000. Efeito em cascata para quem escrever B-02/B-03/B-10: (1) o contrato de `GET /permission-rules` leva `cursor`/`pageSize` na entrada e `nextCursor` na saída desde o primeiro desenho, cursor sugerido sobre `(granted_at, id)`; (2) a tela (F2, B-20/B-21) pagina em vez de carregar tudo; (3) a **análise de redundância/sobreposição/conflito (B-15)**, que precisa enxergar o conjunto inteiro de regras do usuário, não pode depender da página carregada na tela — precisa de uma leitura própria sem paginação (ou lendo todas as páginas) no backend; isso é uma decisão de implementação que falta tomar na B-15/B-22, registrada aqui como pendência | ✅ |
 | D-20 | O plano nasce sobre o núcleo neutro do [plano 28](../28-agent-neutral-core/README.md) e o `RuleDialect` da F5 de lá? | nenhum — as diretivas do 28 (isolamento, regras pelo dialeto, contrato canônico) valem para todo plano não executado, e a [28 · D-12](../28-agent-neutral-core/decisions.md) pausa a B-08 | B-01…B-03, B-06, B-07, B-08…B-18, B-20…B-22, B-26…B-28, B-31…B-33, B-35 | 2026-10-10 · ajuste às diretivas do [plano 28](../28-agent-neutral-core/README.md) (isolamento, regras pelo dialeto, contrato canônico), pedido do usuário: a B-08 (🔄) fica pausada até a [F5 do 28](../28-agent-neutral-core/F5-permission-dialect.md) e retoma escrita atrás do `RuleDialect`; a gramática do Claude (`Tool(x:*)`, `Bash` composto, largura, contenção, alcance, ressalvas) mora no dialeto do adapter, e a regra do núcleo é `{ engine, kind?, matcher }` (B-08, B-09, B-15); B-02 troca o `reach { toolName, kind: tool\|exact\|prefix… }` por `{ engine, kind canônico, form, content, excludesCompound, native? }` e o filtro `tool` por `engine` + `kind`; B-03 troca o `evaluate { toolName, input, permissionMode… }` por `{ engine, kind, subject, rawInput?, mode }`, com o modo canônico e as ressalvas vindas do adapter, e a prévia passa a escrever o padrão pelo dialeto; B-07 escreve no documento do dialeto (`backend/04-engine-integration.md` + o anexo `04a-claude.md`, da F1 do 28); B-14/B-16/B-28/B-35 usam `ask`/`readOnly` no lugar de `default`/`plan`; B-11/B-16 decidem os campos de leitura pelo `kind` `file.read`; B-17 e a D-16 são os modelos do dialeto do Claude, por motor; B-18 leva `engine` no arquivo; B-21/B-22/B-26/B-28/B-31 usam `{agent}`, e a ajuda que só vale para o Claude é da extensão `web/src/engines/claude/` (B-06, B-26, B-32); B-27 escolhe pelo `kind`. D-08, D-09, D-12, D-15, D-16 e D-17 anotadas no mesmo sentido. 2026-10-10 (revisão dos gaps do 28): três respostas do usuário no 28 foram contra a recomendação que o ajuste acima supôs, e o plano as segue. **Gramática canônica já** ([28 · D-11, D-18](../28-agent-neutral-core/decisions.md#f5--permissão-pelo-dialeto)): a regra é escrita por `kind` (`shell(git status:*)`, `file.read(src/**)`, `file.edit(src/**)`, `search(…)`, `web.fetch(domain:…)`, `mcp(srv:tool)`, `agent`), e o parser, o casamento (com o composto de `shell`), o alcance, a largura, a contenção, os achados e a descrição (`messageKey` + `params`) são do domínio; o `RuleDialect` só traduz (`toEngine`, `fromNative`, `translate`); `engine` é nulo na regra canônica e só nomeia o motor na restrita; a B-08 retoma sobre a gramática canônica; o `reach` é `{ engine?, kind, form, content, excludesCompound }` e o `evaluate` responde na gramática canônica (B-02, B-03); a D-09 e a D-08 são por `kind` canônico no domínio; os modelos da D-16 são canônicos e um catálogo só (B-17); o arquivo da D-17 leva o `pattern` canônico e `engine` opcional (B-18); B-07 escreve no `backend/03` (`permission`) e no ADR-025 do 28, e no `04a-claude.md` só a tradução; as regras que a migração do 28 desligou têm estado `disabled`, com o padrão antigo e o motivo, nunca voltam a valer por `PATCH` nem por restauração, e a tela as lista para recriar (B-02, B-10, B-12, B-13, B-21; S-01, S-224…S-226) — se a B-33 do 28 expuser o estado em outra forma, a B-02 adota a de lá. **Todo o REST no pacote** ([28 · D-09](../28-agent-neutral-core/decisions.md#f1--porta-de-motor-e-conversa)): as rotas novas e as mudadas nascem em `packages/contracts/schema/http/`, e o web e o app as leem pelos tipos gerados (B-03, B-20). A D-10 do 28 (kinds de auditoria sem nome de motor) não muda este plano: os kinds dele já são `permission.*` | ✅ |
 
 ### D-01 — O que se edita numa regra
@@ -231,6 +231,19 @@ valer em mais lugares sem ninguém ter decidido — é alargar autorização por
 regras nas pastas-mãe, diz isso. Se o uso mostrar que exato incomoda, a saída é um escopo novo
 (`projectTree`), escolhido explicitamente — nunca a mudança do significado de `project`.
 
+**Decisão (2026-11-05), contra a recomendação acima:** `project` passa a alcançar a pasta **e as
+subpastas**. Isso é exatamente o "alargar autorização por migration" que a recomendação evitava, e
+tem três efeitos que quem escrever a B-09 precisa tratar explicitamente:
+
+1. o casamento de pasta no domínio deixa de ser `===` e passa a ser prefixo de caminho com
+   fronteira de segmento (`/raiz/app` casa `/raiz/app/backend`, **não** casa `/raiz/app2`);
+2. **toda regra `project` já concedida** passa a valer em mais lugares no instante em que a mudança
+   sobe, sem que quem a concedeu tenha decidido isso — a migration (ou o deploy, se não houver
+   migration de dado) precisa de uma nota própria na trilha e a tela (B-21) precisa avisar quando
+   uma regra existente alcança mais do que alcançava antes;
+3. o teste de comando (B-14) e o assistente (F3) passam a dizer "esta pasta e as subpastas", em vez
+   de "só esta pasta" — o texto oposto do que a recomendação propunha.
+
 ### D-11 — Desfazer a revogação
 
 Os princípios deste conjunto de planos dizem: confirmação só para o destrutivo, e desfazer quando
@@ -272,6 +285,20 @@ modelos e importação, dezenas viram centenas com facilidade.
 no servidor. Regra não é trilha: a lista inteira cabe na tela de quem a revisa, a busca e as abas
 recortam, e a análise de redundância (B-15) precisa enxergar o conjunto. Se o teto aparecer em uso
 real, cursor sobre `(granted_at, id)` é acréscimo compatível — cenário S-50 cobra o sinal.
+
+**Decisão (2026-11-05), contra a recomendação acima:** a listagem pagina por cursor **desde a F0**,
+não entra como "lista tudo com teto" para paginar depois. Efeitos que ficam registrados para quem
+escrever B-02/B-03/B-10/B-15:
+
+1. o contrato de `GET /permission-rules` nasce com `cursor`/`pageSize` na entrada e `nextCursor` na
+   saída (cursor sugerido sobre `(granted_at, id)`, como a recomendação já previa como acréscimo);
+2. a tela (F2, B-20/B-21) pagina em vez de carregar o conjunto inteiro de uma vez — rolagem ou
+   "carregar mais", a decidir na F2;
+3. **pendência em aberto, não decidida aqui:** a análise de redundância/sobreposição/conflito (B-15)
+   precisa enxergar **todas** as regras do usuário para achar o que nunca responde ou que sobra —
+   isso não pode depender da página que a tela carregou. Quem escrever a B-15/B-22 decide se ela lê
+   por uma rota interna sem paginação, se itera todas as páginas, ou se recebe um teto próprio só
+   para essa análise.
 
 ### D-20 — O núcleo neutro do plano 28 e o `RuleDialect`
 
@@ -333,11 +360,11 @@ contra a recomendação que os itens acima supuseram. Onde contradizem, vale est
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-14 | O teto da extensão conta de quando: da concessão ou de agora | se "estender" é renovar ou prolongar | B-12 | — | 🔲 |
-| D-15 | Quantas invocações a simulação lê, e o que ela conta | custo da consulta com a trilha cheia; o que o modo da sessão não gravado impede de afirmar. O modo assumido é o canônico `ask` ([D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect)) | B-16 | — | 🔲 |
-| D-16 | Onde moram os modelos de regra, e quais entram | o que o usuário mais aprova — não medido. Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect) (revisão de 2026-10-10), os modelos são canônicos, com `engine` nulo, num catálogo só | B-17 | — | 🔲 |
-| D-17 | Formato da exportação, validade na importação, e se exportar é auditado | se o arquivo sai da máquina; se validade de outra instalação deve valer aqui | B-18 | — | 🔲 |
-| D-18 | Por onde o lembrete de expiração chega | se a preferência do usuário mora no servidor (decisão do plano 06); o que pode atravessar o push | B-19, B-25 | — | 🔲 |
+| D-14 | O teto da extensão conta de quando: da concessão ou de agora | se "estender" é renovar ou prolongar | B-12 | 2026-11-05 · de agora — nova validade ≤ agora + teto da decisão, cada extensão é um ato explícito com segundo passo | ✅ |
+| D-15 | Quantas invocações a simulação lê, e o que ela conta | custo da consulta com a trilha cheia; o que o modo da sessão não gravado impede de afirmar. O modo assumido é o canônico `ask` ([D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect)) | B-16 | 2026-11-05 · `limit` default 200, teto 1000, sempre as mais recentes do chamador; só entradas de decisão; modo assumido `ask`; só os itens que mudam voltam listados | ✅ |
+| D-16 | Onde moram os modelos de regra, e quais entram | o que o usuário mais aprova — não medido. Desde a [D-20](#d-20--o-núcleo-neutro-do-plano-28-e-o-ruledialect) (revisão de 2026-10-10), os modelos são canônicos, com `engine` nulo, num catálogo só | B-17 | 2026-11-05 · catálogo versionado no backend (`GET /permission-rules/templates`), canônico, `engine` nulo, um catálogo só; conjunto inicial: rodar testes, git só leitura, lint/formatação, bloquear rede, bloquear git destrutivo, bloquear apagar em massa | ✅ |
+| D-17 | Formato da exportação, validade na importação, e se exportar é auditado | se o arquivo sai da máquina; se validade de outra instalação deve valer aqui | B-18 | 2026-11-05 · formato `remote-claude.permission-rules` v1 com `pattern` canônico; validade do arquivo é informativa e não vale aqui (o lote ganha a default/teto locais); limites 500 regras/256 KB; prévia + segundo passo; exportar e importar vão para a trilha | ✅ |
+| D-18 | Por onde o lembrete de expiração chega | se a preferência do usuário mora no servidor (decisão do plano 06); o que pode atravessar o push | B-19, B-25 | 2026-11-05 · dois canais: selo na navegação + central de notificações na web sempre (calculado no cliente); push diário por opção, desligado por padrão, levando só contagem e link | ✅ |
 
 ### D-14 — O teto da extensão conta de quando?
 
@@ -438,6 +465,13 @@ Modelos sugeridos a partir dos scripts do `package.json` da pasta ficam para qua
   06 decidir preferências só por visitante, o push sai do escopo, registrado no progresso, e o
   lembrete na web fica.
 
+**Confirmado em 2026-11-09, ao implementar a B-19**: a D-13 do plano 06 fechou sem nenhuma
+preferência do tipo "aceitar lembrete de regra por push" — o que existe lá é por visitante
+(`localStorage`) ou um único item server-side sem relação (recentes/abas abertas). O push sai do
+escopo, exatamente como esta decisão já previa; a B-19 fica `⛔`, só com este registro — nenhum job
+novo, nenhuma rota de push. O selo na web e a central de notificações do plano 06 não dependem
+disto.
+
 ---
 
 ## F2 — Rules screen
@@ -450,7 +484,7 @@ Modelos sugeridos a partir dos scripts do `package.json` da pasta ficam para qua
 
 | ID | Decisão | Gap — o que falta saber | Bloqueia | Resultado | Estado |
 |---|---|---|---|---|---|
-| D-19 | O assistente é uma rota própria ou um painel sobre a lista | se o link para "criar esta regra" precisa sobreviver ao login | B-27 | — | 🔲 |
+| D-19 | O assistente é uma rota própria ou um painel sobre a lista | se o link para "criar esta regra" precisa sobreviver ao login | B-27 | 2026-11-05 · rota própria `/rules/new`, com o rascunho na search (`?kind=&pattern=&decision=&scope=&folder=&template=`) | ✅ |
 
 ### D-19 — Rota própria para o assistente
 

@@ -13,6 +13,10 @@ export interface SelectableTableRowProps {
   /** Overrides the row's own classes — a double-clickable row wants a `cursor-default`, say. */
   readonly className?: string;
 
+  /** For a list a keyboard moves a focus of its own across — `aria-activedescendant` names a row by
+   * it, rather than the browser's own tab order moving through every one (plan 15, S-168). */
+  readonly id?: string;
+
   /** The row's own `<td>`s. */
   readonly children: ReactNode;
 }
@@ -30,12 +34,13 @@ export function SelectableTableRow({
   actions,
   onDoubleClick,
   className,
+  id,
   children,
 }: SelectableTableRowProps): React.JSX.Element {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <tr className={className ?? DEFAULT_ROW_CLASS} onDoubleClick={onDoubleClick}>
+        <tr id={id} className={className ?? DEFAULT_ROW_CLASS} onDoubleClick={onDoubleClick}>
           {children}
         </tr>
       </ContextMenuTrigger>

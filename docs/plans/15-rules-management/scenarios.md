@@ -40,13 +40,13 @@ muda aqui.
 | S-10 | `deny Bash(rm:*)` recusa `ls && rm -rf build` — o `deny` casa **por segmento** | eq | unit | — | B-08 | ✅ |
 | S-11 | `deny Bash(rm:*)` recusa `echo $(rm -rf x)` e `ls \| xargs rm` não — o segundo é declarado fora do alcance na ajuda, não prometido | fron | unit | — | B-08 | ✅ |
 | S-12 | `allow` **exato** continua casando só a string idêntica, mesmo composta: `Bash(make && make test)` casa ela e nada mais | eq | unit | — | B-08 | ✅ |
-| S-13 | **regressão** — `shell(git status:*)` não cobre `git statusx`; `shell(git status)` não cobre `git push --force`; input sem campo casável não casa | eq | unit | — | B-08 | ⬜ |
-| S-14 | `file.read(/a/src:*)` não casa `/a/src/x.ts`: a fronteira de token é o espaço, e a análise devolve o achado `pathPrefix` explicando isso | fron | unit | — | B-08 | ⬜ |
-| S-15 | largura por tabela, por `kind` canônico: `shell`, `shell(sh:*)`, `shell(bash -c:*)`, `shell(env:*)`, `shell(sudo:*)`, `shell(xargs:*)`, `shell(npx:*)`, `shell(python3:*)`, `mcp` → `unbounded`; `shell(git:*)`, `file.write`, `file.edit(src/**)`, `mcp(srv:tool)` → `broad`; `shell(git status:*)`, `shell(git status)`, `web.fetch(domain:example.com)` → `narrow` | eq | unit | — | B-08 | ⬜ |
-| S-16 | prefixo cujo conteúdo traz um operador (`shell(make &&:*)`) é `unbounded` — existe para encadear | fron | unit | — | B-08 | ⬜ |
-| S-17 | espaço à frente, tabulação ou espaço repetido no padrão não alargam nada: leitura e largura são as mesmas do padrão aparado | fron | unit | — | B-08 | ⬜ |
-| S-18 | contenção entre padrões: tool ⊇ prefixo ⊇ exato; prefixo contém prefixo só na fronteira de token; `kind` diferentes são disjuntos, e a regra restrita a um motor não cobre a de outro | eq | unit | — | B-08 | ⬜ |
-| S-19 | **regressão** — precedência intacta: qualquer `deny` que case vence; em `readOnly`, nenhum `allow` responde e o `deny` ainda recusa | eq | unit | — | B-08 | ⬜ |
+| S-13 | **regressão** — `shell(git status:*)` não cobre `git statusx`; `shell(git status)` não cobre `git push --force`; input sem campo casável não casa | eq | unit | — | B-08 | ✅ |
+| S-14 | **revisto em 2026-11-05** (a leitura do código durante a B-08 mostrou que a F5 do plano 28, B-31, já fixou a forma de caminho como glob só — `file.read(src/**)` — e nunca deixou `:*` alcançar um `kind` de caminho): `file.read(/a/src:*)` é **recusado** na criação (`prefixOutsideShell`), como qualquer outro `:*` fora do `shell` — não há padrão ambíguo a aceitar nem achado `pathPrefix` a calcular, porque o padrão nunca chega a existir | fron | unit | — | B-08 | ✅ |
+| S-15 | largura por tabela, por `kind` canônico: `shell`, `shell(sh:*)`, `shell(bash -c:*)`, `shell(env:*)`, `shell(sudo:*)`, `shell(xargs:*)`, `shell(npx:*)`, `shell(python3:*)`, `mcp` → `unbounded`; `shell(git:*)`, `file.write`, `file.edit(src/**)`, `mcp(srv:tool)` → `broad`; `shell(git status:*)`, `shell(git status)`, `web.fetch(domain:example.com)` → `narrow` | eq | unit | — | B-08 | ✅ |
+| S-16 | prefixo cujo conteúdo traz um operador (`shell(make &&:*)`) é `unbounded` — existe para encadear | fron | unit | — | B-08 | ✅ |
+| S-17 | espaço à frente, tabulação ou espaço repetido no padrão não alargam nada: leitura e largura são as mesmas do padrão aparado | fron | unit | — | B-08 | ✅ |
+| S-18 | contenção entre padrões: tool ⊇ prefixo ⊇ exato; prefixo contém prefixo só na fronteira de token; `kind` diferentes são disjuntos, e a regra restrita a um motor não cobre a de outro | eq | unit | — | B-08 | ✅ |
+| S-19 | **regressão** — precedência intacta: qualquer `deny` que case vence; em `readOnly`, nenhum `allow` responde e o `deny` ainda recusa | eq | unit | — | B-08 | ✅ |
 | S-20 | propriedade sobre comandos gerados: o `allow` novo casa um **subconjunto** do antigo e o `deny` novo um **superconjunto** — a mudança só anda na direção segura | eq | unit | — | B-08 | ✅ |
 | S-21 | sessão viva com regra de prefixo antiga: depois da mudança, o comando composto pergunta e o simples continua respondido | est | integração | — | B-08 | ✅ |
 
@@ -54,181 +54,181 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-22 | regra `project` para uma pasta dentro de raiz do usuário → `201`, com o caminho na forma que a sessão carrega | eq | integração | — | B-09 | ⬜ |
-| S-23 | pasta fora da allowlist → recusada; nada gravado, nada auditado | err | integração | `WORKSPACE_NOT_ALLOWED` | B-09 | ⬜ |
-| S-24 | pasta numa raiz que existe e é de **outra pessoa** → recusada | err | integração | `FORBIDDEN` | B-09 | ⬜ |
-| S-25 | pasta que não existe | err | integração | `WORKSPACE_NOT_FOUND` | B-09 | ⬜ |
-| S-26 | caminho que é arquivo | err | integração | `WORKSPACE_NOT_A_DIRECTORY` | B-09 | ⬜ |
-| S-27 | symlink dentro da raiz que aponta para fora dela | err | integração | `WORKSPACE_NOT_ALLOWED` | B-09 | ⬜ |
-| S-28 | caminho relativo, ou com `..` que sai da raiz | err | integração | `WORKSPACE_NOT_ALLOWED` | B-09 | ⬜ |
-| S-29 | regra criada como `/raiz/app/` alcança a sessão aberta em `/raiz/app` — a normalização é a mesma da sessão | fron | integração | — | B-09 | ⬜ |
-| S-30 | regra de `/raiz/app` **não** alcança a sessão aberta em `/raiz/app/backend` ([D-10](decisions.md#d-10--project-alcança-as-subpastas)) | fron | integração | — | B-09 | ⬜ |
-| S-31 | `allow` `unbounded` (`shell`, `shell(sh:*)`) é recusado por qualquer cliente, não só pela tela | err | integração | `PERMISSION_RULE_TOO_BROAD` (novo) | B-09 | ⬜ |
-| S-32 | `allow` `broad` sem `acknowledgeBroad: true` é recusado com `params.breadth: broad`; com ele, `201` | fron | integração | `PERMISSION_RULE_TOO_BROAD` (novo) | B-09 | ⬜ |
-| S-33 | `deny` `unbounded` (`shell`, `mcp`) é aceito — bloquear largo nunca é menos seguro | eq | integração | — | B-09 | ⬜ |
-| S-34 | **regressão** — o caminho do card (`permission.resolve` com `project`/`always`) não muda: padrão mais estreito, sem confirmação de largura, pasta da sessão | eq | integração | — | B-09 | ⬜ |
-| S-35 | a origem é gravada: `approval` com o `requestId`, `request`, `import`, `restore`; regra anterior à migration lê "origem não registrada" | eq | integração | — | B-09 | ⬜ |
-| S-36 | `templateId` que o catálogo não tem | err | integração | `INVALID_INPUT` | B-09 | ⬜ |
-| S-37 | `deny` aceita validade até o teto próprio, `allow` só até o dele; um milissegundo acima de cada teto é recusado | fron | integração | `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-09 | ⬜ |
-| S-38 | o teto de `deny` no limite do código sobe o processo; um milissegundo acima **derruba o boot** ([configuração que falha fechada](../../architecture/shared/07-repository-layout.md#configuração-que-carrega-decisão-de-segurança-falha-fechada)) | fron | unit | — | B-09 | ⬜ |
-| S-39 | **regressão** — a mesma regra concedida ao mesmo tempo pela tela e pelo card → uma linha, um evento na trilha | conc | integração | — | B-09 | ⬜ |
-| S-40 | **regressão** — trilha indisponível na concessão → a regra criada é revogada e a chamada falha | err | integração | `INTERNAL_ERROR` | B-09 | ⬜ |
-| S-41 | **regressão** — regra nascida da tela, da importação ou da restauração **nunca** sai em `updatedPermissions` — o `toEngine` do dialeto não é chamado para ela ([D-09 do plano 03](../03-rules-and-audit/decisions.md#d-09--a-regra-nossa-é-a-única-autoridade)) | eq | unit | — | B-09 | ⬜ |
+| S-22 | regra `project` para uma pasta dentro de raiz do usuário → `201`, com o caminho na forma que a sessão carrega | eq | integração | — | B-09 | ✅ |
+| S-23 | pasta fora da allowlist → recusada; nada gravado, nada auditado | err | integração | `WORKSPACE_NOT_ALLOWED` | B-09 | 🟡 |
+| S-24 | pasta numa raiz que existe e é de **outra pessoa** → recusada | err | integração | `FORBIDDEN` | B-09 | 🟡 |
+| S-25 | pasta que não existe | err | integração | `WORKSPACE_NOT_FOUND` | B-09 | 🟡 |
+| S-26 | caminho que é arquivo | err | integração | `WORKSPACE_NOT_A_DIRECTORY` | B-09 | 🟡 |
+| S-27 | symlink dentro da raiz que aponta para fora dela | err | integração | `WORKSPACE_NOT_ALLOWED` | B-09 | 🟡 |
+| S-28 | caminho relativo, ou com `..` que sai da raiz | err | integração | `WORKSPACE_NOT_ALLOWED` | B-09 | 🟡 |
+| S-29 | regra criada como `/raiz/app/` alcança a sessão aberta em `/raiz/app` — a normalização é a mesma da sessão | fron | integração | — | B-09 | ✅ |
+| S-30 | regra de `/raiz/app` alcança a sessão aberta em `/raiz/app/backend` (subpasta), **não** alcança `/raiz/app2` (fronteira de segmento) nem a sessão aberta em `/raiz` (a pasta-mãe, acima dela) ([D-10](decisions.md#d-10--project-alcança-as-subpastas), decidido em 2026-11-05 contra a recomendação original do plano, que propunha casamento exato) | fron | integração | — | B-09 | ✅ |
+| S-31 | `allow` `unbounded` (`shell`, `shell(sh:*)`) é recusado por qualquer cliente, não só pela tela | err | integração | `PERMISSION_RULE_TOO_BROAD` (novo) | B-09 | ✅ |
+| S-32 | `allow` `broad` sem `acknowledgeBroad: true` é recusado com `params.breadth: broad`; com ele, `201` | fron | integração | `PERMISSION_RULE_TOO_BROAD` (novo) | B-09 | ✅ |
+| S-33 | `deny` `unbounded` (`shell`, `mcp`) é aceito — bloquear largo nunca é menos seguro | eq | integração | — | B-09 | ✅ |
+| S-34 | **regressão** — o caminho do card (`permission.resolve` com `project`/`always`) não muda: padrão mais estreito, sem confirmação de largura, pasta da sessão | eq | integração | — | B-09 | ✅ |
+| S-35 | a origem é gravada: `approval` com o `requestId`, `request`, `import`, `restore`; regra anterior à migration lê "origem não registrada" | eq | integração | — | B-09 | ✅ |
+| S-36 | `templateId` que o catálogo não tem | err | integração | `INVALID_INPUT` | B-09 | ✅ |
+| S-37 | `deny` aceita validade até o teto próprio, `allow` só até o dele; um milissegundo acima de cada teto é recusado | fron | integração | `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-09 | ✅ |
+| S-38 | o teto de `deny` no limite do código sobe o processo; um milissegundo acima **derruba o boot** ([configuração que falha fechada](../../architecture/shared/07-repository-layout.md#configuração-que-carrega-decisão-de-segurança-falha-fechada)) | fron | unit | — | B-09 | ✅ |
+| S-39 | **regressão** — a mesma regra concedida ao mesmo tempo pela tela e pelo card → uma linha, um evento na trilha | conc | integração | — | B-09 | ✅ |
+| S-40 | **regressão** — trilha indisponível na concessão → a regra criada é revogada e a chamada falha | err | integração | `INTERNAL_ERROR` | B-09 | ✅ |
+| S-41 | **regressão** — regra nascida da tela, da importação ou da restauração **nunca** sai em `updatedPermissions` — o `toEngine` do dialeto não é chamado para ela ([D-09 do plano 03](../03-rules-and-audit/decisions.md#d-09--a-regra-nossa-é-a-única-autoridade)) | eq | unit | — | B-09 | ✅ |
 
 ## Listar, filtrar, ordenar — B-10
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-42 | `status=active`, `expired`, `revoked` — revogada só vem quando pedida ([D-02](decisions.md#d-02--revogadas-somem-ou-ficam-consultáveis)) | eq | integração | — | B-10 | ⬜ |
-| S-43 | `expiresBefore`: a regra que expira **exatamente** no limite fica de fora (comparação estrita) | fron | integração | — | B-10 | ⬜ |
-| S-44 | `scope`, `decision`, `engine`, `kind` e `folder` combinados devolvem a interseção | eq | integração | — | B-10 | ⬜ |
-| S-45 | a busca `q` é literal: `%`, `_` e `\` não viram curinga | fron | integração | — | B-10 | ⬜ |
-| S-46 | `q` casa padrão **e** pasta, sem diferenciar caixa | eq | integração | — | B-10 | ⬜ |
-| S-47 | cada ordenação (`grantedAt`, `expiresAt`, `lastUsedAt`, `useCount`, `pattern`) é estável, com desempate por `id` | eq | integração | — | B-10 | ⬜ |
-| S-48 | filtro ou ordenação desconhecidos, data fora de ISO 8601 | err | integração | `INVALID_INPUT` | B-10 | ⬜ |
-| S-49 | nenhum filtro traz regra de outra pessoa — nem `folder` apontando para a pasta de uma regra alheia | eq | integração | — | B-10 | ⬜ |
-| S-50 | acima do teto da listagem, `truncated: true` e as mais novas primeiro ([D-13](decisions.md#d-13--a-listagem-pagina)) | fron | integração | — | B-10 | ⬜ |
-| S-51 | cada item traz alcance estruturado, largura, achados, uso, origem, `etag` e `folderReachable` | eq | integração | — | B-10 | ⬜ |
-| S-52 | a pasta da regra sai da allowlist → a regra continua listada, `folderReachable: false`, achado `unreachable` | est | integração | — | B-10 | ⬜ |
-| S-53 | o resumo (`/summary`) conta o mesmo que a listagem devolve para os mesmos filtros | eq | integração | — | B-10 | ⬜ |
+| S-42 | `status=active`, `expired`, `revoked` — revogada só vem quando pedida ([D-02](decisions.md#d-02--revogadas-somem-ou-ficam-consultáveis)) | eq | integração | — | B-10 | ✅ |
+| S-43 | `expiresBefore`: a regra que expira **exatamente** no limite fica de fora (comparação estrita) | fron | integração | — | B-10 | 🟡 |
+| S-44 | `scope`, `decision`, `engine`, `kind` e `folder` combinados devolvem a interseção | eq | integração | — | B-10 | 🟡 |
+| S-45 | a busca `q` é literal: `%`, `_` e `\` não viram curinga | fron | integração | — | B-10 | 🟡 |
+| S-46 | `q` casa padrão **e** pasta, sem diferenciar caixa | eq | integração | — | B-10 | 🟡 |
+| S-47 | cada ordenação (`grantedAt`, `expiresAt`, `lastUsedAt`, `useCount`, `pattern`) é estável, com desempate por `id` | eq | integração | — | B-10 | 🟡 |
+| S-48 | filtro ou ordenação desconhecidos, data fora de ISO 8601 | err | integração | `INVALID_INPUT` | B-10 | 🟡 |
+| S-49 | nenhum filtro traz regra de outra pessoa — nem `folder` apontando para a pasta de uma regra alheia | eq | integração | — | B-10 | 🟡 |
+| S-50 | lista maior que `pageSize` devolve `nextCursor` não nulo; pedir a página seguinte com ele não repete nem pula regra, mais novas primeiro ([D-13](decisions.md#d-13--a-listagem-pagina), decidido em 2026-11-05 contra a recomendação original do plano, que propunha lista-tudo-com-teto) | fron | integração | — | B-10 | ✅ |
+| S-51 | cada item traz alcance estruturado, largura, achados, uso, origem, `etag` e `folderReachable` | eq | integração | — | B-10 | 🟡 |
+| S-52 | a pasta da regra sai da allowlist → a regra continua listada, `folderReachable: false`, achado `unreachable` | est | integração | — | B-10 | 🟡 |
+| S-53 | o resumo (`/summary`) conta o mesmo que a listagem devolve para os mesmos filtros | eq | integração | — | B-10 | 🟡 |
 | S-54 | o plano de execução da listagem usa o índice, verificado como no [plano 03 · F2](../03-rules-and-audit/F2-audit-query.md) | fron | integração | — | B-10 | ⬜ |
-| S-224 | `status=disabled` lista as regras que a migração do plano 28 desligou, com `legacyPattern` e `disabledReason` e sem `reach`, `breadth` nem `usage`; o resumo as conta; elas nunca entram na precedência, na análise nem na simulação | est | integração | — | B-10 | ⬜ |
+| S-224 | `status=disabled` lista as regras que a migração do plano 28 desligou, com `legacyPattern` e `disabledReason` e sem `reach`, `breadth` nem `usage`; o resumo as conta; elas nunca entram na precedência, na análise nem na simulação | est | integração | — | B-10 | 🟡 |
 
 ## Uso, invocações e história da regra — B-11
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-55 | `useCount` conta só as entradas de **decisão** com aquele `rule_id`, do chamador, dentro da janela de retenção | eq | integração | — | B-11 | ⬜ |
+| S-55 | `useCount` conta só as entradas de **decisão** com aquele `rule_id`, do chamador, dentro da janela de retenção | eq | integração | — | B-11 | ✅ |
 | S-56 | entrada exatamente no início da janela entra; um milissegundo antes não | fron | integração | — | B-11 | ⬜ |
-| S-57 | regra nunca usada → `useCount: 0`, `lastUsedAt: null` | fron | integração | — | B-11 | ⬜ |
-| S-58 | entrada de outro usuário com o mesmo `rule_id` (forjada no banco) não conta — a consulta é escopada por usuário, não só por regra | eq | integração | — | B-11 | ⬜ |
-| S-59 | as invocações da regra paginam por keyset descendente; escrita durante a leitura não repete nem pula linha | conc | integração | — | B-11 | ⬜ |
-| S-60 | invocações ou história de regra alheia; de regra inexistente | err | integração | `PERMISSION_NOT_OWNED`, `PERMISSION_RULE_NOT_FOUND` | B-11 | ⬜ |
-| S-61 | invocação `file.read` sai só com o `subject` e a janela, como a trilha — a lista de permissão decidida pelo `kind` | eq | integração | — | B-11 | ⬜ |
-| S-62 | `GET /audit-entries?ruleId=` devolve **as mesmas** N linhas que o `useCount` diz — o número da tela e a trilha nunca divergem | eq | integração | — | B-11 | ⬜ |
-| S-63 | a história da regra (concedida, validade mudada, revogada, restaurada) traz só eventos do chamador, em ordem | eq | integração | — | B-11 | ⬜ |
+| S-57 | regra nunca usada → `useCount: 0`, `lastUsedAt: null` | fron | integração | — | B-11 | 🟡 |
+| S-58 | entrada de outro usuário com o mesmo `rule_id` (forjada no banco) não conta — a consulta é escopada por usuário, não só por regra | eq | integração | — | B-11 | 🟡 |
+| S-59 | as invocações da regra paginam por keyset descendente; escrita durante a leitura não repete nem pula linha | conc | integração | — | B-11 | 🟡 |
+| S-60 | invocações ou história de regra alheia; de regra inexistente | err | integração | `PERMISSION_NOT_OWNED`, `PERMISSION_RULE_NOT_FOUND` | B-11 | ✅ |
+| S-61 | invocação `file.read` sai só com o `subject` e a janela, como a trilha — a lista de permissão decidida pelo `kind` | eq | integração | — | B-11 | 🟡 |
+| S-62 | `GET /audit-entries?ruleId=` devolve **as mesmas** N linhas que o `useCount` diz — o número da tela e a trilha nunca divergem | eq | integração | — | B-11 | 🟡 |
+| S-63 | a história da regra (concedida, validade mudada, revogada, restaurada) traz só eventos do chamador, em ordem | eq | integração | — | B-11 | ✅ |
 | S-64 | o uso de mil regras sai numa consulta agrupada que usa o índice parcial novo, sem varrer a trilha | fron | integração | — | B-11 | ⬜ |
 
 ## Validade — B-12
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-65 | encurtar uma regra ativa → `200`, `ETag` novo, evento `permission.ruleExpiryChanged` com antes e depois | eq | integração | — | B-12 | ⬜ |
-| S-66 | estender até agora + teto → `200`; um milissegundo acima → recusado ([D-14](decisions.md#d-14--o-teto-da-extensão-conta-de-quando)) | fron | integração | `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-12 | ⬜ |
-| S-67 | nova validade no passado ou agora — encerrar já é revogar | err | integração | `INVALID_INPUT` | B-12 | ⬜ |
-| S-68 | `PATCH` sem `If-Match` | err | integração | `PRECONDITION_REQUIRED` (novo) | B-12 | ⬜ |
-| S-69 | `If-Match` de uma versão que não é mais a atual | err | integração | `PERMISSION_RULE_CHANGED` (novo) | B-12 | ⬜ |
-| S-70 | regra revogada ou expirada não muda de validade — nunca é ressuscitada por um `PATCH` | est | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-12 | ⬜ |
-| S-71 | regra alheia (continua como estava); regra inexistente | err | integração | `PERMISSION_NOT_OWNED`, `PERMISSION_RULE_NOT_FOUND` | B-12 | ⬜ |
-| S-72 | a ordem das recusas é fixa: inexistente → alheia → sem `If-Match` → estado → versão → validade | eq | unit | — | B-12 | ⬜ |
-| S-73 | a mesma validade enviada de novo → `200`, **nenhum** evento novo | idem | integração | — | B-12 | ⬜ |
-| S-74 | estender e revogar ao mesmo tempo → a regra termina revogada; o `PATCH` recebe `409` ou `412`; nenhuma extensão registrada depois da revogação | conc | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo), `PERMISSION_RULE_CHANGED` (novo) | B-12 | ⬜ |
-| S-75 | dois `PATCH` com o mesmo `ETag` → um `200`, o outro `412`; um evento | conc | integração | `PERMISSION_RULE_CHANGED` (novo) | B-12 | ⬜ |
-| S-76 | **regressão** — encurtada para daqui a instantes, a regra deixa de responder na **próxima** invocação da sessão viva, sem cache | est | integração | — | B-12 | ⬜ |
-| S-77 | trilha indisponível: a extensão volta à validade anterior e falha; o encurtamento fica (direção segura) e falha | err | integração | `INTERNAL_ERROR` | B-12 | ⬜ |
-| S-78 | estender apaga a marca de lembrete, e o lembrete volta a valer para a validade nova | est | integração | — | B-12 | ⬜ |
-| S-79 | corpo com `pattern`, `scope` ou `decision` — só validade se edita ([D-01](decisions.md#d-01--o-que-se-edita-numa-regra)) | err | integração | `INVALID_INPUT` | B-12 | ⬜ |
-| S-226 | regra desligada pela migração do plano 28 não volta a valer por `PATCH` de validade nem por restauração — o caminho é recriar | est | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-12, B-13 | ⬜ |
+| S-65 | encurtar uma regra ativa → `200`, `ETag` novo, evento `permission.ruleExpiryChanged` com antes e depois | eq | integração | — | B-12 | ✅ |
+| S-66 | estender até agora + teto → `200`; um milissegundo acima → recusado ([D-14](decisions.md#d-14--o-teto-da-extensão-conta-de-quando)) | fron | integração | `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-12 | ✅ |
+| S-67 | nova validade no passado ou agora — encerrar já é revogar | err | integração | `INVALID_INPUT` | B-12 | ✅ |
+| S-68 | `PATCH` sem `If-Match` | err | integração | `PRECONDITION_REQUIRED` (novo) | B-12 | ✅ |
+| S-69 | `If-Match` de uma versão que não é mais a atual | err | integração | `PERMISSION_RULE_CHANGED` (novo) | B-12 | ✅ |
+| S-70 | regra revogada ou expirada não muda de validade — nunca é ressuscitada por um `PATCH` | est | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-12 | ✅ |
+| S-71 | regra alheia (continua como estava); regra inexistente | err | integração | `PERMISSION_NOT_OWNED`, `PERMISSION_RULE_NOT_FOUND` | B-12 | ✅ |
+| S-72 | a ordem das recusas é fixa: inexistente → alheia → sem `If-Match` → estado → versão → validade | eq | unit | — | B-12 | ✅ |
+| S-73 | a mesma validade enviada de novo → `200`, **nenhum** evento novo | idem | integração | — | B-12 | ✅ |
+| S-74 | estender e revogar ao mesmo tempo → a regra termina revogada; o `PATCH` recebe `409` ou `412`; nenhuma extensão registrada depois da revogação | conc | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo), `PERMISSION_RULE_CHANGED` (novo) | B-12 | 🟡 |
+| S-75 | dois `PATCH` com o mesmo `ETag` → um `200`, o outro `412`; um evento | conc | integração | `PERMISSION_RULE_CHANGED` (novo) | B-12 | 🟡 |
+| S-76 | **regressão** — encurtada para daqui a instantes, a regra deixa de responder na **próxima** invocação da sessão viva, sem cache | est | integração | — | B-12 | 🟡 |
+| S-77 | trilha indisponível: a extensão volta à validade anterior e falha; o encurtamento fica (direção segura) e falha | err | integração | `INTERNAL_ERROR` | B-12 | 🟡 |
+| S-78 | estender apaga a marca de lembrete, e o lembrete volta a valer para a validade nova | est | integração | — | B-12 | ✅ |
+| S-79 | corpo com `pattern`, `scope` ou `decision` — só validade se edita ([D-01](decisions.md#d-01--o-que-se-edita-numa-regra)) | err | integração | `INVALID_INPUT` | B-12 | ✅ |
+| S-226 | regra desligada pela migração do plano 28 não volta a valer por `PATCH` de validade nem por restauração — o caminho é recriar | est | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-12, B-13 | 🟡 |
 
 ## Revogar em lote e desfazer — B-13
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-80 | três regras próprias revogadas numa instrução; três `permission.ruleRevoked` com o mesmo `batchId` | eq | integração | — | B-13 | ⬜ |
-| S-81 | o lote tem um id de outra pessoa → nada é revogado | err | integração | `PERMISSION_NOT_OWNED` | B-13 | ⬜ |
-| S-82 | o lote tem um id que não existe → nada é revogado | err | integração | `PERMISSION_RULE_NOT_FOUND` | B-13 | ⬜ |
-| S-83 | itens já revogados contam como sucesso e não geram evento | idem | integração | — | B-13 | ⬜ |
-| S-84 | 100 ids passam; 101, lista vazia ou id repetido além do teto são recusados; repetido dentro do teto conta uma vez | fron | integração | `INVALID_INPUT` | B-13 | ⬜ |
-| S-85 | lote e `DELETE` avulso na mesma regra, ao mesmo tempo → uma revogação, um evento | conc | integração | — | B-13 | ⬜ |
-| S-86 | **regressão** — depois do lote, a próxima invocação de cada sessão viva pergunta de novo | est | integração | — | B-13 | ⬜ |
-| S-87 | restaurar dentro da janela → regra nova com os mesmos campos, origem `restore` e `restoredFrom`, evento de concessão | eq | integração | — | B-13 | ⬜ |
-| S-88 | restaurar depois da janela ([D-11](decisions.md#d-11--desfazer-a-revogação)) | fron | integração | `PERMISSION_RULE_RESTORE_WINDOW_CLOSED` (novo) | B-13 | ⬜ |
-| S-89 | restaurar regra que não está revogada | err | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-13 | ⬜ |
-| S-90 | restaurar `allow` antigo que hoje é `unbounded`, ou cuja validade passa do teto atual — a restauração é concessão e passa pela mesma rotina | err | integração | `PERMISSION_RULE_TOO_BROAD` (novo), `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-13 | ⬜ |
-| S-91 | restaurar duas vezes (clique duplo, ou duas abas) → uma regra | idem | integração | — | B-13 | ⬜ |
-| S-92 | a validade original já passou enquanto a regra estava revogada → não há o que restaurar | est | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-13 | ⬜ |
-| S-93 | restaurar regra revogada de outra pessoa | err | integração | `PERMISSION_NOT_OWNED` | B-13 | ⬜ |
+| S-80 | três regras próprias revogadas numa instrução; três `permission.ruleRevoked` com o mesmo `batchId` | eq | integração | — | B-13 | ✅ |
+| S-81 | o lote tem um id de outra pessoa → nada é revogado | err | integração | `PERMISSION_NOT_OWNED` | B-13 | ✅ |
+| S-82 | o lote tem um id que não existe → nada é revogado | err | integração | `PERMISSION_RULE_NOT_FOUND` | B-13 | ✅ |
+| S-83 | itens já revogados contam como sucesso e não geram evento | idem | integração | — | B-13 | ✅ |
+| S-84 | 100 ids passam; 101, lista vazia ou id repetido além do teto são recusados; repetido dentro do teto conta uma vez | fron | integração | `INVALID_INPUT` | B-13 | 🟡 |
+| S-85 | lote e `DELETE` avulso na mesma regra, ao mesmo tempo → uma revogação, um evento | conc | integração | — | B-13 | 🟡 |
+| S-86 | **regressão** — depois do lote, a próxima invocação de cada sessão viva pergunta de novo | est | integração | — | B-13 | 🟡 |
+| S-87 | restaurar dentro da janela → regra nova com os mesmos campos, origem `restore` e `restoredFrom`, evento de concessão | eq | integração | — | B-13 | ✅ |
+| S-88 | restaurar depois da janela ([D-11](decisions.md#d-11--desfazer-a-revogação)) | fron | integração | `PERMISSION_RULE_RESTORE_WINDOW_CLOSED` (novo) | B-13 | 🟡 |
+| S-89 | restaurar regra que não está revogada | err | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-13 | ✅ |
+| S-90 | restaurar `allow` antigo que hoje é `unbounded`, ou cuja validade passa do teto atual — a restauração é concessão e passa pela mesma rotina | err | integração | `PERMISSION_RULE_TOO_BROAD` (novo), `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-13 | ✅ |
+| S-91 | restaurar duas vezes (clique duplo, ou duas abas) → uma regra | idem | integração | — | B-13 | ✅ |
+| S-92 | a validade original já passou enquanto a regra estava revogada → não há o que restaurar | est | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-13 | 🟡 |
+| S-93 | restaurar regra revogada de outra pessoa | err | integração | `PERMISSION_NOT_OWNED` | B-13 | ✅ |
 
 ## Testar um comando — B-14
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-94 | `allow` que casa → `outcome: allow`, a regra que responde e todas as que casam | eq | integração | — | B-14 | ⬜ |
-| S-95 | `deny` e `allow` casando → `deny`, com o motivo "deny vence" e as duas listadas | eq | integração | — | B-14 | ⬜ |
-| S-96 | **regressão** — modo `readOnly` (o `plan` do Claude) com `allow` que casa → `ask`, motivo `readOnlyMode`; com `deny`, `deny` | est | integração | — | B-14 | ⬜ |
-| S-97 | nenhuma regra casa → `ask` | eq | integração | — | B-14 | ⬜ |
+| S-94 | `allow` que casa → `outcome: allow`, a regra que responde e todas as que casam | eq | integração | — | B-14 | 🟡 |
+| S-95 | `deny` e `allow` casando → `deny`, com o motivo "deny vence" e as duas listadas | eq | integração | — | B-14 | 🟡 |
+| S-96 | **regressão** — modo `readOnly` (o `plan` do Claude) com `allow` que casa → `ask`, motivo `readOnlyMode`; com `deny`, `deny` | est | integração | — | B-14 | 🟡 |
+| S-97 | nenhuma regra casa → `ask` | eq | integração | — | B-14 | 🟡 |
 | S-98 | regra de outra pessoa que casaria o mesmo comando **não aparece e não muda** o resultado | eq | integração | — | B-14 | ⬜ |
 | S-99 | pasta fora da allowlist; raiz de outra pessoa | err | integração | `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN` | B-14 | ⬜ |
-| S-100 | sem pasta, só as regras `always` contam — como um pedido sem projeto | fron | integração | — | B-14 | ⬜ |
+| S-100 | sem pasta, só as regras `always` contam — como um pedido sem projeto | fron | integração | — | B-14 | 🟡 |
 | S-101 | regra expirada ou revogada nunca responde no teste | est | integração | — | B-14 | ⬜ |
-| S-102 | nenhum efeito colateral: nem entrada na trilha, nem `permission_requests`, nem uso, nem push, nem evento WS | idem | integração | — | B-14 | ⬜ |
+| S-102 | nenhum efeito colateral: nem entrada na trilha, nem `permission_requests`, nem uso, nem push, nem evento WS | idem | integração | — | B-14 | 🟡 |
 | S-103 | o mesmo teste repetido dá o mesmo resultado | idem | integração | — | B-14 | ⬜ |
-| S-104 | rascunho `allow` coberto por um `deny` existente → `deny`, e o rascunho recebe o achado `shadowedByDeny` | eq | integração | — | B-14 | ⬜ |
+| S-104 | rascunho `allow` coberto por um `deny` existente → `deny`, e o rascunho recebe o achado `shadowedByDeny` | eq | integração | — | B-14 | 🟡 |
 | S-105 | `engine` que não está registrado, `kind` fora do vocabulário canônico, comando acima de 4096 caracteres, modo fora dos canônicos | err | integração | `INVALID_INPUT` | B-14 | ⬜ |
 | S-106 | a resposta sempre traz as ressalvas que o adapter do motor declara — no Claude, o CLI decide antes de nós no `deny` do projeto, no `acceptEdits` e nas tools que ele aprova sozinho | eq | unit | — | B-14 | ⬜ |
 | S-107 | o log de I/O do teste não carrega o comando — só `kind`, tamanho e resultado | eq | integração | — | B-14 | ⬜ |
-| S-108 | `sessionId` de sessão viva do chamador acrescenta as regras `session` e o modo atual; de sessão alheia, recusado | err | integração | `FORBIDDEN` | B-14 | ⬜ |
+| S-108 | `sessionId` de sessão viva do chamador acrescenta as regras `session` e o modo atual; de sessão alheia, recusado | err | integração | `FORBIDDEN` | B-14 | 🟡 |
 | S-109 | teste concorrente com uma revogação → o resultado é o de antes ou o de depois, e nunca uma regra revogada depois do commit | conc | integração | — | B-14 | ⬜ |
 
 ## Redundância, sobreposição e conflito — B-15
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-110 | rascunho idêntico a uma regra ativa → achado `identical`, apontando para ela | eq | unit | — | B-15 | ⬜ |
-| S-111 | `allow shell(git status)` ao lado de `allow shell(git status:*)` no mesmo escopo ou mais largo → `redundant`, com a regra que cobre | eq | unit | — | B-15 | ⬜ |
-| S-112 | `allow` inteiramente coberto por um `deny` → `shadowedByDeny` ("nunca responde"); parcialmente → `overlapsDeny` com o trecho | eq | unit | — | B-15 | ⬜ |
-| S-113 | regra `project` coberta por uma `always` de mesma decisão → `redundant`, explicando qual vale onde | eq | unit | — | B-15 | ⬜ |
-| S-114 | regras `project` em pastas diferentes nunca se sobrepõem — o casamento de pasta é exato | fron | unit | — | B-15 | ⬜ |
-| S-115 | regra expirada ou revogada não gera achado contra as ativas | est | unit | — | B-15 | ⬜ |
-| S-116 | regra antiga `unbounded` ou `broad` recebe o achado `tooBroad` — ela continua valendo, e a tela diz o quanto | eq | unit | — | B-15 | ⬜ |
-| S-117 | prefixo em `file.*` (`file.read(/a/src:*)`) recebe `pathPrefix` ([D-08](decisions.md#d-08--prefixo-em-tool-de-caminho)) | eq | unit | — | B-15 | ⬜ |
-| S-118 | a prévia de um rascunho com padrão fora da gramática canônica (inclusive a forma antiga do Claude, `Bash(…)`) | err | integração | `PERMISSION_RULE_PATTERN_INVALID` | B-15 | ⬜ |
+| S-110 | rascunho idêntico a uma regra ativa → achado `identical`, apontando para ela | eq | unit | — | B-15 | ✅ |
+| S-111 | `allow shell(git status)` ao lado de `allow shell(git status:*)` no mesmo escopo ou mais largo → `redundant`, com a regra que cobre | eq | unit | — | B-15 | ✅ |
+| S-112 | `allow` inteiramente coberto por um `deny` → `shadowedByDeny` ("nunca responde"); parcialmente → `overlapsDeny` com o trecho | eq | unit | — | B-15 | ✅ |
+| S-113 | regra `project` coberta por uma `always` de mesma decisão → `redundant`, explicando qual vale onde | eq | unit | — | B-15 | ✅ |
+| S-114 | regras `project` em pastas diferentes nunca se sobrepõem — o casamento de pasta é exato | fron | unit | — | B-15 | ✅ |
+| S-115 | regra expirada ou revogada não gera achado contra as ativas | est | unit | — | B-15 | ✅ |
+| S-116 | regra antiga `unbounded` ou `broad` recebe o achado `tooBroad` — ela continua valendo, e a tela diz o quanto | eq | unit | — | B-15 | ✅ |
+| S-117 | **retirado em 2026-11-05** — `file.read(/a/src:*)` é recusado na criação (B-08 confirmou que a F5 do plano 28 nunca deixou `:*` alcançar caminho), então não existe regra assim para a análise explicar; o achado `pathPrefix` saiu do escopo da B-15 ([D-08](decisions.md#d-08--prefixo-em-tool-de-caminho)) | eq | unit | — | B-15 | ⛔ |
+| S-118 | a prévia de um rascunho com padrão fora da gramática canônica (inclusive a forma antiga do Claude, `Bash(…)`) | err | integração | `PERMISSION_RULE_PATTERN_INVALID` | B-15 | ✅ |
 | S-119 | nenhum achado cita regra de outra pessoa | eq | integração | — | B-15 | ⬜ |
-| S-120 | a mesma entrada dá os mesmos achados, na mesma ordem | idem | unit | — | B-15 | ⬜ |
+| S-120 | a mesma entrada dá os mesmos achados, na mesma ordem | idem | unit | — | B-15 | ✅ |
 
 ## Simular contra a trilha — B-16
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-121 | rascunho `allow`: as invocações que foram perguntadas e que ele teria respondido saem como `wouldAutoAllow`, listadas | eq | integração | — | B-16 | ⬜ |
-| S-122 | remover a regra X: as invocações que X respondeu saem como `wouldAsk` | eq | integração | — | B-16 | ⬜ |
-| S-123 | rascunho `deny` sobre invocações aprovadas por humano → `wouldDeny` | eq | integração | — | B-16 | ⬜ |
-| S-124 | só entram as invocações que chegaram ao `canUseTool` — a `recorded` que o CLI aprovou sozinho não é contada como "teria sido perguntada" | eq | integração | — | B-16 | ⬜ |
-| S-125 | invocação de sessão sem pasta registrada: rascunho `project` não a alcança, e ela é contada em `withoutFolder` | fron | integração | — | B-16 | ⬜ |
-| S-126 | `limit` 1, o default e o teto passam; teto + 1 é recusado ([D-15](decisions.md#d-15--quantas-invocações-a-simulação-lê-e-o-que-ela-conta)) | fron | integração | `INVALID_INPUT` | B-16 | ⬜ |
-| S-127 | a simulação só lê a trilha do chamador | eq | integração | — | B-16 | ⬜ |
-| S-128 | nenhum efeito colateral, e repetir dá o mesmo resultado enquanto a trilha não muda | idem | integração | — | B-16 | ⬜ |
-| S-129 | a simulação usa a mesma precedência da sessão viva (`answeringRule`), não uma cópia | eq | unit | — | B-16 | ⬜ |
-| S-130 | mais de 10 rascunhos, ou mais de 100 regras removidas | fron | integração | `INVALID_INPUT` | B-16 | ⬜ |
-| S-131 | remover um id de regra de outra pessoa | err | integração | `PERMISSION_NOT_OWNED` | B-16 | ⬜ |
-| S-132 | item `file.read` na simulação sai com os campos que a trilha deixa sair, pelo `kind` | eq | integração | — | B-16 | ⬜ |
+| S-121 | rascunho `allow`: as invocações que foram perguntadas e que ele teria respondido saem como `wouldAutoAllow`, listadas | eq | integração | — | B-16 | 🟡 |
+| S-122 | remover a regra X: as invocações que X respondeu saem como `wouldAsk` | eq | integração | — | B-16 | 🟡 |
+| S-123 | rascunho `deny` sobre invocações aprovadas por humano → `wouldDeny` | eq | integração | — | B-16 | ✅ |
+| S-124 | só entram as invocações que chegaram ao `canUseTool` — a `recorded` que o CLI aprovou sozinho não é contada como "teria sido perguntada" | eq | integração | — | B-16 | ✅ |
+| S-125 | invocação de sessão sem pasta registrada: rascunho `project` não a alcança, e ela é contada em `withoutFolder` | fron | integração | — | B-16 | ✅ |
+| S-126 | `limit` 1, o default e o teto passam; teto + 1 é recusado ([D-15](decisions.md#d-15--quantas-invocações-a-simulação-lê-e-o-que-ela-conta)) | fron | integração | `INVALID_INPUT` | B-16 | ✅ |
+| S-127 | a simulação só lê a trilha do chamador | eq | integração | — | B-16 | ✅ |
+| S-128 | nenhum efeito colateral, e repetir dá o mesmo resultado enquanto a trilha não muda | idem | integração | — | B-16 | ✅ |
+| S-129 | a simulação usa a mesma precedência da sessão viva (`answeringRule`), não uma cópia | eq | unit | — | B-16 | ✅ |
+| S-130 | mais de 10 rascunhos, ou mais de 100 regras removidas | fron | integração | `INVALID_INPUT` | B-16 | ✅ |
+| S-131 | remover um id de regra de outra pessoa | err | integração | `PERMISSION_NOT_OWNED` | B-16 | ✅ |
+| S-132 | item `file.read` na simulação sai com os campos que a trilha deixa sair, pelo `kind` | eq | integração | — | B-16 | 🟡 |
 
 ## Modelos de regra — B-17
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-133 | todo modelo do catálogo passa na gramática e na largura — um modelo com `allow` `unbounded` reprova o teste do catálogo | err | unit | `PERMISSION_RULE_TOO_BROAD` (novo) | B-17 | ⬜ |
-| S-134 | nome e descrição de cada modelo são chaves presentes em en e pt-BR | eq | unit | — | B-17 | ⬜ |
+| S-133 | todo modelo do catálogo passa na gramática e na largura — um modelo com `allow` `unbounded` reprova o teste do catálogo | err | unit | `PERMISSION_RULE_TOO_BROAD` (novo) | B-17 | ✅ |
+| S-134 | nome e descrição de cada modelo são chaves presentes em en e pt-BR | eq | unit | — | B-17 | ✅ |
 | S-135 | aplicar um modelo passa pela prévia e pela aplicação da importação: mesmas validações, origem `import` com o `templateId` | eq | integração | — | B-17 | ⬜ |
 
 ## Exportar e importar — B-18
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-136 | a exportação traz `format` e `version`, o `pattern` canônico e o `engine` só na regra restrita, nenhum id, nenhum `userId` e nenhuma regra desligada, em ordem determinística, respeitando os filtros | eq | integração | — | B-18 | ⬜ |
-| S-137 | exportar grava `permission.rulesExported` com a contagem | eq | integração | — | B-18 | ⬜ |
-| S-138 | a prévia da importação dá um veredito por item — `new`, `existing` ou `invalid` com o código; o padrão na forma antiga do Claude é `invalid`, nunca traduzido | eq | integração | — | B-18 | ⬜ |
-| S-139 | arquivo com `userId`, `grantedBy` ou `id` de outra pessoa: os campos são ignorados, e toda regra nasce do chamador | eq | integração | — | B-18 | ⬜ |
-| S-140 | `format` ou `version` desconhecidos; JSON malformado | err | integração | `PERMISSION_RULE_IMPORT_UNSUPPORTED` (novo), `INVALID_INPUT` | B-18 | ⬜ |
-| S-141 | acima de 500 regras ou de 256 KB | fron | integração | `PAYLOAD_TOO_LARGE` | B-18 | ⬜ |
-| S-142 | um item aceito ficou inválido entre a prévia e a aplicação (a pasta saiu da allowlist) → nada é criado, e o detalhe diz qual e por quê | err | integração | `PERMISSION_RULE_IMPORT_REJECTED` (novo) | B-18 | ⬜ |
-| S-143 | `digest` que não é o do arquivo enviado | err | integração | `INVALID_INPUT` | B-18 | ⬜ |
-| S-144 | `folderMap` troca a pasta de outra máquina por uma daqui, e o destino é validado como numa criação | eq | integração | — | B-18 | ⬜ |
-| S-145 | importar o mesmo arquivo duas vezes → a segunda não cria nada nem registra concessão; o resumo diz `created: 0` | idem | integração | — | B-18 | ⬜ |
-| S-146 | duas importações do mesmo arquivo ao mesmo tempo → cada regra uma vez | conc | integração | — | B-18 | ⬜ |
-| S-147 | item `broad` exige confirmação por índice; `allow` `unbounded` é sempre inválido | fron | integração | `PERMISSION_RULE_TOO_BROAD` (novo) | B-18 | ⬜ |
-| S-148 | a validade do arquivo é ignorada: o lote ganha a default ou a escolhida, e acima do teto é recusado | fron | integração | `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-18 | ⬜ |
-| S-149 | falha de escrita no meio do lote: o que já nasceu fica, auditado; a resposta é erro, e a listagem mostra exatamente o que nasceu | err | integração | `INTERNAL_ERROR` | B-18 | ⬜ |
+| S-136 | a exportação traz `format` e `version`, o `pattern` canônico e o `engine` só na regra restrita, nenhum id, nenhum `userId` e nenhuma regra desligada, em ordem determinística, respeitando os filtros | eq | integração | — | B-18 | ✅ |
+| S-137 | exportar grava `permission.rulesExported` com a contagem | eq | integração | — | B-18 | ✅ |
+| S-138 | a prévia da importação dá um veredito por item — `new`, `existing` ou `invalid` com o código; o padrão na forma antiga do Claude é `invalid`, nunca traduzido | eq | integração | — | B-18 | ✅ |
+| S-139 | arquivo com `userId`, `grantedBy` ou `id` de outra pessoa: os campos são ignorados, e toda regra nasce do chamador | eq | integração | — | B-18 | ✅ |
+| S-140 | `format` ou `version` desconhecidos; JSON malformado | err | integração | `PERMISSION_RULE_IMPORT_UNSUPPORTED` (novo), `INVALID_INPUT` | B-18 | ✅ |
+| S-141 | acima de 500 regras ou de 256 KB | fron | integração | `PAYLOAD_TOO_LARGE` | B-18 | ✅ |
+| S-142 | um item aceito ficou inválido entre a prévia e a aplicação (a pasta saiu da allowlist) → nada é criado, e o detalhe diz qual e por quê | err | integração | `PERMISSION_RULE_IMPORT_REJECTED` (novo) | B-18 | 🟡 |
+| S-143 | `digest` que não é o do arquivo enviado | err | integração | `INVALID_INPUT` | B-18 | ✅ |
+| S-144 | `folderMap` troca a pasta de outra máquina por uma daqui, e o destino é validado como numa criação | eq | integração | — | B-18 | ✅ |
+| S-145 | importar o mesmo arquivo duas vezes → a segunda não cria nada nem registra concessão; o resumo diz `created: 0` | idem | integração | — | B-18 | 🟡 |
+| S-146 | duas importações do mesmo arquivo ao mesmo tempo → cada regra uma vez | conc | integração | — | B-18 | ✅ |
+| S-147 | item `broad` exige confirmação por índice; `allow` `unbounded` é sempre inválido | fron | integração | `PERMISSION_RULE_TOO_BROAD` (novo) | B-18 | 🟡 |
+| S-148 | a validade do arquivo é ignorada: o lote ganha a default ou a escolhida, e acima do teto é recusado | fron | integração | `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-18 | 🟡 |
+| S-149 | falha de escrita no meio do lote: o que já nasceu fica, auditado; a resposta é erro, e a listagem mostra exatamente o que nasceu | err | integração | `INTERNAL_ERROR` | B-18 | 🟡 |
 
 ## Lembrete de expiração — B-19
 
@@ -245,25 +245,25 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-156 | os filtros moram na search da URL: recarregar reproduz a tela; valor inválido na search cai no default campo a campo | eq | integração | — | B-20 | ⬜ |
-| S-157 | o hook guarda o `ETag` e manda `If-Match`; o `412` recarrega a regra e diz que ela mudou | err | integração | `PERMISSION_RULE_CHANGED` (novo) | B-20 | ⬜ |
-| S-158 | filtro novo descarta a resposta que ainda chegava do anterior | conc | integração | — | B-20 | ⬜ |
+| S-156 | os filtros moram na search da URL: recarregar reproduz a tela; valor inválido na search cai no default campo a campo | eq | integração | — | B-21 | ✅ |
+| S-157 | o hook guarda o `ETag` e manda `If-Match`; o `412` recarrega a regra e diz que ela mudou | err | integração | `PERMISSION_RULE_CHANGED` (novo) | B-20 | 🟡 |
+| S-158 | filtro novo descarta a resposta que ainda chegava do anterior | conc | integração | — | B-20 | 🟡 |
 
 ## A tela e o detalhe — B-21, B-22
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-159 | os quatro estados: skeleton com a forma da tabela, erro com recuperação, vazio que ensina o próximo passo em cada aba, conteúdo | eq | integração | — | B-21 | ⬜ |
-| S-160 | as abas mostram as contagens do resumo; "Perto de expirar" usa os sete dias do [plano 03 · D-13](../03-rules-and-audit/decisions.md#d-13--perto-de-expirar-é-sete-dias) | fron | integração | — | B-21 | ⬜ |
-| S-161 | a tabela mostra decisão, o tipo pelo `kind` do `reach` (nome traduzido), padrão em mono, onde vale, validade, uso, última vez e criação | eq | integração | — | B-21 | ⬜ |
-| S-162 | `mcp` mostra o servidor e a ferramenta do `reach`; um `kind` que esta versão não conhece ganha o nome genérico, com o padrão ao lado como texto | fron | integração | — | B-21 | ⬜ |
-| S-163 | a frase do detalhe para cada forma (tool, exato, prefixo) × escopo × decisão, nos dois idiomas | eq | unit | — | B-22 | ⬜ |
-| S-164 | o detalhe mostra cada achado com link para a regra envolvida, e o alerta de pasta que não é mais alcançável | eq | integração | — | B-22 | ⬜ |
-| S-165 | as últimas invocações levam à trilha filtrada pela regra | eq | integração | — | B-22 | ⬜ |
-| S-166 | regra revogada no detalhe: estado e data, e só as ações que fazem sentido — duplicar, e restaurar enquanto a janela está aberta | est | integração | — | B-22 | ⬜ |
-| S-167 | abaixo de `md` a tabela vira lista de cartões; sem scroll horizontal; alvo de toque de 44 px | fron | integração | — | B-21 | ⬜ |
-| S-168 | teclado: setas movem, Espaço seleciona, Enter abre o detalhe, Esc fecha | eq | integração | — | B-21 | ⬜ |
-| S-225 | com regras desligadas pela migração, o aviso mostra a contagem e abre a lista com o padrão antigo como texto, o motivo traduzido e **Recriar**, que abre o assistente sem preencher o padrão; recriar não reativa nem apaga a desligada; sem nenhuma, o aviso não aparece | est | integração | — | B-21 | ⬜ |
+| S-159 | os quatro estados: skeleton com a forma da tabela, erro com recuperação, vazio que ensina o próximo passo em cada aba, conteúdo | eq | integração | — | B-21 | ✅ |
+| S-160 | as abas mostram as contagens do resumo; "Perto de expirar" usa os sete dias do [plano 03 · D-13](../03-rules-and-audit/decisions.md#d-13--perto-de-expirar-é-sete-dias) | fron | integração | — | B-21 | ✅ |
+| S-161 | a tabela mostra decisão, o tipo pelo `kind` do `reach` (nome traduzido), padrão em mono, onde vale, validade, uso, última vez e criação | eq | integração | — | B-21 | ✅ |
+| S-162 | `mcp` mostra o servidor e a ferramenta do `reach`; um `kind` que esta versão não conhece ganha o nome genérico, com o padrão ao lado como texto | fron | integração | — | B-21 | ✅ |
+| S-163 | a frase do detalhe para cada forma (tool, exato, prefixo) × escopo × decisão, nos dois idiomas | eq | unit | — | B-22 | ✅ |
+| S-164 | o detalhe mostra cada achado com link para a regra envolvida, e o alerta de pasta que não é mais alcançável | eq | integração | — | B-22 | ✅ |
+| S-165 | as últimas invocações levam à trilha filtrada pela regra | eq | integração | — | B-22 | ✅ |
+| S-166 | regra revogada no detalhe: estado e data, e só as ações que fazem sentido — duplicar, e restaurar enquanto a janela está aberta | est | integração | — | B-22 | 🟡 |
+| S-167 | abaixo de `md` a tabela vira lista de cartões; sem scroll horizontal; alvo de toque de 44 px | fron | integração | — | B-21 | ✅ |
+| S-168 | teclado: setas movem, Espaço seleciona, Enter abre o detalhe, Esc fecha | eq | integração | — | B-21 | ✅ |
+| S-225 | com regras desligadas pela migração, o aviso mostra a contagem e abre a lista com o padrão antigo como texto, o motivo traduzido e **Recriar**, que abre o assistente sem preencher o padrão; recriar não reativa nem apaga a desligada; sem nenhuma, o aviso não aparece | est | integração | — | B-21 | 🟡 |
 
 ## Validade pela tela — B-23
 
@@ -384,7 +384,7 @@ O protocolo exige justificar dimensão vazia, não omiti-la.
 |---|---|---|
 | Contrato e documentos (B-01…B-07) | `fron`, `est`, `conc`, `idem` | a fase escreve documento, catálogo e migration de `CHECK`; o comportamento com fronteira, estado e concorrência é das rotas, e está nas tarefas que as implementam (F1) |
 | Casamento (B-08) | `err`, `conc`, `idem` | o matcher é função pura, sem I/O nem estado compartilhado: não tem erro a devolver (padrão inválido já é recusado na criação — S-118 do lado do rascunho, S-47 do [plano 03](../03-rules-and-audit/scenarios.md)), nem corrida, e a mesma entrada dá a mesma saída por construção — o que o S-120 afirma para a análise que o usa |
-| Listagem (B-10) | `conc`, `idem` | é leitura: não altera nada, e a leitura sob escrita que importa (paginação) está nas invocações (S-59). O teto com `truncated` fixa o recorte (S-50) |
+| Listagem (B-10) | `conc`, `idem` | é leitura: não altera nada, e a leitura sob escrita que importa (paginação) está nas invocações (S-59). O cursor fixa o recorte sem repetir nem pular regra (S-50) |
 | Uso (B-11) | `est`, `idem` | leitura pura sobre uma tabela append-only; o estado que muda o número (regra revogada, expirada) é da regra, provado em S-86 e S-101 |
 | Análise (B-15) | `conc` | função pura sobre um retrato da lista; quem concorre é a escrita, provada nas rotas (S-74, S-85) |
 | Simulação (B-16) | `est`, `conc` | leitura pura com `limit`; estado e concorrência de regra estão em B-12/B-13 e no teste (S-109) |

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/permission-rule-import-preview.json",
+  "title": "PermissionRuleImportPreview",
+  "description": "`POST /permission-rules/import/preview`: one verdict per item of an import file — `new`, `existing`, or `invalid` with the code that would refuse it (plan 15, B-18, D-17). Read only — nothing is written, and a `project` item's path is not resolved yet (no `folderMap` until applying).",
+  "x-kind": "http",
+  "x-type": "permissionRules.importPreview",
+  "x-route": [{ "method": "POST", "path": "/permission-rules/import/preview" }],
+  "type": "object",
+  "required": ["digest", "items"],
+  "properties": {
+    "digest": {
+      "type": "string",
+      "description": "Of the file's own bytes — sent back on apply, to prove it is the same file (S-143)."
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "pattern", "decision", "scope", "verdict"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "pattern": { "type": "string" },
+          "decision": { "type": "string" },
+          "scope": { "type": "string" },
+          "verdict": { "type": "string", "enum": ["new", "existing", "invalid"] },
+          "breadth": {
+            "type": "string",
+            "enum": ["narrow", "broad", "unbounded"],
+            "description": "Present for `new`/`existing` — absent for `invalid`."
+          },
+          "code": {
+            "type": "string",
+            "description": "Present for `invalid` — the code applying this item would answer with."
+          }
+        }
+      }
+    }
+  }
+}

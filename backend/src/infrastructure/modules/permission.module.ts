@@ -2,12 +2,19 @@ import { Module } from '@nestjs/common';
 
 import {
   ApplyPermissionModeUseCase,
+  ChangePermissionRuleExpiryUseCase,
   DescribePermissionRuleUseCase,
   DescribePermissionUseCase,
   EndSessionPermissionsUseCase,
+  EvaluatePermissionUseCase,
+  ExportPermissionRulesUseCase,
   ExtendPermissionUseCase,
   GrantPermissionRuleUseCase,
+  ImportPermissionRulesUseCase,
   ListPermissionRulesUseCase,
+  ListRuleHistoryUseCase,
+  ListRuleInvocationsUseCase,
+  ListRuleTemplatesUseCase,
   PERMISSION_BROADCASTER,
   PERMISSION_EVENTS,
   PERMISSION_REQUEST_REPOSITORY,
@@ -18,24 +25,39 @@ import {
   PermissionRuleBook,
   PermissionSettlement,
   MigrateRulesUseCase,
+  PreviewPermissionRuleUseCase,
+  PreviewRuleImportUseCase,
+  RULE_FOLDER_RESOLVER,
   RULE_MIGRATION_STORE,
   RequestPermissionUseCase,
   ResolvePermissionUseCase,
+  RestorePermissionRulesUseCase,
   RevokeMcpServerRulesUseCase,
   RevokePermissionRuleUseCase,
+  RevokePermissionRulesUseCase,
   RuleDialects,
+  SimulatePermissionRulesUseCase,
+  SummarizePermissionRulesUseCase,
   TOOL_KIND_BACKFILL_STORE,
 } from '@application/permission';
+import { SessionRegistry } from '@application/session';
 import type {
   PermissionBroadcaster,
   PermissionEvents,
   PermissionRequestRepository,
   PermissionRuleRepository,
   PermissionSettings,
+  RuleFolderResolver,
   RuleMigrationStore,
   ToolKindBackfillStore,
 } from '@application/permission';
-import { RecordAuditEventUseCase } from '@application/audit';
+import {
+  AUDIT_EVENT_READER,
+  AUDIT_TRAIL_READER,
+  QueryAuditTrailUseCase,
+  RecordAuditEventUseCase,
+} from '@application/audit';
+import type { AuditEventReader, AuditTrailReader } from '@application/audit';
 import { ToolClassifiers } from '@application/engine';
 import { ResolveDeviceUseCase } from '@application/auth';
 import { CLOCK, ID_GENERATOR, SCHEDULER } from '@application/shared';
@@ -52,6 +74,9 @@ import {
 } from '@adapter/inbound/ws/permission/permission-commands';
 import { EmitterPermissionEvents } from '@adapter/outbound/permission/emitter-permission.events';
 import { HubPermissionBroadcaster } from '@adapter/outbound/permission/hub-permission.broadcaster';
+import { WorkspaceModuleRuleFolderResolver } from '@adapter/outbound/permission/workspace-module.rule-folder-resolver';
+import { DrizzleAuditEventReader } from '@adapter/outbound/persistence/audit/drizzle-audit-event.reader';
+import { DrizzleAuditTrailReader } from '@adapter/outbound/persistence/audit/drizzle-audit-trail.reader';
 import { DrizzlePermissionRequestRepository } from '@adapter/outbound/persistence/permission/drizzle-permission-request.repository';
 import { DrizzlePermissionRuleRepository } from '@adapter/outbound/persistence/permission/drizzle-permission-rule.repository';
 import { DrizzleRuleMigrationStore } from '@adapter/outbound/persistence/permission/drizzle-rule-migration.store';
@@ -60,9 +85,11 @@ import { APP_CONFIG } from '../config/environment';
 import type { AppConfig } from '../config/environment';
 import { AuditModule } from './audit.module';
 import { AuthModule } from './auth.module';
+import { SessionRegistryModule } from './session-registry.module';
 import { RuleMigrationJob } from '../jobs/rule-migration.job';
 import { engineRuleDialectProviders, engineToolClassifierProviders } from './engines';
 import { WebsocketModule } from './websocket.module';
+import { WorkspaceModule } from './workspace.module';
 
 /** DI token of the numbers a request and a rule live by. They are configuration, never a client's. */
 export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
@@ -84,7 +111,7 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
   // that a registered device has to be **approved** to send (B-05).
   // It is also what `BearerAuthGuard` resolves the caller with, on the HTTP routes below.
   // `AuditModule` for the trail: granting and revoking a rule are recorded like a device's approval.
-  imports: [AuditModule, AuthModule, WebsocketModule],
+  imports: [AuditModule, AuthModule, SessionRegistryModule, WebsocketModule, WorkspaceModule],
   controllers: [PermissionController, PermissionRulesController],
   providers: [
     ...engineToolClassifierProviders,
@@ -95,6 +122,13 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
     },
     { provide: PERMISSION_REQUEST_REPOSITORY, useClass: DrizzlePermissionRequestRepository },
     { provide: PERMISSION_RULE_REPOSITORY, useClass: DrizzlePermissionRuleRepository },
+    { provide: RULE_FOLDER_RESOLVER, useClass: WorkspaceModuleRuleFolderResolver },
+    // `permission`'s own instances, never `AuditQueryModule`'s — that module exports neither reader
+    // to any consumer, on purpose (docs/architecture/backend/03-modules.md#audit): the uses, the
+    // invocations and the history of a rule read the trail by this port, and only by it, which is
+    // exactly the arrow backend/03's fronteiras draw for this module (B-01).
+    { provide: AUDIT_TRAIL_READER, useClass: DrizzleAuditTrailReader },
+    { provide: AUDIT_EVENT_READER, useClass: DrizzleAuditEventReader },
     { provide: PERMISSION_BROADCASTER, useClass: HubPermissionBroadcaster },
     { provide: PERMISSION_EVENTS, useClass: EmitterPermissionEvents },
     { provide: PermissionRegistry, useFactory: () => new PermissionRegistry() },
@@ -155,6 +189,7 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
         ID_GENERATOR,
         CLOCK,
         PERMISSION_SETTINGS,
+        RULE_FOLDER_RESOLVER,
       ],
       useFactory: (
         rules: PermissionRuleRepository,
@@ -162,7 +197,8 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
         ids: IdGenerator,
         clock: Clock,
         settings: PermissionSettings,
-      ) => new GrantPermissionRuleUseCase(rules, trail, ids, clock, settings),
+        folders: RuleFolderResolver,
+      ) => new GrantPermissionRuleUseCase(rules, trail, ids, clock, settings, folders),
     },
     // The data step of plan 28 · B-33: the rules out of the engine's grammar, and the kind of every
     // record of a call — once per boot, after the SQL migrations.
@@ -193,10 +229,41 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
         new RuleMigrationJob(migrate, logger),
     },
     {
+      provide: RevokePermissionRulesUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, RecordAuditEventUseCase, ID_GENERATOR, CLOCK],
+      useFactory: (
+        rules: PermissionRuleRepository,
+        trail: RecordAuditEventUseCase,
+        ids: IdGenerator,
+        clock: Clock,
+      ) => new RevokePermissionRulesUseCase(rules, trail, ids, clock),
+    },
+    {
+      // The batch of one (plan 15, D-06): `DELETE /permission-rules/:ruleId` shares the one
+      // implementation `POST /permission-rules/revoke` uses, rather than a second that ages apart.
       provide: RevokePermissionRuleUseCase,
-      inject: [PERMISSION_RULE_REPOSITORY, RecordAuditEventUseCase, CLOCK],
-      useFactory: (rules: PermissionRuleRepository, trail: RecordAuditEventUseCase, clock: Clock) =>
-        new RevokePermissionRuleUseCase(rules, trail, clock),
+      inject: [RevokePermissionRulesUseCase],
+      useFactory: (batch: RevokePermissionRulesUseCase) => new RevokePermissionRuleUseCase(batch),
+    },
+    {
+      provide: RestorePermissionRulesUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, GrantPermissionRuleUseCase, CLOCK, PERMISSION_SETTINGS],
+      useFactory: (
+        rules: PermissionRuleRepository,
+        grant: GrantPermissionRuleUseCase,
+        clock: Clock,
+        settings: PermissionSettings,
+      ) => new RestorePermissionRulesUseCase(rules, grant, clock, settings),
+    },
+    {
+      provide: ChangePermissionRuleExpiryUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, RecordAuditEventUseCase, CLOCK, PERMISSION_SETTINGS],
+      useFactory: (
+        rules: PermissionRuleRepository,
+        trail: RecordAuditEventUseCase,
+        clock: Clock,
+        settings: PermissionSettings,
+      ) => new ChangePermissionRuleExpiryUseCase(rules, trail, clock, settings),
     },
     {
       provide: RevokeMcpServerRulesUseCase,
@@ -206,15 +273,146 @@ export const PERMISSION_SETTINGS = Symbol('PermissionSettings');
     },
     {
       provide: ListPermissionRulesUseCase,
+      inject: [
+        PERMISSION_RULE_REPOSITORY,
+        CLOCK,
+        AUDIT_TRAIL_READER,
+        RULE_FOLDER_RESOLVER,
+        APP_CONFIG,
+        PERMISSION_SETTINGS,
+      ],
+      useFactory: (
+        rules: PermissionRuleRepository,
+        clock: Clock,
+        trail: AuditTrailReader,
+        folders: RuleFolderResolver,
+        config: AppConfig,
+        settings: PermissionSettings,
+      ) =>
+        new ListPermissionRulesUseCase(
+          rules,
+          clock,
+          trail,
+          folders,
+          config.audit.retentionDays,
+          settings,
+        ),
+    },
+    {
+      provide: SummarizePermissionRulesUseCase,
       inject: [PERMISSION_RULE_REPOSITORY, CLOCK],
       useFactory: (rules: PermissionRuleRepository, clock: Clock) =>
-        new ListPermissionRulesUseCase(rules, clock),
+        new SummarizePermissionRulesUseCase(rules, clock),
+    },
+    {
+      // `permission`'s own `QueryAuditTrailUseCase` — never `AuditQueryModule`'s, which exports
+      // neither it nor the reader it wraps to any consumer (see the note above).
+      provide: QueryAuditTrailUseCase,
+      inject: [AUDIT_TRAIL_READER, ToolClassifiers],
+      useFactory: (trail: AuditTrailReader, classifiers: ToolClassifiers) =>
+        new QueryAuditTrailUseCase(trail, classifiers),
+    },
+    {
+      provide: SimulatePermissionRulesUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, AUDIT_TRAIL_READER, ToolClassifiers, CLOCK],
+      useFactory: (
+        rules: PermissionRuleRepository,
+        trail: AuditTrailReader,
+        classifiers: ToolClassifiers,
+        clock: Clock,
+      ) => new SimulatePermissionRulesUseCase(rules, trail, classifiers, clock),
+    },
+    {
+      provide: ListRuleTemplatesUseCase,
+      useFactory: () => new ListRuleTemplatesUseCase(),
+    },
+    {
+      provide: ExportPermissionRulesUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, RecordAuditEventUseCase, ID_GENERATOR, CLOCK],
+      useFactory: (
+        rules: PermissionRuleRepository,
+        trail: RecordAuditEventUseCase,
+        ids: IdGenerator,
+        clock: Clock,
+      ) => new ExportPermissionRulesUseCase(trail, rules, ids, clock),
+    },
+    {
+      provide: PreviewRuleImportUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, PERMISSION_SETTINGS, CLOCK],
+      useFactory: (rules: PermissionRuleRepository, settings: PermissionSettings, clock: Clock) =>
+        new PreviewRuleImportUseCase(rules, settings, clock),
+    },
+    {
+      provide: ImportPermissionRulesUseCase,
+      inject: [GrantPermissionRuleUseCase, RecordAuditEventUseCase, ID_GENERATOR, CLOCK],
+      useFactory: (
+        grant: GrantPermissionRuleUseCase,
+        trail: RecordAuditEventUseCase,
+        ids: IdGenerator,
+        clock: Clock,
+      ) => new ImportPermissionRulesUseCase(grant, trail, ids, clock),
+    },
+    {
+      provide: ListRuleInvocationsUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, QueryAuditTrailUseCase],
+      useFactory: (rules: PermissionRuleRepository, trail: QueryAuditTrailUseCase) =>
+        new ListRuleInvocationsUseCase(rules, trail),
+    },
+    {
+      provide: ListRuleHistoryUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, AUDIT_EVENT_READER],
+      useFactory: (rules: PermissionRuleRepository, events: AuditEventReader) =>
+        new ListRuleHistoryUseCase(rules, events),
     },
     {
       provide: DescribePermissionRuleUseCase,
-      inject: [PERMISSION_RULE_REPOSITORY, CLOCK],
-      useFactory: (rules: PermissionRuleRepository, clock: Clock) =>
-        new DescribePermissionRuleUseCase(rules, clock),
+      inject: [
+        PERMISSION_RULE_REPOSITORY,
+        CLOCK,
+        RULE_FOLDER_RESOLVER,
+        AUDIT_TRAIL_READER,
+        APP_CONFIG,
+        PERMISSION_SETTINGS,
+      ],
+      useFactory: (
+        rules: PermissionRuleRepository,
+        clock: Clock,
+        folders: RuleFolderResolver,
+        trail: AuditTrailReader,
+        config: AppConfig,
+        settings: PermissionSettings,
+      ) =>
+        new DescribePermissionRuleUseCase(
+          rules,
+          clock,
+          folders,
+          trail,
+          config.audit.retentionDays,
+          settings,
+        ),
+    },
+    {
+      provide: PreviewPermissionRuleUseCase,
+      inject: [PERMISSION_RULE_REPOSITORY, RULE_FOLDER_RESOLVER],
+      useFactory: (rules: PermissionRuleRepository, folders: RuleFolderResolver) =>
+        new PreviewPermissionRuleUseCase(rules, folders),
+    },
+    {
+      provide: EvaluatePermissionUseCase,
+      inject: [
+        PERMISSION_RULE_REPOSITORY,
+        PermissionRegistry,
+        SessionRegistry,
+        RULE_FOLDER_RESOLVER,
+        CLOCK,
+      ],
+      useFactory: (
+        rules: PermissionRuleRepository,
+        registry: PermissionRegistry,
+        sessions: SessionRegistry,
+        folders: RuleFolderResolver,
+        clock: Clock,
+      ) => new EvaluatePermissionUseCase(rules, registry, sessions, folders, clock),
     },
     {
       provide: PermissionAutoAnswer,

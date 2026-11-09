@@ -190,12 +190,17 @@ function readMatcher(kind: RuleKind, inner: string): Reading {
   return { problem: 'matcherNotAllowed' };
 }
 
-function readShell(inner: string): Reading {
+function readShell(raw: string): Reading {
+  // A run of whitespace is one separator to a shell, whatever its width — reading it as more than
+  // one keeps a leading tab or a doubled space from narrowing what a prefix answers, or widening
+  // it (S-17 of plan 15).
+  const inner = raw.replace(/\s+/g, ' ').trim();
+
   if (!inner.endsWith(':*')) {
     return { pattern: { kind: 'shell', reach: 'exact', content: inner } };
   }
 
-  const prefix = inner.slice(0, -2);
+  const prefix = inner.slice(0, -2).trim();
 
   // A prefix of nothing would be every command there is.
   return prefix.length === 0

@@ -41,14 +41,15 @@ describe('a read-only session', () => {
   const ask = (overrides: Parameters<typeof aPermissionQuestion>[0] = {}) =>
     harness.request.execute(aPermissionQuestion({ permissionMode: 'readOnly', ...overrides }));
 
-  const grant = (overrides: Partial<GrantPermissionRuleCommand> = {}) =>
+  const grant = (overrides: Partial<Omit<GrantPermissionRuleCommand, 'projectPath'>> = {}) =>
     harness.grant.execute({
       userId: PERMISSION_OWNER,
       pattern: 'shell(pnpm:*)',
       decision: 'allow',
       scope: 'project',
-      projectPath: PERMISSION_PROJECT,
+      projectPath: { trusted: PERMISSION_PROJECT },
       expiresAt: null,
+      grantedVia: 'approval',
       ...overrides,
     });
 
