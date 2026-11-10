@@ -269,10 +269,10 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-169 | estender mostra o teto, os atalhos de prazo e um segundo passo com a data nova e o alcance; voltar não envia nada | est | integração | — | B-23 | ⬜ |
-| S-170 | encurtar é direto, com "desfazer" no aviso; desfazer manda a validade anterior | est | integração | — | B-23 | ⬜ |
-| S-171 | `412` no diálogo → mensagem traduzida e recarga, nunca sobrescrita silenciosa | err | integração | `PERMISSION_RULE_CHANGED` (novo) | B-23 | ⬜ |
-| S-172 | a regra foi revogada noutra tela enquanto o diálogo estava aberto → a linha passa a revogada, com a mensagem traduzida | err | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-23 | ⬜ |
+| S-169 | estender mostra o teto, os atalhos de prazo e um segundo passo com a data nova e o alcance; voltar não envia nada | est | integração | — | B-23 | ✅ |
+| S-170 | encurtar é direto, com "desfazer" no aviso; desfazer manda a validade anterior | est | integração | — | B-23 | ✅ |
+| S-171 | `412` no diálogo → mensagem traduzida e recarga, nunca sobrescrita silenciosa | err | integração | `PERMISSION_RULE_CHANGED` (novo) | B-23 | ✅ |
+| S-172 | a regra foi revogada noutra tela enquanto o diálogo estava aberto → a linha passa a revogada, com a mensagem traduzida | err | integração | `PERMISSION_RULE_STATE_CONFLICT` (novo) | B-23 | ✅ |
 
 ## Seleção e ações em lote — B-24
 

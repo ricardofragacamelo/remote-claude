@@ -185,7 +185,7 @@ provados em integração (`RuleDetailPanel.spec.tsx`, 14 casos; `RulesRoute.spec
 estendidos com a rota `/rules/$ruleId` — fechar, trocar de regra por um achado, abrir a trilha, o
 `sheet` do celular, e uma aba clicada com o painel aberto).
 
-### B-23 — Encurtar e estender 🔲
+### B-23 — Encurtar e estender ✅
 
 Um diálogo com atalhos de prazo (7 dias, 30, 90, um ano para `deny`) e data livre, o teto da decisão
 à vista e a validação na linha:
@@ -196,6 +196,25 @@ Um diálogo com atalhos de prazo (7 dias, 30, 90, um ano para `deny`) e data liv
   (S-169);
 - `412` → "esta regra mudou em outro lugar", recarrega e reabre com o valor novo — nunca sobrescreve
   em silêncio (S-171); `409` → a linha passa ao estado real, com a mensagem traduzida (S-172).
+
+**Nota de execução.** "O teto da decisão à vista" precisou de um campo novo no contrato —
+`expiryCeiling` (opcional, igual a `usage`/`folderReachable` da B-22): o backend não tinha onde o
+cliente pudesse ler o teto configurado da instalação (`ruleMaxLifetimeMs`/`ruleDenyMaxLifetimeMs`)
+antes de tentar — sem ele, o diálogo só saberia o teto depois de um `422` recusando a data, tarde
+demais para "à vista". `expiryCeilingFor`, a mesma forma de `folderReachableFor` (B-22), computa
+`agora + teto da decisão` em `DescribePermissionRuleUseCase` e em `ListPermissionRulesUseCase`, os
+dois injetados com `PermissionSettings`. Os atalhos de prazo contam sempre de agora (D-14), nunca da
+concessão original da regra — a mesma shortcut em `allow` e `deny` aponta para datas diferentes só
+pela validade que cada decisão já tem. "Encurtar"/"Estender" só aparecem para uma regra `active`; o
+diálogo em si é sempre montado (nunca condicionalmente), com `open` controlando a visibilidade — o
+mesmo padrão de `AddEditServerDialog` (plano 13) — para que o picker e o free-date mantenham seu
+próprio estado entre uma abertura e a seguinte sem perder o `key={direction}` que os reseta ao
+trocar de Encurtar para Estender. O `toast` de sucesso (e o "desfazer" que ele carrega) é o `sonner`
+de verdade, não um mock: `vi.mock('sonner', …)` não substitui o módulo que o `setup.ts` global já
+importou antes do arquivo de teste rodar — a correção foi montar um `<Toaster/>` real ao lado do
+diálogo nos próprios testes, a mesma pilha de polyfills (`ResizeObserver`, captura de ponteiro) que o
+`setup.ts` já preparava para isso. **Nível de prova**: S-169…S-172 provados em integração
+(`RuleExpiryDialog.spec.tsx`, 16 casos, com o toast real e o "desfazer" clicado de verdade).
 
 ### B-24 — Seleção, lote, desfazer, menu de contexto e paleta 🔲
 
