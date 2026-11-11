@@ -13,7 +13,7 @@ import {
   sectionsForEngine,
 } from '@/features/agent-settings';
 import { CALLBACK_PATH } from '@/features/auth';
-import { readRulesSearch } from '@/features/permission';
+import { readNewRuleSearch, readRulesSearch } from '@/features/permission';
 import { firstSectionId, settingsSections } from '@/features/settings';
 import { AboutRoute } from './AboutRoute';
 import { AgentSettingsRoute } from './AgentSettingsRoute';
@@ -23,6 +23,7 @@ import { Callback } from './Callback';
 import { DevicesRoute } from './DevicesRoute';
 import { DiagnosticsRoute } from './DiagnosticsRoute';
 import { FramedOutlet } from './FramedOutlet';
+import { NewRuleRoute } from './NewRuleRoute';
 import { NotFoundRoute } from './NotFoundRoute';
 import { RuleRoute } from './RuleRoute';
 import { RulesRoute } from './RulesRoute';
@@ -111,6 +112,19 @@ const ruleRoute = createRoute({
   path: '/rules/$ruleId',
   validateSearch: readRulesSearch,
   component: RuleRoute,
+});
+
+/**
+ * The rule-authoring wizard (plan 15, B-27, D-19) — a static segment, never colliding with
+ * `/rules/$ruleId`: no rule's own id is ever `new` (ULIDs), and a static route always wins a
+ * dynamic one at the same depth. The draft lives in the search, so Recriar and (once it exists)
+ * "criar regra a partir desta invocação" can hand off to it without a store of their own.
+ */
+const newRuleRoute = createRoute({
+  getParentRoute: () => frameRoute,
+  path: '/rules/new',
+  validateSearch: readNewRuleSearch,
+  component: NewRuleRoute,
 });
 
 /** The trail, with its filters in the search so a filtered trail is a link. */
@@ -220,6 +234,7 @@ export const routeTree = rootRoute.addChildren([
     indexRoute,
     workbenchRoute,
     rulesRoute,
+    newRuleRoute,
     ruleRoute,
     auditRoute,
     devicesRoute,

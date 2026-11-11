@@ -28,8 +28,16 @@ export function ruleSentence(rule: PermissionRule, locale: string, t: TFunction)
   return t(key, { action, scope, until });
 }
 
-/** What the rule's own reach does, in words — the kind named by its short name, never raw. */
-function actionText(reach: PermissionRuleReach, ruleKind: string | null, t: TFunction): string {
+/**
+ * What a reach does, in words — the kind named by its short name, never raw. Exported for the
+ * rule-authoring wizard's own live preview (plan 15, B-27, S-185): a draft has a `reach` before it
+ * has a scope or a validity, so it reads this alone, never the whole sentence below.
+ */
+export function actionText(
+  reach: PermissionRuleReach,
+  ruleKind: string | null,
+  t: TFunction,
+): string {
   const kind = kindShortName(ruleKind, t);
 
   if (reach.form === 'any') {
@@ -53,8 +61,14 @@ function actionText(reach: PermissionRuleReach, ruleKind: string | null, t: TFun
  * Where the rule reaches, in words. `always` is every folder; `project` is the one folder named —
  * and its subfolders, since D-10 widened a `project` rule's reach to them (a revision of this
  * plan's own text, which this sentence follows, not the older "not the subfolders" example).
+ *
+ * Exported for the wizard's own review step (B-27): a draft has a scope and a folder before it has
+ * an id, a decision sentence or an expiry.
  */
-function scopeText(rule: PermissionRule, t: TFunction): string {
+export function scopeText(
+  rule: Pick<PermissionRule, 'scope' | 'projectPath'>,
+  t: TFunction,
+): string {
   if (rule.scope === 'always') {
     return t('permission.ruleSentence.scopeAlways');
   }

@@ -211,7 +211,9 @@ function RuleHeaderFacts({
   );
 }
 
-function RuleAlerts({
+/** Shared with the rule-authoring wizard's own review step (plan 15, B-27): the same finding, the
+ * same "open the involved rule" link, whether it is read from a stored rule or a draft's preview. */
+export function RuleAlerts({
   findings,
   onOpenRule,
 }: {

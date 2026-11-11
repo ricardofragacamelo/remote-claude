@@ -298,7 +298,7 @@ describe('the rules route', () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
     mockRules();
 
-    mountApp('/rules?tab=bogus&sort=id&decision=maybe&q=git');
+    const routed = mountApp('/rules?tab=bogus&sort=id&decision=maybe&q=git');
 
     // `tab` and `decision` were not well formed, and fell back to their own default — `active`,
     // and no decision chip pressed; `q`, well formed, survived the fallback untouched.
@@ -316,6 +316,13 @@ describe('the rules route', () => {
       'false',
     );
     expect(screen.getByLabelText(t('rules.filters.search'))).toHaveValue('git');
+
+    // Not just unmatched by any chip: the invalid `decision` must not be sitting unvalidated under
+    // `readRulesSearch`'s own result either — `frameRoute` has no `validateSearch` of its own, so
+    // TanStack Router's `Object.assign` merge would otherwise let `decision=maybe` leak through
+    // untouched had `readRulesSearch` merely omitted the key instead of clearing it outright.
+    expect(routed.search()).not.toMatchObject({ decision: 'maybe' });
+    expect((routed.search() as Record<string, unknown>)['decision']).toBeUndefined();
   });
 
   it('opens a rule from its own row, by a double click', async () => {
@@ -380,13 +387,79 @@ describe('the rules route', () => {
       ],
     });
     const user = userEvent.setup();
-    mountRules();
+    const routed = mountRules();
 
     await user.click(await screen.findByRole('button', { name: t('rules.disabled.open') }));
     await user.click(await screen.findByRole('button', { name: t('rules.disabled.recreate') }));
 
-    // The wizard itself is B-27's; today the hand-off runs without throwing, nothing else.
-    expect(screen.getByRole('button', { name: t('rules.disabled.recreate') })).toBeVisible();
+    // The wizard's own first step (B-27), with the disabled rule's decision and scope carried
+    // over — never its untranslatable pattern (S-225).
+    await waitFor(() => {
+      expect(routed.path()).toBe('/rules/new');
+    });
+    expect(routed.search()).toMatchObject({ decision: 'allow', scope: 'always' });
+    expect(
+      await screen.findByRole('heading', { level: 1, name: t('rules.wizard.screenTitle') }),
+    ).toBeVisible();
+  });
+
+  it('opens the wizard, blank, from the screen’s own "New rule" button', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    mockRules();
+    const user = userEvent.setup();
+    const routed = mountRules();
+    await screen.findByText(t('rules.tabEmpty.activeTitle'));
+
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.newRule') }));
+
+    await waitFor(() => {
+      expect(routed.path()).toBe('/rules/new');
+    });
+  });
+
+  it('carries the disabled rule’s folder into the hand-off, for a `project`-scoped one', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    mockRules({
+      summary: {
+        byStatus: { active: 0, expired: 0, revoked: 0, disabled: 1 },
+        byDecision: { allow: 0, deny: 0 },
+        byScope: { project: 0, always: 0 },
+        expiringBefore: 0,
+      },
+      disabledRules: [
+        {
+          id: 'rule_old_project',
+          scope: 'project',
+          kind: null,
+          pattern: 'legacy',
+          legacyPattern: 'Bash(npm run *)',
+          decision: 'deny',
+          projectPath: '/srv/app',
+          engine: null,
+          grantedBy: 'auth|42',
+          grantedAt: '2026-09-20T10:00:00.000Z',
+          expiresAt: '2026-12-19T10:00:00.000Z',
+          status: 'disabled',
+          revokedAt: null,
+          disabled: { reason: 'untranslatable' },
+          disabledReason: { messageKey: 'common.error.unexpected', params: {} },
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    const routed = mountRules();
+
+    await user.click(await screen.findByRole('button', { name: t('rules.disabled.open') }));
+    await user.click(await screen.findByRole('button', { name: t('rules.disabled.recreate') }));
+
+    await waitFor(() => {
+      expect(routed.path()).toBe('/rules/new');
+    });
+    expect(routed.search()).toMatchObject({
+      decision: 'deny',
+      scope: 'project',
+      folder: '/srv/app',
+    });
   });
 
   it('has no accessibility violation', async () => {

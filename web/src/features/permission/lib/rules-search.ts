@@ -1,5 +1,6 @@
 import type { PermissionDecision, PersistedScope } from '../types/permission';
 import type { RuleFilters, RuleListQuery, RuleOrder, RuleSort, RuleStatus } from '../types/rule';
+import { oneOf, text } from './search-params';
 
 /** The tab a rule falls into — a status for the server, or a client-side narrowing of `active`. */
 export type RuleTab = 'active' | 'expiringSoon' | 'expired' | 'revoked' | 'all';
@@ -10,16 +11,25 @@ const SCOPES: readonly PersistedScope[] = ['project', 'always'];
 const SORTS: readonly RuleSort[] = ['grantedAt', 'expiresAt', 'lastUsedAt', 'useCount', 'pattern'];
 const ORDERS: readonly RuleOrder[] = ['asc', 'desc'];
 
-/** Everything the rules screen reads from the URL's search, with every field defaulted (S-156). */
+/**
+ * Everything the rules screen reads from the URL's search, with every field defaulted (S-156).
+ *
+ * Every optional field also accepts `undefined` explicitly (`exactOptionalPropertyTypes`), not
+ * just absent: TanStack Router merges a route's own `validateSearch` result into its ancestors' by
+ * `Object.assign` (never clearing a key an ancestor already carries raw, since `frameRoute` has no
+ * `validateSearch` of its own), so the only way `readRulesSearch` actually discards an invalid
+ * value, rather than leaving the unvalidated one from the URL sitting underneath, is to assign
+ * every field `undefined` outright — the same fix `readNewRuleSearch` needed (S-192).
+ */
 export interface RulesSearch {
   readonly tab: RuleTab;
-  readonly decision?: PermissionDecision;
-  readonly scope?: PersistedScope;
-  readonly kind?: string;
-  readonly folder?: string;
-  readonly q?: string;
+  readonly decision?: PermissionDecision | undefined;
+  readonly scope?: PersistedScope | undefined;
+  readonly kind?: string | undefined;
+  readonly folder?: string | undefined;
+  readonly q?: string | undefined;
   /** "Com alerta" — only rules with at least one finding. Narrowed on the client (D-13's own limit: findings are computed per page, not over the whole set). */
-  readonly withAlert?: boolean;
+  readonly withAlert?: boolean | undefined;
   readonly sort: RuleSort;
   readonly order: RuleOrder;
 }
@@ -30,16 +40,6 @@ export const DEFAULT_RULES_SEARCH: RulesSearch = {
   order: 'desc',
 };
 
-function text(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
-}
-
-function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | undefined {
-  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
-    ? (value as T)
-    : undefined;
-}
-
 /**
  * The search, read from whatever the URL carries — and only what is well formed.
  *
@@ -48,20 +48,14 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | und
  * error the person did not cause by clicking (the same rule `readAuditSearch` already follows).
  */
 export function readRulesSearch(search: Readonly<Record<string, unknown>>): RulesSearch {
-  const decision = oneOf(search['decision'], DECISIONS);
-  const scope = oneOf(search['scope'], SCOPES);
-  const kind = text(search['kind']);
-  const folder = text(search['folder']);
-  const q = text(search['q']);
-
   return {
     tab: oneOf(search['tab'], RULE_TABS) ?? DEFAULT_RULES_SEARCH.tab,
-    ...(decision === undefined ? {} : { decision }),
-    ...(scope === undefined ? {} : { scope }),
-    ...(kind === undefined ? {} : { kind }),
-    ...(folder === undefined ? {} : { folder }),
-    ...(q === undefined ? {} : { q }),
-    ...(search['withAlert'] === true ? { withAlert: true } : {}),
+    decision: oneOf(search['decision'], DECISIONS),
+    scope: oneOf(search['scope'], SCOPES),
+    kind: text(search['kind']),
+    folder: text(search['folder']),
+    q: text(search['q']),
+    withAlert: search['withAlert'] === true ? true : undefined,
     sort: oneOf(search['sort'], SORTS) ?? DEFAULT_RULES_SEARCH.sort,
     order: oneOf(search['order'], ORDERS) ?? DEFAULT_RULES_SEARCH.order,
   };

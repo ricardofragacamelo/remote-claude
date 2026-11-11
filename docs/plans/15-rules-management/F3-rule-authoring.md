@@ -25,7 +25,7 @@ com o servidor recusando o que nenhuma tela deveria deixar passar ([D-09](decisi
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-27 — O assistente de criação 🔲
+### B-27 — O assistente de criação ✅
 
 Em `/rules/new`, com o rascunho na search ([D-19](decisions.md#d-19--rota-própria-para-o-assistente)):
 
@@ -66,6 +66,63 @@ desta invocação"** na trilha — em `AuditTrail` hoje, na tela do [plano 14](.
 quando existir —, que preenche o padrão mais estreito daquela invocação (S-193); e o **Recriar** de uma
 regra desligada pela migração do plano 28 (B-21), que preenche decisão, escopo e pasta e mostra o padrão
 antigo só como referência (S-225).
+
+**Nota de execução.** `/rules/new` (D-19) tem seis passos — `kind`, `padrão`, `decisão`, `pasta`,
+`validade`, `revisão` — geridos por `useNewRuleFlow` (novo hook: `step`, `draft`, `canAdvance`,
+`next`/`back`/`goTo`), nenhum envio ao servidor antes do Confirm da revisão. O campo do passo 2 muda
+por `subjectFieldOf(kind)` (`lib/rule-kind-fields.ts`): comando para `shell`, caminho para `file.*`,
+domínio para `web.fetch`, servidor+ferramenta para `mcp`, nenhum campo para `search`/`web.search`/`agent`
+(sempre "a ferramenta inteira", S-186) — `mcp` nunca oferece um padrão de servidor inteiro sem avisar a
+largura, porque isso é `broad` pela D-09. A prévia do padrão (S-185) é `useRulePreview`, debounced, sobre
+`{kind, subject, form}` com `decision`/`scope` **placeholder** (`allow`/`always`) só para a frase/erro de
+gramática — a prévia **autoritativa** (largura, achados) só acontece de novo na revisão, com os valores
+reais, porque o passo 2 ainda não os tem. A pasta (passo 4, S-187) só vem do seletor do plano 06
+(`FolderChooserBrowser`, extraído de `OpenFolderDialog`/`PluginFolderBrowseDialog` — nenhum campo de
+texto em lugar nenhum); o passo explica que `project` alcança a pasta **e as subpastas** (D-10, a mesma
+correção já repetida nas notas da B-22 e da B-26). A revisão (passo 6, S-188) sempre aparece, para
+`allow` e `deny`, com a frase de alcance (`actionText`/`scopeText`, agora exportadas de
+`rule-sentence.ts`), os achados (`RuleAlerts`, agora exportado de `RuleDetailPanel.tsx`) e o resumo da
+simulação; `widthGate` (novo, `lib/new-rule-width.ts`) é a única fonte da regra da D-09: `unbounded`
+bloqueia o Confirm com a explicação, `broad` exige `acknowledgeBroad` explícito, `narrow` nunca pede
+nada (S-189) — um achado `identical` desabilita o Confirm e oferece só **abrir** a regra existente, sem
+um atalho separado de "estender" (S-190, `🟡` — ver corte de escopo abaixo). Criar tem a guarda de clique
+duplo de `useRuleMutations.grant` (S-194, que não tinha guarda nenhuma até esta tarefa — corrigido
+também para as outras `grant`-only chamadas futuras), e uma pasta recusada entre o seletor e o envio
+(`WORKSPACE_NOT_ALLOWED`/`WORKSPACE_NOT_FOUND`) devolve ao passo 4 com o erro traduzido, por
+`useGrantSubmit` lendo o erro **assentado** num `useEffect`, nunca dentro do `.catch` do próprio clique —
+o `.catch` roda antes de `guarded()` assentar a falha, e ler `failure` ali seria sempre o valor da
+renderização anterior (S-195). A search (`readNewRuleSearch`) valida campo a campo, nunca lança — e
+corrigiu, de passagem, um bug real e não deste código: o TanStack Router mescla o resultado do
+`validateSearch` de uma rota com o das rotas-mãe por `Object.assign`, e `frameRoute`/`rootRoute` (sem
+`validateSearch` próprio) repassam a search **crua** como sua própria contribuição; uma rota-filha que
+só **omite** uma chave inválida (em vez de assentá-la como `undefined`) não a limpa — o valor cru da
+URL sobrevive por baixo. `readRulesSearch` (B-21) tinha exatamente o mesmo defeito, nunca percebido
+porque o teste que já existia não distinguia "ausente" de "vazou, mas não casou com nenhum chip" — os
+dois lugares foram corrigidos juntos, assentando sempre todo campo (`| undefined` explícito, sob
+`exactOptionalPropertyTypes`), com um teste de regressão novo no nível da rota real para os dois
+(S-192).
+
+**Cortes de escopo, registrados aqui e não no texto do plano**: (1) nenhuma restrição de motor no
+assistente — só o Claude está instalado, `engine` fica sempre nulo em `GrantRuleInput`, como toda
+concessão hoje; (2) "o que casa e o que não casa" da prévia do padrão não ganhou exemplos — o contrato
+(`PermissionRulePreviewPayload`) não tem campo para eles, e gerá-los no cliente correria o mesmo risco
+de segurança já registrado na nota da B-22 (reimplementar a gramática fora do domínio); (3) "criar regra
+a partir desta invocação" (S-193) e os pontos de entrada de duplicar/modelos (S-203, S-204) continuam
+fora — a tela do [plano 14](../14-audit-explained/README.md) ainda não existe, e duplicar/modelos são a
+própria B-30; só os dois pontos de entrada já claramente pedidos (botão da tela, paleta) mais o Recriar
+já prometido (S-225) foram construídos; (4) a pasta-mãe com regra avisando que ela não alcança a de baixo
+(parte da D-10) não ganhou uma busca própria no cliente — a revisão já mostra isso como um achado comum
+(`overlapsDeny`/`shadowedByDeny`) vindo do servidor, a mesma fonte de achados que todo o resto da tela
+usa, em vez de uma segunda implementação só para o assistente; (5) nenhum erro de validade embutido na
+linha existe ainda neste passo (S-191, `🟡`) — os atalhos e a data livre funcionam, mas o teto da decisão
+não chega a `ExpiryPicker` por este passo (`error={null}` sempre), e "narrower suggestions" do bloqueio
+`unbounded` (S-189) ainda é só a explicação, sem sugestão de padrão mais estreito nenhuma — os dois
+ficam para a B-32, que é a própria tarefa de usabilidade/ajuda do assistente; (6) o teste de comando
+dentro da revisão (S-198) é da B-28, que ainda não existe. **Nível de prova**: S-185…S-189, S-192,
+S-194, S-195, S-225 provados em integração, com o servidor mockado só na borda (`api.post`/`api.get`) —
+nunca um componente filho mockado — incluindo um teste de ponta a ponta pelo roteador real
+(`/rules/new`, `NewRuleRoute.spec.tsx`) e um de teclado só, do primeiro passo à criação (S-210);
+S-190, S-191 ficam `🟡`, pelos cortes acima.
 
 ### B-28 — Testar um comando 🔲
 

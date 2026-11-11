@@ -6,12 +6,12 @@ import type { PermissionDecision, PersistedScope } from '../types/permission';
 import type { PermissionRule } from '../types/rule';
 
 export interface RuleFiltersValue {
-  readonly decision?: PermissionDecision;
-  readonly scope?: PersistedScope;
-  readonly kind?: string;
-  readonly folder?: string;
-  readonly q?: string;
-  readonly withAlert?: boolean;
+  readonly decision?: PermissionDecision | undefined;
+  readonly scope?: PersistedScope | undefined;
+  readonly kind?: string | undefined;
+  readonly folder?: string | undefined;
+  readonly q?: string | undefined;
+  readonly withAlert?: boolean | undefined;
 }
 
 export interface RuleFiltersBarProps {
@@ -47,16 +47,10 @@ function field<K extends string, V>(key: K, value: V | undefined): { readonly [P
   return value === undefined ? {} : ({ [key]: value } as { readonly [P in K]?: V });
 }
 
-/** One field of a patch: present with a value, present as `undefined` (clear it), or absent
- * (leave it as it was) — the three states `replacing` tells apart with `in`. */
-interface FilterPatch {
-  readonly decision?: PermissionDecision | undefined;
-  readonly scope?: PersistedScope | undefined;
-  readonly kind?: string | undefined;
-  readonly folder?: string | undefined;
-  readonly q?: string | undefined;
-  readonly withAlert?: boolean | undefined;
-}
+/** A patch: each field present with a value, present as `undefined` (clear it), or absent (leave
+ * it as it was) — the three states `replacing` tells apart with `in`. The same shape as
+ * `RuleFiltersValue` field for field, so it reuses that type rather than redeclaring it. */
+type FilterPatch = RuleFiltersValue;
 
 /** The next filters, with one field replaced — every other field carried exactly as it was. */
 function replacing(value: RuleFiltersValue, patch: FilterPatch): RuleFiltersValue {

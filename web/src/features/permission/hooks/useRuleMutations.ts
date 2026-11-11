@@ -95,8 +95,12 @@ export function useRuleMutations(): RuleMutations {
   }, []);
 
   const grant = useCallback(
-    (input: GrantRuleInput): Promise<PermissionRule> => grantRule(input),
-    [],
+    (input: GrantRuleInput): Promise<PermissionRule> =>
+      // Keyed by the draft itself, not a rule id — there is none yet (plan 15, B-27, S-194): the
+      // same draft pressed twice is the one click this guards against; a different one, even from
+      // the same screen, is a genuinely different attempt, and proceeds on its own.
+      guarded(JSON.stringify(input), () => grantRule(input)),
+    [guarded],
   );
 
   const revoke = useCallback(

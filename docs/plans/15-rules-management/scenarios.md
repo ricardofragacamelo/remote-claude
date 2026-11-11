@@ -263,7 +263,7 @@ muda aqui.
 | S-166 | regra revogada no detalhe: estado e data, e só as ações que fazem sentido — duplicar, e restaurar enquanto a janela está aberta | est | integração | — | B-22 | 🟡 |
 | S-167 | abaixo de `md` a tabela vira lista de cartões; sem scroll horizontal; alvo de toque de 44 px | fron | integração | — | B-21 | ✅ |
 | S-168 | teclado: setas movem, Espaço seleciona, Enter abre o detalhe, Esc fecha | eq | integração | — | B-21 | ✅ |
-| S-225 | com regras desligadas pela migração, o aviso mostra a contagem e abre a lista com o padrão antigo como texto, o motivo traduzido e **Recriar**, que abre o assistente sem preencher o padrão; recriar não reativa nem apaga a desligada; sem nenhuma, o aviso não aparece | est | integração | — | B-21 | 🟡 |
+| S-225 | com regras desligadas pela migração, o aviso mostra a contagem e abre a lista com o padrão antigo como texto, o motivo traduzido e **Recriar**, que abre o assistente sem preencher o padrão; recriar não reativa nem apaga a desligada; sem nenhuma, o aviso não aparece | est | integração | — | B-21, B-27 | ✅ |
 
 ## Validade pela tela — B-23
 
@@ -305,17 +305,17 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-185 | padrão fora da gramática mostra o erro traduzido **antes** de enviar, vindo da prévia do servidor | err | integração | `PERMISSION_RULE_PATTERN_INVALID` | B-27 | ⬜ |
-| S-186 | o campo muda com o `kind` (comando, caminho, URL); `kind` sem campo casável (`mcp`) só oferece a ferramenta inteira, com o aviso de largura; o padrão é escrito pela prévia do servidor, na gramática canônica, sem nome de ferramenta do motor | eq | integração | — | B-27 | ⬜ |
-| S-187 | a pasta só vem do seletor do plano 06; não há campo de texto para ela; pasta fora da allowlist não aparece | eq | integração | — | B-27 | ⬜ |
-| S-188 | o segundo passo sempre aparece, para `allow` e `deny`, com o alcance por extenso, os achados e o resumo da simulação; voltar não envia nada | est | integração | — | B-27 | ⬜ |
-| S-189 | `allow` `broad` pede a confirmação explícita no segundo passo; `unbounded` é bloqueado com a explicação | fron | integração | `PERMISSION_RULE_TOO_BROAD` (novo) | B-27 | ⬜ |
-| S-190 | rascunho idêntico a uma regra ativa desabilita salvar e oferece abrir ou estender a que existe | idem | integração | — | B-27 | ⬜ |
-| S-191 | atalhos de validade e data livre limitada ao teto; acima dele, erro na linha | fron | integração | `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-27 | ⬜ |
-| S-192 | preenchimento pela search (`/rules/new?…`) é validado campo a campo; o inválido é descartado, não aplicado | fron | integração | — | B-27 | ⬜ |
-| S-193 | "criar regra a partir desta invocação", na trilha, preenche o padrão mais estreito dela | eq | integração | — | B-27 | ⬜ |
-| S-194 | clique duplo em criar → uma regra | idem | integração | — | B-27 | ⬜ |
-| S-195 | a pasta saiu da allowlist entre o seletor e o envio → o assistente fica preenchido, com o erro traduzido | err | integração | `WORKSPACE_NOT_ALLOWED` | B-27 | ⬜ |
+| S-185 | padrão fora da gramática mostra o erro traduzido **antes** de enviar, vindo da prévia do servidor | err | integração | `PERMISSION_RULE_PATTERN_INVALID` | B-27 | ✅ |
+| S-186 | o campo muda com o `kind` (comando, caminho, URL); `kind` sem campo casável (`mcp`) só oferece a ferramenta inteira, com o aviso de largura; o padrão é escrito pela prévia do servidor, na gramática canônica, sem nome de ferramenta do motor | eq | integração | — | B-27 | ✅ |
+| S-187 | a pasta só vem do seletor do plano 06; não há campo de texto para ela; pasta fora da allowlist não aparece | eq | integração | — | B-27 | ✅ |
+| S-188 | o segundo passo sempre aparece, para `allow` e `deny`, com o alcance por extenso, os achados e o resumo da simulação; voltar não envia nada | est | integração | — | B-27 | ✅ |
+| S-189 | `allow` `broad` pede a confirmação explícita no segundo passo; `unbounded` é bloqueado com a explicação | fron | integração | `PERMISSION_RULE_TOO_BROAD` (novo) | B-27 | ✅ |
+| S-190 | rascunho idêntico a uma regra ativa desabilita salvar e oferece abrir ou estender a que existe | idem | integração | — | B-27 | 🟡 |
+| S-191 | atalhos de validade e data livre limitada ao teto; acima dele, erro na linha | fron | integração | `PERMISSION_RULE_EXPIRY_TOO_LONG` | B-27 | 🟡 |
+| S-192 | preenchimento pela search (`/rules/new?…`) é validado campo a campo; o inválido é descartado, não aplicado | fron | integração | — | B-27 | ✅ |
+| S-193 | "criar regra a partir desta invocação", na trilha, preenche o padrão mais estreito dela | eq | integração | — | B-27 | ⛔ |
+| S-194 | clique duplo em criar → uma regra | idem | integração | — | B-27 | ✅ |
+| S-195 | a pasta saiu da allowlist entre o seletor e o envio → o assistente fica preenchido, com o erro traduzido | err | integração | `WORKSPACE_NOT_ALLOWED` | B-27 | ✅ |
 
 ## Testar um comando pela tela — B-28
 

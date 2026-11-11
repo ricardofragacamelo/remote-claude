@@ -5,7 +5,7 @@ export { AnsweredQuestions } from './components/AnsweredQuestions';
 export type { QuestionEnd } from './components/AnsweredQuestions';
 export type { QuestionHandlers } from './components/PermissionRequestCard';
 export { asksQuestion, readAnswers, readInteraction } from './services/permission.service';
-export { RuleDetailPanel } from './components/RuleDetailPanel';
+export { RuleDetailPanel, RuleAlerts } from './components/RuleDetailPanel';
 export type { RuleDetailPanelProps } from './components/RuleDetailPanel';
 export { RulesScreen } from './components/RulesScreen';
 export type { RulesScreenProps } from './components/RulesScreen';
@@ -24,6 +24,23 @@ export { RulesNavBadge } from './components/RulesNavBadge';
 export { rulesHelpExtras } from './lib/rules-help-extras';
 export type { RulesHelpExtra } from './lib/rules-help-extras';
 export { rulesScreenHelp } from './lib/rules-help';
+export {
+  NEW_RULE_KINDS,
+  isNewRuleKind,
+  subjectFieldOf,
+  allowsPrefix,
+} from './lib/rule-kind-fields';
+export type { NewRuleKind, SubjectField } from './lib/rule-kind-fields';
+export { patternOf } from './lib/new-rule-pattern';
+export type { NewRuleForm, NewRulePatternDraft } from './lib/new-rule-pattern';
+export { readNewRuleSearch } from './lib/new-rule-search';
+export type { NewRuleSearch } from './lib/new-rule-search';
+export { NewRuleWizard } from './components/NewRuleWizard';
+export type { NewRuleWizardProps } from './components/NewRuleWizard';
+export { useNewRuleFlow } from './hooks/useNewRuleFlow';
+export type { NewRuleDraft, NewRuleFlow, NewRuleStep } from './hooks/useNewRuleFlow';
+export { useRulePreview } from './hooks/useRulePreview';
+export { useRuleSimulation } from './hooks/useRuleSimulation';
 export { useRuleMutations } from './hooks/useRuleMutations';
 export type {
   ChangeRuleExpiryResult,

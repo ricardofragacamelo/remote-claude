@@ -1,9 +1,18 @@
 import { useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { RulesScreen, rulesHelpExtras, rulesScreenHelp } from '@/features/permission';
+import { useCommands } from '@/features/commands';
+import {
+  RulesScreen,
+  readNewRuleSearch,
+  rulesHelpExtras,
+  rulesScreenHelp,
+} from '@/features/permission';
 import type { RulesSearch } from '@/features/permission';
+import { Button } from '@/shared/components/ui/button';
 import { ScreenFrame } from '@/shared/components/ScreenFrame';
 import { useRegistry } from '@/shared/hooks/useRegistry';
 import { useShellShortcuts } from './screen-shortcuts';
@@ -22,10 +31,10 @@ export interface RulesScreenFrameProps {
  * or not a rule is open over it — one shell, so the two routes cannot say it two different ways
  * (plan 15, B-21, B-22).
  *
- * The rule-authoring wizard `onRecreate` would open is plan 15's B-27, a task that does not exist
- * yet — the callback is wired and ready for it (S-225 asks that Recriar open the wizard, never the
- * pattern), but there is nowhere to navigate to until that route is registered. Filling this in is
- * B-27's own hand-off, not a gap in B-21/B-22 to work around with a route that is not real yet.
+ * Recriar and the screen's own "New rule" button both hand off to `/rules/new` (B-27) the same
+ * way: `readNewRuleSearch` turns Recriar's loosely-typed `{decision, scope, folder}` into the
+ * wizard's own draft shape, discarding anything that does not fit it, never the pattern (S-225) —
+ * the untranslatable one is the engine's own grammar, not the canonical one the wizard writes.
  */
 export function RulesScreenFrame({
   search,
@@ -35,8 +44,40 @@ export function RulesScreenFrame({
 }: RulesScreenFrameProps): React.JSX.Element {
   const shortcuts = useShellShortcuts(['rules.revokeSelected', 'rules.openExpiringSoon']);
   const { t } = useTranslation();
-  const onRecreate = useCallback((): void => undefined, []);
+  const navigate = useNavigate();
   const engineExtras = useRegistry(rulesHelpExtras);
+
+  const onNewRule = useCallback(() => {
+    void navigate({ to: '/rules/new', search: {} });
+  }, [navigate]);
+
+  const onRecreate = useCallback(
+    (rule: {
+      readonly decision: string;
+      readonly scope: string;
+      readonly folder: string | null;
+    }) => {
+      void navigate({
+        to: '/rules/new',
+        search: readNewRuleSearch({
+          decision: rule.decision,
+          scope: rule.scope,
+          ...(rule.folder === null ? {} : { folder: rule.folder }),
+        }),
+      });
+    },
+    [navigate],
+  );
+
+  useCommands([
+    {
+      id: 'rules.new',
+      labelKey: 'rules.command.new',
+      category: 'file',
+      icon: Plus,
+      run: onNewRule,
+    },
+  ]);
 
   return (
     <ScreenFrame
@@ -45,6 +86,12 @@ export function RulesScreenFrame({
       help="rules.help"
       shortcuts={shortcuts}
       extra={rulesScreenHelp(t, engineExtras)}
+      actions={
+        <Button type="button" onClick={onNewRule}>
+          <Plus className="size-4" aria-hidden />
+          {t('rules.wizard.newRule')}
+        </Button>
+      }
     >
       <div className="flex gap-4">
         <div className="min-w-0 flex-1">

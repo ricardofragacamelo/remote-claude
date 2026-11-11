@@ -13,5 +13,7 @@ export { useFolderBrowser } from './hooks/useFolderBrowser';
 export type { BrowserOption, Crumb, FolderBrowser } from './hooks/useFolderBrowser';
 export { FolderBrowserPanel } from './components/FolderBrowserPanel';
 export { FolderPickerDialog, FolderPickerFooter } from './components/FolderPickerChrome';
+export { FolderChooserBrowser } from './components/FolderChooserBrowser';
+export type { FolderChooserLabelKeys } from './components/FolderChooserBrowser';
 export { useFolderDialog } from './store/folder-dialog.store';
 export type { OpenFolder, OpenFolderState, ResolvedFolder, Workspace } from './types/workspace';

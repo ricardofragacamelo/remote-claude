@@ -1,11 +1,10 @@
-import { useTranslation } from 'react-i18next';
+import { FolderChooserBrowser, FolderPickerDialog } from '@/features/workspace';
+import type { FolderChooserLabelKeys } from '@/features/workspace';
 
-import {
-  FolderBrowserPanel,
-  FolderPickerDialog,
-  FolderPickerFooter,
-  useFolderBrowser,
-} from '@/features/workspace';
+const LABEL_KEYS: FolderChooserLabelKeys = {
+  cancel: 'engines.claude.plugins.browseCancel',
+  confirm: 'engines.claude.plugins.browseChoose',
+};
 
 export interface PluginFolderBrowseDialogProps {
   readonly open: boolean;
@@ -19,13 +18,12 @@ export interface PluginFolderBrowseDialogProps {
  * "Choose a folder": browses the allowlist's own roots, one level at a time, for the local-plugin
  * add wizard's path field (plan 13, B-29) — never a path typed loose, the plan's own text.
  *
- * Built on `FolderPickerDialog`/`FolderBrowserPanel`/`useFolderBrowser` (`@/features/workspace`) —
- * the same shared chrome and lower-level pieces `OpenFolderDialog` (plan 06) is built on — with its
- * own local `onChoose` instead of navigating the workbench. See
- * `docs/plans/13-claude-settings/decisions.md` for why neither `OpenFolderDialog` (a global singleton
- * wired to the workbench) nor `McpFolderPicker`/`FolderSelect` (a dropdown of already-known folders,
- * not a filesystem browse) fit this field, and why the chrome and the browsing UI are shared pieces
- * rather than a second hand-copied implementation of either.
+ * Built on `FolderPickerDialog`/`FolderChooserBrowser` (`@/features/workspace`) — the same shared
+ * chrome and browsing pieces `OpenFolderDialog` (plan 06) and the rule-authoring wizard's own
+ * `NewRuleFolderDialog` (plan 15, B-27) are built on — with its own local `onChoose` instead of
+ * navigating the workbench. See `docs/plans/13-claude-settings/decisions.md` for why neither
+ * `OpenFolderDialog` (a global singleton wired to the workbench) nor `McpFolderPicker`/
+ * `FolderSelect` (a dropdown of already-known folders, not a filesystem browse) fit this field.
  */
 export function PluginFolderBrowseDialog({
   open,
@@ -40,8 +38,9 @@ export function PluginFolderBrowseDialog({
       descriptionKey="engines.claude.plugins.browseDialogDescription"
     >
       {(list) => (
-        <Browser
+        <FolderChooserBrowser
           listRef={list}
+          labelKeys={LABEL_KEYS}
           onChoose={onChoose}
           onCancel={() => {
             onOpenChange(false);
@@ -49,30 +48,5 @@ export function PluginFolderBrowseDialog({
         />
       )}
     </FolderPickerDialog>
-  );
-}
-
-interface BrowserProps {
-  readonly listRef: React.RefObject<HTMLDivElement | null>;
-  onChoose(path: string): void;
-  onCancel(): void;
-}
-
-function Browser({ listRef: list, onChoose, onCancel }: BrowserProps): React.JSX.Element {
-  const { t } = useTranslation();
-  const browser = useFolderBrowser(null);
-
-  return (
-    <>
-      <FolderBrowserPanel browser={browser} listRef={list} />
-
-      <FolderPickerFooter
-        current={browser.current}
-        cancelLabel={t('engines.claude.plugins.browseCancel')}
-        confirmLabel={t('engines.claude.plugins.browseChoose')}
-        onCancel={onCancel}
-        onConfirm={onChoose}
-      />
-    </>
   );
 }
