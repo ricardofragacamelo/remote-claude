@@ -11,6 +11,7 @@ import {
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
+import { RulesNavBadge } from '@/features/permission';
 import { createRegistry } from '@/shared/lib/registry';
 import type { Registry, RegistryEntry } from '@/shared/lib/registry';
 
@@ -102,6 +103,7 @@ const DECLARED: readonly NavigationEntry[] = [
     icon: ShieldCheck,
     href: () => '/rules',
     sections: ['rules'],
+    Badge: RulesNavBadge,
   },
   {
     // A screen of its own and not a section of Settings: approving a phone is a security decision,

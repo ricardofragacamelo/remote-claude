@@ -288,9 +288,9 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-178 | o selo na navegação mostra quantas expiram em sete dias; zero esconde o selo | fron | integração | — | B-25 | ⬜ |
-| S-179 | a entrada na central de notificações leva à aba filtrada | eq | integração | — | B-25 | ⬜ |
-| S-180 | a preferência do resumo por push é gravada e lida de volta | eq | integração | — | B-25 | ⬜ |
+| S-178 | o selo na navegação mostra quantas expiram em sete dias; zero esconde o selo | fron | integração | — | B-25 | ✅ |
+| S-179 | a entrada na central de notificações leva à aba filtrada | eq | integração | — | B-25 | ✅ |
+| S-180 | a preferência do resumo por push é gravada e lida de volta | eq | integração | — | B-25 | ⛔ |
 
 ## Usabilidade e ajuda da tela — B-26
 

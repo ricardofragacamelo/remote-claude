@@ -263,7 +263,7 @@ prova**: S-173…S-175, S-177 provados em integração (`RulesScreen.spec.tsx`, 
 `RuleBatchRevokeDialog.spec.tsx`, 2 casos, com o toast real e o "desfazer" clicado de verdade); S-176
 `🟡` pelo motivo acima.
 
-### B-25 — Lembrete de expiração na web 🔲
+### B-25 — Lembrete de expiração na web ✅
 
 - **selo** na entrada "Regras" da navegação global com o número de regras ativas que expiram em sete
   dias, pelo resumo; zero esconde o selo (S-178);
@@ -271,6 +271,34 @@ prova**: S-173…S-175, S-177 provados em integração (`RulesScreen.spec.tsx`, 
   "Perto de expirar" (S-179);
 - a preferência "me avise por push" nas Configurações, se o plano 06 guardar preferência no servidor
   ([D-18](decisions.md#d-18--por-onde-o-lembrete-de-expiração-chega), S-180).
+
+**Nota de execução.** `RulesNavBadge` lê `useRuleSummary` com o mesmo `expiresBefore` (sete dias,
+`EXPIRY_WARNING_MS`) que a aba "Perto de expirar" já usa (S-160) — a mesma contagem, nunca uma
+segunda lógica que poderia divergir. Zero, carregando ou uma leitura recusada mostram nada: um selo é
+decorativo, nunca um estado de erro próprio. A barra de navegação é desenhada **antes** do login
+também (é como "Workbench" leva à tela de entrar) — `RulesNavBadge` por isso só monta o componente que
+lê o resumo depois de `isAuthenticated`, nunca antes; sem essa guarda, a suíte descobriu que o selo
+pedia `/permission-rules/summary` numa tela de login, uma chamada que duas suítes já existentes
+(`AppFrame.spec.tsx`'s "asks nobody signed out for their tabs", `App.spec.tsx`'s próprio stub de
+`fetch` do fluxo de logout) não esperavam — corrigidas para responder a esse pedido novo, não para
+escondê-lo. `useRuleExpiryReminder` (montado em `ShellHosts.tsx`, ao lado dos outros serviços "para
+quem está assinado") confere o resumo **uma vez por montagem** (um login, ou uma carga nova — nunca
+por intervalo) e só manda o aviso quando há pelo menos uma regra a relatar; o dia (`YYYY-MM-DD`, no
+fuso da própria máquina) fica em `visitor-storage` só quando o aviso realmente sai — um dia sem nada
+não "gasta" a tentativa, e uma leitura que falhou também não, tentando de novo na próxima montagem. A
+mensagem (`notification.rules.expiringSoon`) entrou no catálogo do servidor
+(`NOTIFICATION_CATALOGUE`, 06 · D-19) — toda notificação que a central guarda tem que estar nele — com
+o parâmetro `count`; a ação do aviso ("Open", reusando `rules.action.open`) leva a `/rules?tab=
+expiringSoon`, a mesma rota que o comando de paleta já abre (B-24). S-180 (a preferência por push)
+continua **fora de escopo**, confirmado de novo contra a decisão já tomada em D-18: o plano 06 nunca
+guardou uma preferência "aceitar lembrete por push" no servidor, só por visitante ou um item sem
+relação — não há onde gravá-la. Duas sessões concorrentes do mesmo visitante no mesmo dia podem, em
+teoria, mostrar o aviso duas vezes (cada aba decide por si, antes de qualquer uma escrever o dia) —
+aceito sem tratamento: nenhum cenário pede coordenação entre abas, e mostrar a mesma informação duas
+vezes não é um dano. **Nível de prova**: S-178, S-179 provados em integração
+(`RulesNavBadge.spec.tsx`, 4 casos, incluindo o "nada antes do login"; `useRuleExpiryReminder.spec.tsx`,
+6 casos, com `onNotify` capturando o aviso de verdade e a ação navegando por um router real);
+`notification.rules.expiringSoon` provado contra o catálogo (`notification-catalogue.spec.ts`).
 
 ### B-26 — Usabilidade e ajuda da tela de regras 🔲
 

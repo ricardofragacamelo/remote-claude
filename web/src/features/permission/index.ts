@@ -19,6 +19,8 @@ export type { RuleTab, RulesSearch } from './lib/rules-search';
 export { useRules, ruleQueryKey } from './hooks/useRules';
 export type { Rules } from './hooks/useRules';
 export { useRuleSummary } from './hooks/useRuleSummary';
+export { useRuleExpiryReminder } from './hooks/useRuleExpiryReminder';
+export { RulesNavBadge } from './components/RulesNavBadge';
 export { useRuleMutations } from './hooks/useRuleMutations';
 export type {
   ChangeRuleExpiryResult,

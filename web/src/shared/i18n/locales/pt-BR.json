@@ -282,6 +282,9 @@
     },
     "permission": {
       "waiting": "O {{agent}} está esperando por você em {{folder}}."
+    },
+    "rules": {
+      "expiringSoon": "{{count}} regras expiram em até sete dias."
     }
   },
   "permission": {
@@ -857,6 +860,9 @@
     },
     "global": {
       "label": "Navegação global"
+    },
+    "rulesBadge": {
+      "label": "{{count}} regras expiram em até sete dias"
     }
   },
   "help": {

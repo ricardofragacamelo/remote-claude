@@ -201,6 +201,19 @@ describe('the sign-out', () => {
         );
       }
 
+      // The navigation's own rule-expiry badge (plan 15, B-25) reads this in the background on
+      // every signed-in screen — nothing this suite is about, so it always answers "none soon".
+      if (url.includes('/permission-rules/summary')) {
+        return Promise.resolve(
+          Response.json({
+            byStatus: { active: 0, expired: 0, revoked: 0, disabled: 0 },
+            byDecision: { allow: 0, deny: 0 },
+            byScope: { project: 0, always: 0 },
+            expiringBefore: 0,
+          }),
+        );
+      }
+
       return Promise.resolve(new Response(null, { status: 204 }));
     });
   });

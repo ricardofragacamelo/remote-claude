@@ -70,6 +70,10 @@ describe('the notification catalogue — plan 06, S-174', () => {
     ]);
   });
 
+  it('admits the once-a-day rule-expiry reminder — plan 15, D-18, B-25', () => {
+    expect(problemsOf('notification.rules.expiringSoon', { count: 3 })).toEqual([]);
+  });
+
   it('names every key once', () => {
     const keys = NOTIFICATION_CATALOGUE.map((kind) => kind.messageKey);
 

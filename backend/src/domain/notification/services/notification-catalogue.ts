@@ -30,6 +30,8 @@ export const NOTIFICATION_CATALOGUE: readonly NotificationKind[] = [
   { messageKey: 'notification.changes.rejectedHunk', params: ['name'] },
   // The agent asks something in a folder tab not on screen; the toast leads to it (08 · B-42).
   { messageKey: 'notification.permission.waiting', params: ['folder'] },
+  // Once a day: active rules that expire within seven days (15 · D-18, B-25).
+  { messageKey: 'notification.rules.expiringSoon', params: ['count'] },
 ];
 
 /** One kind of notification: its key, and the names of the parameters it interpolates. */
