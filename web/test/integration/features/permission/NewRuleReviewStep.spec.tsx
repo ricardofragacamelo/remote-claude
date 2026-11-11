@@ -124,14 +124,24 @@ describe('the second step, for allow and deny alike — S-188', () => {
     expect(screen.getByText(t('rules.decision.deny'))).toBeInTheDocument();
   });
 
-  it('shows the simulation summary once it answers — D-15', async () => {
+  it('shows the simulation summary once it answers, inside its own disclosure — D-15', async () => {
     mockSimulation();
     render(<NewRuleReviewStep {...baseProps()} />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByText(t('rules.simulate.heading')));
 
     expect(
-      await screen.findByText(t('rules.wizard.simulationSummary', { limit: 200, count: 2 }), {
-        exact: false,
-      }),
+      await screen.findByText(
+        t('rules.simulate.countsSummary', {
+          limit: 200,
+          wouldAutoAllow: 2,
+          wouldAutoDeny: 0,
+          wouldAsk: 1,
+          unchanged: 3,
+        }),
+        { exact: false },
+      ),
     ).toBeInTheDocument();
   });
 

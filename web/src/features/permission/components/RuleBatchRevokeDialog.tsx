@@ -13,6 +13,7 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Button } from '@/shared/components/ui/button';
 import { RuleFailureMessage } from './RuleFailureMessage';
+import { SimulationPanel } from './SimulationPanel';
 
 export interface RuleBatchRevokeDialogProps {
   readonly rules: readonly PermissionRule[];
@@ -21,6 +22,9 @@ export interface RuleBatchRevokeDialogProps {
 
   /** The write landed — the ids to take off the list this screen has in hand (S-173). */
   onRevoked(ruleIds: readonly string[]): void;
+
+  /** Opens a rule a simulated change would answer with, from the preview below (S-201). */
+  onOpenRule(ruleId: string): void;
 }
 
 /**
@@ -35,6 +39,7 @@ export function RuleBatchRevokeDialog({
   open,
   onOpenChange,
   onRevoked,
+  onOpenRule,
 }: RuleBatchRevokeDialogProps): React.JSX.Element {
   const { t } = useTranslation();
   const { revokeBatch, restoreBatch, inFlight, failure } = useRuleMutations();
@@ -74,6 +79,11 @@ export function RuleBatchRevokeDialog({
             </li>
           ))}
         </ul>
+
+        <section>
+          <h3 className="text-ui-sm font-ui-strong">{t('rules.simulate.revokeHeadingBatch')}</h3>
+          <SimulationPanel remove={ruleIds} onOpenRule={onOpenRule} />
+        </section>
 
         {failure !== null && failure.ruleId === batchFailureId && (
           <RuleFailureMessage messageKey={failure.error.messageKey} params={failure.error.params} />

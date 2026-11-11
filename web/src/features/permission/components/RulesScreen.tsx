@@ -287,6 +287,7 @@ export function RulesScreen({
           open={batchRevokeOpen}
           onOpenChange={setBatchRevokeOpen}
           onRevoked={onBatchRevoked}
+          onOpenRule={onOpenRule}
         />
       )}
 

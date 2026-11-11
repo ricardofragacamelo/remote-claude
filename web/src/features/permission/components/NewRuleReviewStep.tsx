@@ -1,18 +1,17 @@
 import { useTranslation } from 'react-i18next';
 
-import type { AsyncRead } from '@/shared/hooks/useAsyncRead';
 import { Button } from '@/shared/components/ui/button';
 import { useGrantSubmit } from '../hooks/useGrantSubmit';
-import { useRuleSimulation } from '../hooks/useRuleSimulation';
 import { actionText, scopeText } from '../lib/rule-sentence';
-import { grantInputOf, simulationInputOf } from '../lib/new-rule-grant';
+import { grantInputOf } from '../lib/new-rule-grant';
 import { widthGate } from '../lib/new-rule-width';
 import type { PermissionDecision, PersistedScope } from '../types/permission';
-import type { PermissionRule, RulePreview, RuleSimulation } from '../types/rule';
+import type { PermissionRule, RulePreview } from '../types/rule';
 import { CommandTestPanel } from './CommandTestPanel';
 import { RuleAlerts } from './RuleDetailPanel';
 import { RuleDecisionChip } from './RuleDecisionChip';
 import { RuleFailureMessage } from './RuleFailureMessage';
+import { SimulationPanel } from './SimulationPanel';
 
 export interface NewRuleReviewStepProps {
   readonly pattern: string;
@@ -63,7 +62,6 @@ export function NewRuleReviewStep({
     breadthIsBroad: preview.breadth === 'broad',
   });
   const { submitting, error, confirm } = useGrantSubmit(input, onGranted, onFolderRefused);
-  const simulation = useRuleSimulation(simulationInputOf({ pattern, decision, scope, folder }));
 
   const identical = preview.findings.some((finding) => finding.kind === 'identical');
   const width = widthGate(decision, preview.breadth, acknowledgeBroad);
@@ -97,7 +95,18 @@ export function NewRuleReviewStep({
         </p>
       )}
 
-      <SimulationSummary simulation={simulation} />
+      <details className="rounded-md border p-2">
+        <summary className="cursor-pointer text-ui-sm font-ui-strong">
+          {t('rules.simulate.heading')}
+        </summary>
+        <div className="mt-3">
+          <SimulationPanel
+            add={[{ pattern, decision }]}
+            {...(scope === 'project' && folder !== null ? { folder } : {})}
+            onOpenRule={onOpenRule}
+          />
+        </div>
+      </details>
 
       <details className="rounded-md border p-2">
         <summary className="cursor-pointer text-ui-sm font-ui-strong">
@@ -151,26 +160,5 @@ function WidthNotice({
       />
       {t('rules.wizard.acknowledgeBroad')}
     </label>
-  );
-}
-
-function SimulationSummary({
-  simulation,
-}: {
-  readonly simulation: AsyncRead<RuleSimulation>;
-}): React.JSX.Element | null {
-  const { t } = useTranslation();
-
-  if (simulation.status !== 'ready') {
-    return null;
-  }
-
-  return (
-    <p className="text-ui-sm text-muted-foreground">
-      {t('rules.wizard.simulationSummary', {
-        limit: 200,
-        count: simulation.value.counts.wouldAutoAllow + simulation.value.counts.wouldAutoDeny,
-      })}
-    </p>
   );
 }

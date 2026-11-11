@@ -1,5 +1,5 @@
 import type { PermissionDecision, PersistedScope } from '../types/permission';
-import type { GrantRuleInput, SimulateRulesInput } from '../types/rule';
+import type { GrantRuleInput } from '../types/rule';
 
 /**
  * `POST /permission-rules`'s own input, built once from the review step's draft — `acknowledgeBroad`
@@ -21,20 +21,5 @@ export function grantInputOf(args: {
     expiresAt: args.expiresAt,
     ...(args.scope === 'project' && args.folder !== null ? { projectPath: args.folder } : {}),
     ...(args.breadthIsBroad ? { acknowledgeBroad: true } : {}),
-  };
-}
-
-/** "If this rule existed" (D-15, review step): the same draft, read against the last 200
- * invocations of the folder it would reach — every invocation, when `scope` is `always`. */
-export function simulationInputOf(args: {
-  readonly pattern: string;
-  readonly decision: PermissionDecision;
-  readonly scope: PersistedScope;
-  readonly folder: string | null;
-}): SimulateRulesInput {
-  return {
-    add: [{ pattern: args.pattern, decision: args.decision }],
-    ...(args.scope === 'project' && args.folder !== null ? { folder: args.folder } : {}),
-    limit: 200,
   };
 }

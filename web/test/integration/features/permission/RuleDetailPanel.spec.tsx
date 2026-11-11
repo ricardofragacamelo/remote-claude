@@ -354,6 +354,65 @@ describe('the rule detail panel — plan 15, B-22', () => {
     });
   });
 
+  it('offers "simular revogar esta" for an active rule, reading against the trail — S-201', async () => {
+    mockApiGet();
+    const post = vi.spyOn(api, 'post').mockImplementation((path: unknown) => {
+      if (String(path).includes('/simulate')) {
+        return Promise.resolve({
+          counts: { unchanged: 0, wouldAutoAllow: 0, wouldAutoDeny: 0, wouldAsk: 1 },
+          changes: [],
+          withoutFolder: 0,
+          assumedMode: 'ask',
+        });
+      }
+      return Promise.reject(new Error(`unexpected POST ${String(path)}`));
+    });
+    render(
+      <RuleDetailPanel
+        ruleId="rule_1"
+        onClose={() => {}}
+        onOpenRule={() => {}}
+        onShowTrail={() => {}}
+      />,
+    );
+
+    await userEvent.click(await screen.findByText(t('rules.simulate.revokeHeading')));
+
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith('/permission-rules/simulate', {
+        remove: ['rule_1'],
+        limit: 200,
+      });
+    });
+    expect(
+      await screen.findByText(
+        t('rules.simulate.countsSummary', {
+          limit: 200,
+          wouldAutoAllow: 0,
+          wouldAutoDeny: 0,
+          wouldAsk: 1,
+          unchanged: 0,
+        }),
+        { exact: false },
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('offers no "simular revogar esta" for a rule that is no longer active', async () => {
+    mockApiGet({ rule: { ...rule, status: 'revoked', revokedAt: '2026-09-23T09:00:00.000Z' } });
+    render(
+      <RuleDetailPanel
+        ruleId="rule_1"
+        onClose={() => {}}
+        onOpenRule={() => {}}
+        onShowTrail={() => {}}
+      />,
+    );
+
+    await screen.findByText('shell(git status:*)');
+    expect(screen.queryByText(t('rules.simulate.revokeHeading'))).not.toBeInTheDocument();
+  });
+
   it('shows the failure, and keeps it beside the rule it was for', async () => {
     mockApiGet();
     const error = {

@@ -1,6 +1,6 @@
 import { RuleWizardOption } from './RuleWizardOption';
 
-export interface RadioOptionGroupProps<T extends string> {
+export interface RadioOptionGroupProps<T extends string | number> {
   readonly label: string;
   readonly options: readonly T[];
   readonly value: T | null;
@@ -12,11 +12,12 @@ export interface RadioOptionGroupProps<T extends string> {
 
 /**
  * One choice of a single-select group, picked from a short list of options named by `labelOf` —
- * the shape the kind step (wizard and command tester alike) and the command tester's own mode
- * picker all share, down to the token (plan 15, B-27, B-28): a `radiogroup` of `RuleWizardOption`s,
- * the outer layout and each option's own class left to the caller.
+ * the shape the kind step (wizard and command tester alike), the command tester's own mode picker,
+ * and the simulation panel's own limit picker (a number, not a string) all share, down to the
+ * token (plan 15, B-27, B-28, B-29): a `radiogroup` of `RuleWizardOption`s, the outer layout and
+ * each option's own class left to the caller.
  */
-export function RadioOptionGroup<T extends string>({
+export function RadioOptionGroup<T extends string | number>({
   label,
   options,
   value,

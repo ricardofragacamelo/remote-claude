@@ -59,6 +59,29 @@ const unexpected = {
   traceId: 'trace-1',
 };
 
+/** What revoking nothing would bring back — the batch-revoke dialog's own simulation panel
+ * (S-201) asks for this as soon as it mounts, same as the revoke preview did before it (S-173). */
+const EMPTY_SIMULATION = {
+  counts: { unchanged: 0, wouldAutoAllow: 0, wouldAutoDeny: 0, wouldAsk: 0 },
+  changes: [],
+  withoutFolder: 0,
+  assumedMode: 'ask' as const,
+};
+
+/** `api.post`, answering `/permission-rules/simulate` on its own — the caller's own `other`
+ * handles whatever it is itself testing (`/permission-rules/revoke`, and so on). */
+function mockApiPost(
+  other: (path: string, body?: unknown) => Promise<unknown>,
+): ReturnType<typeof vi.spyOn> {
+  return vi.spyOn(api, 'post').mockImplementation((path: unknown, body?: unknown) => {
+    const p = String(path);
+    if (p.includes('/simulate')) {
+      return Promise.resolve(EMPTY_SIMULATION);
+    }
+    return other(p, body);
+  });
+}
+
 /** `api.get`, answering the listing, the summary, and the disabled rules' own listing — by path. */
 function mockApiGet(
   options: {
@@ -1130,12 +1153,16 @@ describe('the rules screen — plan 15, B-21', () => {
 
     it('revokes the lot with a preview, removes the rows, and offers "desfazer" — S-173', async () => {
       mockApiGet({ rules: [ruleA, ruleB] });
-      const post = vi.spyOn(api, 'post').mockResolvedValue({
-        rules: [
-          { ...ruleA, status: 'revoked' },
-          { ...ruleB, status: 'revoked' },
-        ],
-      });
+      const post = mockApiPost((p) =>
+        p === '/permission-rules/revoke'
+          ? Promise.resolve({
+              rules: [
+                { ...ruleA, status: 'revoked' },
+                { ...ruleB, status: 'revoked' },
+              ],
+            })
+          : Promise.reject(new Error(`unexpected POST ${p}`)),
+      );
       render(
         <RulesScreen
           search={DEFAULT_RULES_SEARCH}
@@ -1170,7 +1197,7 @@ describe('the rules screen — plan 15, B-21', () => {
 
     it('a double click on Confirm sends the batch once — S-174', async () => {
       mockApiGet({ rules: [ruleA] });
-      const post = vi.spyOn(api, 'post').mockReturnValue(new Promise(() => undefined));
+      const post = mockApiPost(() => new Promise(() => undefined));
       render(
         <RulesScreen
           search={DEFAULT_RULES_SEARCH}
@@ -1188,16 +1215,20 @@ describe('the rules screen — plan 15, B-21', () => {
       await userEvent.click(confirm);
       await userEvent.click(confirm);
 
-      expect(post).toHaveBeenCalledTimes(1);
+      expect(
+        post.mock.calls.filter(([path]: [unknown]) => path === '/permission-rules/revoke'),
+      ).toHaveLength(1);
     });
 
     it('a refusal keeps every row, with the translated error inline — S-175', async () => {
       mockApiGet({ rules: [ruleA, ruleB] });
-      vi.spyOn(api, 'post').mockRejectedValue({
-        code: 'PERMISSION_NOT_OWNED',
-        messageKey: 'permission.error.ruleNotOwned',
-        params: {},
-      });
+      mockApiPost(() =>
+        Promise.reject({
+          code: 'PERMISSION_NOT_OWNED',
+          messageKey: 'permission.error.ruleNotOwned',
+          params: {},
+        }),
+      );
       render(
         <RulesScreen
           search={DEFAULT_RULES_SEARCH}
@@ -1223,7 +1254,11 @@ describe('the rules screen — plan 15, B-21', () => {
 
     it('registers "revoke selected" for the palette, only while something is selected — S-176', async () => {
       mockApiGet({ rules: [ruleA] });
-      vi.spyOn(api, 'post').mockResolvedValue({ rules: [{ ...ruleA, status: 'revoked' }] });
+      mockApiPost((p) =>
+        p === '/permission-rules/revoke'
+          ? Promise.resolve({ rules: [{ ...ruleA, status: 'revoked' }] })
+          : Promise.reject(new Error(`unexpected POST ${p}`)),
+      );
       render(
         <RulesScreen
           search={DEFAULT_RULES_SEARCH}

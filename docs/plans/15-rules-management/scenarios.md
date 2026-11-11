@@ -330,9 +330,9 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-200 | "se esta regra existisse": resumo e lista; trilha vazia explica por que não há o que simular | eq | integração | — | B-29 | ⬜ |
-| S-201 | "se eu revogar esta", no detalhe, lista o que voltaria a ser perguntado | eq | integração | — | B-29 | ⬜ |
-| S-202 | o seletor de quantas invocações ler respeita o teto | fron | integração | — | B-29 | ⬜ |
+| S-200 | "se esta regra existisse": resumo e lista; trilha vazia explica por que não há o que simular | eq | integração | — | B-29 | ✅ |
+| S-201 | "se eu revogar esta", no detalhe, lista o que voltaria a ser perguntado | eq | integração | — | B-29 | ✅ |
+| S-202 | o seletor de quantas invocações ler respeita o teto | fron | integração | — | B-29 | ✅ |
 
 ## Modelos e duplicar pela tela — B-30
 
@@ -393,6 +393,7 @@ O protocolo exige justificar dimensão vazia, não omiti-la.
 | Hooks (B-20) | `fron`, `est`, `idem` | o hook repassa o que o backend decide; fronteira e estado estão nas rotas (F1) e nas telas (S-160, S-169) |
 | Telas (B-21…B-32) | `conc` nas tarefas B-22, B-25, B-26, B-28…B-32 | a corrida que existe na web — duas respostas para o mesmo filtro, dois cliques no mesmo botão — está em S-158, S-174, S-194; as outras tarefas não disparam escrita concorrente |
 | Teste de comando (B-28) | `fron`, `idem` | `/permission-rules/evaluate` não escreve nada: é leitura contra o estado atual das regras, a mesma entrada dá a mesma saída por construção (como B-10/B-11/B-16); os tetos de `matching`/`reasons`/`caveats` (100/5/10) são do contrato e já provados em B-14 — o painel só renderiza o que volta |
+| Simular contra a trilha (B-29) | `err`, `est`, `idem` | `/permission-rules/simulate` também não escreve nada — mesma razão da B-28 — e não tem seletor de pasta próprio (a pasta vem de quem incorpora o painel, já validada ali); o seletor de quantas invocações é fechado (50/200/1000, sempre um dos três), e os ids de `remove` vêm só de regras já exibidas na tela, nunca digitados — não sobra entrada mal formada para o servidor recusar |
 | E2E (B-33…B-36) | `fron`, `conc`, `idem` | fronteiras (teto de validade, de lote, de importação, de simulação) e corridas (revogar × estender, lote × avulso, importação dupla) são exatas e baratas em integração (S-66, S-74, S-84, S-126, S-141, S-146); pela porta do usuário só acrescentariam minutos ao portão 9 |
 
 ---

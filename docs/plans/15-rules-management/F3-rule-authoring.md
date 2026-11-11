@@ -173,7 +173,7 @@ viva ficou de fora. Uma tarefa futura pode revisitar isso se abrir um caminho ma
 leitura (um endpoint que liste sessões vivas do chamador, por exemplo, em vez do estado só-cliente
 de hoje).
 
-### B-29 — Simular contra a trilha 🔲
+### B-29 — Simular contra a trilha ✅
 
 Pela [D-15](decisions.md#d-15--quantas-invocações-a-simulação-lê-e-o-que-ela-conta):
 
@@ -183,6 +183,33 @@ Pela [D-15](decisions.md#d-15--quantas-invocações-a-simulação-lê-e-o-que-el
   perguntado (S-201);
 - seletor de quantas invocações ler (50, 200, 1000), avisando que o modo da sessão não está na trilha e
   quantas não tinham pasta registrada (S-202); trilha vazia explica por que não há o que simular.
+
+**Nota de execução**: um único componente (`SimulationPanel`), reutilizado em três lugares — dentro
+da revisão do assistente (atrás de um `<details>`, substituindo o resumo de uma linha que já
+existia desde a B-27), no detalhe de uma regra ativa (`RuleDetailPanel`, "Simular revogar esta",
+atrás de outro `<details>`, só para `status === 'active'`) e no diálogo de revogação em lote
+(`RuleBatchRevokeDialog`, "Simular revogar estas", sempre visível — ali já é um momento de confirmar
+uma ação destrutiva, diferente dos outros dois, supletivos). O seletor de limite (50/200/1000)
+mora dentro do próprio painel, não em cada lugar que o incorpora — `RadioOptionGroup` (B-28) foi
+generalizado para `T extends string | number` para aceitar os três números sem conversão.
+`isEmptyTrail` (`lib/simulation-input.ts`) distingue "a trilha está vazia" (nada foi lido, nem
+sequer `withoutFolder`) de "nada mudaria" (a trilha tem invocações, mas nenhuma muda de veredito) —
+duas mensagens diferentes, nunca confundidas. A coluna "onde" que o texto do plano menciona
+(S-200) não entrou: o contrato de `/permission-rules/simulate` nunca devolveu pasta por item —
+só agregada, no `withoutFolder` — e reimplementar esse join no cliente seria o mesmo risco já
+registrado nas notas da B-22/B-28 (duplicar lógica do domínio). Cada item mostra tipo+quando
+(`ruleInvocationLabel`, já existente desde a B-22) e antes→depois em palavras.
+
+**Achado e corrigido durante a própria tarefa**: embutir `SimulationPanel` nos três lugares acima
+expôs testes de tela já existentes (`RulesScreen.spec.tsx`, 4 testes do diálogo de revogação em
+lote) que mockavam `api.post` de forma genérica (`mockResolvedValue`/`mockRejectedValue` para
+**qualquer** chamada) — o novo painel, ao montar, chama `/permission-rules/simulate` também, e
+recebia de volta a resposta pensada só para `/permission-rules/revoke`, quebrando em runtime
+(`isEmptyTrail` lendo `counts` de um objeto que não tinha `counts`). Corrigido nos próprios testes,
+trocando o mock genérico por um que decide pela rota (o mesmo padrão já usado em
+`CommandTestPanel.spec.tsx`, B-28) — nenhuma mudança de produto, só os testes passaram a refletir
+que agora há duas chamadas, não uma. `SimulationPanel` também ganhou o estado `failed` que faltava
+(só tinha `loading`/`ready` na primeira versão) — sem ele, uma leitura recusada não mostrava nada.
 
 ### B-30 — Modelos e duplicar 🔲
 

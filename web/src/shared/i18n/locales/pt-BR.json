@@ -802,7 +802,6 @@
       "acknowledgeBroad": "Eu entendo que isto alcança mais do que um caso exato.",
       "unboundedBlocked": "“{{pattern}}” é largo demais para permitir — escreva um padrão mais estreito, ou bloqueie em vez de permitir.",
       "identicalBlocked": "Já existe uma regra igual a esta — abra-a em vez de criar outra.",
-      "simulationSummary": "Nas suas últimas {{limit}} invocações, esta regra teria respondido {{count}} que foram perguntadas a você.",
       "previewLoading": "Lendo o que isto faria…",
       "screenTitle": "Nova regra",
       "screenPurpose": "Escreva uma regra de antemão, em vez de esperar o {{agent}} perguntar.",
@@ -831,6 +830,23 @@
       "verdictAskReadOnly": "O {{agent}} perguntaria a você: no modo somente leitura, regras que permitem não respondem.",
       "verdictAskNoRule": "O {{agent}} perguntaria a você: nenhuma regra casa.",
       "purpose": "Teste se um comando seria permitido, bloqueado ou perguntado, sem executá-lo."
+    },
+    "simulate": {
+      "heading": "Simular contra a trilha",
+      "limitLabel": "Quantas invocações ler",
+      "loading": "Lendo a trilha…",
+      "emptyTrail": "Ainda não há nada na trilha para simular contra.",
+      "noChanges": "Nada mudaria, nas invocações lidas.",
+      "countsSummary": "Das últimas {{limit}} invocações: {{wouldAutoAllow}} passariam a ser permitidas sem perguntar, {{wouldAutoDeny}} passariam a ser bloqueadas, {{wouldAsk}} ainda perguntariam, {{unchanged}} sem mudança.",
+      "withoutFolder": "{{count}} delas não tinham pasta registrada, e não foram lidas.",
+      "assumedMode": "Lidas como se cada uma tivesse perguntado primeiro — o modo da sessão não fica guardado na trilha.",
+      "changesHeading": "O que mudaria",
+      "changeLine": "{{before}} → {{after}}",
+      "outcomeAllow": "permitido",
+      "outcomeDeny": "bloqueado",
+      "outcomeAsk": "perguntado",
+      "revokeHeading": "Simular revogar esta",
+      "revokeHeadingBatch": "Simular revogar estas"
     }
   },
   "transcript": {

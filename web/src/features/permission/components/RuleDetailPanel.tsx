@@ -27,6 +27,7 @@ import { RuleDecisionChip } from './RuleDecisionChip';
 import { RuleExpiryDialog } from './RuleExpiryDialog';
 import { RuleFailureMessage } from './RuleFailureMessage';
 import { RuleLastUsedCell, RuleUsageCell, RuleValidityCell } from './RuleValidityCell';
+import { SimulationPanel } from './SimulationPanel';
 
 export interface RuleDetailPanelProps {
   readonly ruleId: string;
@@ -163,6 +164,17 @@ export function RuleDetailPanel({
           </section>
 
           <RuleHistorySection ruleId={ruleId} locale={i18n.language} />
+
+          {rule.status === 'active' && (
+            <details className="rounded-md border p-2">
+              <summary className="cursor-pointer text-ui-sm font-ui-strong">
+                {t('rules.simulate.revokeHeading')}
+              </summary>
+              <div className="mt-3">
+                <SimulationPanel remove={[ruleId]} onOpenRule={onOpenRule} />
+              </div>
+            </details>
+          )}
 
           <RuleActions
             rule={rule}
