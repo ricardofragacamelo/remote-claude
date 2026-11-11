@@ -6,6 +6,7 @@ import { axe } from 'jest-axe';
 import { commandRegistry } from '@/features/commands';
 import { DEFAULT_RULES_SEARCH, RulesScreen } from '@/features/permission';
 import { api } from '@/shared/api/api';
+import { applyTheme } from '@/shared/hooks/useTheme';
 import { render, translator } from '../../../support/render';
 import { aViewport } from '../../../support/viewport';
 
@@ -557,6 +558,23 @@ describe('the rules screen — plan 15, B-21', () => {
     await screen.findByText(alwaysRule.pattern);
 
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('has no accessibility violation in the dark theme — S-183', async () => {
+    applyTheme('dark');
+    mockApiGet({ rules: [alwaysRule, projectRule] });
+    const { container } = render(
+      <RulesScreen
+        search={DEFAULT_RULES_SEARCH}
+        onSearch={vi.fn()}
+        onOpenRule={vi.fn()}
+        onRecreate={vi.fn()}
+      />,
+    );
+    await screen.findByText(alwaysRule.pattern);
+
+    expect(await axe(container)).toHaveNoViolations();
+    applyTheme('light');
   });
 
   describe('the filters — plan 15, B-21', () => {

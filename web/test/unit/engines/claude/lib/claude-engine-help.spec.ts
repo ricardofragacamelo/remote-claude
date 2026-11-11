@@ -2,10 +2,38 @@ import { describe, expect, it } from 'vitest';
 import type { TFunction } from 'i18next';
 
 import { createI18n } from '@/shared/i18n';
-import { pluginsSectionHelp } from '@/engines/claude/lib/claude-engine-help';
+import { pluginsSectionHelp, rulesSectionHelp } from '@/engines/claude/lib/claude-engine-help';
 
 const en = createI18n('en').t as TFunction;
 const pt = createI18n('pt-BR').t as TFunction;
+
+/**
+ * The rules screen's own addition (plan 15, B-26) — what Claude decides before these rules are ever
+ * asked: a project's own `deny` still applying, its `allow` not; accept-edits; reads approved on
+ * their own.
+ */
+describe('rulesSectionHelp — what Claude decides before the rules screen', () => {
+  it('has its own id', () => {
+    expect(rulesSectionHelp(en).id).toBe('claude-rules-precedence');
+  });
+
+  it('says a project’s own deny still applies, its allow does not', () => {
+    const entry = rulesSectionHelp(en);
+
+    expect(entry.heading).toBe(en('engines.claude.help.rulesPrecedenceHeading'));
+    expect(entry.body).toBe(en('engines.claude.help.rulesPrecedenceBody'));
+    expect(entry.body).toMatch(/deny.*still applies/i);
+    expect(entry.body).toMatch(/allow.*does not/i);
+  });
+
+  it('is translated in pt-BR too, by the same id', () => {
+    const entry = rulesSectionHelp(pt);
+
+    expect(entry.id).toBe('claude-rules-precedence');
+    expect(entry.heading).toBe(pt('engines.claude.help.rulesPrecedenceHeading'));
+    expect(entry.body).toBe(pt('engines.claude.help.rulesPrecedenceBody'));
+  });
+});
 
 /**
  * The help of "Plugins" (plan 13, B-30, S-138) — Claude's own extension, so it names Claude by its

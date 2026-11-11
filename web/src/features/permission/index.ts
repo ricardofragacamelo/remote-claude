@@ -21,6 +21,9 @@ export type { Rules } from './hooks/useRules';
 export { useRuleSummary } from './hooks/useRuleSummary';
 export { useRuleExpiryReminder } from './hooks/useRuleExpiryReminder';
 export { RulesNavBadge } from './components/RulesNavBadge';
+export { rulesHelpExtras } from './lib/rules-help-extras';
+export type { RulesHelpExtra } from './lib/rules-help-extras';
+export { rulesScreenHelp } from './lib/rules-help';
 export { useRuleMutations } from './hooks/useRuleMutations';
 export type {
   ChangeRuleExpiryResult,

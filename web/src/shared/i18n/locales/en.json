@@ -667,7 +667,21 @@
     "help": {
       "what": "Every rule you granted from a permission request: which tool, which pattern, where it applies and until when. Revoking is one click, and the next matching request asks you again.",
       "states": "An active rule answers requests without asking. A rule close to expiring — less than seven days left — is marked. An expired rule stays listed, marked as such; a revoked one leaves the list. A revocation that fails keeps the row, with the reason beside it. A rule written for an agent in a form this version cannot translate is listed as disabled, with the pattern it had: it answers nothing, and revoking is all it offers.",
-      "notRecorded": "Rules that only last a session are not listed: they end with it. This screen does not show which requests a rule answered — the audit trail does."
+      "notRecorded": "Rules that only last a session are not listed: they end with it. This screen does not show which requests a rule answered — the audit trail does.",
+      "precedenceHeading": "Allow and Block",
+      "precedenceBody": "A rule either allows or blocks. When more than one rule matches a request, any block that matches wins — an allow never overrides a block.",
+      "scopeHeading": "Where a rule reaches",
+      "scopeBody": "“This folder” reaches that folder and its subfolders, not only the exact one. “Everywhere” reaches any folder of yours, in any session.",
+      "readOnlyHeading": "Read-only mode",
+      "readOnlyBody": "In read-only mode, no rule that allows answers on its own — {{agent}} still asks, every time.",
+      "patternHeading": "What a prefix reaches",
+      "patternBody": "An allow of a shell prefix does not answer a chained command — one joined by an operator such as &&, ; or |, or a substitution such as $(…) — even written inside quotes: with no shell parser, the gap closes toward asking more, never authorising more. A block of the same prefix matches if any segment of the line matches, not only the whole command.",
+      "sandboxHeading": "A block is not a sandbox",
+      "sandboxBody": "A block on a shell command is a speed bump, not a sandbox: an alias, a script, xargs, or an encoded form of the same command can still get through. What stops a dangerous command is the person running it — a block is the reminder that somebody already thought about this one.",
+      "recordedHeading": "What goes to the trail",
+      "recordedBody": "Granting, changing validity, revoking, restoring, exporting and importing a rule all go to the audit trail. Testing a command and simulating a rule record nothing.",
+      "disabledHeading": "Disabled rules",
+      "disabledBody": "A rule written for an agent in a form this version cannot translate to the canonical pattern is kept, disabled: it answers nothing. Recriar opens the rule-authoring assistant with the same decision, scope and folder — never the untranslatable pattern itself."
     },
     "tabs": {
       "label": "Rule status",
@@ -2863,7 +2877,9 @@
         "projectHookHeading": "A hook is code that runs on this machine",
         "projectHookBody": "A hook is a command the project's own settings.json wires to an event — every tool use, say. It is not a suggestion: it runs on this machine, with nobody approving it here, exactly as written. This screen shows every hook in full so nothing about it stays hidden.",
         "projectPermissionsHeading": "Why these permissions do not apply here",
-        "projectPermissionsBody": "A project's own \"deny\" rule still applies in this product's sessions. Its \"allow\" rules do not: this product clears the folder's trust mark before a session opens, so nothing here is pre-approved the way it would be running Claude Code directly, in a terminal, on that same folder."
+        "projectPermissionsBody": "A project's own \"deny\" rule still applies in this product's sessions. Its \"allow\" rules do not: this product clears the folder's trust mark before a session opens, so nothing here is pre-approved the way it would be running Claude Code directly, in a terminal, on that same folder.",
+        "rulesPrecedenceHeading": "What Claude decides before this screen",
+        "rulesPrecedenceBody": "A project's own “deny” (.claude/settings.json) still applies in this product's sessions; its “allow” does not — the folder's trust mark is cleared before a session opens. A session in “accept edits” mode answers file edits without asking, and some reads Claude considers safe are approved on their own. None of that is a rule this screen can show or change."
       },
       "account": {
         "title": "Account",

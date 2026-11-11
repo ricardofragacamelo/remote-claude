@@ -8,6 +8,7 @@ import {
   agentSettingsShortcuts,
   defaultsExtraFields,
 } from '@/features/agent-settings';
+import { rulesHelpExtras } from '@/features/permission';
 import { sensitiveFiles } from '@/shared/lib/sensitive-files';
 import { AccountSection } from './components/AccountSection';
 import { ClaudeShortcuts } from './components/ClaudeShortcuts';
@@ -20,6 +21,7 @@ import {
   outputStyleHelp,
   pluginsSectionHelp,
   projectSectionHelp,
+  rulesSectionHelp,
   skillsSectionHelp,
   usageSectionHelp,
 } from './lib/claude-engine-help';
@@ -108,6 +110,12 @@ export function registerClaudeEngine(): () => void {
       labelKey: 'engines.claude.defaults.outputStyle',
       useField: useOutputStyle,
       help: outputStyleHelp,
+    }),
+    rulesHelpExtras.register({
+      id: 'claude.rulesPrecedence',
+      engine: ENGINE,
+      position: 100,
+      help: rulesSectionHelp,
     }),
     globalNavigation.register({
       // How the agent works on this machine (plan 13): a screen of its own, never a section of the

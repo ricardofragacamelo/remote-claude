@@ -667,7 +667,21 @@
     "help": {
       "what": "Cada regra que você concedeu a partir de um pedido de permissão: qual tool, qual padrão, onde vale e até quando. Revogar é um clique, e o próximo pedido que casar volta a perguntar.",
       "states": "Uma regra ativa responde aos pedidos sem perguntar. Uma regra perto de expirar — menos de sete dias — fica marcada. Uma regra expirada continua na lista, marcada como tal; uma revogada sai da lista. Uma revogação que falha mantém a linha, com o motivo ao lado. Uma regra escrita para um agente numa forma que esta versão não traduz aparece como desligada, com o padrão que tinha: ela não responde nada, e só oferece a revogação.",
-      "notRecorded": "Regras que só valem para uma sessão não aparecem: elas acabam com ela. Esta tela não mostra quais pedidos uma regra respondeu — a trilha de auditoria mostra."
+      "notRecorded": "Regras que só valem para uma sessão não aparecem: elas acabam com ela. Esta tela não mostra quais pedidos uma regra respondeu — a trilha de auditoria mostra.",
+      "precedenceHeading": "Permite e Bloqueia",
+      "precedenceBody": "Uma regra permite ou bloqueia. Quando mais de uma regra casa com um pedido, qualquer bloqueio que case vence — um permite nunca derruba um bloqueio.",
+      "scopeHeading": "Onde uma regra vale",
+      "scopeBody": "“Nesta pasta” alcança essa pasta e as subpastas dela, não só a exata. “Em todo lugar” alcança qualquer pasta sua, em qualquer sessão.",
+      "readOnlyHeading": "Modo somente leitura",
+      "readOnlyBody": "No modo somente leitura, nenhuma regra que permite responde sozinha — o {{agent}} pergunta sempre.",
+      "patternHeading": "O que um prefixo alcança",
+      "patternBody": "Um permite de prefixo de shell não responde um comando encadeado — unido por um operador como &&, ; ou |, ou uma substituição como $(…) — mesmo entre aspas: sem analisador de shell, a falha se fecha para perguntar mais, nunca para autorizar mais. Um bloqueio do mesmo prefixo casa se qualquer segmento da linha casar, não só o comando inteiro.",
+      "sandboxHeading": "Bloquear não é sandbox",
+      "sandboxBody": "Um bloqueio em comando de shell é uma lombada, não um sandbox: um alias, um script, o xargs ou uma forma codificada do mesmo comando ainda passam. O que segura um comando perigoso é quem o roda — um bloqueio é o aviso de que alguém já pensou nisso.",
+      "recordedHeading": "O que vai para a trilha",
+      "recordedBody": "Conceder, mudar a validade, revogar, restaurar, exportar e importar uma regra vão para a trilha de auditoria. Testar um comando e simular uma regra não gravam nada.",
+      "disabledHeading": "Regras desligadas",
+      "disabledBody": "Uma regra escrita para um agente numa forma que esta versão não consegue traduzir para o padrão canônico fica guardada, desligada: ela não responde nada. Recriar abre o assistente de regras com a mesma decisão, escopo e pasta — nunca o padrão intraduzível em si."
     },
     "tabs": {
       "label": "Estado da regra",
@@ -2863,7 +2877,9 @@
         "projectHookHeading": "Hook é código que roda nesta máquina",
         "projectHookBody": "Um hook é um comando que o settings.json do projeto liga a um evento — todo uso de ferramenta, por exemplo. Não é uma sugestão: ele roda nesta máquina, sem ninguém aprovar aqui, exatamente como escrito. Esta tela mostra cada hook por extenso para que nada fique escondido.",
         "projectPermissionsHeading": "Por que estas permissões não valem aqui",
-        "projectPermissionsBody": "A regra \"deny\" de um projeto continua valendo nas sessões deste produto. As regras \"allow\" não: este produto limpa a marca de confiança da pasta antes de abrir uma sessão, então nada aqui já vem aprovado como valeria rodando o Claude Code direto, num terminal, naquela mesma pasta."
+        "projectPermissionsBody": "A regra \"deny\" de um projeto continua valendo nas sessões deste produto. As regras \"allow\" não: este produto limpa a marca de confiança da pasta antes de abrir uma sessão, então nada aqui já vem aprovado como valeria rodando o Claude Code direto, num terminal, naquela mesma pasta.",
+        "rulesPrecedenceHeading": "O que o Claude decide antes desta tela",
+        "rulesPrecedenceBody": "O “bloqueia” próprio do projeto (.claude/settings.json) ainda vale nas sessões deste produto; o “permite” dele não — a marca de confiança da pasta é limpa antes de uma sessão abrir. Uma sessão no modo “aceitar edições” responde edições de arquivo sem perguntar, e algumas leituras que o Claude considera seguras são aprovadas por conta própria. Nada disso é uma regra que esta tela possa mostrar ou mudar."
       },
       "account": {
         "title": "Conta",

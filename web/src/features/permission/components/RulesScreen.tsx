@@ -214,6 +214,9 @@ export function RulesScreen({
       run: () => {
         setBatchRevokeOpen(true);
       },
+      // Registered (and so bound) only while this screen is mounted, with something selected — the
+      // same guard `when` already gives the palette entry (plan 15, B-26, S-184).
+      keys: [{ key: 'Mod+K R', context: 'global' }],
     },
     {
       id: 'rules.openExpiringSoon',
@@ -223,6 +226,7 @@ export function RulesScreen({
       run: () => {
         onTab('expiringSoon');
       },
+      keys: [{ key: 'Mod+K E', context: 'global' }],
     },
   ]);
 

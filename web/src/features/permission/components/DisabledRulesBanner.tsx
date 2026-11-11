@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { LearnMore } from '@/shared/components/LearnMore';
 import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
@@ -43,7 +44,10 @@ export function DisabledRulesBanner({
 
   return (
     <div className="flex items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-      <span>{t('rules.disabled.banner', { count })}</span>
+      <span className="flex flex-wrap items-center gap-2">
+        {t('rules.disabled.banner', { count })}
+        <LearnMore section="rules-disabled" topic={t('rules.disabled.title')} />
+      </span>
       <Button
         variant="outline"
         size="touch"

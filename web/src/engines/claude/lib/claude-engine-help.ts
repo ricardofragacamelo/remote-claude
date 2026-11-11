@@ -92,6 +92,19 @@ export function skillsSectionHelp(t: TFunction): HelpExtra[] {
 }
 
 /**
+ * The rules screen's own addition (plan 15, B-26): what Claude decides before these rules are ever
+ * asked — a project's own `deny` still applying, its `allow` not; accept-edits answering file edits
+ * on its own; some reads approved without asking. None of it is a rule this screen can show or change.
+ */
+export function rulesSectionHelp(t: TFunction): HelpExtra {
+  return {
+    id: 'claude-rules-precedence',
+    heading: t('engines.claude.help.rulesPrecedenceHeading'),
+    body: t('engines.claude.help.rulesPrecedenceBody'),
+  };
+}
+
+/**
  * The help of "Project", written for somebody who has never seen `.claude/` before (plan 13, B-40):
  * what `CLAUDE.md` is and where Claude looks for one, what a slash command and a subagent are (and
  * why a subagent's own frontmatter can widen what it may do), what an output style changes, what a

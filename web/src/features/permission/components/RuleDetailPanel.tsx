@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { PermissionRuleFinding } from '@remote-claude/contracts';
 
 import { IconButton } from '@/shared/components/IconButton';
+import { LearnMore } from '@/shared/components/LearnMore';
 import { LoadMore } from '@/shared/components/LoadMore';
 import { ListStatus } from '@/shared/components/ListStatus';
 import { LoadStatus } from '@/shared/components/LoadStatus';
@@ -200,7 +201,12 @@ function RuleHeaderFacts({
         </p>
       )}
 
-      {sentence !== null && <p className="text-ui-sm">{sentence}</p>}
+      {sentence !== null && (
+        <p className="flex flex-wrap items-center gap-2 text-ui-sm">
+          {sentence}
+          <LearnMore section="rules-pattern" topic={t('rules.help.patternHeading')} />
+        </p>
+      )}
     </>
   );
 }

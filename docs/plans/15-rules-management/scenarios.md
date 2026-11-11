@@ -296,10 +296,10 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-181 | a gaveta de ajuda tem todos os tópicos, traduzidos; cada "saiba mais" abre a seção certa | eq | integração | — | B-26 | ⬜ |
-| S-182 | todo controle de ícone tem tooltip e nome acessível | eq | integração | — | B-26 | ⬜ |
-| S-183 | axe sem violação na lista, com o detalhe aberto e com um diálogo aberto, nos temas claro e escuro | eq | integração | — | B-26 | ⬜ |
-| S-184 | os atalhos da tela estão na paleta e funcionam | eq | integração | — | B-26 | ⬜ |
+| S-181 | a gaveta de ajuda tem todos os tópicos, traduzidos; cada "saiba mais" abre a seção certa | eq | integração | — | B-26 | ✅ |
+| S-182 | todo controle de ícone tem tooltip e nome acessível | eq | integração | — | B-26 | ✅ |
+| S-183 | axe sem violação na lista, com o detalhe aberto e com um diálogo aberto, nos temas claro e escuro | eq | integração | — | B-26 | ✅ |
+| S-184 | os atalhos da tela estão na paleta e funcionam | eq | integração | — | B-26 | ✅ |
 
 ## O assistente de criação — B-27
 

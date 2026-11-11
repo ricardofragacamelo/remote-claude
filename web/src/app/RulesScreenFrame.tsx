@@ -2,9 +2,10 @@ import { useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { RulesScreen } from '@/features/permission';
+import { RulesScreen, rulesHelpExtras, rulesScreenHelp } from '@/features/permission';
 import type { RulesSearch } from '@/features/permission';
 import { ScreenFrame } from '@/shared/components/ScreenFrame';
+import { useRegistry } from '@/shared/hooks/useRegistry';
 import { useShellShortcuts } from './screen-shortcuts';
 
 export interface RulesScreenFrameProps {
@@ -32,9 +33,10 @@ export function RulesScreenFrame({
   onOpenRule,
   children,
 }: RulesScreenFrameProps): React.JSX.Element {
-  const shortcuts = useShellShortcuts();
+  const shortcuts = useShellShortcuts(['rules.revokeSelected', 'rules.openExpiringSoon']);
   const { t } = useTranslation();
   const onRecreate = useCallback((): void => undefined, []);
+  const engineExtras = useRegistry(rulesHelpExtras);
 
   return (
     <ScreenFrame
@@ -42,6 +44,7 @@ export function RulesScreenFrame({
       purpose={t('rules.screen.purpose')}
       help="rules.help"
       shortcuts={shortcuts}
+      extra={rulesScreenHelp(t, engineExtras)}
     >
       <div className="flex gap-4">
         <div className="min-w-0 flex-1">

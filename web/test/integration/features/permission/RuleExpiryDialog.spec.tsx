@@ -13,6 +13,7 @@ import {
 import type { PermissionRule } from '@/features/permission/types/rule';
 import { Toaster } from '@/shared/components/ui/sonner';
 import { api } from '@/shared/api/api';
+import { applyTheme } from '@/shared/hooks/useTheme';
 import { render, translator } from '../../../support/render';
 
 const t = translator('en');
@@ -425,5 +426,21 @@ describe('the extend/shorten dialog — plan 15, B-23', () => {
     );
 
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('has no axe violations in the dark theme — S-183', async () => {
+    applyTheme('dark');
+    const { container } = render(
+      <RuleExpiryDialog
+        rule={nearRule}
+        direction="extend"
+        open
+        onOpenChange={() => {}}
+        onChanged={() => {}}
+      />,
+    );
+
+    expect(await axe(container)).toHaveNoViolations();
+    applyTheme('light');
   });
 });

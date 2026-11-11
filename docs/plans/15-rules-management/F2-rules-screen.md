@@ -300,7 +300,7 @@ vezes não é um dano. **Nível de prova**: S-178, S-179 provados em integraçã
 6 casos, com `onNotify` capturando o aviso de verdade e a ação navegando por um router real);
 `notification.rules.expiringSoon` provado contra o catálogo (`notification-catalogue.spec.ts`).
 
-### B-26 — Usabilidade e ajuda da tela de regras 🔲
+### B-26 — Usabilidade e ajuda da tela de regras ✅
 
 A gaveta de ajuda da moldura, escrita para quem nunca viu o produto, em en e pt-BR (S-181), com um
 "saiba mais" de cada controle levando à seção certa:
@@ -334,6 +334,39 @@ padrão, escopo, validade e precedência, com `{agent}` ([D-20](decisions.md#d-2
 E o resto do princípio de usabilidade: tooltip e nome acessível em todo controle de ícone (S-182), axe
 sem violação na lista, com o painel e com um diálogo abertos, claro e escuro (S-183), atalhos na paleta
 (S-184), foco visível e preso nos diálogos, e zero literal na UI (`lint` e `i18n:check`).
+
+**Nota de execução.** Os três parágrafos fixos da ajuda (o que é, o que cada estado quer dizer, o que
+não aparece/grava) já tinham texto desde a B-21; a B-26 acrescentou os sete tópicos extras
+(`rules.help.*`) que este texto lista — Permite × Bloqueia e a precedência, onde uma regra alcança,
+o modo somente leitura, o que um prefixo de shell alcança e não alcança, que bloquear não é sandbox
+(sem eufemismo, como o [D-07](decisions.md#d-07--comando-composto-e-o-prefixo) já pedia), o que vai
+para a trilha, e as regras desligadas. Dois ajustes de precisão contra o texto original da tarefa: (1)
+"onde vale" diz que uma regra `project` alcança a pasta **e as subpastas** — a mesma correção que a
+nota da B-22 já tinha feito, a recomendação original do D-10 (só a pasta exata) perdeu para a decisão
+tomada; (2) "o que esta tela não mostra" (o que o `{agent}` decide antes de nós) virou o próprio tópico
+de precedência do motor, não uma frase dentro do texto fixo de `notRecorded` — o mecanismo de `extra`
+só acrescenta seções novas, nunca interpola dentro de uma já escrita.
+
+Esse último é o único tópico que o núcleo não escreve: `rulesHelpExtras` (novo registro,
+`web/src/features/permission/lib/rules-help-extras.ts`, a mesma forma de `defaultsExtraFields` — plano
+28, D-06) é onde `web/src/engines/claude/register.ts` registra o seu, lido por `RulesScreenFrame.tsx`
+e passado a `rulesScreenHelp(t, extras)` depois dos sete do núcleo — nunca o núcleo importando
+`engines/`. O conteúdo reaproveita o fato já certo do próprio "Project" do Claude (`allow` do projeto
+não vale aqui, `deny` vale) e acrescenta o que falta para esta tela: modo que aceita edições, leituras
+aprovadas sozinhas. Dois "saiba mais" foram cabeados — no aviso de regras desligadas, e na frase de
+uma regra no painel de detalhe — cobrindo os dois controles mais prováveis de gerar dúvida; os demais
+(os filtros de decisão/escopo, compactos e já autoexplicativos) ficaram de fora, por julgamento: mais
+links encurtaria o valor de cada um, não o contrário. S-182 (tooltip/nome acessível em todo controle de
+ícone) já estava coberto — nenhum ícone solto sem rótulo foi encontrado na varredura da tela. S-184 (os
+atalhos da tela, na paleta, funcionando) ganhou keybindings reais (`Mod+K R`/`Mod+K E`, a mesma
+convenção de líder que `ClaudeShortcuts.tsx` já usa) para os dois comandos da B-24
+(`rules.revokeSelected`/`rules.openExpiringSoon`), que antes só existiam sem atalho — agora aparecem na
+própria lista de atalhos da ajuda, prova visível de que funcionam. **Nível de prova**: S-181, S-184
+provados em integração (`RulesRoute.spec.tsx`, +4 casos: lista todos os tópicos, os dois "saiba mais"
+cada um na seção certa, os atalhos na lista); S-183 provado estendendo os três axe já existentes
+(lista, detalhe, diálogo) com uma rodada em tema escuro cada; os sete tópicos do núcleo e o do motor,
+cada um com cabeçalho/corpo nas duas línguas, provados em unit (`rules-help.spec.ts`,
+`claude-engine-help.spec.ts`).
 
 ---
 

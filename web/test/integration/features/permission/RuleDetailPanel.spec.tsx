@@ -5,6 +5,7 @@ import { axe } from 'jest-axe';
 
 import { RuleDetailPanel } from '@/features/permission';
 import { api } from '@/shared/api/api';
+import { applyTheme } from '@/shared/hooks/useTheme';
 import { render, translator } from '../../../support/render';
 
 const t = translator('en');
@@ -426,5 +427,22 @@ describe('the rule detail panel — plan 15, B-22', () => {
     await screen.findByText('shell(git status:*)');
 
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('has no axe violations in the dark theme — S-183', async () => {
+    applyTheme('dark');
+    mockApiGet();
+    const { container } = render(
+      <RuleDetailPanel
+        ruleId="rule_1"
+        onClose={() => {}}
+        onOpenRule={() => {}}
+        onShowTrail={() => {}}
+      />,
+    );
+    await screen.findByText('shell(git status:*)');
+
+    expect(await axe(container)).toHaveNoViolations();
+    applyTheme('light');
   });
 });

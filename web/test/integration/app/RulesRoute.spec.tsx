@@ -398,3 +398,130 @@ describe('the rules route', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 });
+
+describe('the help of the rules screen — plan 15, B-26', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ status: 'unknown', session: null });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function heading(key: string): HTMLElement {
+    return screen.getByRole('heading', { name: t(key) });
+  }
+
+  it('lists every topic — the core ones and what Claude decides before this screen — S-181', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    mockRules();
+    const user = userEvent.setup();
+    mountRules();
+
+    await user.click(await screen.findByRole('button', { name: t('help.panel.open') }));
+
+    expect(heading('rules.help.precedenceHeading')).toBeVisible();
+    expect(heading('rules.help.scopeHeading')).toBeVisible();
+    expect(heading('rules.help.readOnlyHeading')).toBeVisible();
+    expect(heading('rules.help.patternHeading')).toBeVisible();
+    expect(heading('rules.help.sandboxHeading')).toBeVisible();
+    expect(heading('rules.help.recordedHeading')).toBeVisible();
+    expect(heading('rules.help.disabledHeading')).toBeVisible();
+    expect(heading('engines.claude.help.rulesPrecedenceHeading')).toBeVisible();
+  });
+
+  it('lists the screen’s own shortcuts, with real keys — S-184', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    mockRules();
+    const user = userEvent.setup();
+    mountRules();
+
+    await user.click(await screen.findByRole('button', { name: t('help.panel.open') }));
+
+    expect(screen.getByText(t('rules.command.revokeSelected'))).toBeVisible();
+    expect(screen.getByText(t('rules.command.openExpiringSoon'))).toBeVisible();
+  });
+
+  it('"saiba mais" of the disabled rules banner opens the help at the right topic', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    mockRules({
+      summary: {
+        byStatus: { active: 0, expired: 0, revoked: 0, disabled: 1 },
+        byDecision: { allow: 0, deny: 0 },
+        byScope: { project: 0, always: 0 },
+        expiringBefore: 0,
+      },
+      disabledRules: [
+        {
+          id: 'rule_old',
+          scope: 'always',
+          kind: null,
+          pattern: 'legacy',
+          legacyPattern: 'Bash(npm run *)',
+          decision: 'allow',
+          projectPath: null,
+          engine: null,
+          grantedBy: 'auth|42',
+          grantedAt: '2026-09-20T10:00:00.000Z',
+          expiresAt: '2026-12-19T10:00:00.000Z',
+          status: 'disabled',
+          revokedAt: null,
+          disabled: { reason: 'untranslatable' },
+          disabledReason: { messageKey: 'common.error.unexpected', params: {} },
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    mountRules();
+    await screen.findByText(t('rules.disabled.banner', { count: 1 }));
+
+    await user.click(
+      screen.getByRole('button', {
+        name: t('help.learnMore.label', { topic: t('rules.disabled.title') }),
+      }),
+    );
+
+    expect(screen.getByRole('region', { name: t('rules.help.disabledHeading') })).toHaveFocus();
+  });
+
+  it('"saiba mais" of a rule\'s own sentence opens the help at the pattern topic', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    const rule = {
+      id: 'rule_1',
+      scope: 'always',
+      kind: 'shell',
+      pattern: 'shell(git status:*)',
+      engine: null,
+      disabled: null,
+      decision: 'allow',
+      projectPath: null,
+      grantedBy: 'auth|42',
+      grantedAt: '2026-09-20T10:00:00.000Z',
+      expiresAt: '2026-12-19T10:00:00.000Z',
+      status: 'active',
+      revokedAt: null,
+      etag: '"etag-1"',
+      expiryCeiling: '2027-09-20T10:00:00.000Z',
+      reach: { kind: 'shell', form: 'prefix', content: 'git status', excludesCompound: false },
+    };
+    vi.spyOn(api, 'get').mockImplementation((path: unknown) => {
+      const p = String(path);
+      if (p.includes('/permission-rules/summary')) return Promise.resolve(EMPTY_SUMMARY);
+      if (p.includes('/invocations')) return Promise.resolve({ invocations: [], nextCursor: null });
+      if (p.includes('/history')) return Promise.resolve({ events: [] });
+      if (p.endsWith('/rule_1')) return Promise.resolve(rule);
+      return Promise.resolve({ rules: [rule], nextCursor: null });
+    });
+    const user = userEvent.setup();
+    mountApp('/rules/rule_1');
+    await screen.findByRole('button', { name: t('rules.action.revoke') });
+
+    await user.click(
+      screen.getByRole('button', {
+        name: t('help.learnMore.label', { topic: t('rules.help.patternHeading') }),
+      }),
+    );
+
+    expect(screen.getByRole('region', { name: t('rules.help.patternHeading') })).toHaveFocus();
+  });
+});
