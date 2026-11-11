@@ -9,6 +9,7 @@ import { grantInputOf, simulationInputOf } from '../lib/new-rule-grant';
 import { widthGate } from '../lib/new-rule-width';
 import type { PermissionDecision, PersistedScope } from '../types/permission';
 import type { PermissionRule, RulePreview, RuleSimulation } from '../types/rule';
+import { CommandTestPanel } from './CommandTestPanel';
 import { RuleAlerts } from './RuleDetailPanel';
 import { RuleDecisionChip } from './RuleDecisionChip';
 import { RuleFailureMessage } from './RuleFailureMessage';
@@ -97,6 +98,15 @@ export function NewRuleReviewStep({
       )}
 
       <SimulationSummary simulation={simulation} />
+
+      <details className="rounded-md border p-2">
+        <summary className="cursor-pointer text-ui-sm font-ui-strong">
+          {t('rules.test.heading')}
+        </summary>
+        <div className="mt-3">
+          <CommandTestPanel draft={{ pattern, decision }} onOpenRule={onOpenRule} />
+        </div>
+      </details>
 
       {error !== null && <RuleFailureMessage messageKey={error.messageKey} params={error.params} />}
 

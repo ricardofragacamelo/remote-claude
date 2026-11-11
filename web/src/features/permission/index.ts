@@ -41,6 +41,13 @@ export { useNewRuleFlow } from './hooks/useNewRuleFlow';
 export type { NewRuleDraft, NewRuleFlow, NewRuleStep } from './hooks/useNewRuleFlow';
 export { useRulePreview } from './hooks/useRulePreview';
 export { useRuleSimulation } from './hooks/useRuleSimulation';
+export { useRuleEvaluation } from './hooks/useRuleEvaluation';
+export { CommandTestPanel } from './components/CommandTestPanel';
+export type { CommandTestPanelProps } from './components/CommandTestPanel';
+export { TESTABLE_MODES, evaluationInputOf } from './lib/evaluate-input';
+export type { CommandTestDraft, DraftRuleHandoff, TestableMode } from './lib/evaluate-input';
+export { verdictOf } from './lib/evaluation-verdict';
+export type { Verdict } from './lib/evaluation-verdict';
 export { useRuleMutations } from './hooks/useRuleMutations';
 export type {
   ChangeRuleExpiryResult,

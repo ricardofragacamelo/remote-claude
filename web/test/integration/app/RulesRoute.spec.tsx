@@ -417,6 +417,20 @@ describe('the rules route', () => {
     });
   });
 
+  it('opens the command tester from the screen’s own "Testar um comando" button — B-28', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    mockRules();
+    const user = userEvent.setup();
+    const routed = mountRules();
+    await screen.findByText(t('rules.tabEmpty.activeTitle'));
+
+    await user.click(screen.getByRole('button', { name: t('rules.test.button') }));
+
+    await waitFor(() => {
+      expect(routed.path()).toBe('/rules/test');
+    });
+  });
+
   it('carries the disabled rule’s folder into the hand-off, for a `project`-scoped one', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
     mockRules({

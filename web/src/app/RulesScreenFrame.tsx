@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
+import { FlaskConical, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useCommands } from '@/features/commands';
@@ -51,6 +51,10 @@ export function RulesScreenFrame({
     void navigate({ to: '/rules/new', search: {} });
   }, [navigate]);
 
+  const onTestCommand = useCallback(() => {
+    void navigate({ to: '/rules/test' });
+  }, [navigate]);
+
   const onRecreate = useCallback(
     (rule: {
       readonly decision: string;
@@ -77,6 +81,13 @@ export function RulesScreenFrame({
       icon: Plus,
       run: onNewRule,
     },
+    {
+      id: 'rules.test',
+      labelKey: 'rules.command.test',
+      category: 'file',
+      icon: FlaskConical,
+      run: onTestCommand,
+    },
   ]);
 
   return (
@@ -87,10 +98,16 @@ export function RulesScreenFrame({
       shortcuts={shortcuts}
       extra={rulesScreenHelp(t, engineExtras)}
       actions={
-        <Button type="button" onClick={onNewRule}>
-          <Plus className="size-4" aria-hidden />
-          {t('rules.wizard.newRule')}
-        </Button>
+        <>
+          <Button type="button" variant="outline" onClick={onTestCommand}>
+            <FlaskConical className="size-4" aria-hidden />
+            {t('rules.test.button')}
+          </Button>
+          <Button type="button" onClick={onNewRule}>
+            <Plus className="size-4" aria-hidden />
+            {t('rules.wizard.newRule')}
+          </Button>
+        </>
       }
     >
       <div className="flex gap-4">

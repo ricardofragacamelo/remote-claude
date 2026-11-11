@@ -28,6 +28,7 @@ import { NotFoundRoute } from './NotFoundRoute';
 import { RuleRoute } from './RuleRoute';
 import { RulesRoute } from './RulesRoute';
 import { SettingsRoute } from './SettingsRoute';
+import { TestCommandRoute } from './TestCommandRoute';
 import { readWorkbenchSearch } from './workbench-location';
 import { WorkbenchRoute } from './WorkbenchRoute';
 // The composition root of the engine extensions (ADR-025): imported here, not only from
@@ -125,6 +126,17 @@ const newRuleRoute = createRoute({
   path: '/rules/new',
   validateSearch: readNewRuleSearch,
   component: NewRuleRoute,
+});
+
+/**
+ * "Testar um comando" on its own (plan 15, B-28) — a static segment, same reasoning as
+ * `/rules/new` above: no rule ever has `test` for an id. No search of its own: the panel's own
+ * fields always start empty here, unlike the wizard's draft.
+ */
+const testCommandRoute = createRoute({
+  getParentRoute: () => frameRoute,
+  path: '/rules/test',
+  component: TestCommandRoute,
 });
 
 /** The trail, with its filters in the search so a filtered trail is a link. */
@@ -235,6 +247,7 @@ export const routeTree = rootRoute.addChildren([
     workbenchRoute,
     rulesRoute,
     newRuleRoute,
+    testCommandRoute,
     ruleRoute,
     auditRoute,
     devicesRoute,

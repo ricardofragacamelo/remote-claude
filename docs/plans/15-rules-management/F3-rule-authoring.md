@@ -124,12 +124,11 @@ nunca um componente filho mockado — incluindo um teste de ponta a ponta pelo r
 (`/rules/new`, `NewRuleRoute.spec.tsx`) e um de teclado só, do primeiro passo à criação (S-210);
 S-190, S-191 ficam `🟡`, pelos cortes acima.
 
-### B-28 — Testar um comando 🔲
+### B-28 — Testar um comando ✅
 
 Um painel (na tela, pela ação do cabeçalho e pela paleta; no assistente, dentro da revisão e ao lado
 do padrão): o tipo (`kind`), o campo dele, pasta pelo seletor, modo canônico (`ask`, `readOnly`,
-`acceptEdits`, com o nome traduzido) e,
-opcional, "nesta sessão" para uma sessão viva do usuário ([D-12](decisions.md#d-12--o-que-o-teste-de-comando-considera)).
+`acceptEdits`, com o nome traduzido).
 
 O resultado é um veredito grande e em palavras — "seria permitido sem perguntar, pela regra X", "seria
 bloqueado pela regra Y — ela vence a regra Z, que permitiria", "o `{agent}` perguntaria a você: nenhuma
@@ -137,6 +136,42 @@ regra casa", "perguntaria: no modo somente leitura, regras que permitem não res
 **todas** as regras que casam com link para cada uma, e as ressalvas do que o motor decide antes, que
 vêm do backend pelo adapter (S-196, S-197). No
 assistente, o teste inclui o rascunho (S-198). Pasta recusada mostra o erro traduzido (S-199).
+
+**Nota de execução**: o painel (`CommandTestPanel`) é um único componente reutilizado, sem estado
+ou rota própria além da que o hospeda — usado solto na rota nova `/rules/test` (ação do cabeçalho
+`rules.test` + comando da paleta, ambos em `RulesScreenFrame.tsx`) e embutido dentro da revisão do
+assistente (`NewRuleReviewStep.tsx`, atrás de um `<details>` colapsado, rotulado "Testar um
+comando"), onde carrega o próprio rascunho do assistente (`pattern`+`decision`) como `draft` no
+corpo da chamada — exatamente o que D-12/S-198 pedem. O veredito (`verdictOf`,
+`lib/evaluation-verdict.ts`) é função pura sobre a resposta do servidor: lê `outcome`+`reasons`
+para escolher entre cinco frases (permitido, bloqueado, bloqueado-vence-um-allow, perguntaria por
+falta de regra, perguntaria por causa do modo somente leitura) — nunca recalcula o que o backend já
+decidiu. O campo de assunto por `kind` (`lib/evaluate-subject.ts`) escreve o **assunto concreto**
+de uma invocação real (`command`/`paths`/`url`/`server`+`tool`, os mesmos campos de
+`toolSubjectSchema`), nunca um padrão com curinga — diferente do passo de padrão do assistente, que
+escreve a gramática (B-27); os dois reaproveitam a mesma `subjectFieldOf(kind)` para decidir qual
+campo mostrar, só divergem no que escrevem nele.
+
+**Corte de escopo, registrado aqui e não no texto do plano**: o "nesta sessão" opcional do D-12 (a
+sessão viva do usuário, com seu próprio modo atual, em vez do modo escolhido à mão) **não foi
+construído**. A única forma de ler isso do lado do cliente é pelo próprio `@/features/session` —
+cujo barril (`register-changes`/`register-context`) importa, por tabela, o barril de
+`@/features/editor`, que se autorregistra como efeito de módulo (`registerEditor()`) assim que
+**qualquer coisa** importa esse barril. Como `test/support/setup.ts` já importa
+`@/features/permission` para todo arquivo de teste do repositório, e este painel precisaria estar
+no barril público dessa feature (para a rota e para a revisão o importarem), construir "nesta
+sessão" fazia esse efeito de módulo rodar em **todo** arquivo de teste da suíte — quebrando, sem
+nenhuma relação com o plano 15, `settings-sections.spec.ts` (D-13/S-142 do plano 06) e
+`EditorAreaAndKeepers.spec.tsx` (o próprio registro do plano 07), cada um assumindo um estado
+global limpo que deixou de existir. Achado e revertido durante esta própria tarefa — a importação
+cruzada `permission → session` foi removida por completo (o hook `useFolderLiveSession` que a
+usava foi apagado), em vez de corrigido para a frente: uma task do plano 15 não é o lugar de mudar
+a suposição de teste de outro plano, e um deep import contornando o barril de `session` é proibido
+pelo próprio lint (`no-cross-feature-internals`). `EvaluateRuleInput.sessionId`/`draft` seguem no
+tipo (combinam com o contrato do backend e `draft` já é usado por S-198); só o seletor de sessão
+viva ficou de fora. Uma tarefa futura pode revisitar isso se abrir um caminho mais seguro para essa
+leitura (um endpoint que liste sessões vivas do chamador, por exemplo, em vez do estado só-cliente
+de hoje).
 
 ### B-29 — Simular contra a trilha 🔲
 

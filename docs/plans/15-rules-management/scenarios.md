@@ -321,10 +321,10 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-196 | o testador mostra o veredito, a regra que responde, todas as que casam, o motivo e as ressalvas | eq | integração | — | B-28 | ⬜ |
-| S-197 | trocar o modo para `readOnly` muda o veredito de um `allow` | est | integração | — | B-28 | ⬜ |
-| S-198 | dentro do assistente, o teste considera o rascunho | eq | integração | — | B-28 | ⬜ |
-| S-199 | pasta recusada no teste mostra o erro traduzido | err | integração | `WORKSPACE_NOT_ALLOWED` | B-28 | ⬜ |
+| S-196 | o testador mostra o veredito, a regra que responde, todas as que casam, o motivo e as ressalvas | eq | integração | — | B-28 | ✅ |
+| S-197 | trocar o modo para `readOnly` muda o veredito de um `allow` | est | integração | — | B-28 | ✅ |
+| S-198 | dentro do assistente, o teste considera o rascunho | eq | integração | — | B-28 | ✅ |
+| S-199 | pasta recusada no teste mostra o erro traduzido | err | integração | `WORKSPACE_NOT_ALLOWED` | B-28 | ✅ |
 
 ## Simulação pela tela — B-29
 
@@ -392,6 +392,7 @@ O protocolo exige justificar dimensão vazia, não omiti-la.
 | Lembrete (B-19) | `err` | o job não tem chamador a quem devolver código; a falha de push é transição de estado (S-154), e o log a registra |
 | Hooks (B-20) | `fron`, `est`, `idem` | o hook repassa o que o backend decide; fronteira e estado estão nas rotas (F1) e nas telas (S-160, S-169) |
 | Telas (B-21…B-32) | `conc` nas tarefas B-22, B-25, B-26, B-28…B-32 | a corrida que existe na web — duas respostas para o mesmo filtro, dois cliques no mesmo botão — está em S-158, S-174, S-194; as outras tarefas não disparam escrita concorrente |
+| Teste de comando (B-28) | `fron`, `idem` | `/permission-rules/evaluate` não escreve nada: é leitura contra o estado atual das regras, a mesma entrada dá a mesma saída por construção (como B-10/B-11/B-16); os tetos de `matching`/`reasons`/`caveats` (100/5/10) são do contrato e já provados em B-14 — o painel só renderiza o que volta |
 | E2E (B-33…B-36) | `fron`, `conc`, `idem` | fronteiras (teto de validade, de lote, de importação, de simulação) e corridas (revogar × estender, lote × avulso, importação dupla) são exatas e baratas em integração (S-66, S-74, S-84, S-126, S-141, S-146); pela porta do usuário só acrescentariam minutos ao portão 9 |
 
 ---

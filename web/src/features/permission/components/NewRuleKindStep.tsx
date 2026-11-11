@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { kindShortName } from '@/shared/lib/tool-label';
 import { NEW_RULE_KINDS } from '../lib/rule-kind-fields';
 import type { NewRuleKind } from '../lib/rule-kind-fields';
-import { RuleWizardOption } from './RuleWizardOption';
+import { RadioOptionGroup } from './RadioOptionGroup';
 
 export interface NewRuleKindStepProps {
   readonly kind: NewRuleKind | null;
@@ -21,23 +21,14 @@ export function NewRuleKindStep({ kind, onPick }: NewRuleKindStepProps): React.J
   const { t } = useTranslation();
 
   return (
-    <div
-      className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-      role="radiogroup"
-      aria-label={t('rules.wizard.kindStepLabel')}
-    >
-      {NEW_RULE_KINDS.map((candidate) => (
-        <RuleWizardOption
-          key={candidate}
-          pressed={kind === candidate}
-          className="flex min-h-touch items-center justify-center rounded-md border px-3 text-ui"
-          onClick={() => {
-            onPick(candidate);
-          }}
-        >
-          {kindShortName(candidate, t)}
-        </RuleWizardOption>
-      ))}
-    </div>
+    <RadioOptionGroup
+      label={t('rules.wizard.kindStepLabel')}
+      options={NEW_RULE_KINDS}
+      value={kind}
+      onPick={onPick}
+      labelOf={(candidate) => kindShortName(candidate, t)}
+      outerClassName="grid grid-cols-2 gap-2 sm:grid-cols-3"
+      optionClassName="flex min-h-touch items-center justify-center rounded-md border px-3 text-ui"
+    />
   );
 }

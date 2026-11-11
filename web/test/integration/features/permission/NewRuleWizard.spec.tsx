@@ -409,3 +409,40 @@ describe('keyboard only, start to finish — S-210', () => {
     });
   });
 });
+
+describe('the review step’s own command tester — S-198', () => {
+  it('tests a command considering the rule being authored, not yet granted', async () => {
+    mount();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('radio', { name: t('sessions.kind.search') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(allowRadio());
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(alwaysScopeRadio());
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(screen.getByRole('button', { name: t('permission.ruleExpiry.shortcut7') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await screen.findByText(t('rules.wizard.stepOf', { step: t('rules.wizard.stepReview') }));
+
+    await user.click(screen.getByText(t('rules.test.heading')));
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: t('rules.test.kindStepLabel') })).getByRole(
+        'radio',
+        { name: t('sessions.kind.shell') },
+      ),
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: t('rules.wizard.subjectCommand') }),
+      'git status',
+    );
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith(
+        '/permission-rules/evaluate',
+        expect.objectContaining({ draft: { pattern: 'search', decision: 'allow' } }),
+      );
+    });
+  });
+});

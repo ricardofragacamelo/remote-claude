@@ -759,7 +759,8 @@
     "command": {
       "revokeSelected": "Rules: revoke selected",
       "openExpiringSoon": "Rules: open expiring soon",
-      "new": "Rules: new rule"
+      "new": "Rules: new rule",
+      "test": "Rules: test a command"
     },
     "wizard": {
       "stepOf": "Step: {{step}}",
@@ -811,6 +812,25 @@
       "what": "A rule you are about to grant, step by step — what it is about, how much it covers, Allow or Block, where it reaches, how long it lasts. Nothing is written until the last step's own confirm.",
       "states": "Each step keeps what you picked in the one before it; going back never loses it. The last step shows the full sentence, what it would conflict with, and what it would have changed in your last invocations, before anything is sent.",
       "notRecorded": "Nothing from this wizard is sent, or kept anywhere, before its own last step confirms it."
+    },
+    "test": {
+      "heading": "Test a command",
+      "button": "Test a command",
+      "kindStepLabel": "What kind of thing",
+      "subjectOptionalBody": "This always reaches any use of {{kind}} — there is nothing to narrow it with.",
+      "folderChoose": "Choose a folder…",
+      "folderChangeChoice": "Change the folder…",
+      "folderClear": "Any folder",
+      "modeStepLabel": "Mode",
+      "loading": "Testing…",
+      "matching": "Every rule that matches",
+      "caveats": "What {{agent}} decides before any rule of yours",
+      "verdictAllowedByRule": "Would be allowed without asking, by “{{pattern}}”.",
+      "verdictDeniedByRule": "Would be blocked, by “{{pattern}}”.",
+      "verdictDeniedOverAllow": "Would be blocked by “{{denyPattern}}” — it beats “{{allowPattern}}”, which would allow it.",
+      "verdictAskReadOnly": "{{agent}} would ask you: in read-only mode, rules that allow do not answer.",
+      "verdictAskNoRule": "{{agent}} would ask you: no rule matches.",
+      "purpose": "Test whether a command would be allowed, blocked or asked about, without running it."
     }
   },
   "transcript": {

@@ -144,6 +144,16 @@ export interface EvaluateRuleInput {
   readonly subject: Readonly<Record<string, unknown>>;
   readonly folder?: string;
   readonly mode?: string;
+
+  /** A live session of the caller's own — its `session`-scoped rules and current mode count too (D-12). */
+  readonly sessionId?: string;
+
+  /** Inside the wizard, the rule being authored counts as if it already existed (S-198, D-12). */
+  readonly draft?: {
+    readonly pattern: string;
+    readonly decision: PermissionDecision;
+    readonly engine?: string;
+  };
 }
 
 /** `POST /permission-rules/preview`: a pattern nobody has granted yet (plan 15, B-15). */

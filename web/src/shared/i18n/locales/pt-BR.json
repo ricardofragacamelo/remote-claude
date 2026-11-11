@@ -759,7 +759,8 @@
     "command": {
       "revokeSelected": "Regras: revogar selecionadas",
       "openExpiringSoon": "Regras: abrir perto de expirar",
-      "new": "Regras: nova regra"
+      "new": "Regras: nova regra",
+      "test": "Regras: testar um comando"
     },
     "wizard": {
       "stepOf": "Etapa: {{step}}",
@@ -811,6 +812,25 @@
       "what": "Uma regra que você está prestes a conceder, passo a passo — sobre o que ela é, o quanto ela cobre, Permitir ou Bloquear, onde ela vale, por quanto tempo. Nada é gravado antes do próprio último passo confirmar.",
       "states": "Cada passo guarda o que você escolheu no anterior; voltar nunca perde isso. O último passo mostra a frase completa, com o que ela conflitaria e o que ela teria mudado nas suas últimas invocações, antes de qualquer coisa ser enviada.",
       "notRecorded": "Nada deste assistente é enviado, ou guardado em algum lugar, antes do próprio último passo confirmar."
+    },
+    "test": {
+      "heading": "Testar um comando",
+      "button": "Testar um comando",
+      "kindStepLabel": "Sobre o que é",
+      "subjectOptionalBody": "Isto sempre alcança qualquer uso de {{kind}} — não há o que estreitar aqui.",
+      "folderChoose": "Escolher uma pasta…",
+      "folderChangeChoice": "Trocar a pasta…",
+      "folderClear": "Qualquer pasta",
+      "modeStepLabel": "Modo",
+      "loading": "Testando…",
+      "matching": "Toda regra que casa",
+      "caveats": "O que o {{agent}} decide antes de qualquer regra sua",
+      "verdictAllowedByRule": "Seria permitido sem perguntar, pela regra “{{pattern}}”.",
+      "verdictDeniedByRule": "Seria bloqueado, pela regra “{{pattern}}”.",
+      "verdictDeniedOverAllow": "Seria bloqueado por “{{denyPattern}}” — ela vence “{{allowPattern}}”, que permitiria.",
+      "verdictAskReadOnly": "O {{agent}} perguntaria a você: no modo somente leitura, regras que permitem não respondem.",
+      "verdictAskNoRule": "O {{agent}} perguntaria a você: nenhuma regra casa.",
+      "purpose": "Teste se um comando seria permitido, bloqueado ou perguntado, sem executá-lo."
     }
   },
   "transcript": {
