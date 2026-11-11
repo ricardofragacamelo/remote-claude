@@ -216,7 +216,7 @@ diálogo nos próprios testes, a mesma pilha de polyfills (`ResizeObserver`, cap
 `setup.ts` já preparava para isso. **Nível de prova**: S-169…S-172 provados em integração
 (`RuleExpiryDialog.spec.tsx`, 16 casos, com o toast real e o "desfazer" clicado de verdade).
 
-### B-24 — Seleção, lote, desfazer, menu de contexto e paleta 🔲
+### B-24 — Seleção, lote, desfazer, menu de contexto e paleta ✅
 
 - seleção por caixa, Shift+clique para intervalo, "selecionar tudo" que pega **só o filtrado**
   (S-177); barra de lote com Revogar e Exportar;
@@ -228,6 +228,40 @@ diálogo nos próprios testes, a mesma pilha de polyfills (`ResizeObserver`, cap
 - **comandos na paleta** do plano 06, com atalho editável: "Regras: nova regra", "Regras: testar um
   comando", "Regras: revogar selecionadas", "Regras: exportar", "Regras: importar", "Regras: abrir
   perto de expirar" (S-176).
+
+**Nota de execução.** Seleção (`useSelection`, compartilhado) ganhou intervalo por Shift+clique —
+lido por `onClick`+`readOnly` em vez de `onChange` no `SelectCell`, a única forma de capturar
+`event.shiftKey` de forma confiável — e `selectAll(rowIds)`/`clear()`; a extensão ficou aditiva e
+retrocompatível: `toggle(id)` sem o segundo argumento continua funcionando exatamente como antes para
+`McpServerTable`/`PluginTable`/`SkillTable` (plano 13), que nunca passam `options`. A barra de lote
+(`RuleBatchBar`) e o diálogo de revogação em lote (`RuleBatchRevokeDialog`) cobrem exatamente
+S-173…S-175 e S-177; o diálogo reusa o `batchKey` do `useRuleMutations` (agora exportado) para achar
+seu próprio `inFlight`/`failure` pela mesma chave que a escrita usa, sem recalcular o formato da chave
+em dois lugares. **Cortes de escopo, documentados em vez de forçados**: (1) "Exportar" na barra de
+lote não foi construído — a exportação em si é a B-31, que ainda não existe; um botão que abre nada
+seria pior que omiti-lo; (2) dos seis comandos de paleta do texto original, só dois entraram —
+"Regras: revogar selecionadas" e "Regras: abrir perto de expirar" — os outros quatro ("nova regra",
+"testar um comando", "exportar", "importar") apontam para telas que ainda não existem (B-27, B-31,
+B-32) ou para uma rota sem entrada na tela ainda (testar, B-14 só tem backend); um comando registado
+que não leva a lugar nenhum é pior UX que a ausência dele, e cada um entra na paleta junto da própria
+tarefa que o implementa, como "Duplicar"/"Simular" já ficaram para a B-30/B-29 na nota da B-22; (3) um
+menu de contexto **distinto** sobre a seleção não foi construído — a única ação em lote que existe
+hoje (Revogar) já tem sua própria superfície visível na barra de lote, e duplicá-la num menu seria a
+mesma ação em dois lugares; o menu por linha (`⋯`, S-161) continua a cobrir as ações de uma regra só.
+Por isso **S-176 fica `🟡`**: os comandos de paleta que existem agem sobre a seleção, provados; o
+"menu de contexto sobre a seleção" em si, não — revisitar quando mais ações em lote existirem (B-31,
+B-32) e a barra deixar de caber um botão por ação. Mobile fica fora, pelo mesmo motivo já decidido na
+B-21 (lista de cartões sem diálogo nem menu de contexto) — nenhuma seleção, nenhuma barra de lote
+abaixo de `md`. Um teste novo (`RuleBatchRevokeDialog.spec.tsx`) expôs um bug genuíno, não um flake:
+o `<Toaster/>` real (a mesma técnica da B-23) precisa de `vi.useFakeTimers({ shouldAdvanceTime: true
+})` — sem isso, o cronômetro real de auto-descarte/animação de saída do `sonner` sobrevive ao fim do
+teste e dispara depois que o jsdom daquele arquivo já foi desmontado, derrubando a suíte inteira com
+`ReferenceError: window is not defined` sob `pnpm verify` completo, nunca sob o arquivo isolado — a
+mesma lição que `RuleExpiryDialog.spec.tsx` (B-23) já tinha descoberto, agora clara como parte do
+próprio padrão: todo teste que monta um `Toaster` real precisa de cronômetros falsos. **Nível de
+prova**: S-173…S-175, S-177 provados em integração (`RulesScreen.spec.tsx`, +9 casos; e
+`RuleBatchRevokeDialog.spec.tsx`, 2 casos, com o toast real e o "desfazer" clicado de verdade); S-176
+`🟡` pelo motivo acima.
 
 ### B-25 — Lembrete de expiração na web 🔲
 

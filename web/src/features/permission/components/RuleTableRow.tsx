@@ -30,7 +30,7 @@ export interface RuleTableRowProps {
   readonly now: number;
   readonly selected: boolean;
   readonly focused: boolean;
-  onToggleSelected(ruleId: string): void;
+  onToggleSelected(ruleId: string, shiftKey: boolean): void;
 
   /** Whether a mutation of this rule is already running — the row's own guard against a second
    * click, beside the hook's own (S-19). */
@@ -74,8 +74,8 @@ export function RuleTableRow({
         <SelectCell
           ariaLabel={t('rules.table.rowSelect', { pattern: rule.pattern })}
           checked={selected}
-          onToggle={() => {
-            onToggleSelected(rule.id);
+          onToggle={(shiftKey) => {
+            onToggleSelected(rule.id, shiftKey);
           }}
         />
         <td className="p-2">

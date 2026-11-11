@@ -1,6 +1,8 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { AlarmClock, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { useCommands } from '@/features/commands';
 import { LoadMore } from '@/shared/components/LoadMore';
 import { useClock } from '@/shared/hooks/useClock';
 import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
@@ -16,6 +18,8 @@ import { useRuleSummary } from '../hooks/useRuleSummary';
 import { useRules } from '../hooks/useRules';
 import type { PermissionRule, RuleSort } from '../types/rule';
 import { DisabledRulesBanner } from './DisabledRulesBanner';
+import { RuleBatchBar } from './RuleBatchBar';
+import { RuleBatchRevokeDialog } from './RuleBatchRevokeDialog';
 import { RuleCardList } from './RuleCardList';
 import { RuleFiltersBar } from './RuleFiltersBar';
 import type { RuleFiltersValue } from './RuleFiltersBar';
@@ -112,6 +116,7 @@ export function RulesScreen({
   const { revoke, inFlight, failure } = useRuleMutations();
   const selection = useSelection();
   const isDesktop = useIsDesktop();
+  const [batchRevokeOpen, setBatchRevokeOpen] = useState(false);
 
   const rows = useMemo(
     () => rowsOf(rules, search.tab, search.withAlert, now),
@@ -122,6 +127,11 @@ export function RulesScreen({
     [rows, now],
   );
   const rowIds = useMemo(() => rows.map((rule) => rule.id), [rows]);
+  const selectedRules = useMemo(
+    () => rows.filter((rule) => selection.ids.has(rule.id)),
+    [rows, selection.ids],
+  );
+  const allSelected = rowIds.length > 0 && rowIds.every((id) => selection.ids.has(id));
 
   const onTab = useCallback(
     (tab: RuleTab) => {
@@ -167,6 +177,55 @@ export function RulesScreen({
     onRevoke,
   });
 
+  // Shift-click range reads the row order at the moment of the click — the keyboard path above
+  // (`nav`'s own) never carries a shift, so it keeps calling `selection.toggle` with nothing extra.
+  const onToggleSelected = useCallback(
+    (ruleId: string, shiftKey: boolean) => {
+      selection.toggle(ruleId, { shiftKey, rowIds });
+    },
+    [selection, rowIds],
+  );
+
+  const onSelectAll = useCallback(() => {
+    if (allSelected) {
+      selection.clear();
+    } else {
+      selection.selectAll(rowIds);
+    }
+  }, [allSelected, selection, rowIds]);
+
+  const onBatchRevoked = useCallback(
+    (ruleIds: readonly string[]) => {
+      for (const ruleId of ruleIds) {
+        removeRule(ruleId);
+      }
+      selection.clear();
+    },
+    [removeRule, selection],
+  );
+
+  useCommands([
+    {
+      id: 'rules.revokeSelected',
+      labelKey: 'rules.command.revokeSelected',
+      category: 'view',
+      icon: Undo2,
+      when: () => selection.ids.size > 0,
+      run: () => {
+        setBatchRevokeOpen(true);
+      },
+    },
+    {
+      id: 'rules.openExpiringSoon',
+      labelKey: 'rules.command.openExpiringSoon',
+      category: 'go',
+      icon: AlarmClock,
+      run: () => {
+        onTab('expiringSoon');
+      },
+    },
+  ]);
+
   const viewProps: RuleListViewProps = {
     rules: rows,
     isLoading,
@@ -191,6 +250,16 @@ export function RulesScreen({
 
       <RuleFiltersBar value={search} onChange={onFilters} rules={rules} />
 
+      {isDesktop && selection.ids.size > 0 && (
+        <RuleBatchBar
+          count={selection.ids.size}
+          onRevoke={() => {
+            setBatchRevokeOpen(true);
+          }}
+          onClear={selection.clear}
+        />
+      )}
+
       {isDesktop ? (
         <RuleTable
           {...viewProps}
@@ -198,11 +267,23 @@ export function RulesScreen({
           order={search.order}
           onSort={onSort}
           selected={selection.ids}
-          onToggleSelected={selection.toggle}
+          onToggleSelected={onToggleSelected}
+          allSelected={allSelected}
+          someSelected={selection.ids.size > 0}
+          onSelectAll={onSelectAll}
           handlers={{ onOpen: onOpenRule, onRevoke }}
         />
       ) : (
         <RuleCardList {...viewProps} onOpen={onOpenRule} onRevoke={onRevoke} />
+      )}
+
+      {isDesktop && (
+        <RuleBatchRevokeDialog
+          rules={selectedRules}
+          open={batchRevokeOpen}
+          onOpenChange={setBatchRevokeOpen}
+          onRevoked={onBatchRevoked}
+        />
       )}
 
       <LoadMore

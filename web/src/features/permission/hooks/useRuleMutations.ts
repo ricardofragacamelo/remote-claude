@@ -141,7 +141,11 @@ export function useRuleMutations(): RuleMutations {
   return { inFlight, failure, grant, revoke, revokeBatch, restoreBatch, changeExpiry };
 }
 
-/** One key per lot, by its exact ids — two different lots never collapse into the same guard. */
-function batchKey(action: string, ruleIds: readonly string[]): string {
+/**
+ * One key per lot, by its exact ids — two different lots never collapse into the same guard.
+ * Exported so a screen can check `inFlight`/`failure` for the exact lot it is about to send, before
+ * `revokeBatch`/`restoreBatch` ever runs (B-24) — never a second, drifting copy of this format.
+ */
+export function batchKey(action: 'revoke' | 'restore', ruleIds: readonly string[]): string {
   return `${action}:${[...ruleIds].sort().join(',')}`;
 }

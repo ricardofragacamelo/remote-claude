@@ -729,6 +729,19 @@
       "retry": "Try again",
       "recreate": "Recreate",
       "scopeDecision": "{{scope}} · {{decision}}"
+    },
+    "batch": {
+      "selectedCount": "{{count}} selected",
+      "clearSelection": "Clear selection",
+      "revokeTitle": "Revoke {{count}} rules",
+      "revokeDescription": "Once revoked, none of them answers anything — undo while the toast is still up.",
+      "cancel": "Cancel",
+      "confirmRevoke": "Revoke them",
+      "revokedToast": "Revoked {{count}}."
+    },
+    "command": {
+      "revokeSelected": "Rules: revoke selected",
+      "openExpiringSoon": "Rules: open expiring soon"
     }
   },
   "transcript": {

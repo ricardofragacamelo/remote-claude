@@ -28,7 +28,10 @@ export interface RuleTableProps extends RuleListViewProps {
   readonly order: RuleOrder;
   onSort(field: RuleSort): void;
   readonly selected: ReadonlySet<string>;
-  onToggleSelected(ruleId: string): void;
+  onToggleSelected(ruleId: string, shiftKey: boolean): void;
+  readonly allSelected: boolean;
+  readonly someSelected: boolean;
+  onSelectAll(): void;
   readonly handlers: RuleRowActionHandlers;
 }
 
@@ -46,6 +49,9 @@ export function RuleTable({
   onSort,
   selected,
   onToggleSelected,
+  allSelected,
+  someSelected,
+  onSelectAll,
   focusedId,
   onKeyDown,
   inFlight,
@@ -74,7 +80,12 @@ export function RuleTable({
           <caption className="sr-only">{t('rules.table.caption')}</caption>
           <thead>
             <tr className="border-b border-border text-left text-muted-foreground">
-              <SelectColumnHeader label={t('rules.table.columnSelect')} />
+              <SelectColumnHeader
+                label={t('rules.table.columnSelect')}
+                allSelected={allSelected}
+                someSelected={someSelected}
+                onSelectAll={onSelectAll}
+              />
               <th className="p-2">{t('rules.table.columnDecision')}</th>
               <th className="p-2">{t('rules.table.columnType')}</th>
               <SortHeaders

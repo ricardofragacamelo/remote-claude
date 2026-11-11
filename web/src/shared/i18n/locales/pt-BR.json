@@ -729,6 +729,19 @@
       "retry": "Tentar de novo",
       "recreate": "Recriar",
       "scopeDecision": "{{scope}} · {{decision}}"
+    },
+    "batch": {
+      "selectedCount": "{{count}} selecionadas",
+      "clearSelection": "Limpar seleção",
+      "revokeTitle": "Revogar {{count}} regras",
+      "revokeDescription": "Revogadas, nenhuma delas responde mais nada — desfaça enquanto o aviso ainda está na tela.",
+      "cancel": "Cancelar",
+      "confirmRevoke": "Revogar",
+      "revokedToast": "{{count}} revogadas."
+    },
+    "command": {
+      "revokeSelected": "Regras: revogar selecionadas",
+      "openExpiringSoon": "Regras: abrir perto de expirar"
     }
   },
   "transcript": {

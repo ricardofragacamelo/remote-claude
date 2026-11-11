@@ -278,11 +278,11 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-173 | selecionar várias → barra de lote; revogar mostra a prévia (quantas, quais padrões) e, feito, "desfazer" restaura | est | integração | — | B-24 | ⬜ |
-| S-174 | clique duplo na confirmação revoga uma vez | idem | integração | — | B-24 | ⬜ |
-| S-175 | lote recusado mantém todas as linhas, com o erro traduzido | err | integração | `PERMISSION_NOT_OWNED` | B-24 | ⬜ |
-| S-176 | menu de contexto e comandos da paleta existem e agem sobre a seleção | eq | integração | — | B-24 | ⬜ |
-| S-177 | "selecionar tudo" pega só o que o filtro atual mostra | fron | integração | — | B-24 | ⬜ |
+| S-173 | selecionar várias → barra de lote; revogar mostra a prévia (quantas, quais padrões) e, feito, "desfazer" restaura | est | integração | — | B-24 | ✅ |
+| S-174 | clique duplo na confirmação revoga uma vez | idem | integração | — | B-24 | ✅ |
+| S-175 | lote recusado mantém todas as linhas, com o erro traduzido | err | integração | `PERMISSION_NOT_OWNED` | B-24 | ✅ |
+| S-176 | menu de contexto e comandos da paleta existem e agem sobre a seleção | eq | integração | — | B-24 | 🟡 |
+| S-177 | "selecionar tudo" pega só o que o filtro atual mostra | fron | integração | — | B-24 | ✅ |
 
 ## Lembrete na web — B-25
 

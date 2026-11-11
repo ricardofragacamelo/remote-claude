@@ -14,7 +14,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 
 ## Panorama
 
-**Última atualização:** 2026-11-10
+**Última atualização:** 2026-11-11
 
 ```
 00-bootstrap                  ████████████████████ 100%   ✅ concluído
@@ -32,7 +32,7 @@ lidos dos arquivos de fase e das matrizes de cenário de **todos** os planos. O 
 12-integrated-terminal        ░░░░░░░░░░░░░░░░░░░░   0%   🔄 em andamento
 13-claude-settings            ████████████████████ 100%   ✅ concluído
 14-audit-explained            ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
-15-rules-management           ████████████░░░░░░░░  61%   ⛔ bloqueado
+15-rules-management           █████████████░░░░░░░  64%   ⛔ bloqueado
 16-usage-and-cost             ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
 17-devices                    ██░░░░░░░░░░░░░░░░░░   9%   🔄 em andamento
 18-logs-and-diagnostics       ░░░░░░░░░░░░░░░░░░░░   0%   🔲 não iniciado
@@ -71,7 +71,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [12 — Terminal integrado](12-integrated-terminal/README.md) | 0/4 | 0/26 | 2/175 | 14/14 | 🔄 |
 | [13 — Configuração do Claude](13-claude-settings/README.md) | 5/5 | 47/47 | 207/216 | 31/31 | ✅ |
 | [14 — Auditoria explicada](14-audit-explained/README.md) | 0/5 | 0/38 | 0/152 | 1/15 | 🔲 |
-| [15 — Gestão de regras](15-rules-management/README.md) | 1/5 | 22/36 | 97/226 | 20/20 | ⛔ |
+| [15 — Gestão de regras](15-rules-management/README.md) | 1/5 | 23/36 | 101/226 | 20/20 | ⛔ |
 | [16 — Uso e custo](16-usage-and-cost/README.md) | 0/5 | 0/33 | 0/123 | 1/16 | 🔲 |
 | [17 — Dispositivos](17-devices/README.md) | 1/5 | 3/32 | 13/132 | 4/16 | 🔄 |
 | [18 — Logs e diagnóstico](18-logs-and-diagnostics/README.md) | 0/5 | 0/34 | 0/116 | 3/17 | 🔲 |
@@ -85,7 +85,7 @@ Fases concluídas · tarefas concluídas · cenários passando · decisões toma
 | [26 — Paridade da conversa no app](26-mobile-conversation-parity/README.md) | 8/8 | 26/26 | 78/78 | 35/35 | ✅ |
 | [27 — Perdas da conversa](27-conversation-losses/README.md) | 9/9 | 31/31 | 119/124 | 15/15 | ✅ |
 | [28 — Agent neutral core](28-agent-neutral-core/README.md) | 8/8 | 48/48 | 118/136 | 51/51 | ✅ |
-| **Total** | **142/178** | **761/980** | **2924/3987** | **540/603** | ⛔ |
+| **Total** | **142/178** | **762/980** | **2928/3987** | **540/603** | ⛔ |
 
 Legenda: 🔲 não iniciado · 🔄 em andamento · ✅ concluído · ⛔ bloqueado
 

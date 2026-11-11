@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 
+import { commandRegistry } from '@/features/commands';
 import { DEFAULT_RULES_SEARCH, RulesScreen } from '@/features/permission';
 import { api } from '@/shared/api/api';
 import { render, translator } from '../../../support/render';
@@ -687,9 +688,15 @@ describe('the rules screen — plan 15, B-21', () => {
     });
 
     it('narrows to only rules with a finding when "com alerta" is on — client-side (D-13)', async () => {
+      // `alwaysRule` has `findings: []` — a route that has computed the answer and found nothing.
+      // `noFindingsField`, below, drops the field entirely — a route that has not been taught to
+      // fill it yet (contract, `findings?`) — and must be excluded exactly the same way.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- only `findings` is dropped, nothing of it kept
+      const { findings: _findings, ...noFindingsField } = alwaysRule;
       mockApiGet({
         rules: [
           alwaysRule,
+          { ...noFindingsField, id: 'rule_no_findings_field' },
           { ...projectRule, findings: [{ kind: 'shadowedByDeny', ruleId: 'other' }] },
         ],
       });
@@ -1023,6 +1030,219 @@ describe('the rules screen — plan 15, B-21', () => {
 
       const row = await screen.findByText(alwaysRule.pattern).then((cell) => cell.closest('tr')!);
       expect(within(row).queryByRole('img')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('selection and the batch bar — plan 15, B-24', () => {
+    const ruleA = { ...alwaysRule, id: 'rule_a', pattern: 'shell(a:*)' };
+    const ruleB = { ...alwaysRule, id: 'rule_b', pattern: 'shell(b:*)' };
+    const ruleC = { ...alwaysRule, id: 'rule_c', pattern: 'shell(c:*)' };
+
+    function checkboxOf(pattern: string): HTMLElement {
+      return screen.getByLabelText(t('rules.table.rowSelect', { pattern }));
+    }
+
+    it('shift-clicks a range: the rows between the last plain click and this one — S-177', async () => {
+      mockApiGet({ rules: [ruleA, ruleB, ruleC] });
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(ruleA.pattern);
+
+      await userEvent.click(checkboxOf(ruleA.pattern));
+      fireEvent.click(checkboxOf(ruleC.pattern), { shiftKey: true });
+
+      expect(checkboxOf(ruleA.pattern)).toBeChecked();
+      expect(checkboxOf(ruleB.pattern)).toBeChecked();
+      expect(checkboxOf(ruleC.pattern)).toBeChecked();
+    });
+
+    it('"select all" picks only what the current tab shows, never the rest — S-177', async () => {
+      mockApiGet({ rules: [ruleA, ruleB] });
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(ruleA.pattern);
+
+      await userEvent.click(screen.getByLabelText(t('rules.table.columnSelect')));
+
+      expect(checkboxOf(ruleA.pattern)).toBeChecked();
+      expect(checkboxOf(ruleB.pattern)).toBeChecked();
+      expect(screen.getByText(t('rules.batch.selectedCount', { count: 2 }))).toBeInTheDocument();
+
+      await userEvent.click(screen.getByLabelText(t('rules.table.columnSelect')));
+
+      expect(checkboxOf(ruleA.pattern)).not.toBeChecked();
+      expect(screen.queryByText(t('rules.batch.selectedCount', { count: 2 }))).toBeNull();
+    });
+
+    it('shows the batch bar once something is selected, and clears from its own button', async () => {
+      mockApiGet({ rules: [ruleA, ruleB] });
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(ruleA.pattern);
+
+      expect(screen.queryByRole('status')).toBeNull();
+
+      await userEvent.click(checkboxOf(ruleA.pattern));
+
+      expect(screen.getByText(t('rules.batch.selectedCount', { count: 1 }))).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: t('rules.batch.clearSelection') }));
+
+      expect(screen.queryByRole('status')).toBeNull();
+      expect(checkboxOf(ruleA.pattern)).not.toBeChecked();
+    });
+
+    it('revokes the lot with a preview, removes the rows, and offers "desfazer" — S-173', async () => {
+      mockApiGet({ rules: [ruleA, ruleB] });
+      const post = vi.spyOn(api, 'post').mockResolvedValue({
+        rules: [
+          { ...ruleA, status: 'revoked' },
+          { ...ruleB, status: 'revoked' },
+        ],
+      });
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(ruleA.pattern);
+
+      await userEvent.click(checkboxOf(ruleA.pattern));
+      await userEvent.click(checkboxOf(ruleB.pattern));
+      await userEvent.click(screen.getByRole('button', { name: t('rules.action.revoke') }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText(ruleA.pattern)).toBeInTheDocument();
+      expect(within(dialog).getByText(ruleB.pattern)).toBeInTheDocument();
+
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: t('rules.batch.confirmRevoke') }),
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByText(ruleA.pattern)).toBeNull();
+      });
+      expect(screen.queryByText(ruleB.pattern)).toBeNull();
+      expect(post).toHaveBeenCalledWith('/permission-rules/revoke', {
+        ids: expect.arrayContaining([ruleA.id, ruleB.id]),
+      });
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('a double click on Confirm sends the batch once — S-174', async () => {
+      mockApiGet({ rules: [ruleA] });
+      const post = vi.spyOn(api, 'post').mockReturnValue(new Promise(() => undefined));
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(ruleA.pattern);
+
+      await userEvent.click(checkboxOf(ruleA.pattern));
+      await userEvent.click(screen.getByRole('button', { name: t('rules.action.revoke') }));
+      const confirm = await screen.findByRole('button', { name: t('rules.batch.confirmRevoke') });
+
+      await userEvent.click(confirm);
+      await userEvent.click(confirm);
+
+      expect(post).toHaveBeenCalledTimes(1);
+    });
+
+    it('a refusal keeps every row, with the translated error inline — S-175', async () => {
+      mockApiGet({ rules: [ruleA, ruleB] });
+      vi.spyOn(api, 'post').mockRejectedValue({
+        code: 'PERMISSION_NOT_OWNED',
+        messageKey: 'permission.error.ruleNotOwned',
+        params: {},
+      });
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(ruleA.pattern);
+
+      await userEvent.click(checkboxOf(ruleA.pattern));
+      await userEvent.click(checkboxOf(ruleB.pattern));
+      await userEvent.click(screen.getByRole('button', { name: t('rules.action.revoke') }));
+      await userEvent.click(
+        await screen.findByRole('button', { name: t('rules.batch.confirmRevoke') }),
+      );
+
+      expect(await screen.findByText(t('permission.error.ruleNotOwned'))).toBeInTheDocument();
+      expect(screen.getAllByText(ruleA.pattern).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(ruleB.pattern).length).toBeGreaterThan(0);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('registers "revoke selected" for the palette, only while something is selected — S-176', async () => {
+      mockApiGet({ rules: [ruleA] });
+      vi.spyOn(api, 'post').mockResolvedValue({ rules: [{ ...ruleA, status: 'revoked' }] });
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(ruleA.pattern);
+
+      expect(commandRegistry.command('rules.revokeSelected')?.when?.()).toBe(false);
+
+      await userEvent.click(checkboxOf(ruleA.pattern));
+
+      expect(commandRegistry.command('rules.revokeSelected')?.when?.()).toBe(true);
+
+      commandRegistry.command('rules.revokeSelected')?.run();
+
+      expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('registers "open expiring soon", asking for that tab — S-176', async () => {
+      mockApiGet({ rules: [] });
+      const onSearch = vi.fn();
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={onSearch}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(t('rules.tabEmpty.activeTitle'));
+
+      commandRegistry.command('rules.openExpiringSoon')?.run();
+
+      expect(onSearch).toHaveBeenCalledWith(expect.objectContaining({ tab: 'expiringSoon' }));
     });
   });
 
