@@ -1,0 +1,17 @@
+{
+  "id": "15·S-211, S-212",
+  "title": "testing a command before and after creating its rule through the wizard's second step, then a scripted session proves the rule for real",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "kind": "Shell",
+    "command": "pnpm test",
+    "pattern": "shell(pnpm test:*)",
+    "askSuffix": "would ask you: no rule matches.",
+    "allowedPrefix": "Would be allowed without asking, by",
+    "fixture": "pnpm-watch-turn",
+    "scope": "always"
+  }
+}

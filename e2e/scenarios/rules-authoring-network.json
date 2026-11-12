@@ -1,0 +1,13 @@
+{
+  "id": "15·S-213",
+  "title": "the \"Block network access\" template, applied from the screen, refuses a scripted session's web fetch without asking",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "templateName": "Block network access",
+    "fixture": "web-fetch-turn",
+    "scope": "always"
+  }
+}

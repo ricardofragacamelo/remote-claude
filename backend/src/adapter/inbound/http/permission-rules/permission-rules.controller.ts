@@ -45,6 +45,7 @@ import {
   RestorePermissionRulesUseCase,
   RevokePermissionRuleUseCase,
   RevokePermissionRulesUseCase,
+  RuleDialects,
   SimulatePermissionRulesUseCase,
   SummarizePermissionRulesUseCase,
   decodeRuleCursor,
@@ -154,6 +155,7 @@ export class PermissionRulesController {
     @Inject(ImportPermissionRulesUseCase)
     private readonly importRules: ImportPermissionRulesUseCase,
     @Inject(ToolClassifiers) private readonly classifiers: ToolClassifiers,
+    @Inject(RuleDialects) private readonly dialects: RuleDialects,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
@@ -346,7 +348,7 @@ export class PermissionRulesController {
     return toEvaluationDto(
       await this.evaluate.execute({
         userId,
-        engine: body.engine,
+        engine: body.engine ?? this.dialects.default,
         kind: body.kind,
         subject: toToolSubject(body.subject),
         folder: body.folder ?? null,

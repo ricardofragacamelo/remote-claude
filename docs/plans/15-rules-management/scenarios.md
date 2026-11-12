@@ -361,9 +361,9 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-211 | criar pela tela com o segundo passo → a sessão roteirizada tem a próxima invocação respondida com `auto: true`, o uso vai a 1 e a trilha mostra a concessão com a origem | eq | e2e | — | B-33 | ⬜ |
-| S-212 | testar o comando antes (pergunta) e depois de criar (permitido) | est | e2e | — | B-33 | ⬜ |
-| S-213 | o modelo "bloquear rede" cria `deny` que recusa um `WebFetch` da sessão roteirizada | eq | e2e | — | B-33 | ⬜ |
+| S-211 | criar pela tela com o segundo passo → a sessão roteirizada tem a próxima invocação respondida com `auto: true`, o uso vai a 1 e a trilha mostra a concessão com a origem | eq | e2e | — | B-33 | ✅ |
+| S-212 | testar o comando antes (pergunta) e depois de criar (permitido) | est | e2e | — | B-33 | ✅ |
+| S-213 | o modelo "bloquear rede" cria `deny` que recusa um `WebFetch` da sessão roteirizada | eq | e2e | — | B-33 | ✅ |
 | S-214 | encurtar e estender com segundo passo; os dois na trilha | est | e2e | — | B-34 | ⬜ |
 | S-215 | revogar em lote com a prévia → a próxima invocação pergunta; desfazer → volta a ser respondida; trilha com revogação e restauração | est | e2e | — | B-34 | ⬜ |
 | S-216 | importar arquivo com pasta de outra máquina: a prévia marca, o remapeamento corrige, as regras nascem | eq | e2e | — | B-34 | ⬜ |

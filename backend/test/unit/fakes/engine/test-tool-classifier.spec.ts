@@ -6,10 +6,10 @@ const FOLDER = '/srv/projects/app';
 
 /**
  * Scenario matrix (AGENTS.md rule 4) for the test engine's own classification table — the fake's
- * equivalent of `tool-classifier.ts`'s own coverage, over its three native tools.
+ * equivalent of `tool-classifier.ts`'s own coverage, over its four native tools.
  *
- * - equivalência: each of `write_file`, `run_shell`, `ask_user` reads as its canonical kind, with the
- *   origin carrying the engine's own native name.
+ * - equivalência: each of `write_file`, `run_shell`, `ask_user`, `web_fetch` reads as its canonical
+ *   kind, with the origin carrying the engine's own native name.
  * - fronteira: an empty `content` writes no lines; an `ask_user` with no `options` still classifies.
  * - erro: a name the table has no classification for is `other`, never a thrown error.
  * - transição de estado: not applicable — classification is a pure function of its arguments, with no
@@ -54,6 +54,17 @@ describe('classifyTestTool', () => {
     });
     expect(tool.subject).toEqual({ command: 'echo one\necho two' });
     expect(tool.changes).toEqual([]);
+  });
+
+  it('reads web_fetch as a web.fetch, with the host as its label and the url as its subject', () => {
+    const tool = classifyTestTool('web_fetch', { url: 'https://example.com/data' }, FOLDER);
+
+    expect(tool.kind).toBe('web.fetch');
+    expect(tool.label).toEqual({
+      messageKey: 'sessions.tool.webFetch',
+      params: { host: 'example.com' },
+    });
+    expect(tool.subject).toEqual({ url: 'https://example.com/data' });
   });
 
   it('reads ask_user as a question, normalised the way every question-asking engine is', () => {

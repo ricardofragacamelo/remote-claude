@@ -17,6 +17,12 @@ export class RuleDialects {
     this.byEngine = new Map(dialects.map((dialect) => [dialect.engine, dialect]));
   }
 
+  /** The engine a caller names none of — what `translate` and `/permission-rules/evaluate`'s own
+   * hypothetical test (B-14, no live session to read one from) both fall back to. */
+  get default(): string {
+    return this.defaultEngine;
+  }
+
   /** [nativePattern] of [engine] — the default when `null` — in the canonical grammar, or why not. */
   translate(engine: string | null, nativePattern: string): RuleTranslation {
     const dialect = this.byEngine.get(engine ?? this.defaultEngine);

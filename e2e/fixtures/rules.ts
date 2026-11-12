@@ -24,6 +24,28 @@ export interface ListedRule {
   readonly revokedAt: string | null;
 }
 
+/** A rule's own usage, as `GET /permission-rules/:id` carries it (plan 15, B-22/B-23). */
+export interface RuleUsage {
+  readonly count: number;
+  readonly lastUsedAt: string | null;
+  readonly windowDays: number;
+}
+
+/** A rule as `GET /permission-rules/:id` answers it — the listing's own fields, plus its usage,
+ * its decision and its canonical `kind` (plan 15, B-33). */
+export interface DescribedRule extends ListedRule {
+  readonly decision: string;
+  readonly kind: string;
+  readonly usage: RuleUsage;
+}
+
+/** One invocation of a rule, as `GET /permission-rules/:id/invocations` lists it (plan 15, B-11). */
+export interface RuleInvocation {
+  readonly id: string;
+  readonly toolName: string;
+  readonly decision: string;
+}
+
 /** One entry of the trail, as `GET /audit-entries` answers it. */
 export interface TrailEntry {
   readonly id: string;
@@ -45,6 +67,26 @@ export async function rulesOf(user: AuthenticatedUser): Promise<readonly ListedR
   const response = await callApi(user, '/permission-rules');
   expect(response.status).toBe(200);
   return ((await response.json()) as { rules: readonly ListedRule[] }).rules;
+}
+
+/** One rule, described in full — its own usage and decision included. */
+export async function describedRule(
+  user: AuthenticatedUser,
+  ruleId: string,
+): Promise<DescribedRule> {
+  const response = await callApi(user, `/permission-rules/${ruleId}`);
+  expect(response.status).toBe(200);
+  return (await response.json()) as DescribedRule;
+}
+
+/** A rule's own invocations, newest first (plan 15, B-11). */
+export async function invocationsOf(
+  user: AuthenticatedUser,
+  ruleId: string,
+): Promise<readonly RuleInvocation[]> {
+  const response = await callApi(user, `/permission-rules/${ruleId}/invocations`);
+  expect(response.status).toBe(200);
+  return ((await response.json()) as { invocations: readonly RuleInvocation[] }).invocations;
 }
 
 /** Takes a rule back from the browser, whatever state it is in. For cleanup: it asserts nothing. */
@@ -135,17 +177,20 @@ export function requestIdOf(frame: Envelope): string {
  * `answer` is who answers the question, if one comes: `null` means nobody on this socket does, which
  * is what a turn a rule settles needs — and a turn that asks anyway then waits for the deadline,
  * whose refusal the {@link Turn} shows. `by` is the socket that answers, when it is not the one
- * that prompted: the phone answering a session the browser opened.
+ * that prompted: the phone answering a session the browser opened. `fixture` names a different
+ * recorded turn than the file write every earlier suite reached for — a shell call or a web fetch,
+ * for a rule whose own width or kind the file-write turn could never exercise (plan 15, B-33).
  */
 export async function writeTurn(
   socket: E2eSocket,
   sessionId: string,
   answer: Answer | null,
   by: E2eSocket = socket,
+  fixture = 'tool-turn',
 ): Promise<Turn> {
   const mark = socket.frames.length;
   const answererMark = by.frames.length;
-  prompt(socket, sessionId, 'tool-turn');
+  prompt(socket, sessionId, fixture);
 
   if (answer !== null) {
     const request = await waitSince(
@@ -186,6 +231,30 @@ export function expectRanUnasked(turn: Turn): void {
   expect(
     turn.completed.some((frame) => (frame.payload as { toolUseId?: string }).toolUseId === writeId),
   ).toBe(true);
+}
+
+/**
+ * Asserts that a turn settled **without asking anybody**: no question went out, and a rule
+ * settled it — `auto`, `allow` — without checking which native tool ran, unlike
+ * {@link expectRanUnasked}'s own `Write` pairing: a turn whose own tool is a shell call or a web
+ * fetch has nothing of the kind to look for (plan 15, B-33, S-211).
+ */
+export function expectAllowedUnasked(turn: Turn): void {
+  expect(turn.asked).toHaveLength(0);
+  expect(turn.resolved.map((frame) => frame.payload)).toEqual([
+    expect.objectContaining({ decision: 'allow', auto: true }),
+  ]);
+}
+
+/**
+ * Asserts that a turn was refused **without asking anybody**: no question went out, and a rule
+ * settled it — `auto`, `deny` (plan 15, B-33, S-213).
+ */
+export function expectDeniedUnasked(turn: Turn): void {
+  expect(turn.asked).toHaveLength(0);
+  expect(turn.resolved.map((frame) => frame.payload)).toEqual([
+    expect.objectContaining({ decision: 'deny', auto: true }),
+  ]);
 }
 
 /**

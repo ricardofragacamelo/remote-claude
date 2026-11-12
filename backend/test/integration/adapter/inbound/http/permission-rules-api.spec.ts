@@ -1468,6 +1468,25 @@ describe('the permission rules HTTP surface', () => {
 
       expect(await rowCount()).toBe(1);
     });
+
+    // A hypothetical test (the screen's own "Testar um comando", B-14) names no live session and
+    // so has no engine to read one from — `engine` absent falls back to the installation's own
+    // default, the same way a draft's own `engine` already did (`RuleDialects.translate`). Found
+    // missing while writing plan 15's own first e2e spec (B-33): the schema required it, the web
+    // never sent it, and no test before this one ever omitted it.
+    it('answers a hypothetical call naming no engine at all, under the installation’s own default', async () => {
+      const granted = await grant();
+
+      const response = await evaluate({
+        kind: 'shell',
+        subject: { command: 'git status' },
+        folder: PROJECT,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.outcome).toBe('allow');
+      expect(response.body.answeringRule.id).toBe(granted.body.id);
+    });
   });
 
   describe('POST /permission-rules/preview', () => {

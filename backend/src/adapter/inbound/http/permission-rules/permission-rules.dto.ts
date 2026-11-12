@@ -175,9 +175,11 @@ const toolSubjectSchema = z
   })
   .strict();
 
-/** What `POST /permission-rules/evaluate` is sent — a call to test, never run (plan 15, B-14). */
+/** What `POST /permission-rules/evaluate` is sent — a call to test, never run (plan 15, B-14).
+ * `engine` absent means the installation's own default (ADR-025: the core asks for a name, never
+ * picks one itself) — the test panel's own hypothetical call names no session to read it from. */
 export const evaluatePermissionSchema = z.object({
-  engine: z.string().regex(ENGINE_NAME),
+  engine: z.string().regex(ENGINE_NAME).optional(),
   kind: z.string().min(1).max(64),
   subject: toolSubjectSchema,
   /** A raw folder, resolved against the allowlist exactly as creating a `project` rule is. */

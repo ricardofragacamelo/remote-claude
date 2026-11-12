@@ -92,6 +92,25 @@ const runShell: Classify = (input) => {
   return tool('shell', 'sessions.tool.shell', { command: firstLine(command) }, { command });
 };
 
+/**
+ * The host of a URL, or the URL itself when it is not one — the same rule Claude's own classifier
+ * shows a label by (`hostOf` of `tool-classifier.ts`), kept as its own copy here on purpose: this
+ * fake must never depend on Claude's adapter changing underneath it.
+ */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+/** `web_fetch`: `{ url }` — this engine's own name for a web fetch. */
+const webFetch: Classify = (input) => {
+  const url = field(input, 'url');
+  return tool('web.fetch', 'sessions.tool.webFetch', { host: hostOf(url) }, { url });
+};
+
 /** The options of an `ask_user` call, kept as the strings the agent wrote — never more than one each. */
 function optionsOf(input: Input): readonly string[] {
   const raw = input['options'];
@@ -142,7 +161,7 @@ const askUser: Classify = (input) => {
  * Every native tool of the test engine (plan 28, B-43) — other names than Claude's, by the task's
  * own text.
  */
-export const TEST_TOOLS = ['write_file', 'run_shell', 'ask_user'] as const;
+export const TEST_TOOLS = ['write_file', 'run_shell', 'ask_user', 'web_fetch'] as const;
 
 export type TestTool = (typeof TEST_TOOLS)[number];
 
@@ -154,6 +173,7 @@ const CLASSIFY: Readonly<Record<TestTool, Classify>> = {
   write_file: writeFile,
   run_shell: runShell,
   ask_user: askUser,
+  web_fetch: webFetch,
 };
 
 function isTestTool(name: string): name is TestTool {

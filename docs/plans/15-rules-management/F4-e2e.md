@@ -27,7 +27,7 @@ porque nada aqui depende do que o CLI real faz além do que o plano 03 já provo
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-33 — O ciclo de autoria pela tela 🔲
+### B-33 — O ciclo de autoria pela tela ✅
 
 Spec nova `rule-authoring.spec.ts`:
 
@@ -38,6 +38,35 @@ Spec nova `rule-authoring.spec.ts`:
   (S-211);
 - o modelo "Bloquear rede" aplicado → um `WebFetch` da sessão roteirizada é recusado sem pergunta
   (S-213).
+
+**Nota de execução**: nenhuma das três cenas tinha turno roteirizado — o motor neutro de teste
+(`backend/test/fakes/engine/test-tool-classifier.ts`, plano 28) só sabia `write_file`/`run_shell`/
+`ask_user`; ganhou `web_fetch` (mesma forma do classificador real do Claude, `tool('web.fetch',
+'sessions.tool.webFetch', {host}, {url})`), e `script.ts` ganhou `pnpm-watch-turn`/`web-fetch-turn`.
+`writeTurn` (`e2e/fixtures/rules.ts`) ganhou um quinto parâmetro opcional `fixture` (era fixo em
+`'tool-turn'`); `startSession` (`e2e/fixtures/live-session.ts`) ganhou um `engine` opcional, para
+abrir a sessão roteirizada no motor de teste em vez do padrão da instalação. Novo
+`expectAllowedUnasked` ao lado do já existente `expectRanUnasked` (que checa especificamente um par
+`Write`, errado para um shell/web fetch) e novo `expectDeniedUnasked` para a recusa automática.
+
+**Achado e corrigido durante a própria tarefa — uma lacuna real de contrato**: `POST
+/permission-rules/evaluate` (o teste de comando, B-14) exigia `engine` no corpo, mas o tipo do web
+(`EvaluateRuleInput.engine?`) sempre o declarou opcional — e a tela nunca o manda, pois um teste
+hipotético não nomeia sessão nenhuma para lê-lo dali. Nenhum teste de integração existente notou,
+porque todos os seus já mandavam `engine` explícito; só o primeiro teste e2e de verdade bateu nisso.
+Corrigido tornando `engine` opcional no schema (`permission-rules.dto.ts`) e expondo um getter
+`default` em `RuleDialects` (já injetada no controller, zero wiring novo) para resolver o padrão da
+instalação quando a tela não manda nenhum — o mesmo fallback `translate` já fazia internamente.
+
+**Achado e corrigido, um bug de i18n de passagem**: `rules.templates.heading` do catálogo em inglês
+dizia "Modelos" (português vazado na B-30) em vez de "Templates" — bateu direto na tela que este
+teste dirige; `pnpm i18n:check` nunca notou porque só compara paridade estrutural, não o conteúdo.
+
+**Achado durante a execução, não a escrita**: a validade da instalação de e2e tem teto de um dia
+(`RC_PERMISSION_RULE_MAX_LIFETIME_MS=86400000`, `scripts/lib/stack.mjs`) — mais curto que o menor
+atalho fixo da tela (7 dias). Os dois casos usam a data livre do próprio passo (`ExpiryPicker`,
+"Or pick a date"), com a data de hoje — que `dateInputToExpiresAt` já resolve para o **fim** do dia
+de hoje, sempre à frente de "agora" e sempre dentro do teto, qualquer que seja a hora da corrida.
 
 ### B-34 — Gestão: validade, lote, desfazer, importar 🔲
 

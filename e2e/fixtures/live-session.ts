@@ -94,9 +94,19 @@ export interface WorkspaceRoot {
   readonly label: string;
 }
 
-/** Opens a session on a workspace and answers the id the **server** minted for it. */
-export async function startSession(socket: E2eSocket, workspacePath: string): Promise<string> {
-  socket.send('session.start', { workspacePath });
+/**
+ * Opens a session on a workspace and answers the id the **server** minted for it.
+ *
+ * `engine` names a `GET /engines` id to open on instead of the installation's default — the
+ * neutral test engine's own `[fixture:…]` turns (plan 15, B-33) only replay on a session of its
+ * own, since the default engine's own scripted fake knows nothing of them.
+ */
+export async function startSession(
+  socket: E2eSocket,
+  workspacePath: string,
+  engine?: string,
+): Promise<string> {
+  socket.send('session.start', { workspacePath, ...(engine === undefined ? {} : { engine }) });
 
   const started = await socket.waitFor((frame) => frame.type === 'session.started');
   const sessionId = (started.payload as { sessionId?: unknown }).sessionId;

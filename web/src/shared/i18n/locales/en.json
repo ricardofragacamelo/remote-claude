@@ -857,7 +857,7 @@
       "revokeHeadingBatch": "Simulate revoking these"
     },
     "templates": {
-      "heading": "Modelos",
+      "heading": "Templates",
       "purpose": "A ready-made bundle of rules, reviewed before anything is granted.",
       "loading": "Reading the catalog…",
       "pick": "Choose",

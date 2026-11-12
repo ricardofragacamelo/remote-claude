@@ -68,8 +68,9 @@ export function fixtureNamedIn(promptText: string): string | null {
 
 /**
  * The turns every suite can reach for by name, without writing its own script — one per shape of
- * turn the port contract suite needs: plain text, a file write, a shell call, a question, and one
- * that holds until interrupted.
+ * turn the port contract suite needs (plain text, a file write, a shell call, a question, one that
+ * holds until interrupted), plus the shell and web-fetch calls plan 15's own e2e suite needs to
+ * prove a rule's width against a command, or a template's own rule, for real.
  */
 const TOOL_TURN_STEPS = [
   toolStep('write_file', { path: 'notes.txt', content: 'hello\n' }, 'wrote notes.txt'),
@@ -94,6 +95,19 @@ export const TEST_SCRIPTS: TestEngineScript = {
   // own `text-turn`, so the port contract suite's interrupt scenario (S-120) reads the same way for
   // either engine.
   'held-turn': turn([textStep('Working on it.')], true),
+  // A shell call a `shell(pnpm test:*)` rule reaches (plan 15, B-33, S-211) — a different command
+  // than `'shell-turn'`'s own, so a suite proving a rule's own width covers more than the one
+  // command it was written against never collides with the port contract suite's `echo hi`.
+  'pnpm-watch-turn': turn([
+    toolStep('run_shell', { command: 'pnpm test --watch' }, 'watching…'),
+    textStep('Started.'),
+  ]),
+  // A `web.fetch` call — this engine's only one — for the "Bloquear rede" template's own rule to
+  // refuse (plan 15, B-33, S-213).
+  'web-fetch-turn': turn([
+    toolStep('web_fetch', { url: 'https://example.com/data' }, 'fetched'),
+    textStep('Fetched it.'),
+  ]),
 };
 
 /**
