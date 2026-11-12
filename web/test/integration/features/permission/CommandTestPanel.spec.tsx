@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
 
 import { CommandTestPanel } from '@/features/permission/components/CommandTestPanel';
 import { api } from '@/shared/api/api';
@@ -270,5 +271,22 @@ describe('CommandTestPanel — "testar um comando" (plan 15, B-28)', () => {
         }),
       );
     });
+  });
+
+  it('has no axe violations, with a verdict, matching rules and caveats shown — B-32, S-209', async () => {
+    vi.spyOn(api, 'post').mockResolvedValue({
+      outcome: 'allow',
+      answeringRule: { id: 'rule_1', pattern: 'search', decision: 'allow', scope: 'always' },
+      matching: [{ id: 'rule_1', pattern: 'search', decision: 'allow', scope: 'always' }],
+      reasons: ['ruleAnswers'],
+      caveats: [{ messageKey: 'rules.test.verdictAskNoRule', params: {} }],
+    });
+    const { container } = render(<CommandTestPanel onOpenRule={vi.fn()} />);
+    const user = userEvent.setup();
+
+    await user.click(kindRadio(t('sessions.kind.search')));
+    await screen.findByText(t('rules.test.verdictAllowedByRule', { pattern: 'search' }));
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

@@ -354,8 +354,8 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-209 | ajuda, tooltips e exemplos do assistente traduzidos; axe sem violação em cada passo | eq | integração | — | B-32 | ⬜ |
-| S-210 | só com o teclado se completa o assistente, do primeiro passo à criação | eq | integração | — | B-32 | ⬜ |
+| S-209 | ajuda, tooltips e exemplos do assistente traduzidos; axe sem violação em cada passo | eq | integração | — | B-32 | ✅ |
+| S-210 | só com o teclado se completa o assistente, do primeiro passo à criação | eq | integração | — | B-32 | ✅ |
 
 ## E2E — B-33…B-36
 

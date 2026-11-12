@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
 
 import { NewRuleWizard } from '@/features/permission/components/NewRuleWizard';
 import type { NewRuleSearch } from '@/features/permission/lib/new-rule-search';
@@ -444,5 +445,73 @@ describe('the review step’s own command tester — S-198', () => {
         expect.objectContaining({ draft: { pattern: 'search', decision: 'allow' } }),
       );
     });
+  });
+});
+
+describe('axe — one check per step — B-32, S-209', () => {
+  it('kind', async () => {
+    const { container } = mount();
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('pattern, with a real subject field on screen', async () => {
+    const { container } = mount();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('radio', { name: t('sessions.kind.shell') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await screen.findByRole('textbox', { name: t('rules.wizard.subjectCommand') });
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('decision', async () => {
+    const { container } = mount();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('radio', { name: t('sessions.kind.search') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('folder', async () => {
+    const { container } = mount();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('radio', { name: t('sessions.kind.search') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(allowRadio());
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('validity', async () => {
+    const { container } = mount();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('radio', { name: t('sessions.kind.search') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(allowRadio());
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+    await user.click(alwaysScopeRadio());
+    await user.click(screen.getByRole('button', { name: t('rules.wizard.next') }));
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('review, once the preview answers, command tester included', async () => {
+    const { container } = mount();
+    const user = userEvent.setup();
+
+    await advanceToReview(user);
+    await screen.findByRole('button', { name: t('rules.wizard.confirm') });
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

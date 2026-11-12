@@ -317,7 +317,7 @@ nada, re-marcar uma linha desmarcada, desmarcar uma confirmação de `broad` já
 `deny` (toda regra de teste até aqui era `allow`) — eram ramos de verdade, cobertos com cinco
 testes novos.
 
-### B-32 — Usabilidade e ajuda do assistente, do teste, da simulação e da importação 🔲
+### B-32 — Usabilidade e ajuda do assistente, do teste, da simulação e da importação ✅
 
 - ajuda de cada passo na gaveta da moldura, com os exemplos do padrão e o "por que não posso
   permitir o shell inteiro" — a explicação da largura escrita para quem não conhece shell; os exemplos
@@ -327,6 +327,45 @@ testes novos.
 - só com o teclado se completa o assistente, do primeiro passo ao criar (S-210);
 - axe sem violação em cada passo, no teste, na simulação e na prévia da importação; tudo traduzido
   (S-209).
+
+**Nota de execução**: levantamento prévio (antes de escrever qualquer código) encontrou boa parte
+do escopo já satisfeita pelo trabalho das tarefas anteriores da própria F3:
+
+- **tooltip em todo controle de ícone**: já garantido estruturalmente — nenhum botão só-ícone existe
+  em todo o escopo da tarefa (assistente, teste, simulação, importação); todo ícone encontrado é
+  decorativo (`aria-hidden`) ao lado de um rótulo de texto, nunca a única pista;
+- **S-210 (só com o teclado)**: já implementado na própria B-27, por `useWizardStepFocus`; o teste
+  `describe('keyboard only, start to finish — S-210')` (`NewRuleWizard.spec.tsx`) já cobria os seis
+  passos — só faltava marcar o cenário.
+
+O que de fato faltava, e foi construído agora:
+
+- **ajuda por passo do assistente**: `ScreenFrame` já aceita `extra?: readonly HelpExtra[]` (o
+  mesmo mecanismo que `rulesScreenHelp`/`rulesHelpExtras` já usam em `/rules`, B-26) — `NewRuleRoute`
+  só não o passava ainda. Novo `lib/new-rule-wizard-help.ts` (`newRuleWizardHelp(t)`), dois tópicos:
+  o formato do padrão canônico (tipo sozinho vs. com assunto, com `shell(git:*)`/`shell(git status)`
+  como exemplos reais) e por que um Permitir `unbounded` nunca é oferecido (D-09), escrito para quem
+  nunca digitou um comando de shell de propósito — o único texto existente sobre largura
+  (`unboundedBlocked`) é uma frase curta para quem já está vendo o bloqueio, não uma explicação;
+  novas chaves em `rules.wizardHelp.*` (mesmo namespace das três partes fixas, mesma profundidade de
+  3 segmentos);
+- **validação na linha + foco no primeiro campo com erro**: a validação em si já existia
+  (`RuleFailureMessage`, usado em todo lugar deste plano que mostra um erro); o que faltava era o
+  foco. Em vez de espalhar `ref`/`useEffect` por cada um dos ~13 lugares que renderizam esse
+  componente, o foco entrou **no próprio `RuleFailureMessage`** — `tabIndex={-1}` + `ref.current
+  .focus()` num `useEffect` chaveado por `messageKey`, movendo o foco assim que a mensagem aparece
+  (e de novo, se um novo erro substituir o anterior sem o componente desmontar). Um corte
+  deliberado: resolve o pedido da tarefa (o campo de uma etapa do assistente) e, de graça, o mesmo
+  padrão de acessibilidade em toda falha de escrita já exibida por este plano (linha da tabela,
+  cartão, painel de detalhe, revisão de modelo, importação) — sem reimplementar a mesma lógica em
+  cada um;
+- **axe em cada passo, no teste, na simulação e na prévia da importação (S-209)**: nenhuma dessas
+  telas tinha teste de axe ainda. Seis novos testes no assistente (um por passo: tipo, padrão,
+  decisão, pasta, validade, revisão já com a prévia respondida), um em `CommandTestPanel` (com
+  veredito, regras batendo e ressalvas na tela), um em `SimulationPanel` (com mudanças de verdade,
+  não a trilha vazia) e um em `ImportRulesDialog` (prévia com um item `new`, um `existing` e um
+  `broad`, a mistura mais rica de uma vez). Todos passaram de primeira — nenhuma violação nova
+  encontrada, só cobertura que faltava.
 
 ---
 

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
 
 import { ImportRulesDialog } from '@/features/permission/components/ImportRulesDialog';
 import type { RuleImportResult } from '@/features/permission/types/rule';
@@ -94,15 +95,16 @@ function mockImportApi(options: {
 function renderDialog(onApplied = vi.fn()): {
   onOpenChange: ReturnType<typeof vi.fn>;
   onApplied: ReturnType<typeof vi.fn>;
+  container: HTMLElement;
 } {
   const onOpenChange = vi.fn();
-  render(
+  const { container } = render(
     <>
       <Toaster containerAriaLabel="toasts" />
       <ImportRulesDialog open onOpenChange={onOpenChange} onApplied={onApplied} />
     </>,
   );
-  return { onOpenChange, onApplied };
+  return { onOpenChange, onApplied, container };
 }
 
 async function chooseFile(content = fileOf()): Promise<void> {
@@ -469,5 +471,21 @@ describe('ImportRulesDialog — "Importar" (plan 15, B-31, D-17)', () => {
 
     expect(screen.getByText(t('rules.import.chooseFile'))).toBeInTheDocument();
     expect(screen.queryByText('shell(pnpm test:*)')).not.toBeInTheDocument();
+  });
+
+  it('has no axe violations in the preview, with a mix of new, existing and broad verdicts — B-32, S-209', async () => {
+    fakeWorkspaceApi({ roots: [projects] });
+    mockImportApi({
+      previewItems: previewItemsFor(RULES, {
+        0: { verdict: 'existing' },
+        1: { breadth: 'broad' },
+      }),
+    });
+    const { container } = renderDialog();
+    await chooseFile();
+    await pickFirstValidityShortcut();
+    await screen.findByText(t('rules.import.acknowledgeBroad'));
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

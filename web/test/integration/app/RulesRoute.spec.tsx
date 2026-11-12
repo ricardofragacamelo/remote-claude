@@ -553,6 +553,7 @@ describe('the help of the rules screen — plan 15, B-26', () => {
     expect(heading('rules.help.sandboxHeading')).toBeVisible();
     expect(heading('rules.help.recordedHeading')).toBeVisible();
     expect(heading('rules.help.disabledHeading')).toBeVisible();
+    expect(heading('rules.export.button')).toBeVisible();
     expect(heading('engines.claude.help.rulesPrecedenceHeading')).toBeVisible();
   });
 

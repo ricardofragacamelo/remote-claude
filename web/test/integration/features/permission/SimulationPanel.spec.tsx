@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
 import type { AuditTrailEntry } from '@remote-claude/contracts';
 
 import { SimulationPanel } from '@/features/permission/components/SimulationPanel';
@@ -217,5 +218,18 @@ describe('SimulationPanel — "se esta regra existisse" / "se eu revogar esta" (
     await user.click(openButtons[0] as HTMLElement);
 
     expect(onOpenRule).toHaveBeenCalledWith('rule_1');
+  });
+
+  it('has no axe violations, with a trail full of changes — B-32, S-209', async () => {
+    mockSimulate(WITH_CHANGES);
+    const { container } = render(
+      <SimulationPanel
+        add={[{ pattern: 'shell(git status)', decision: 'allow' }]}
+        onOpenRule={vi.fn()}
+      />,
+    );
+    await screen.findByText(t('rules.simulate.changesHeading'));
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

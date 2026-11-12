@@ -814,7 +814,11 @@
     "wizardHelp": {
       "what": "Uma regra que você está prestes a conceder, passo a passo — sobre o que ela é, o quanto ela cobre, Permitir ou Bloquear, onde ela vale, por quanto tempo. Nada é gravado antes do próprio último passo confirmar.",
       "states": "Cada passo guarda o que você escolheu no anterior; voltar nunca perde isso. O último passo mostra a frase completa, com o que ela conflitaria e o que ela teria mudado nas suas últimas invocações, antes de qualquer coisa ser enviada.",
-      "notRecorded": "Nada deste assistente é enviado, ou guardado em algum lugar, antes do próprio último passo confirmar."
+      "notRecorded": "Nada deste assistente é enviado, ou guardado em algum lugar, antes do próprio último passo confirmar.",
+      "patternExamplesHeading": "Como é um padrão",
+      "patternExamplesBody": "Um tipo sozinho, como \"shell\", vale para todo uso dele — não existe nada mais estreito. Escrever um assunto estreita isso: \"shell(git status)\" vale só para esse comando, \"shell(git:*)\" vale para qualquer comando \"git\" (o \"*\" é a parte deixada aberta). A mesma forma vale para todo outro tipo que este assistente sabe escrever.",
+      "widthHeading": "Por que não dá para permitir o shell inteiro",
+      "widthBody": "\"shell\" sem nada depois não quer dizer \"este comando\" — quer dizer todo comando que alguém algum dia possa digitar, inclusive um que ninguém pensou ainda. É por isso que um Permitir tão largo nunca é oferecido, seja o que for escolhido neste passo: escreva um padrão mais estreito, ou escolha Bloquear, que este assistente deixa alcançar tudo, já que bloquear algo largo nunca é uma surpresa do jeito que permitir seria."
     },
     "test": {
       "heading": "Testar um comando",

@@ -89,6 +89,20 @@ describe('/rules/new, mounted through the real router — plan 15, B-27', () => 
     expect(screen.getByText(t('rules.wizard.screenPurpose'))).toBeVisible();
   });
 
+  it('lists the width explanation and the pattern examples in its own help — B-32', async () => {
+    mockServer();
+    const user = userEvent.setup();
+    mountApp('/rules/new');
+
+    await screen.findByRole('heading', { level: 1, name: t('rules.wizard.screenTitle') });
+    await user.click(screen.getByRole('button', { name: t('help.panel.open') }));
+
+    expect(
+      screen.getByRole('heading', { name: t('rules.wizardHelp.patternExamplesHeading') }),
+    ).toBeVisible();
+    expect(screen.getByRole('heading', { name: t('rules.wizardHelp.widthHeading') })).toBeVisible();
+  });
+
   it('runs a whole draft end to end — kind through Confirm — with only the server mocked', async () => {
     mockServer();
     const user = userEvent.setup();

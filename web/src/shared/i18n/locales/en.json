@@ -814,7 +814,11 @@
     "wizardHelp": {
       "what": "A rule you are about to grant, step by step — what it is about, how much it covers, Allow or Block, where it reaches, how long it lasts. Nothing is written until the last step's own confirm.",
       "states": "Each step keeps what you picked in the one before it; going back never loses it. The last step shows the full sentence, what it would conflict with, and what it would have changed in your last invocations, before anything is sent.",
-      "notRecorded": "Nothing from this wizard is sent, or kept anywhere, before its own last step confirms it."
+      "notRecorded": "Nothing from this wizard is sent, or kept anywhere, before its own last step confirms it.",
+      "patternExamplesHeading": "What a pattern looks like",
+      "patternExamplesBody": "A bare kind, such as \"shell\", reaches every use of it — nothing narrower exists. Writing a subject narrows it: \"shell(git status)\" reaches only that one command, \"shell(git:*)\" reaches any \"git\" command (the \"*\" is the part left open). The same shape applies to every other kind this wizard can write.",
+      "widthHeading": "Why you cannot allow the whole shell",
+      "widthBody": "\"shell\" with nothing after it does not mean \"this one command\" — it means every command anybody could ever type, forever, including ones nobody has thought of yet. That is why an Allow this wide is never offered, whatever you pick on this step: write a narrower pattern instead, or choose Block, which this wizard does let reach everything, since blocking something wide is never a surprise the way allowing it would be."
     },
     "test": {
       "heading": "Test a command",

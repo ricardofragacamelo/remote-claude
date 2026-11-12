@@ -24,6 +24,7 @@ export { RulesNavBadge } from './components/RulesNavBadge';
 export { rulesHelpExtras } from './lib/rules-help-extras';
 export type { RulesHelpExtra } from './lib/rules-help-extras';
 export { rulesScreenHelp } from './lib/rules-help';
+export { newRuleWizardHelp } from './lib/new-rule-wizard-help';
 export {
   NEW_RULE_KINDS,
   isNewRuleKind,
