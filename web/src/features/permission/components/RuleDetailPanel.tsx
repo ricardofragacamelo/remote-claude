@@ -12,6 +12,7 @@ import { Button } from '@/shared/components/ui/button';
 import { useClock } from '@/shared/hooks/useClock';
 import { useCopy } from '@/shared/hooks/useCopy';
 import { kindShortName } from '@/shared/lib/tool-label';
+import type { Load } from '@/shared/hooks/useLoad';
 import { useRule } from '../hooks/useRule';
 import { useRuleHistory } from '../hooks/useRuleHistory';
 import { useRuleInvocations } from '../hooks/useRuleInvocations';
@@ -52,6 +53,18 @@ function restoreKeyOf(ruleId: string): string {
 }
 
 /**
+ * [written] over whatever full read this panel already had, never in its place: a write route
+ * (shorten/extend, revoke) answers the bare rule, never `usage`/`findings`/`folderReachable`/
+ * `expiryCeiling` — those are the describe route's own expense (plan 15, B-22/B-23), not repeated
+ * on every write — and replacing the rule wholesale with that answer would lose them, crashing the
+ * validity dialog on a date it can no longer read. `current` is never anything but `ready` by the
+ * time a write resolves — the buttons a write answers are themselves only ever shown once it is.
+ */
+function mergedWith(current: Load<PermissionRule>, written: PermissionRule): PermissionRule {
+  return current.status === 'ready' ? { ...current.value, ...written } : written;
+}
+
+/**
  * One rule, whatever became of it — the panel that opens over the list (S-222), from the rules
  * screen's own row or from the audit trail's entry it answered (D-04).
  */
@@ -71,13 +84,13 @@ export function RuleDetailPanel({
   const [expiryDialog, setExpiryDialog] = useState<'shorten' | 'extend' | null>(null);
 
   const onRuleChanged = (changed: PermissionRule): void => {
-    setLoad(() => ({ status: 'ready', value: changed }));
+    setLoad((current) => ({ status: 'ready', value: mergedWith(current, changed) }));
   };
 
   const onRevoke = (): void => {
     void revoke(ruleId)
       .then((revoked) => {
-        setLoad(() => ({ status: 'ready', value: revoked }));
+        setLoad((current) => ({ status: 'ready', value: mergedWith(current, revoked) }));
       })
       .catch(() => {});
   };

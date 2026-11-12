@@ -1,0 +1,11 @@
+{
+  "id": "15·S-215",
+  "title": "revoking three rules in a batch puts the live session's next invocation back to a person, and undo restores a revoked one",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "scope": "always"
+  }
+}

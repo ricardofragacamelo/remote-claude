@@ -1,0 +1,12 @@
+{
+  "id": "15·S-216",
+  "title": "importing a file naming an unknown folder flags it, the shared folder selector remaps it, and the rule is created",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "scope": "project",
+    "unknownFolder": "/elsewhere/not-a-real-machine-path"
+  }
+}

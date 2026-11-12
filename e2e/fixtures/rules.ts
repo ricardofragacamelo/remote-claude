@@ -22,6 +22,7 @@ export interface ListedRule {
   readonly status: string;
   readonly grantedBy: string;
   readonly revokedAt: string | null;
+  readonly expiresAt: string;
 }
 
 /** A rule's own usage, as `GET /permission-rules/:id` carries it (plan 15, B-22/B-23). */
@@ -44,6 +45,15 @@ export interface RuleInvocation {
   readonly id: string;
   readonly toolName: string;
   readonly decision: string;
+}
+
+/** One event of a rule's own history, as `GET /permission-rules/:id/history` lists it — the same
+ * `audit_events` kind a restored rule reads back as a fresh `permission.ruleGranted`, never a kind
+ * of its own (plan 15, B-07/B-12/B-18/B-34). */
+export interface RuleHistoryEvent {
+  readonly id: string;
+  readonly kind: string;
+  readonly at: string;
 }
 
 /** One entry of the trail, as `GET /audit-entries` answers it. */
@@ -87,6 +97,17 @@ export async function invocationsOf(
   const response = await callApi(user, `/permission-rules/${ruleId}/invocations`);
   expect(response.status).toBe(200);
   return ((await response.json()) as { invocations: readonly RuleInvocation[] }).invocations;
+}
+
+/** A rule's own history — grants, revocations, validity changes — the same stream the detail
+ * panel's own History section shows (plan 15, B-12, B-34). */
+export async function ruleHistoryOf(
+  user: AuthenticatedUser,
+  ruleId: string,
+): Promise<readonly RuleHistoryEvent[]> {
+  const response = await callApi(user, `/permission-rules/${ruleId}/history`);
+  expect(response.status).toBe(200);
+  return ((await response.json()) as { events: readonly RuleHistoryEvent[] }).events;
 }
 
 /** Takes a rule back from the browser, whatever state it is in. For cleanup: it asserts nothing. */

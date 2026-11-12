@@ -1,0 +1,11 @@
+{
+  "id": "15·S-214",
+  "title": "shortening a rule's validity applies directly with undo, extending asks a second step, and the rule's own history shows both",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "scope": "always"
+  }
+}

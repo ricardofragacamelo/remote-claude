@@ -68,7 +68,7 @@ atalho fixo da tela (7 dias). Os dois casos usam a data livre do próprio passo 
 "Or pick a date"), com a data de hoje — que `dateInputToExpiresAt` já resolve para o **fim** do dia
 de hoje, sempre à frente de "agora" e sempre dentro do teto, qualquer que seja a hora da corrida.
 
-### B-34 — Gestão: validade, lote, desfazer, importar 🔲
+### B-34 — Gestão: validade, lote, desfazer, importar ✅
 
 Spec nova `rule-management.spec.ts`:
 
@@ -79,6 +79,32 @@ Spec nova `rule-management.spec.ts`:
   (S-215);
 - importar um arquivo com uma pasta de outra máquina: a prévia marca, o remapeamento pelo seletor
   corrige, as regras nascem e aparecem na lista (S-216).
+
+**Nota de execução — "os dois eventos" não é o `/audit`**: `/audit` (`GET /audit-entries`) só lista
+invocações de ferramenta — nunca um evento de gestão de regra (concessão, revogação, validade
+mudada). Esses vivem só na própria história da regra (`GET /permission-rules/:id/history`,
+`RuleHistorySection` no painel de detalhe, B-12/B-22) — é lá que S-214 lê as duas mudanças de
+validade. Documentado aqui porque o texto original da tarefa lia como se fosse o mesmo lugar.
+
+**Achado e corrigido durante a própria tarefa — um bug real, não um ajuste de teste**: `PATCH
+/permission-rules/:ruleId` (encurtar/estender) responde a regra **crua** (`toPermissionRuleDto`,
+sem `usage`/`findings`/`folderReachable`/`expiryCeiling` — essas são a despesa só do `describe`,
+B-22/B-23, deliberadamente fora de todo escrita). `RuleDetailPanel.tsx` substituía o estado inteiro
+por essa resposta crua, e `RuleExpiryDialog`'s própria `DialogDescription` lê
+`new Date(rule.expiryCeiling!)` sem guarda — `expiryCeiling` ausente (não `null`, ausente de
+verdade) é `undefined`, e `new Date(undefined)` formatado derruba a tela inteira ("Something went
+wrong!"), achado só pelo e2e de verdade: nenhum teste de integração existente notou porque todo
+mock ali espalhava (`spread`) o fixture rico, nunca a resposta crua real. Corrigido com um
+`mergedWith` em `RuleDetailPanel.tsx` — o resultado de uma escrita (encurtar/estender, revogar) é
+mesclado **sobre** o estado já lido, nunca o substitui por inteiro — e um teste de regressão novo
+em `RuleDetailPanel.spec.tsx` que, ao contrário de todo mock existente no arquivo, responde a forma
+crua de verdade.
+
+**Achado durante a escrita do próprio e2e — restaurar nasce com id novo**: `POST
+/permission-rules/restore` não reativa a mesma linha — grava uma `permission.ruleGranted` nova,
+com `restoredFrom` apontando pra original, que fica `revoked` para sempre (D-01, já documentado em
+`rule-history-label.ts`). A prova de "desfazer" funcionou não é reler o id original (que nunca
+volta a `active`) — é achar a regra ativa pelo próprio padrão (`rulesOf` já exclui as revogadas).
 
 ### B-35 — Segurança pela porta do usuário 🔲
 

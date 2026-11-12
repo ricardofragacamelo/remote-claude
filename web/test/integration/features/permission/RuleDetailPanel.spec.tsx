@@ -278,6 +278,67 @@ describe('the rule detail panel — plan 15, B-22', () => {
     });
   });
 
+  it('keeps the usage, the findings and the ceiling a shorten’s own bare response never carries', async () => {
+    mockApiGet();
+    // `PATCH /permission-rules/:ruleId` answers the bare rule (plan 15, B-23) — never
+    // `usage`/`findings`/`folderReachable`/`expiryCeiling`, the describe route's own expense
+    // (B-22) — unlike every other mock in this file, which spreads the rich fixture and so never
+    // catches a regression here.
+    vi.spyOn(api, 'patch').mockResolvedValue({
+      id: 'rule_1',
+      scope: 'always',
+      kind: 'shell',
+      toolName: 'shell',
+      pattern: 'shell(git status:*)',
+      decision: 'allow',
+      projectPath: null,
+      engine: null,
+      grantedBy: 'auth|42',
+      grantedAt: '2026-09-20T10:00:00.000Z',
+      expiresAt: '2026-09-27T23:59:59.999Z',
+      status: 'active',
+      revokedAt: null,
+      disabled: null,
+      reach: { kind: 'shell', form: 'prefix', content: 'git status', excludesCompound: false },
+      grantedVia: 'request',
+      etag: '"etag-2"',
+    });
+    render(
+      <RuleDetailPanel
+        ruleId="rule_1"
+        onClose={() => {}}
+        onOpenRule={() => {}}
+        onShowTrail={() => {}}
+        onDuplicate={() => {}}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: t('permission.ruleExpiry.shortenTitle') }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: t('permission.ruleExpiry.shortcut7') }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: t('permission.ruleExpiry.apply') }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('heading', { name: t('permission.ruleExpiry.shortenTitle') }),
+      ).toBeNull();
+    });
+    // Still there from the original read — never blanked by the write's own bare answer.
+    expect(screen.getByText(t('rules.table.useCount', { count: 3, days: 90 }))).toBeInTheDocument();
+
+    // The ceiling the dialog reads is still a real date — opening Extend next does not crash on
+    // a `new Date(undefined)` the way it did before this fix.
+    await userEvent.click(
+      screen.getByRole('button', { name: t('permission.ruleExpiry.extendTitle') }),
+    );
+    expect(
+      screen.getByRole('heading', { name: t('permission.ruleExpiry.extendTitle') }),
+    ).toBeInTheDocument();
+  });
+
   it('opens the extend dialog from its own button', async () => {
     mockApiGet();
     render(
