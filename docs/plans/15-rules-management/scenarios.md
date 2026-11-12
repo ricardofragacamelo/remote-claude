@@ -345,10 +345,10 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-205 | exportar baixa um arquivo com data no nome, da seleção ou do filtro atual | eq | integração | — | B-31 | ⬜ |
-| S-206 | a prévia da importação mostra o veredito por item, remapeia pasta pelo seletor, confirma o `broad` item a item e pede o segundo passo com a contagem e o alcance | est | integração | — | B-31 | ⬜ |
-| S-207 | importação recusada mostra os motivos por item, e nada foi criado | err | integração | `PERMISSION_RULE_IMPORT_REJECTED` (novo) | B-31 | ⬜ |
-| S-208 | arquivo grande demais é recusado com mensagem traduzida | err | integração | `PAYLOAD_TOO_LARGE` | B-31 | ⬜ |
+| S-205 | exportar baixa um arquivo com data no nome, da seleção ou do filtro atual | eq | integração | — | B-31 | ✅ |
+| S-206 | a prévia da importação mostra o veredito por item, remapeia pasta pelo seletor, confirma o `broad` item a item e pede o segundo passo com a contagem e o alcance | est | integração | — | B-31 | ✅ |
+| S-207 | importação recusada mostra os motivos por item, e nada foi criado | err | integração | `PERMISSION_RULE_IMPORT_REJECTED` (novo) | B-31 | ✅ |
+| S-208 | arquivo grande demais é recusado com mensagem traduzida | err | integração | `PAYLOAD_TOO_LARGE` | B-31 | ✅ |
 
 ## Usabilidade e ajuda do assistente — B-32
 

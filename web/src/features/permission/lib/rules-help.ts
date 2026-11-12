@@ -50,6 +50,11 @@ export function rulesScreenHelp(t: TFunction, extras: readonly RulesHelpExtra[] 
       heading: t('rules.help.disabledHeading'),
       body: t('rules.help.disabledBody'),
     },
+    {
+      id: 'rules-export',
+      heading: t('rules.export.button'),
+      body: t('rules.export.help'),
+    },
     ...extras.map((extra) => extra.help(t)),
   ];
 }

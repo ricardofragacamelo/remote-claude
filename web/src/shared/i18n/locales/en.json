@@ -762,7 +762,9 @@
       "openExpiringSoon": "Rules: open expiring soon",
       "new": "Rules: new rule",
       "test": "Rules: test a command",
-      "templates": "Rules: templates"
+      "templates": "Rules: templates",
+      "export": "Rules: export",
+      "import": "Rules: import"
     },
     "wizard": {
       "stepOf": "Step: {{step}}",
@@ -864,6 +866,30 @@
       "confirm": "Apply",
       "applying": "Applying…",
       "appliedToast": "{{count}} rules created"
+    },
+    "import": {
+      "heading": "Import",
+      "purpose": "A file of rules, previewed before anything is granted.",
+      "chooseFile": "Choose a file…",
+      "chooseDifferent": "Choose a different file…",
+      "reading": "Reading the file…",
+      "colInclude": "Include",
+      "colRule": "Rule",
+      "colVerdict": "Verdict",
+      "verdictExisting": "Already granted",
+      "verdictInvalid": "Could not be applied",
+      "unboundedBlocked": "Reaches too much to allow",
+      "acknowledgeBroad": "I understand this reaches more than one exact case.",
+      "remap": "Choose a folder for “{{folder}}”…",
+      "applying": "Applying…",
+      "confirm": "Apply",
+      "appliedToast": "{{count}} rules created",
+      "rejectedItem": "{{field}}: {{rule}}"
+    },
+    "export": {
+      "button": "Export",
+      "exporting": "Exporting…",
+      "help": "The file has your patterns and folders — not a secret, but the map of what {{agent}} can do here without asking. Exporting it is recorded in the trail."
     }
   },
   "transcript": {

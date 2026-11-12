@@ -1376,6 +1376,191 @@ describe('the rules screen — plan 15, B-21', () => {
     });
   });
 
+  describe('exportar e importar — plan 15, B-31', () => {
+    function fakeDownloadLink(): HTMLAnchorElement {
+      const anchor = { href: '', download: '', click: vi.fn() } as unknown as HTMLAnchorElement;
+      const real = document.createElement.bind(document);
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake-url');
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) =>
+        tag === 'a' ? anchor : real(tag),
+      );
+      return anchor;
+    }
+
+    it('downloads the current filter’s own export, named by today’s date — S-205', async () => {
+      mockApiGet({ rules: [alwaysRule] });
+      const get = vi.spyOn(api, 'get');
+      const anchor = fakeDownloadLink();
+      render(
+        <RulesScreen
+          search={{ ...DEFAULT_RULES_SEARCH, scope: 'project' }}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(alwaysRule.pattern);
+
+      await userEvent.click(screen.getByRole('button', { name: t('rules.export.button') }));
+
+      await waitFor(() => {
+        expect(anchor.click).toHaveBeenCalledOnce();
+      });
+      const call = get.mock.calls.find((args) =>
+        String(args[0]).startsWith('/permission-rules/export'),
+      );
+      expect(call).toBeDefined();
+      expect(String(call![0])).toContain('scope=project');
+      expect(anchor.download).toMatch(/^remote-claude-rules-\d{4}-\d{2}-\d{2}\.json$/);
+    });
+
+    it('shows the translated failure when the export read is refused, without downloading', async () => {
+      mockApiGet({ rules: [alwaysRule] });
+      vi.spyOn(api, 'get').mockImplementation((path: unknown) => {
+        const p = String(path);
+        if (p.startsWith('/permission-rules/export')) return Promise.reject(unexpected);
+        if (p.includes('/permission-rules/summary')) return Promise.resolve(EMPTY_SUMMARY);
+        return Promise.resolve({ rules: [alwaysRule], nextCursor: null });
+      });
+      const createObjectURL = vi.spyOn(URL, 'createObjectURL');
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(alwaysRule.pattern);
+
+      await userEvent.click(screen.getByRole('button', { name: t('rules.export.button') }));
+
+      expect(await screen.findByText(t('common.error.unexpected'))).toBeInTheDocument();
+      expect(createObjectURL).not.toHaveBeenCalled();
+    });
+
+    it('runs the same export from the command palette — rules.export', async () => {
+      mockApiGet({ rules: [alwaysRule] });
+      const anchor = fakeDownloadLink();
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(alwaysRule.pattern);
+
+      commandRegistry.command('rules.export')?.run();
+
+      await waitFor(() => {
+        expect(anchor.click).toHaveBeenCalledOnce();
+      });
+    });
+
+    it('opens "Importar" from its own button, and reloads the list and the summary once applied', async () => {
+      const get = vi.spyOn(api, 'get').mockImplementation((path: unknown) => {
+        const p = String(path);
+        if (p.includes('/permission-rules/summary')) return Promise.resolve(EMPTY_SUMMARY);
+        return Promise.resolve({ rules: [alwaysRule], nextCursor: null });
+      });
+      vi.spyOn(api, 'post').mockImplementation((path: unknown, body?: unknown) => {
+        const p = String(path);
+        if (p === '/permission-rules/import/preview') {
+          return Promise.resolve({
+            digest: 'digest-1',
+            items: [
+              {
+                index: 0,
+                pattern: 'shell(pnpm test:*)',
+                decision: 'allow',
+                scope: 'always',
+                verdict: 'new',
+                breadth: 'narrow',
+              },
+            ],
+          });
+        }
+        if (p === '/permission-rules/import') {
+          return Promise.resolve({ counts: { created: 1, existing: 0 }, rules: [alwaysRule] });
+        }
+        return Promise.reject(new Error(`unexpected POST ${p} ${JSON.stringify(body)}`));
+      });
+      render(
+        <>
+          <Toaster containerAriaLabel="toasts" />
+          <RulesScreen
+            search={DEFAULT_RULES_SEARCH}
+            onSearch={vi.fn()}
+            onOpenRule={vi.fn()}
+            onRecreate={vi.fn()}
+          />
+        </>,
+      );
+      await screen.findByText(alwaysRule.pattern);
+      const callsBefore = get.mock.calls.length;
+
+      await userEvent.click(screen.getByRole('button', { name: t('rules.import.heading') }));
+      const dialog = await screen.findByRole('dialog');
+      const input = within(dialog).getByLabelText(t('rules.import.chooseFile'));
+      const file = new File(
+        [
+          JSON.stringify({
+            format: 'remote-claude.permission-rules',
+            version: 1,
+            exportedAt: '2000-01-01T00:00:00.000Z',
+            rules: [
+              {
+                pattern: 'shell(pnpm test:*)',
+                decision: 'allow',
+                scope: 'always',
+                projectPath: null,
+              },
+            ],
+          }),
+        ],
+        'rules.json',
+        { type: 'application/json' },
+      );
+      await userEvent.upload(input, file);
+      await userEvent.click(
+        await within(dialog).findByRole('button', { name: t('permission.ruleExpiry.shortcut7') }),
+      );
+
+      const confirm = within(dialog).getByRole('button', { name: t('rules.import.confirm') });
+      await waitFor(() => {
+        expect(confirm).not.toBeDisabled();
+      });
+      await userEvent.click(confirm);
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(get.mock.calls.length).toBeGreaterThan(callsBefore);
+      });
+    });
+
+    it('runs the same "Importar" open from the command palette — rules.import', async () => {
+      mockApiGet({ rules: [alwaysRule] });
+      render(
+        <RulesScreen
+          search={DEFAULT_RULES_SEARCH}
+          onSearch={vi.fn()}
+          onOpenRule={vi.fn()}
+          onRecreate={vi.fn()}
+        />,
+      );
+      await screen.findByText(alwaysRule.pattern);
+
+      commandRegistry.command('rules.import')?.run();
+
+      expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    });
+  });
+
   describe('clearing a filter on a second interaction', () => {
     it('clears the scope', async () => {
       const onSearch = vi.fn();

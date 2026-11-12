@@ -15,15 +15,17 @@ const CORE_IDS = [
   'rules-sandbox',
   'rules-recorded',
   'rules-disabled',
+  'rules-export',
 ];
 
 /**
  * The rules screen's own help topics (plan 15, B-26): Allow × Block and its precedence, where a
  * rule reaches, the read-only mode, what a shell prefix does and does not reach (D-07), that a
- * block is a speed bump and never a sandbox, what goes to the trail, and disabled rules.
+ * block is a speed bump and never a sandbox, what goes to the trail, disabled rules, and what
+ * exporting hands over (B-31).
  */
 describe('rulesScreenHelp — written for somebody who has never seen the screen', () => {
-  it('has the seven core topics, each with a unique id, when no engine adds its own', () => {
+  it('has the eight core topics, each with a unique id, when no engine adds its own', () => {
     expect(rulesScreenHelp(en).map((entry) => entry.id)).toEqual(CORE_IDS);
   });
 
@@ -76,6 +78,14 @@ describe('rulesScreenHelp — written for somebody who has never seen the screen
 
     expect(disabled?.heading).toBe(en('rules.help.disabledHeading'));
     expect(disabled?.body).toMatch(/answers nothing/i);
+  });
+
+  it('explains what the exported file contains, and that exporting it is recorded (B-31)', () => {
+    const [, , , , , , , exportTopic] = rulesScreenHelp(en);
+
+    expect(exportTopic?.heading).toBe(en('rules.export.button'));
+    expect(exportTopic?.body).toMatch(/map of what/i);
+    expect(exportTopic?.body).toMatch(/recorded in the trail/i);
   });
 
   it('is translated in pt-BR too, by the same ids', () => {

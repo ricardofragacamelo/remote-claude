@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 
+import { LoadStatus } from '@/shared/components/LoadStatus';
+import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,12 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/components/ui/dialog';
-import { Button } from '@/shared/components/ui/button';
-import { LoadStatus } from '@/shared/components/LoadStatus';
-import { useApplyTemplate } from '../hooks/useApplyTemplate';
-import type { ApplyTemplateSubmit } from '../hooks/useApplyTemplate';
+import { useApplyImport } from '../hooks/useApplyImport';
 import { useRuleImportPreview } from '../hooks/useRuleImportPreview';
 import { useRuleTemplates } from '../hooks/useRuleTemplates';
+import {
+  closeDialogOnApplied,
+  confirmRuleImportApply,
+  withAppliedToast,
+} from '../lib/confirm-import';
 import {
   hasAcceptedBroadItem,
   isTemplateItemBlocked,
@@ -26,10 +29,11 @@ import {
 import type { TemplatePreviewItem } from '../lib/template-import';
 import { FolderChoiceButton, NewRuleFolderDialog } from './NewRuleFolderDialog';
 import { NewRuleValidityStep } from './NewRuleValidityStep';
+import { ReviewBackButton } from './ReviewBackButton';
 import { RuleDecisionChip } from './RuleDecisionChip';
 import { RuleFailureMessage } from './RuleFailureMessage';
 import type { PersistedScope } from '../types/permission';
-import type { RuleImportResult, RuleTemplates } from '../types/rule';
+import type { ReviewStepProps, RuleImportResult, RuleTemplates } from '../types/rule';
 
 export interface ApplyTemplateDialogProps {
   readonly open: boolean;
@@ -38,33 +42,6 @@ export interface ApplyTemplateDialogProps {
 }
 
 type Template = RuleTemplates['templates'][number];
-
-/** Confirm's own one call, kept out of `TemplateReview` itself — a closure of this many branches,
- * inlined, is counted against the component that defines it. */
-function confirmTemplateApply(args: {
-  readonly apply: ApplyTemplateSubmit['apply'];
-  readonly file: string;
-  readonly digest: string;
-  readonly accepted: readonly number[];
-  readonly items: readonly TemplatePreviewItem[];
-  readonly acknowledgeBroad: boolean;
-  readonly expiresAt: string;
-  onApplied(result: RuleImportResult): void;
-}): void {
-  void args
-    .apply({
-      file: args.file,
-      digest: args.digest,
-      accept: args.accepted,
-      acknowledgeBroad: templateBroadIndices(args.items, args.accepted, args.acknowledgeBroad),
-      expiresAt: args.expiresAt,
-    })
-    .then((result) => {
-      if (result !== null) {
-        args.onApplied(result);
-      }
-    });
-}
 
 /**
  * "Modelos" (plan 15, B-30, D-16): a catalog of ready-made bundles, applied as an import — the
@@ -123,10 +100,7 @@ function ApplyTemplateDialogBody({
           onBack={() => {
             setSelected(null);
           }}
-          onApplied={(result) => {
-            onOpenChange(false);
-            onApplied(result);
-          }}
+          onApplied={closeDialogOnApplied(onOpenChange, onApplied)}
         />
       )}
     </>
@@ -186,7 +160,7 @@ function useTemplateReview(template: Template) {
   const [folder, setFolder] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [acknowledgeBroad, setAcknowledgeBroad] = useState(false);
-  const { submitting, error: submitError, apply } = useApplyTemplate();
+  const { submitting, error: submitError, apply } = useApplyImport();
 
   const scopeReady = scope === 'always' || (scope === 'project' && folder !== null);
   const file =
@@ -231,11 +205,7 @@ function TemplateReview({
   template,
   onBack,
   onApplied,
-}: {
-  readonly template: Template;
-  onBack(): void;
-  onApplied(result: RuleImportResult): void;
-}): React.JSX.Element {
+}: { readonly template: Template } & ReviewStepProps): React.JSX.Element {
   const { t } = useTranslation();
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const review = useTemplateReview(template);
@@ -244,26 +214,24 @@ function TemplateReview({
   // `scopeReady` (which is exactly when `file` is non-null), `preview.status === 'ready'` and
   // `expiresAt !== null`: by the time this ever runs, all three already hold.
   const onConfirm = (): void => {
-    confirmTemplateApply({
+    confirmRuleImportApply({
       apply: review.apply,
       file: review.file!,
       digest: review.readyPreview!.digest,
-      accepted: review.batch.accepted,
-      items: review.readyPreview!.items,
-      acknowledgeBroad: review.acknowledgeBroad,
+      accept: review.batch.accepted,
+      acknowledgeBroad: templateBroadIndices(
+        review.readyPreview!.items,
+        review.batch.accepted,
+        review.acknowledgeBroad,
+      ),
       expiresAt: review.expiresAt!,
-      onApplied: (result) => {
-        toast(t('rules.templates.appliedToast', { count: result.counts.created }));
-        onApplied(result);
-      },
+      onApplied: withAppliedToast(t, 'rules.templates.appliedToast', onApplied),
     });
   };
 
   return (
     <div className="flex flex-col gap-4">
-      <Button type="button" variant="outline" onClick={onBack}>
-        {t('rules.templates.back')}
-      </Button>
+      <ReviewBackButton onBack={onBack} labelKey="rules.templates.back" />
 
       <section>
         <h3 className="text-ui-sm font-ui-strong">{t('rules.templates.rulesHeading')}</h3>

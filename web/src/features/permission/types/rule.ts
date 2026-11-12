@@ -137,6 +137,13 @@ export type RuleExport = PermissionRuleExportPayload;
 export type RuleImportPreview = PermissionRuleImportPreviewPayload;
 export type RuleImportResult = PermissionRuleImportResultPayload;
 
+/** The pair every import/template review step takes, whatever it reviews: back to the picker,
+ * or report the applied result up to the dialog that owns closing itself (B-30, B-31). */
+export interface ReviewStepProps {
+  onBack(): void;
+  onApplied(result: RuleImportResult): void;
+}
+
 /** `POST /permission-rules/evaluate`: testing a command, the engine, its canonical `kind` and subject (B-14). */
 export interface EvaluateRuleInput {
   readonly engine?: string;

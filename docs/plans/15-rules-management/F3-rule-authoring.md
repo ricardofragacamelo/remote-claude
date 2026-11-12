@@ -265,7 +265,7 @@ uma regra já aberta, e o botão ali já cobre o caso, sem precisar de um atalho
 acabou não precisando de handoff nenhum pela search do assistente — tem o próprio diálogo, de ponta
 a ponta.
 
-### B-31 — Exportar e importar 🔲
+### B-31 — Exportar e importar ✅
 
 - **Exportar** — da seleção ou do filtro atual, baixa `remote-claude-rules-AAAA-MM-DD.json` (S-205),
   e a ajuda diz o que o arquivo contém (padrões e pastas — não segredo, mas o mapa do que o `{agent}`
@@ -275,6 +275,47 @@ a ponta.
   pasta desconhecida, confirmação item a item dos `broad`, validade do lote, e o segundo passo com a
   contagem e o alcance (S-206). Importação recusada mostra os motivos por item, e nada nasceu (S-207);
   arquivo grande demais é recusado com a mensagem traduzida (S-208).
+
+**Nota de execução**: "da seleção ou do filtro atual" é lido como dois pontos de entrada para a
+mesma ação com escopo por filtro — nunca duas abrangências —, como já assentado em D-17: exportar
+não carrega lista de id nenhuma, só os filtros correntes da tela (`summaryFilters`, o mesmo que a
+listagem e o resumo já leem), e a trilha registra "contagem e filtros". `useRuleExport` chama
+`GET /permission-rules/export` e entrega o payload a `downloadRuleExportFile`
+(`lib/rule-export-download.ts`) — a única rotina do web que escreve no disco do visitante: um
+`Blob`, uma URL de objeto, um `<a download>` nunca anexado à página, clicado e revogado em seguida.
+A ajuda pedida pela tarefa foi ligada em `rules-help.ts` (`rules-export`, oitavo tópico).
+
+"Importar" lê um arquivo real escolhido pela própria máquina do visitante — nunca o seletor de
+pastas do backend (`<input type="file">` oculto, lido por `chosen.text()`, um padrão novo neste
+código: `UploadPickers.tsx` só manda `File` cru para um pipeline remoto, nunca lê o texto aqui
+mesmo). Reaproveita o mesmo par prévia/aplicar que "Modelos" (B-30) já usa, generalizado em
+`lib/file-import.ts` (`importedPathsOf`, `isReachableFolder`, `importRowsOf`,
+`importBatchStateOf`) para confirmação **por item** em vez de uma caixa só para o lote — um
+arquivo de verdade não é curado como um modelo (S-206) — e para o remapeamento de pasta, que
+"Modelos" nunca precisou (um modelo nunca chega com `projectPath` de outra máquina).
+
+**Achado durante a própria tarefa — duplicação entre os dois diálogos**: `ApplyTemplateDialog`
+(B-30) e o novo `ImportRulesDialog` convergiram na mesma chamada de aplicar (`confirmTemplateApply`/
+`confirmImportApply`, quase idênticas) e no mesmo par abrir/voltar/fechar. Extraído para
+`lib/confirm-import.ts` (`confirmRuleImportApply`, `withAppliedToast`, `closeDialogOnApplied`,
+compartilhadas pelos dois) e `components/ReviewBackButton.tsx` + `ReviewStepProps`
+(`types/rule.ts`) para o botão "voltar" e a dupla `onBack`/`onApplied` que todo passo de revisão
+já levava. `ApplyTemplateDialog` foi ajustado para usar as três funções compartilhadas no mesmo
+corte — zero duplicação depois (`pnpm jscpd`), nenhuma regressão nos 18 testes já existentes da B-30.
+
+**Achado pela cobertura, não pela leitura — três ramos mortos em `ImportRulesDialog`**: o portão 7
+(90 % de branches por arquivo) acusou `ImportRulesDialog.tsx` em 84,31 %. Três das lacunas eram
+guardas defensivas para um estado que a própria UI já impede de existir — `onRemap` só é
+alcançável a partir do botão que `ImportRuleVerdictCell` só desenha quando `row.needsRemap`, o que
+já implica `projectPath` não nulo (`importRowsOf`); `onChoose` do seletor de pasta só roda enquanto
+o diálogo está aberto, o que só acontece com `remapPickerFor` já setado; e o próprio
+`onOpenChange` do seletor só é chamado pelo Radix para reportar um fechamento (Esc, backdrop,
+Cancelar) — nunca para abrir, já que a abertura é sempre dirigida de fora. As três guardas viraram
+asserção de não-nulo com um comentário da invariante (mesmo precedente da B-27), e não teste
+forçando um estado impossível. As lacunas restantes — cancelar a escolha do arquivo sem escolher
+nada, re-marcar uma linha desmarcada, desmarcar uma confirmação de `broad` já marcada, e o chip
+`deny` (toda regra de teste até aqui era `allow`) — eram ramos de verdade, cobertos com cinco
+testes novos.
 
 ### B-32 — Usabilidade e ajuda do assistente, do teste, da simulação e da importação 🔲
 

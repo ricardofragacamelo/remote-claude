@@ -762,7 +762,9 @@
       "openExpiringSoon": "Regras: abrir perto de expirar",
       "new": "Regras: nova regra",
       "test": "Regras: testar um comando",
-      "templates": "Regras: modelos"
+      "templates": "Regras: modelos",
+      "export": "Regras: exportar",
+      "import": "Regras: importar"
     },
     "wizard": {
       "stepOf": "Etapa: {{step}}",
@@ -864,6 +866,30 @@
       "confirm": "Aplicar",
       "applying": "Aplicando…",
       "appliedToast": "{{count}} regras criadas"
+    },
+    "import": {
+      "heading": "Importar",
+      "purpose": "Um arquivo de regras, revisado antes de qualquer uma ser concedida.",
+      "chooseFile": "Escolher um arquivo…",
+      "chooseDifferent": "Escolher outro arquivo…",
+      "reading": "Lendo o arquivo…",
+      "colInclude": "Incluir",
+      "colRule": "Regra",
+      "colVerdict": "Veredito",
+      "verdictExisting": "Já concedida",
+      "verdictInvalid": "Não pôde ser aplicada",
+      "unboundedBlocked": "Alcança demais para permitir",
+      "acknowledgeBroad": "Entendo que isto alcança mais que um caso exato.",
+      "remap": "Escolher uma pasta para “{{folder}}”…",
+      "applying": "Aplicando…",
+      "confirm": "Aplicar",
+      "appliedToast": "{{count}} regras criadas",
+      "rejectedItem": "{{field}}: {{rule}}"
+    },
+    "export": {
+      "button": "Exportar",
+      "exporting": "Exportando…",
+      "help": "O arquivo tem seus padrões e pastas — não é segredo, mas é o mapa do que o {{agent}} pode fazer aqui sem perguntar. Exportar fica registrado na trilha."
     }
   },
   "transcript": {

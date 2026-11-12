@@ -6,6 +6,8 @@ export { WelcomeScreen } from './components/WelcomeScreen';
 export { WorkspaceSettings } from './components/WorkspaceSettings';
 export { useOpenFolders } from './hooks/useOpenFolders';
 export { useRecentFolders } from './hooks/useRecentFolders';
+export { useRoots } from './hooks/useRoots';
+export type { Roots } from './hooks/useRoots';
 export { useFolderChoices } from './hooks/useFolderChoices';
 export type { RecentFolders } from './hooks/useRecentFolders';
 export type { OpenFolders } from './hooks/useOpenFolders';

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-import { useApplyTemplate } from '@/features/permission/hooks/useApplyTemplate';
+import { useApplyImport } from '@/features/permission/hooks/useApplyImport';
 import type { ApplyRuleImportInput } from '@/features/permission/types/rule';
 import { api } from '@/shared/api/api';
 
@@ -11,13 +11,13 @@ const input: ApplyRuleImportInput = {
   accept: [0],
 };
 
-describe('useApplyTemplate — "Modelos"’s own one write (plan 15, B-30)', () => {
+describe('useApplyImport — "Modelos"’s own one write (plan 15, B-30)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it('starts idle, with nothing submitting and no error', () => {
-    const { result } = renderHook(() => useApplyTemplate());
+    const { result } = renderHook(() => useApplyImport());
 
     expect(result.current.submitting).toBe(false);
     expect(result.current.error).toBeNull();
@@ -26,7 +26,7 @@ describe('useApplyTemplate — "Modelos"’s own one write (plan 15, B-30)', () 
   it('flips submitting around a resolved call, and resolves to the result', async () => {
     const applied = { counts: { created: 1, existing: 0 }, rules: [] };
     vi.spyOn(api, 'post').mockResolvedValue(applied);
-    const { result } = renderHook(() => useApplyTemplate());
+    const { result } = renderHook(() => useApplyImport());
 
     let returned: unknown;
     await act(async () => {
@@ -46,7 +46,7 @@ describe('useApplyTemplate — "Modelos"’s own one write (plan 15, B-30)', () 
         resolveCall = resolve;
       }),
     );
-    const { result } = renderHook(() => useApplyTemplate());
+    const { result } = renderHook(() => useApplyImport());
 
     let pending: Promise<unknown> = Promise.resolve(null);
     act(() => {
@@ -68,7 +68,7 @@ describe('useApplyTemplate — "Modelos"’s own one write (plan 15, B-30)', () 
   it('flips submitting back and resolves to null on a rejected call, with the error kept', async () => {
     const error = { code: 'INTERNAL_ERROR', messageKey: 'common.error.unexpected', params: {} };
     vi.spyOn(api, 'post').mockRejectedValue(error);
-    const { result } = renderHook(() => useApplyTemplate());
+    const { result } = renderHook(() => useApplyImport());
 
     let returned: unknown;
     await act(async () => {
@@ -89,7 +89,7 @@ describe('useApplyTemplate — "Modelos"’s own one write (plan 15, B-30)', () 
         counts: { created: 1, existing: 0 },
         rules: [],
       });
-    const { result } = renderHook(() => useApplyTemplate());
+    const { result } = renderHook(() => useApplyImport());
 
     await act(async () => {
       await result.current.apply(input);

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { AlarmClock, LayoutTemplate, Undo2 } from 'lucide-react';
+import { AlarmClock, Download, LayoutTemplate, Undo2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useCommands } from '@/features/commands';
@@ -13,6 +13,8 @@ import type { RuleListViewProps } from '../lib/rule-list-view';
 import type { RuleTab } from '../lib/rules-search';
 import { ruleSummaryFilters, rulesListQuery } from '../lib/rules-search';
 import type { RulesSearch } from '../lib/rules-search';
+import { useRuleExport } from '../hooks/useRuleExport';
+import type { RuleExportSubmit } from '../hooks/useRuleExport';
 import { useRuleListNav } from '../hooks/useRuleListNav';
 import { useRuleMutations } from '../hooks/useRuleMutations';
 import { useRuleSummary } from '../hooks/useRuleSummary';
@@ -20,9 +22,11 @@ import { useRules } from '../hooks/useRules';
 import type { PermissionRule, RuleSort } from '../types/rule';
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { DisabledRulesBanner } from './DisabledRulesBanner';
+import { ImportRulesDialog } from './ImportRulesDialog';
 import { RuleBatchBar } from './RuleBatchBar';
 import { RuleBatchRevokeDialog } from './RuleBatchRevokeDialog';
 import { RuleCardList } from './RuleCardList';
+import { RuleFailureMessage } from './RuleFailureMessage';
 import { RuleFiltersBar } from './RuleFiltersBar';
 import type { RuleFiltersValue } from './RuleFiltersBar';
 import { RuleTable } from './RuleTable';
@@ -120,6 +124,8 @@ export function RulesScreen({
   const isDesktop = useIsDesktop();
   const [batchRevokeOpen, setBatchRevokeOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const ruleExport = useRuleExport();
 
   const rows = useMemo(
     () => rowsOf(rules, search.tab, search.withAlert, now),
@@ -240,6 +246,24 @@ export function RulesScreen({
         setTemplatesOpen(true);
       },
     },
+    {
+      id: 'rules.export',
+      labelKey: 'rules.command.export',
+      category: 'file',
+      icon: Download,
+      run: () => {
+        void ruleExport.download(summaryFilters);
+      },
+    },
+    {
+      id: 'rules.import',
+      labelKey: 'rules.command.import',
+      category: 'file',
+      icon: Upload,
+      run: () => {
+        setImportOpen(true);
+      },
+    },
   ]);
 
   const viewProps: RuleListViewProps = {
@@ -262,22 +286,31 @@ export function RulesScreen({
     <div className="flex flex-col gap-4">
       <DisabledRulesBanner count={summary?.byStatus.disabled ?? 0} onRecreate={onRecreate} />
 
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            setTemplatesOpen(true);
-          }}
-        >
-          <LayoutTemplate className="size-4" aria-hidden />
-          {t('rules.templates.heading')}
-        </Button>
-      </div>
+      <RuleCatalogActions
+        ruleExport={ruleExport}
+        onExport={() => {
+          void ruleExport.download(summaryFilters);
+        }}
+        onImport={() => {
+          setImportOpen(true);
+        }}
+        onTemplates={() => {
+          setTemplatesOpen(true);
+        }}
+      />
 
       <ApplyTemplateDialog
         open={templatesOpen}
         onOpenChange={setTemplatesOpen}
+        onApplied={() => {
+          reload();
+          summaryLoad.reload();
+        }}
+      />
+
+      <ImportRulesDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
         onApplied={() => {
           reload();
           summaryLoad.reload();
@@ -334,5 +367,47 @@ export function RulesScreen({
         loadingLabel={t('rules.table.loadingMore')}
       />
     </div>
+  );
+}
+
+/** Export, import, modelos — the three catalog-level actions, none of them about one rule
+ * (those live in the batch bar/the row's own buttons instead). */
+function RuleCatalogActions({
+  ruleExport,
+  onExport,
+  onImport,
+  onTemplates,
+}: {
+  readonly ruleExport: RuleExportSubmit;
+  onExport(): void;
+  onImport(): void;
+  onTemplates(): void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="outline" disabled={ruleExport.exporting} onClick={onExport}>
+          <Download className="size-4" aria-hidden />
+          {ruleExport.exporting ? t('rules.export.exporting') : t('rules.export.button')}
+        </Button>
+        <Button type="button" variant="outline" onClick={onImport}>
+          <Upload className="size-4" aria-hidden />
+          {t('rules.import.heading')}
+        </Button>
+        <Button type="button" variant="outline" onClick={onTemplates}>
+          <LayoutTemplate className="size-4" aria-hidden />
+          {t('rules.templates.heading')}
+        </Button>
+      </div>
+
+      {ruleExport.error !== null && (
+        <RuleFailureMessage
+          messageKey={ruleExport.error.messageKey}
+          params={ruleExport.error.params}
+        />
+      )}
+    </>
   );
 }
