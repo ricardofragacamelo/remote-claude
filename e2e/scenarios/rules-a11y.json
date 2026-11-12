@@ -1,0 +1,12 @@
+{
+  "id": "15·S-221",
+  "title": "axe finds no violation on /rules (list, detail panel, Templates dialog) nor on /rules/new (each step), and a phone keeps no horizontal scroll, the detail opening as a sheet",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "tags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+    "phone": { "width": 360, "height": 740 }
+  }
+}

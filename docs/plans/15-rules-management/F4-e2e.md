@@ -144,7 +144,7 @@ dois turnos de `rule-authoring.spec.ts` e nos dois de `rule-authoring-security.s
 jscpd` (gate 5) não ignora `e2e/` como ignora `**/test/**` — zero clones depois, confirmado em todo
 o repositório.
 
-### B-36 — Regressões do plano 03, acessibilidade e o deep link 🔲
+### B-36 — Regressões do plano 03, acessibilidade e o deep link ✅
 
 - `rules.spec.ts` (S-68 do plano 03), `rule-cycle.spec.ts` e `trail-isolation.spec.ts` continuam
   verdes, ajustados **só** nos seletores que a tela nova mudou — nunca no que afirmam; o segundo passo
@@ -153,6 +153,78 @@ o repositório.
   scroll horizontal, com o detalhe em `sheet` (S-221);
 - o deep link `/rules/$ruleId` — o que a trilha usa — abre o painel da regra certa, e a revogada
   explica o estado (S-222).
+
+**Nota de execução — os seletores que mudaram, e por quê**: `rules.spec.ts` e o teste `revokedLive`
+de `rule-cycle.spec.ts` liam `getByRole('listitem', {name: 'Rule …'})` e um botão "Revoke" sempre
+visível na própria linha — a tela do plano 03. A tela atual (B-21) é uma tabela densa
+(`RuleTableRow.tsx`), e `SelectableTableRow.tsx` envolve cada linha num `ContextMenu` do Radix —
+as ações da linha (`rules.action.revoke`) só existem hoje atrás de um clique direito, como
+`role="menuitem"`. Em vez de simular o clique direito (frágil, e o mesmo escrutínio que o próprio
+teste já faz do detalhe), as duas specs passaram a abrir a regra pelo seu próprio link
+(`/rules/$ruleId`, a mesma prova que S-222 já teria que montar de qualquer jeito) e revogar pelo
+botão "Revoke" sempre visível do painel de detalhe (`RuleActions`, B-22) — a mesma afirmação
+("revogar pela tela tira da lista"), só pela porta que o produto de verdade oferece hoje. `/rules`
+sozinho redireciona para a sua própria busca padrão ao carregar (B-21) — toda chamada a
+`openSignedIn`/`page.goto` ganhou a busca explícita (`?tab=active&sort=grantedAt&order=desc`), o
+mesmo cuidado que as specs da B-33…B-35 já registram cada uma a sua vez. `rules.spec.ts`'s
+`'In one project'` também não existe mais na célula da pasta — `RuleFolderCell.tsx` mostra o nome
+real da pasta (com o caminho inteiro num tooltip), não mais o rótulo genérico do seletor de escopo
+— a asserção passou a ler o nome da pasta de verdade. `rule-cycle.spec.ts`'s `trail`'s própria
+`revokedStatus` ("Revoked", comparado com `exact: true`) nunca bateu com o que a tela realmente
+mostra desde a B-23: a frase inteira (`rules.row.revokedOn`, "Revoked on {{at}}. It no longer
+answers anything.") — trocado por uma correspondência de substring contra a parte que explica o
+estado, não a data. `trail-isolation.spec.ts` não toca `/rules` nem `/rules/$ruleId` em lugar
+nenhum — zero mudanças ali.
+
+**Nova spec `rules-a11y.spec.ts` (S-221, S-222)**: o próprio axe sobre um navegador de verdade
+achou dois bugs de contraste reais, nunca pegos pelos testes `jest-axe` deste plano (jsdom não tem
+cor nem layout — o mesmo motivo que já justificou esta tarefa) nem pela própria varredura de
+`/rules` que o plano 06 já faz (`workbench-a11y.spec.ts`, que só visita a lista vazia, nunca um
+chip de decisão ou de validade): `--success` (oklch 52%→44%) e `--warning` (oklch 58%→48%) em
+`globals.css`, o par `bg-<cor>/15 text-<cor>` que `RuleDecisionChip`/`RuleValidityCell` e outros
+componentes já reaproveitam — a razão de contraste subia de ~4.1/3.54 para acima de 4.5:1 contra o
+próprio fundo claro que a cor gera. Achado de passagem, fora de escopo desta tarefa e não mexido:
+o teto de validade deste stack de e2e (`RC_PERMISSION_RULE_MAX_LIFETIME_MS`, um dia) deixa toda
+regra que esta spec cria dentro da janela de sete dias do lembrete (B-25) — o toast de notificação
+que isso dispara apareceu uma vez pego pelo axe a meio de uma animação (cores quase idênticas,
+~1.3:1), um instantâneo transitório e não um bug de verdade; a spec dispensa esse toast (um único
+clique, tolerante à ausência, nunca um laço) antes de cada varredura em vez de reescrever a
+animação. O deep link (S-222) abre a regra ativa e uma revogada pelo mesmo link antigo; o painel
+de desktop abre ao lado da lista, não por cima — o mesmo padrão pode aparecer duas vezes na tela,
+então toda prova é restrita ao painel (`getByLabel('Details of the rule')`), nunca à página
+inteira.
+
+**Achado só ao rodar o `pnpm verify:full` por inteiro — além das três specs que o texto da própria
+tarefa já nomeava**: duas outras specs do plano 06, nunca atualizadas para o B-21, navegavam direto
+para `/rules` só como "qualquer tela já logada" (`screens.spec.ts`'s S-148, `workbench-routes.spec.ts`'s
+"the removed ones") — o próprio redirecionamento as travava esperando uma URL que nunca chega.
+Trocadas para `/`, que não redireciona e não é o que nenhuma das duas realmente testa.
+`workbench-routes.spec.ts`'s própria "the screens that stay" também lia um `h1` "A rule you
+granted" que não existe mais (o painel de detalhe é `h2`, "Rule") — trocado pela mesma prova
+restrita ao painel que `rules-a11y.spec.ts` já usa.
+
+**Achado de verdade, não desta tarefa, mas bloqueando o próprio portão dela**: `rule-management.spec.ts`
+(B-34) tinha uma checagem "estas três regras aparecem na aba Revogadas" por texto solto
+(`page.getByText(pattern)`) — nunca um problema rodando só aquele arquivo, mas o suite inteiro
+revelou que **outras especificações, de outros planos, concedem de verdade uma regra
+`file.write(summary.md)`** como efeito colateral de escrever esse arquivo de exemplo comum (plano
+07/09/12, vários `.spec.ts` e `.json` próprios usam o mesmo nome) — e nunca a revogam, porque não
+têm por que saber que regras existem. Regra revogada nunca volta sozinha (D-01), e várias dessas
+specs deixam a sua própria cópia revogada para trás; `dev` é o único usuário que o suite inteiro
+compartilha. Corrigido só no que B-36 pode corrigir sem arquitetar isolamento entre planos:
+`batch`'s próprias três checagens passaram a mirar a linha pelo próprio id da regra
+(`#rule-row-<id>`, o mesmo id que `ruleRowElementId` já gera), nunca um texto solto que outra linha
+qualquer, de outro plano, pode coincidentemente repetir; mais um `test.beforeEach` que já recolhe
+qualquer regra **ativa** à toa antes de cada caso (não alcança uma já revogada — essa não volta
+nunca, D-01 — mas uma ativa de sobra atrapalharia a própria seleção "3 regras" do lote). Arquitetar
+isolamento de verdade entre specs de planos diferentes que compartilham workspace e usuário fica de
+fora, explicitamente — não é o que esta tarefa pede, e mexer nisso seria arquitetura de harness de
+e2e, não uma regressão desta tela.
+
+**Não mexido, fora de escopo**: `rich-previews.spec.ts` (plano 21, busca dentro do leitor de PDF)
+falhou uma vez no `pnpm verify:full` (um contador de busca vazio) — nada no diff desta tarefa toca
+PDF, editor ou busca; a releitura confirmou verde, e tudo aponta para instabilidade sob carga do
+suite inteiro (já documentada noutra sessão para testes de backend), não uma regressão.
 
 ---
 

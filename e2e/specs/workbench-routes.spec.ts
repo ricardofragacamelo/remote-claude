@@ -50,9 +50,13 @@ test(`${routes.id} — ${routes.title}: the screens that stay`, async ({ page })
     );
     rule = await ruleGrantedFor(context().user, pattern);
 
-    await openSignedIn(page, routes.user, `/rules/${rule.id}`);
-    await expect(page.getByRole('heading', { level: 1, name: 'A rule you granted' })).toBeVisible();
-    await expect(page.getByText(pattern, { exact: true })).toBeVisible();
+    // `/rules/$ruleId` redirects to its own default search the moment it loads (plan 15, B-21),
+    // and the desktop panel opens beside the list, not over it — the list behind it can show the
+    // same pattern too, so the proof is scoped to the panel itself, by its own `aria-label`
+    // (`permission.ruleDetail.label`), never a heading level or text this screen owned before.
+    await openSignedIn(page, routes.user, `/rules/${rule.id}?tab=active&sort=grantedAt&order=desc`);
+    const detail = page.getByLabel('Details of the rule');
+    await expect(detail.getByText(pattern, { exact: true })).toBeVisible();
 
     const filtered = new URLSearchParams({ sessionId, toolName: 'Write' }).toString();
     await page.goto(`/audit?${filtered}`);
@@ -71,7 +75,9 @@ test(`${routes.id} — ${routes.title}: the screens that stay`, async ({ page })
 });
 
 test(`${routes.id} — ${routes.title}: the removed ones`, async ({ page, browser }) => {
-  await openSignedIn(page, routes.user, '/rules');
+  // Any signed-in screen does — `/rules` redirects to its own default search the moment it loads
+  // (plan 15, B-21), which this test has no reason to care about at all.
+  await openSignedIn(page, routes.user, '/');
 
   for (const address of expected.removed) {
     await page.goto(address);

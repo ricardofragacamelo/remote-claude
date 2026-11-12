@@ -37,7 +37,9 @@ test(`${appearance.id} — ${appearance.title}`, async ({ page }) => {
 test(`${about.id} — ${about.title}`, async ({ page }) => {
   const expected = about.expect as { components: string[]; unreadable: string };
 
-  await openSignedIn(page, about.user, '/rules');
+  // Any signed-in screen does — `/rules` redirects to its own default search the moment it loads
+  // (plan 15, B-21), which this test has no reason to care about at all.
+  await openSignedIn(page, about.user, '/');
   await page.getByRole('button', { name: 'Manage' }).click();
   await page.getByRole('menuitem', { name: 'About' }).click();
   await page.waitForURL('**/about');

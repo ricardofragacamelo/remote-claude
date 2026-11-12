@@ -10,6 +10,7 @@ import {
   workspaceFor,
 } from '../fixtures/live-session';
 import { callApi } from '../fixtures/api';
+import { environment } from '../fixtures/environment';
 import {
   expectRanUnasked,
   offeredPattern,
@@ -95,11 +96,19 @@ test(`${revokedLive.id} — ${revokedLive.title}`, async ({ page }) => {
     const rule = await ruleLeftBy(await writeTurn(socket, sessionId, ALLOW_ALWAYS));
     expectRanUnasked(await writeTurn(socket, sessionId, null));
 
-    // Revoked where a person revokes it: the rules screen of the browser.
-    await openSignedIn(page, revokedLive.user, '/rules');
-    const row = page.getByRole('listitem', { name: `Rule ${rule.pattern}` });
-    await row.getByRole('button', { name: 'Revoke' }).click();
-    await expect(row).toBeHidden();
+    // Revoked where a person revokes it: the rules screen of the browser — the rule's own detail
+    // page now (B-22), not an inline button on a plain list item plan 03 drew (every row's own
+    // actions are a right-click context menu today, `RowActionsMenu`; the detail panel's own
+    // always-visible Revoke button is the simpler, equally honest door to the same write).
+    await openSignedIn(page, revokedLive.user, '/rules?tab=active&sort=grantedAt&order=desc');
+    const patternCell = page.getByText(rule.pattern, { exact: true });
+    await expect(patternCell).toBeVisible();
+    await patternCell.locator('xpath=ancestor::tr').dblclick();
+    await page.waitForURL(`**/rules/${rule.id}*`);
+    await page.getByRole('button', { name: 'Revoke' }).click();
+
+    await page.goto(`${environment.webUrl}/rules?tab=active&sort=grantedAt&order=desc`);
+    await expect(page.getByText(rule.pattern, { exact: true })).toBeHidden();
 
     // The same session, never restarted: the next write is put to a person again.
     const asked = await writeTurn(socket, sessionId, {
@@ -170,8 +179,11 @@ test(`${trail.id} — ${trail.title}`, async ({ page }) => {
   await expect(row.getByText(expected.byRule)).toBeVisible();
 
   await row.getByRole('button', { name: expected.openRule }).click();
-  await page.waitForURL(`**/rules/${rule.id}`);
-  await expect(page.getByText(expected.revokedStatus, { exact: true })).toBeVisible();
+  await page.waitForURL(`**/rules/${rule.id}*`);
+  // The validity cell's own sentence for a revoked rule (`rules.row.revokedOn`) carries the date
+  // in the middle of it, so this is a substring match, never `exact` — the state it explains is
+  // the part that matters here, not the timestamp (B-36, S-222).
+  await expect(page.getByText(expected.revokedStatus)).toBeVisible();
 });
 
 test(`${fromThePhone.id} — ${fromThePhone.title}`, async () => {

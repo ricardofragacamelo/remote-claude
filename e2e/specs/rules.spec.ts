@@ -10,6 +10,7 @@ import {
   startSession,
   workspaceFor,
 } from '../fixtures/live-session';
+import { environment } from '../fixtures/environment';
 import { revokeQuietly, rulesOf } from '../fixtures/rules';
 import type { ListedRule } from '../fixtures/rules';
 
@@ -76,15 +77,23 @@ test('S-68 — the scope the question offers becomes the rule /rules lists, and 
     granted = (await rulesOf(signedIn)).find((rule) => rule.pattern === offered?.pattern);
     expect(granted).toMatchObject({ scope: 'project', status: 'active' });
 
-    // Through the browser: sign in from the deep link, and come back to it.
-    await openSignedIn(page, user, '/rules');
+    // Through the browser: the list, then the rule's own detail (B-21/B-22) — a desktop table row
+    // now, not the plain list item plan 03 drew; its own folder cell shows the folder's own name,
+    // never the generic "In one project" the wizard's own picker still says (plan 15, B-21).
+    await openSignedIn(page, user, '/rules?tab=active&sort=grantedAt&order=desc');
+    const folderName = context().workspace.split('/').filter(Boolean).pop() ?? context().workspace;
 
-    const row = page.getByRole('listitem', { name: `Rule ${String(offered?.pattern)}` });
-    await expect(row).toBeVisible();
-    await expect(row.getByText('In one project')).toBeVisible();
+    const patternCell = page.getByText(String(offered?.pattern), { exact: true });
+    await expect(patternCell).toBeVisible();
+    const row = patternCell.locator('xpath=ancestor::tr');
+    await expect(row.getByText(folderName, { exact: true })).toBeVisible();
 
-    await row.getByRole('button', { name: 'Revoke' }).click();
-    await expect(row).toBeHidden();
+    await row.dblclick();
+    await page.waitForURL(`**/rules/${String(granted?.id)}*`);
+    await page.getByRole('button', { name: 'Revoke' }).click();
+
+    await page.goto(`${environment.webUrl}/rules?tab=active&sort=grantedAt&order=desc`);
+    await expect(page.getByText(String(offered?.pattern), { exact: true })).toBeHidden();
 
     // Gone from the list the server keeps too — revoked, not merely hidden by the screen.
     expect((await rulesOf(signedIn)).some((rule) => rule.id === granted?.id)).toBe(false);

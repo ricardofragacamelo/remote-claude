@@ -121,8 +121,8 @@
   --primary-foreground: oklch(99% 0 0);
   --destructive: oklch(52% 0.21 27);
   --destructive-foreground: oklch(99% 0 0);
-  --success: oklch(52% 0.14 150);
-  --warning: oklch(58% 0.14 75);
+  --success: oklch(44% 0.14 150);
+  --warning: oklch(48% 0.14 75);
   --border: oklch(90% 0.008 260);
   --ring: oklch(55% 0.16 265);
   --sidebar: oklch(97% 0.004 260);

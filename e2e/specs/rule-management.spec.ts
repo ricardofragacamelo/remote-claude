@@ -37,6 +37,20 @@ const context = workspaceFor(expiry.user);
 
 revokingEveryRuleAfterEach(() => context().user);
 
+// Takes back whatever this user already holds **before** each case too, not only after — `dev` is
+// the one user the whole e2e suite shares, and another plan's own spec (one with no reason of its
+// own to know rules exist, writing a real file as a side effect) can leave one standing. This only
+// reaches an *active* stray rule, never a revoked one — a row never comes back from that on its
+// own (D-01), so a stray revoked rule sharing a pattern with this file's own rows is a different
+// problem, solved instead by scoping each of `batch`'s own checks to its own row id, never a bare
+// pattern search. Both found running the whole suite together for the first time (B-36, S-220's
+// own completion gate, `pnpm verify:full`), neither reachable running this file on its own.
+test.beforeEach(async () => {
+  for (const rule of await rulesOf(context().user)) {
+    await revokeQuietly(context().user, rule.id);
+  }
+});
+
 /** "Don't ask again anywhere" — the answer that leaves an `always` rule standing. */
 const ALLOW_ALWAYS: Answer = { decision: 'allow', scope: 'always' };
 
@@ -228,11 +242,17 @@ test(`${batch.id} — ${batch.title}`, async ({ page }) => {
     });
     expect(asked.asked).toHaveLength(1);
 
-    // The Revoked tab — all three, from the screen that just took them back.
+    // The Revoked tab — all three, from the screen that just took them back. Scoped to each
+    // rule's own row id, never a bare pattern search: `dev` is the one user the whole e2e suite
+    // shares, and another plan's own spec (one with no reason to know rules exist, let alone
+    // revoke one it granted as a side effect) can leave a `file.write` rule standing under a
+    // coincidentally identical pattern — a bare `getByText` then matches more than this test's
+    // own three rows (found running the whole suite together for the first time, B-36's own
+    // `pnpm verify:full`).
     await page.getByRole('tab', { name: /Revoked/ }).click();
-    await expect(page.getByText(live.pattern)).toBeVisible();
-    await expect(page.getByText(second.pattern)).toBeVisible();
-    await expect(page.getByText(third.pattern)).toBeVisible();
+    for (const rule of [live, second, third]) {
+      await expect(page.locator(`#rule-row-${rule.id}`).getByText(rule.pattern)).toBeVisible();
+    }
 
     const historyOfLive = await ruleHistoryOf(context().user, live.id);
     expect(historyOfLive.some((event) => event.kind === 'permission.ruleRevoked')).toBe(true);

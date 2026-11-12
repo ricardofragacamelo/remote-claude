@@ -1,0 +1,11 @@
+{
+  "id": "15·S-222",
+  "title": "the old deep link /rules/$ruleId opens the right rule's own panel, active or revoked, and the revoked one explains its state",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "scope": "always"
+  }
+}

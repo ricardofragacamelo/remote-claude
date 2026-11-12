@@ -370,9 +370,9 @@ muda aqui.
 | S-217 | padrão largo demais recusado com mensagem traduzida; pasta fora da allowlist nem é oferecida | err | e2e | `PERMISSION_RULE_TOO_BROAD` (novo) | B-35 | ✅ |
 | S-218 | outra pessoa não vê as regras do usuário na lista, no teste de comando, na simulação nem na exportação | eq | e2e | — | B-35 | ✅ |
 | S-219 | **regressão** — regra criada pela tela não responde em sessão no modo `readOnly` (o `plan` do Claude) | est | e2e | — | B-35 | ✅ |
-| S-220 | **regressão** — as specs do plano 03 (`rules.spec`, `rule-cycle.spec`, `trail-isolation.spec`) continuam verdes, e o segundo passo do card não mudou | eq | e2e | — | B-36 | ⬜ |
-| S-221 | axe em `/rules` e `/rules/new`; viewport de celular sem scroll horizontal | eq | e2e | — | B-36 | ⬜ |
-| S-222 | o deep link antigo `/rules/$ruleId` abre o detalhe da regra certa, com o estado de revogada explicado | eq | e2e | — | B-36 | ⬜ |
+| S-220 | **regressão** — as specs do plano 03 (`rules.spec`, `rule-cycle.spec`, `trail-isolation.spec`) continuam verdes, e o segundo passo do card não mudou | eq | e2e | — | B-36 | ✅ |
+| S-221 | axe em `/rules` e `/rules/new`; viewport de celular sem scroll horizontal | eq | e2e | — | B-36 | ✅ |
+| S-222 | o deep link antigo `/rules/$ruleId` abre o detalhe da regra certa, com o estado de revogada explicado | eq | e2e | — | B-36 | ✅ |
 
 ---
 
