@@ -22,7 +22,7 @@ import { ruleHistoryLabelKey } from '../lib/rule-history-label';
 import { ruleInvocationLabel } from '../lib/rule-invocation-label';
 import { ruleOrigin } from '../lib/rule-origin';
 import { ruleSentence } from '../lib/rule-sentence';
-import type { PermissionRule } from '../types/rule';
+import type { PermissionRule, RuleStatus } from '../types/rule';
 import { RuleDecisionChip } from './RuleDecisionChip';
 import { RuleExpiryDialog } from './RuleExpiryDialog';
 import { RuleFailureMessage } from './RuleFailureMessage';
@@ -40,6 +40,10 @@ export interface RuleDetailPanelProps {
    * invocation it names instead (S-165).
    */
   onShowTrail(): void;
+
+  /** Opens the wizard pre-filled with this rule's own fields — the convenience D-01 names
+   * "editar o padrão" (B-30). */
+  onDuplicate(rule: PermissionRule): void;
 }
 
 /** `restore:<id>` — the exact guard key `useRuleMutations.restoreBatch` keys a lot of one rule by. */
@@ -56,6 +60,7 @@ export function RuleDetailPanel({
   onClose,
   onOpenRule,
   onShowTrail,
+  onDuplicate,
 }: RuleDetailPanelProps): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const { load, isLoading, error, setLoad, reload } = useRule(ruleId);
@@ -183,6 +188,9 @@ export function RuleDetailPanel({
             failure={failure}
             onRevoke={onRevoke}
             onRestore={onRestore}
+            onDuplicate={() => {
+              onDuplicate(rule);
+            }}
           />
         </>
       )}
@@ -263,6 +271,7 @@ function RuleActions({
   failure,
   onRevoke,
   onRestore,
+  onDuplicate,
 }: {
   readonly rule: PermissionRule;
   readonly ruleId: string;
@@ -270,6 +279,7 @@ function RuleActions({
   readonly failure: RuleMutationFailure | null;
   onRevoke(): void;
   onRestore(): void;
+  onDuplicate(): void;
 }): React.JSX.Element {
   const { t } = useTranslation();
   const restoreKey = restoreKeyOf(ruleId);
@@ -293,12 +303,34 @@ function RuleActions({
             {t('permission.ruleDetail.restore')}
           </Button>
         )}
+        <DuplicateButton status={rule.status} onDuplicate={onDuplicate} />
       </div>
 
       {isFailureForThisRule && failure !== null && (
         <RuleFailureMessage messageKey={failure.error.messageKey} params={failure.error.params} />
       )}
     </>
+  );
+}
+
+/** Every status but `disabled` — its pattern never translated back, nothing to duplicate (B-30). */
+function DuplicateButton({
+  status,
+  onDuplicate,
+}: {
+  readonly status: RuleStatus;
+  onDuplicate(): void;
+}): React.JSX.Element | null {
+  const { t } = useTranslation();
+
+  if (status === 'disabled') {
+    return null;
+  }
+
+  return (
+    <Button variant="outline" size="touch" onClick={onDuplicate}>
+      {t('permission.ruleDetail.duplicate')}
+    </Button>
   );
 }
 

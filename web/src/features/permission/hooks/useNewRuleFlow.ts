@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import type { PermissionDecision, PersistedScope } from '../types/permission';
+import { draftFromPattern, kindOfPattern } from '../lib/new-rule-pattern';
 import type { NewRuleForm } from '../lib/new-rule-pattern';
 import type { NewRuleSearch } from '../lib/new-rule-search';
 import { subjectFieldOf } from '../lib/rule-kind-fields';
@@ -35,12 +36,30 @@ export interface NewRuleDraft {
   readonly expiresAt: string | null;
 }
 
+/** "Duplicar" (B-30) hands a stored rule's own pattern — its `kind` is read off it directly
+ * (every canonical pattern starts with one, D-20) rather than carried as a second field; the
+ * pattern un-templates back into the step's own fields when it's one of the three shapes this
+ * wizard ever writes, `null` falling back to a blank pattern step for anything else (S-204). */
+function kindAndPatternOf(initial: NewRuleSearch): {
+  readonly kind: NewRuleKind | null;
+  readonly parsed: ReturnType<typeof draftFromPattern>;
+} {
+  if (initial.pattern === undefined) {
+    return { kind: initial.kind ?? null, parsed: null };
+  }
+
+  const kind = initial.kind ?? kindOfPattern(initial.pattern);
+  return { kind, parsed: kind === null ? null : draftFromPattern(initial.pattern, kind) };
+}
+
 function draftFrom(initial: NewRuleSearch): NewRuleDraft {
+  const { kind, parsed } = kindAndPatternOf(initial);
+
   return {
-    kind: initial.kind ?? null,
-    form: 'exact',
-    subject: initial.pattern ?? '',
-    mcpTool: '',
+    kind,
+    form: parsed?.form ?? 'exact',
+    subject: parsed?.subject ?? '',
+    mcpTool: parsed?.mcpTool ?? '',
     decision: initial.decision ?? null,
     scope: initial.scope ?? null,
     folder: initial.folder ?? null,
@@ -92,8 +111,8 @@ export interface NewRuleFlow {
   next(): void;
   back(): void;
 
-  /** Jumps straight to a step already completed — a reopened wizard that lands on `review`
-   * (S-203's own template hand-off, once B-30 exists) still lets every earlier step be revisited. */
+  /** Jumps straight to a step already completed — what a folder refused on submit (S-195) and
+   * every earlier step's own "back" both use. */
   goTo(step: NewRuleStep): void;
 }
 
@@ -101,8 +120,11 @@ export interface NewRuleFlow {
  * The rule-authoring wizard's own steps and draft (plan 15, B-27) — kind, pattern, decision,
  * where it reaches, validity, review, in that order, with nothing sent to the server before
  * `review`'s own confirm. `initial` seeds the draft from `/rules/new`'s own search (D-19): a
- * hand-off from Recriar (decision, scope, folder — never the untranslatable pattern, S-225) or,
- * once B-30 exists, a duplicate or a template.
+ * hand-off from Recriar (decision, scope, folder — never the untranslatable pattern, S-225) or
+ * from "duplicar" (B-30), the rule's own pattern included, un-templated back into the pattern
+ * step's own fields (`draftFromPattern`) so it is editable from there same as if typed (D-01).
+ * A template (B-30, D-16) hands off several rules at once, never through this one-rule flow at
+ * all — it has its own review, in `ApplyTemplateDialog`.
  */
 export function useNewRuleFlow(initial: NewRuleSearch): NewRuleFlow {
   const [step, setStep] = useState<NewRuleStep>('kind');

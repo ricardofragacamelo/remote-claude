@@ -490,7 +490,8 @@
       "historyLoading": "Carregando histórico…",
       "historyEmptyTitle": "Sem histórico",
       "historyEmptyDescription": "Nada registrado ainda para esta regra.",
-      "copyId": "Copiar o id da regra"
+      "copyId": "Copiar o id da regra",
+      "duplicate": "Duplicar"
     },
     "ruleExpiry": {
       "shortcuts": "Até quando",
@@ -760,7 +761,8 @@
       "revokeSelected": "Regras: revogar selecionadas",
       "openExpiringSoon": "Regras: abrir perto de expirar",
       "new": "Regras: nova regra",
-      "test": "Regras: testar um comando"
+      "test": "Regras: testar um comando",
+      "templates": "Regras: modelos"
     },
     "wizard": {
       "stepOf": "Etapa: {{step}}",
@@ -847,6 +849,21 @@
       "outcomeAsk": "perguntado",
       "revokeHeading": "Simular revogar esta",
       "revokeHeadingBatch": "Simular revogar estas"
+    },
+    "templates": {
+      "heading": "Modelos",
+      "purpose": "Um lote pronto de regras, revisado antes de qualquer uma ser concedida.",
+      "loading": "Lendo o catálogo…",
+      "pick": "Escolher",
+      "back": "Voltar ao catálogo",
+      "rulesHeading": "As regras deste modelo",
+      "verdictExisting": "Já concedida — não muda nada",
+      "verdictInvalid": "Não pôde ser aplicada",
+      "unboundedBlocked": "Alcança demais para permitir — nunca entra no lote",
+      "acknowledgeBroad": "Entendo que algumas destas alcançam mais que um caso exato.",
+      "confirm": "Aplicar",
+      "applying": "Aplicando…",
+      "appliedToast": "{{count}} regras criadas"
     }
   },
   "transcript": {

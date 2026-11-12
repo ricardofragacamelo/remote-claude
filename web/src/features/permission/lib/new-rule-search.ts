@@ -19,10 +19,6 @@ export interface NewRuleSearch {
   readonly decision?: PermissionDecision | undefined;
   readonly scope?: PersistedScope | undefined;
   readonly folder?: string | undefined;
-
-  /** A catalog template to open the review step from (B-30) — read, but acted on only once that
-   * task's own hand-off exists. */
-  readonly template?: string | undefined;
 }
 
 const DECISIONS: readonly PermissionDecision[] = ['allow', 'deny'];
@@ -37,6 +33,5 @@ export function readNewRuleSearch(search: Record<string, unknown>): NewRuleSearc
     decision: oneOf(search['decision'], DECISIONS),
     scope: oneOf(search['scope'], SCOPES),
     folder: text(search['folder']),
-    template: text(search['template']),
   };
 }

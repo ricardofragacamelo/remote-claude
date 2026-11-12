@@ -31,6 +31,38 @@ describe('useNewRuleFlow — the rule-authoring wizard’s own steps and draft (
     });
   });
 
+  it('seeds the draft from "duplicar" — the pattern un-templated back into kind, form and subject (B-30, S-204)', () => {
+    const { result } = renderHook(() =>
+      useNewRuleFlow({ pattern: 'shell(git status:*)', decision: 'allow', scope: 'always' }),
+    );
+
+    expect(result.current.draft).toMatchObject({
+      kind: 'shell',
+      form: 'prefix',
+      subject: 'git status',
+      decision: 'allow',
+      scope: 'always',
+    });
+  });
+
+  it('reads mcp’s own server and tool apart from a duplicated pattern', () => {
+    const { result } = renderHook(() =>
+      useNewRuleFlow({ pattern: 'mcp(github:create_issue)', decision: 'allow' }),
+    );
+
+    expect(result.current.draft).toMatchObject({
+      kind: 'mcp',
+      subject: 'github',
+      mcpTool: 'create_issue',
+    });
+  });
+
+  it('starts blank, rather than wrong, for a duplicated pattern outside this wizard’s own shapes', () => {
+    const { result } = renderHook(() => useNewRuleFlow({ pattern: 'Bash(git status)' }));
+
+    expect(result.current.draft).toMatchObject({ kind: null, subject: '', mcpTool: '' });
+  });
+
   it('cannot advance from kind until one is chosen', () => {
     const { result } = renderHook(() => useNewRuleFlow({}));
 

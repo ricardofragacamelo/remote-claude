@@ -1,5 +1,8 @@
+import { useTranslation } from 'react-i18next';
+
 import { FolderChooserBrowser, FolderPickerDialog } from '@/features/workspace';
 import type { FolderChooserLabelKeys } from '@/features/workspace';
+import { Button } from '@/shared/components/ui/button';
 
 const LABEL_KEYS: FolderChooserLabelKeys = {
   cancel: 'rules.wizard.folderCancel',
@@ -45,5 +48,29 @@ export function NewRuleFolderDialog({
         />
       )}
     </FolderPickerDialog>
+  );
+}
+
+/**
+ * "Choose a folder…", or "Change the folder…" once one is picked, beside the folder itself once
+ * it is — the one button every step that reaches for `NewRuleFolderDialog` shows the same way
+ * (the wizard's own folder step, the template review's own, B-30).
+ */
+export function FolderChoiceButton({
+  folder,
+  onOpen,
+}: {
+  readonly folder: string | null;
+  onOpen(): void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button type="button" variant="outline" onClick={onOpen}>
+        {folder === null ? t('rules.wizard.folderChoose') : t('rules.wizard.folderChangeChoice')}
+      </Button>
+      {folder !== null && <code className="text-ui-sm">{folder}</code>}
+    </div>
   );
 }

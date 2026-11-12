@@ -249,6 +249,45 @@ describe('the rules route', () => {
     expect(mounted.search()).toMatchObject({ ruleId: 'rule_1' });
   });
 
+  it('opens the wizard pre-filled, from the detail’s own "Duplicar" — B-30', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    mockOneRule();
+
+    const mounted = mountApp('/rules/rule_1');
+    await screen.findByRole('button', { name: t('rules.action.revoke') });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: t('permission.ruleDetail.duplicate') }),
+    );
+
+    await waitFor(() => {
+      expect(mounted.path()).toBe('/rules/new');
+    });
+    expect(mounted.search()).toMatchObject({
+      pattern: 'file.write(/workspace/summary.md)',
+      decision: 'allow',
+      scope: 'always',
+    });
+    expect((mounted.search() as Record<string, unknown>)['folder']).toBeUndefined();
+  });
+
+  it('carries the folder along too, duplicating a `project`-scoped rule', async () => {
+    vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
+    mockOneRule([{ ...oneRule, scope: 'project', projectPath: '/srv/app' }]);
+
+    const mounted = mountApp('/rules/rule_1');
+    await screen.findByRole('button', { name: t('rules.action.revoke') });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: t('permission.ruleDetail.duplicate') }),
+    );
+
+    await waitFor(() => {
+      expect(mounted.path()).toBe('/rules/new');
+    });
+    expect(mounted.search()).toMatchObject({ scope: 'project', folder: '/srv/app' });
+  });
+
   it('opens the rule in a sheet on a phone, with its own way to close it', async () => {
     vi.spyOn(authService, 'renewSession').mockResolvedValue(session);
     mockOneRule();

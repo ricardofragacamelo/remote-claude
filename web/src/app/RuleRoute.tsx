@@ -2,8 +2,8 @@ import { useCallback } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-import { RuleDetailPanel } from '@/features/permission';
-import type { RulesSearch } from '@/features/permission';
+import { RuleDetailPanel, readNewRuleSearch } from '@/features/permission';
+import type { PermissionRule, RulesSearch } from '@/features/permission';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/shared/components/ui/sheet';
 import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
 import { RulesScreenFrame } from './RulesScreenFrame';
@@ -49,12 +49,28 @@ export function RuleRoute(): React.JSX.Element {
     void navigate({ to: '/audit', search: { ruleId } });
   }, [navigate, ruleId]);
 
+  const onDuplicate = useCallback(
+    (rule: PermissionRule) => {
+      void navigate({
+        to: '/rules/new',
+        search: readNewRuleSearch({
+          pattern: rule.pattern,
+          decision: rule.decision,
+          scope: rule.scope,
+          ...(rule.projectPath === null ? {} : { folder: rule.projectPath }),
+        }),
+      });
+    },
+    [navigate],
+  );
+
   const panel = (
     <RuleDetailPanel
       ruleId={ruleId}
       onClose={onClose}
       onOpenRule={onOpenRule}
       onShowTrail={onShowTrail}
+      onDuplicate={onDuplicate}
     />
   );
 

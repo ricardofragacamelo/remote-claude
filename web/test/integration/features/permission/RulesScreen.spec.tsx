@@ -6,6 +6,7 @@ import { axe } from 'jest-axe';
 import { commandRegistry } from '@/features/commands';
 import { DEFAULT_RULES_SEARCH, RulesScreen } from '@/features/permission';
 import { api } from '@/shared/api/api';
+import { Toaster } from '@/shared/components/ui/sonner';
 import { applyTheme } from '@/shared/hooks/useTheme';
 import { render, translator } from '../../../support/render';
 import { aViewport } from '../../../support/viewport';
@@ -1296,6 +1297,82 @@ describe('the rules screen — plan 15, B-21', () => {
       commandRegistry.command('rules.openExpiringSoon')?.run();
 
       expect(onSearch).toHaveBeenCalledWith(expect.objectContaining({ tab: 'expiringSoon' }));
+    });
+
+    it('applies a template, closes the dialog, and reloads the list and the summary — B-30', async () => {
+      const template = {
+        id: 'tpl_tests',
+        name: { messageKey: 'x.name', params: {} },
+        description: { messageKey: 'x.description', params: {} },
+        rules: [
+          { pattern: 'shell(pnpm test:*)', decision: 'allow' as const, breadth: 'narrow' as const },
+        ],
+      };
+      const get = vi.spyOn(api, 'get').mockImplementation((path: unknown) => {
+        const p = String(path);
+        if (p.includes('/permission-rules/summary')) return Promise.resolve(EMPTY_SUMMARY);
+        if (p.includes('/permission-rules/templates'))
+          return Promise.resolve({ templates: [template] });
+        return Promise.resolve({ rules: [ruleA], nextCursor: null });
+      });
+      vi.spyOn(api, 'post').mockImplementation((path: unknown, body?: unknown) => {
+        const p = String(path);
+        if (p === '/permission-rules/import/preview') {
+          return Promise.resolve({
+            digest: 'digest-1',
+            items: [
+              {
+                index: 0,
+                pattern: 'shell(pnpm test:*)',
+                decision: 'allow',
+                scope: 'always',
+                verdict: 'new',
+                breadth: 'narrow',
+              },
+            ],
+          });
+        }
+        if (p === '/permission-rules/import') {
+          return Promise.resolve({ counts: { created: 1, existing: 0 }, rules: [ruleA] });
+        }
+        return Promise.reject(new Error(`unexpected POST ${p} ${JSON.stringify(body)}`));
+      });
+      render(
+        <>
+          <Toaster containerAriaLabel="toasts" />
+          <RulesScreen
+            search={DEFAULT_RULES_SEARCH}
+            onSearch={vi.fn()}
+            onOpenRule={vi.fn()}
+            onRecreate={vi.fn()}
+          />
+        </>,
+      );
+      await screen.findByText(ruleA.pattern);
+      const callsBefore = get.mock.calls.length;
+
+      await userEvent.click(screen.getByRole('button', { name: t('rules.templates.heading') }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.click(
+        await within(dialog).findByRole('button', { name: t('rules.templates.pick') }),
+      );
+      await userEvent.click(within(dialog).getByRole('button', { name: t('rules.scope.always') }));
+      await userEvent.click(
+        await within(dialog).findByRole('button', { name: t('permission.ruleExpiry.shortcut7') }),
+      );
+
+      const confirm = within(dialog).getByRole('button', { name: t('rules.templates.confirm') });
+      await waitFor(() => {
+        expect(confirm).not.toBeDisabled();
+      });
+      await userEvent.click(confirm);
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(get.mock.calls.length).toBeGreaterThan(callsBefore);
+      });
     });
   });
 

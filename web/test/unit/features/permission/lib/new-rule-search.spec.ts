@@ -11,7 +11,6 @@ describe('readNewRuleSearch — the wizard’s own draft, from an untrusted URL 
         decision: 'allow',
         scope: 'always',
         folder: '/workspace/app',
-        template: 'tpl_1',
       }),
     ).toEqual({
       kind: 'shell',
@@ -19,7 +18,6 @@ describe('readNewRuleSearch — the wizard’s own draft, from an untrusted URL 
       decision: 'allow',
       scope: 'always',
       folder: '/workspace/app',
-      template: 'tpl_1',
     });
   });
 

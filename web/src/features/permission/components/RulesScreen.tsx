@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import { AlarmClock, Undo2 } from 'lucide-react';
+import { AlarmClock, LayoutTemplate, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useCommands } from '@/features/commands';
+import { Button } from '@/shared/components/ui/button';
 import { LoadMore } from '@/shared/components/LoadMore';
 import { useClock } from '@/shared/hooks/useClock';
 import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
@@ -17,6 +18,7 @@ import { useRuleMutations } from '../hooks/useRuleMutations';
 import { useRuleSummary } from '../hooks/useRuleSummary';
 import { useRules } from '../hooks/useRules';
 import type { PermissionRule, RuleSort } from '../types/rule';
+import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { DisabledRulesBanner } from './DisabledRulesBanner';
 import { RuleBatchBar } from './RuleBatchBar';
 import { RuleBatchRevokeDialog } from './RuleBatchRevokeDialog';
@@ -117,6 +119,7 @@ export function RulesScreen({
   const selection = useSelection();
   const isDesktop = useIsDesktop();
   const [batchRevokeOpen, setBatchRevokeOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const rows = useMemo(
     () => rowsOf(rules, search.tab, search.withAlert, now),
@@ -228,6 +231,15 @@ export function RulesScreen({
       },
       keys: [{ key: 'Mod+K E', context: 'global' }],
     },
+    {
+      id: 'rules.templates',
+      labelKey: 'rules.command.templates',
+      category: 'file',
+      icon: LayoutTemplate,
+      run: () => {
+        setTemplatesOpen(true);
+      },
+    },
   ]);
 
   const viewProps: RuleListViewProps = {
@@ -249,6 +261,28 @@ export function RulesScreen({
   return (
     <div className="flex flex-col gap-4">
       <DisabledRulesBanner count={summary?.byStatus.disabled ?? 0} onRecreate={onRecreate} />
+
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setTemplatesOpen(true);
+          }}
+        >
+          <LayoutTemplate className="size-4" aria-hidden />
+          {t('rules.templates.heading')}
+        </Button>
+      </div>
+
+      <ApplyTemplateDialog
+        open={templatesOpen}
+        onOpenChange={setTemplatesOpen}
+        onApplied={() => {
+          reload();
+          summaryLoad.reload();
+        }}
+      />
 
       <RuleTabs tab={search.tab} onChange={onTab} summary={summary} />
 

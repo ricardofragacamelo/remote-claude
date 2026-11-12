@@ -338,8 +338,8 @@ muda aqui.
 
 | ID | Cenário | Dim | Nível | Erro esperado | Tarefa | Estado |
 |---|---|---|---|---|---|---|
-| S-203 | um modelo abre a revisão de várias regras, cada uma desligável, com segundo passo; nada nasce antes de confirmar | est | integração | — | B-30 | ⬜ |
-| S-204 | duplicar abre o assistente com os campos e validade nova; sem mudança, o achado `identical` aparece | idem | integração | — | B-30 | ⬜ |
+| S-203 | um modelo abre a revisão de várias regras, cada uma desligável, com segundo passo; nada nasce antes de confirmar | est | integração | — | B-30 | ✅ |
+| S-204 | duplicar abre o assistente com os campos e validade nova; sem mudança, o achado `identical` aparece | idem | integração | — | B-30 | ✅ |
 
 ## Exportar e importar pela tela — B-31
 

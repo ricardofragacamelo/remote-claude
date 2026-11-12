@@ -92,6 +92,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -116,6 +117,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -136,6 +138,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -156,6 +159,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={onShowTrail}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -174,6 +178,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -203,6 +208,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={onOpenRule}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -231,6 +237,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -247,6 +254,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -278,6 +286,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -299,6 +308,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -321,6 +331,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -342,6 +353,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -352,6 +364,51 @@ describe('the rule detail panel — plan 15, B-22', () => {
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/permission-rules/restore', { ids: ['rule_1'] });
     });
+  });
+
+  it('hands the whole rule to onDuplicate, for the wizard to pre-fill from — B-30', async () => {
+    mockApiGet();
+    const onDuplicate = vi.fn();
+    render(
+      <RuleDetailPanel
+        ruleId="rule_1"
+        onClose={() => {}}
+        onOpenRule={() => {}}
+        onShowTrail={() => {}}
+        onDuplicate={onDuplicate}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: t('permission.ruleDetail.duplicate') }),
+    );
+
+    expect(onDuplicate).toHaveBeenCalledWith(rule);
+  });
+
+  it('offers no "duplicate" for a disabled rule — its pattern cannot be translated back', async () => {
+    mockApiGet({
+      rule: {
+        ...rule,
+        status: 'disabled',
+        disabled: null,
+        disabledReason: { messageKey: 'common.error.notFound', params: {} },
+      },
+    });
+    render(
+      <RuleDetailPanel
+        ruleId="rule_1"
+        onClose={() => {}}
+        onOpenRule={() => {}}
+        onShowTrail={() => {}}
+        onDuplicate={() => {}}
+      />,
+    );
+
+    await screen.findByText('shell(git status:*)');
+    expect(
+      screen.queryByRole('button', { name: t('permission.ruleDetail.duplicate') }),
+    ).not.toBeInTheDocument();
   });
 
   it('offers "simular revogar esta" for an active rule, reading against the trail — S-201', async () => {
@@ -373,6 +430,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -406,6 +464,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -427,6 +486,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -444,6 +504,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={onClose}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
 
@@ -464,6 +525,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
     await screen.findByText('shell(git status:*)');
@@ -481,6 +543,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
     await screen.findByText('shell(git status:*)');
@@ -497,6 +560,7 @@ describe('the rule detail panel — plan 15, B-22', () => {
         onClose={() => {}}
         onOpenRule={() => {}}
         onShowTrail={() => {}}
+        onDuplicate={() => {}}
       />,
     );
     await screen.findByText('shell(git status:*)');

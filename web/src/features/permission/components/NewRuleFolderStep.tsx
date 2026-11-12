@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/shared/components/ui/button';
-import { NewRuleFolderDialog } from './NewRuleFolderDialog';
+import { FolderChoiceButton, NewRuleFolderDialog } from './NewRuleFolderDialog';
 import { RuleWizardOption } from './RuleWizardOption';
 import type { PersistedScope } from '../types/permission';
 
@@ -61,20 +60,12 @@ export function NewRuleFolderStep({
       {scope === 'project' && (
         <div className="flex flex-col gap-2">
           <p className="text-ui-sm text-muted-foreground">{t('rules.wizard.folderProjectBody')}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setPickerOpen(true);
-              }}
-            >
-              {folder === null
-                ? t('rules.wizard.folderChoose')
-                : t('rules.wizard.folderChangeChoice')}
-            </Button>
-            {folder !== null && <code className="text-ui-sm">{folder}</code>}
-          </div>
+          <FolderChoiceButton
+            folder={folder}
+            onOpen={() => {
+              setPickerOpen(true);
+            }}
+          />
         </div>
       )}
 

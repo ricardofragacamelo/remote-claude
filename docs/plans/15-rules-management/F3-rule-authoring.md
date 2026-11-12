@@ -211,7 +211,7 @@ trocando o mock genérico por um que decide pela rota (o mesmo padrão já usado
 que agora há duas chamadas, não uma. `SimulationPanel` também ganhou o estado `failed` que faltava
 (só tinha `loading`/`ready` na primeira versão) — sem ele, uma leitura recusada não mostrava nada.
 
-### B-30 — Modelos e duplicar 🔲
+### B-30 — Modelos e duplicar ✅
 
 - **Modelos** — um catálogo em cartões (nome, o que faz, as regras com a decisão), da
   [D-16](decisions.md#d-16--onde-moram-os-modelos-de-regra-e-quais-entram). Escolher um abre a revisão
@@ -222,6 +222,48 @@ que agora há duas chamadas, não uma. `SimulationPanel` também ganhou o estado
   nova. Sem mudar nada, a revisão diz "idêntica à regra X" (S-204). É também o "editar o padrão" da
   [D-01](decisions.md#d-01--o-que-se-edita-numa-regra): ao salvar uma cópia alterada, o assistente
   oferece revogar a original, com desfazer.
+
+**Nota de execução — Modelos**: aplicar um modelo é uma importação de ponta a ponta (D-16) — o
+cliente sintetiza o arquivo `remote-claude.permission-rules` (todas as regras do modelo, a decisão
+de escopo/pasta/validade aplicada uniformemente), chama `/permission-rules/import/preview` para os
+achados por item (`new`/`existing`/`invalid`) e só então `/permission-rules/import` com os índices
+aceitos. Um único componente (`ApplyTemplateDialog`) cobre catálogo + revisão, montado sob demanda
+(`RulesScreen.tsx`, botão "Modelos" + paleta `rules.templates`) — o catálogo só é lido quando o
+diálogo abre de verdade (`ApplyTemplateDialogBody` só monta com `open`), nunca eager. Reaproveita
+`NewRuleFolderStep`/`NewRuleFolderDialog` (pasta) e `NewRuleValidityStep` (validade) do próprio
+assistente — ambos já genéricos o bastante. Um item `unbounded`+`allow` é bloqueado do mesmo jeito
+que a D-09 já bloqueia no assistente de uma regra só; um item `broad` aceito exige o mesmo
+reconhecimento (`acknowledgeBroad`), só que uma única caixa para o lote inteiro, não por item —
+corte de escopo deliberado, dado que um modelo é curado e dificilmente mistura width por item. A
+coluna "onde" (pasta) de cada item do lote não existe no modelo tampouco, pelo mesmo motivo já
+registrado na B-29 (o contrato de import nunca devolveu isso por item).
+
+**Achado e corrigido durante a própria tarefa**: `templateExportFileOf` construía `exportedAt`/
+`expiresAt` com `new Date().toISOString()` **a cada chamada** — e como essa função roda de novo a
+cada render (o arquivo não é memoizado), o conteúdo do arquivo mudava a cada milissegundo,
+e `useRuleImportPreview` (que lê pela chave do próprio conteúdo, via `useAsyncRead`) nunca
+assentava em `ready`: cada render disparava uma nova leitura antes da anterior responder. Invisível
+em execução normal (rápida o bastante para não aparecer), mas reproduzível de forma consistente sob
+instrumentação de cobertura (mais lenta) — foi assim que apareceu, num teste de ponta a ponta que
+nunca fechava o diálogo. Corrigido trocando as duas datas por uma constante fixa — ambas já são só
+informativas, ignoradas na importação (D-17), então nenhuma delas precisava ser a hora real.
+
+**Nota de execução — Duplicar**: a pattern é lida de volta para os campos editáveis do passo 2 por
+`draftFromPattern` (`lib/new-rule-pattern.ts`), o inverso exato de `patternOf` — não uma
+reinterpretação da gramática (a mesma cautela já registrada nas notas da B-22/28/29): desfaz
+apenas as três formas que o próprio assistente escreve (`kind`, `kind(subject)`,
+`kind(subject:*)`, `mcp(server:tool)`), e devolve `null` para qualquer outra, caindo de volta num
+passo de padrão em branco em vez de um errado. `kindOfPattern` lê o `kind` direto do início do
+padrão canônico (D-20), então o hand-off (`/rules/new`) só precisa do `pattern` — nenhum campo novo
+na search. O botão "Duplicar" (`RuleDetailPanel`) aparece para todo status exceto `disabled` (cujo
+padrão é intraduzível, S-225) — inclusive revogada, por D-02 ("a revogada abre com... duplicar e
+restaurar"). **Corte de escopo**: nenhum menu de contexto novo foi construído para "do menu" — o
+botão já soma com Revogar/Restaurar na mesma linha, mesmo precedente da B-24 (nenhum menu distinto
+sobre a seleção, só a barra); nenhum comando de paleta `rules.duplicate` — duplicar sempre parte de
+uma regra já aberta, e o botão ali já cobre o caso, sem precisar de um atalho redundante. O campo
+`template` que a B-27 já havia pré-escrito em `NewRuleSearch` (nunca usado) foi removido: "Modelos"
+acabou não precisando de handoff nenhum pela search do assistente — tem o próprio diálogo, de ponta
+a ponta.
 
 ### B-31 — Exportar e importar 🔲
 

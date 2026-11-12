@@ -490,7 +490,8 @@
       "historyLoading": "Loading history…",
       "historyEmptyTitle": "No history",
       "historyEmptyDescription": "Nothing recorded yet for this rule.",
-      "copyId": "Copy the rule's id"
+      "copyId": "Copy the rule's id",
+      "duplicate": "Duplicate"
     },
     "ruleExpiry": {
       "shortcuts": "How much longer",
@@ -760,7 +761,8 @@
       "revokeSelected": "Rules: revoke selected",
       "openExpiringSoon": "Rules: open expiring soon",
       "new": "Rules: new rule",
-      "test": "Rules: test a command"
+      "test": "Rules: test a command",
+      "templates": "Rules: templates"
     },
     "wizard": {
       "stepOf": "Step: {{step}}",
@@ -847,6 +849,21 @@
       "outcomeAsk": "asked",
       "revokeHeading": "Simulate revoking this",
       "revokeHeadingBatch": "Simulate revoking these"
+    },
+    "templates": {
+      "heading": "Modelos",
+      "purpose": "A ready-made bundle of rules, reviewed before anything is granted.",
+      "loading": "Reading the catalog…",
+      "pick": "Choose",
+      "back": "Back to the catalog",
+      "rulesHeading": "This template's own rules",
+      "verdictExisting": "Already granted — changes nothing",
+      "verdictInvalid": "Could not be applied",
+      "unboundedBlocked": "Reaches too much to allow — never part of the lot",
+      "acknowledgeBroad": "I understand some of these reach more than one exact case.",
+      "confirm": "Apply",
+      "applying": "Applying…",
+      "appliedToast": "{{count}} rules created"
     }
   },
   "transcript": {
