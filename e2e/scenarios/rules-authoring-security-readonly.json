@@ -1,0 +1,12 @@
+{
+  "id": "15·S-219",
+  "title": "regression — an allow rule created through the screen does not answer a session in readOnly mode; the card still appears",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "fixture": "web-fetch-turn",
+    "scope": "always"
+  }
+}

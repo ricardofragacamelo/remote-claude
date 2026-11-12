@@ -99,14 +99,22 @@ export interface WorkspaceRoot {
  *
  * `engine` names a `GET /engines` id to open on instead of the installation's default — the
  * neutral test engine's own `[fixture:…]` turns (plan 15, B-33) only replay on a session of its
- * own, since the default engine's own scripted fake knows nothing of them.
+ * own, since the default engine's own scripted fake knows nothing of them. `permissionMode` opens
+ * the session already in that mode (`ask` is the server's own default when absent) — `readOnly`
+ * is what a regression against an `allow` rule needs (plan 15, B-35, S-219): `decideOutcome`
+ * deliberately skips an otherwise-matching `allow` in that mode, so the card still appears.
  */
 export async function startSession(
   socket: E2eSocket,
   workspacePath: string,
   engine?: string,
+  permissionMode?: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll',
 ): Promise<string> {
-  socket.send('session.start', { workspacePath, ...(engine === undefined ? {} : { engine }) });
+  socket.send('session.start', {
+    workspacePath,
+    ...(engine === undefined ? {} : { engine }),
+    ...(permissionMode === undefined ? {} : { permissionMode }),
+  });
 
   const started = await socket.waitFor((frame) => frame.type === 'session.started');
   const sessionId = (started.payload as { sessionId?: unknown }).sessionId;

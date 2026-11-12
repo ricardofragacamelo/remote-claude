@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { openSignedIn } from '../fixtures/auth';
 import { environment } from '../fixtures/environment';
-import { closeSession, connected, startSession, workspaceFor } from '../fixtures/live-session';
+import { workspaceFor } from '../fixtures/live-session';
 import {
   describedRule,
   expectAllowedUnasked,
@@ -10,9 +10,10 @@ import {
   invocationsOf,
   revokingEveryRuleAfterEach,
   ruleGrantedFor,
+  runScriptedTurn,
   trailOf,
-  writeTurn,
 } from '../fixtures/rules';
+import { createRuleThroughWizard } from '../fixtures/wizard';
 import { scenario } from '../scenarios';
 
 /**
@@ -64,30 +65,11 @@ test(`${authoring.id} — ${authoring.title}`, async ({ page }) => {
 
   // The wizard, from scratch: kind, the prefix pattern, allow, always, a week, confirm.
   await page.goto(`${environment.webUrl}/rules/new`);
-  await page.getByRole('radio', { name: expected.kind }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
-
-  await page.getByRole('radio', { name: 'This, and anything after it' }).click();
-  await page.getByRole('textbox', { name: 'Command' }).fill(expected.command);
-  await page.getByRole('button', { name: 'Next' }).click();
-
-  await page.getByRole('radiogroup', { name: 'Allow or block' }).getByRole('radio').first().click();
-  await page.getByRole('button', { name: 'Next' }).click();
-
-  await page
-    .getByRole('radiogroup', { name: 'Where it reaches' })
-    .getByRole('radio')
-    .first()
-    .click();
-  await page.getByRole('button', { name: 'Next' }).click();
-
-  await page.getByLabel('Or pick a date').fill(todayDateInput());
-  await page.getByRole('button', { name: 'Next' }).click();
-
-  await page.getByRole('button', { name: 'Create the rule' }).click();
-  await page.waitForURL(
-    (url) => /^\/rules\/[^/]+$/.test(url.pathname) && url.pathname !== '/rules/new',
-  );
+  await createRuleThroughWizard(page, {
+    kind: expected.kind,
+    command: expected.command,
+    dateInput: todayDateInput(),
+  });
 
   const rule = await ruleGrantedFor(context().user, expected.pattern);
   expect(rule).toMatchObject({
@@ -105,29 +87,26 @@ test(`${authoring.id} — ${authoring.title}`, async ({ page }) => {
 
   // A scripted session, on the neutral test engine — the only one with this call recorded —
   // proves the rule for a *different* command its own prefix still reaches.
-  const socket = await connected(context().user);
-  const sessionId = await startSession(socket, context().workspace, 'test');
+  const { turn, sessionId } = await runScriptedTurn(
+    context().user,
+    context().workspace,
+    expected.fixture,
+  );
+  expectAllowedUnasked(turn);
 
-  try {
-    const turn = await writeTurn(socket, sessionId, null, socket, expected.fixture);
-    expectAllowedUnasked(turn);
+  const described = await describedRule(context().user, rule.id);
+  expect(described.usage.count).toBe(1);
 
-    const described = await describedRule(context().user, rule.id);
-    expect(described.usage.count).toBe(1);
+  const invocations = await invocationsOf(context().user, rule.id);
+  expect(invocations.length).toBeGreaterThan(0);
 
-    const invocations = await invocationsOf(context().user, rule.id);
-    expect(invocations.length).toBeGreaterThan(0);
-
-    const trail = await trailOf(context().user, sessionId);
-    const decided = trail.find(
-      (entry) => entry.toolName === 'run_shell' && entry.verdict?.auto === true,
-    );
-    expect(decided).toMatchObject({
-      verdict: { auto: true, ruleId: rule.id, scope: expected.scope },
-    });
-  } finally {
-    await closeSession(socket, sessionId);
-  }
+  const trail = await trailOf(context().user, sessionId);
+  const decided = trail.find(
+    (entry) => entry.toolName === 'run_shell' && entry.verdict?.auto === true,
+  );
+  expect(decided).toMatchObject({
+    verdict: { auto: true, ruleId: rule.id, scope: expected.scope },
+  });
 });
 
 test(`${network.id} — ${network.title}`, async ({ page }) => {
@@ -149,13 +128,6 @@ test(`${network.id} — ${network.title}`, async ({ page }) => {
   await dialog.getByRole('button', { name: 'Apply' }).click();
   await expect(dialog).toBeHidden();
 
-  const socket = await connected(context().user);
-  const sessionId = await startSession(socket, context().workspace, 'test');
-
-  try {
-    const turn = await writeTurn(socket, sessionId, null, socket, expected.fixture);
-    expectDeniedUnasked(turn);
-  } finally {
-    await closeSession(socket, sessionId);
-  }
+  const { turn } = await runScriptedTurn(context().user, context().workspace, expected.fixture);
+  expectDeniedUnasked(turn);
 });

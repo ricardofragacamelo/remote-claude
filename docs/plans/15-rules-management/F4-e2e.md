@@ -106,7 +106,7 @@ com `restoredFrom` apontando pra original, que fica `revoked` para sempre (D-01,
 `rule-history-label.ts`). A prova de "desfazer" funcionou não é reler o id original (que nunca
 volta a `active`) — é achar a regra ativa pelo próprio padrão (`rulesOf` já exclui as revogadas).
 
-### B-35 — Segurança pela porta do usuário 🔲
+### B-35 — Segurança pela porta do usuário ✅
 
 Spec nova `rule-authoring-security.spec.ts`:
 
@@ -116,6 +116,33 @@ Spec nova `rule-authoring-security.spec.ts`:
   exportação dele não refletem nada do primeiro (S-218);
 - **regressão**: sessão no modo `readOnly` (o `plan` do Claude) com a regra `allow` criada pela tela →
   o card aparece (S-219).
+
+**Nota de execução — o mecanismo da regressão (S-219), já achado no próprio domínio**:
+`decide-outcome.ts`'s own precedência (B-08/D-20) já faz exatamente isso de propósito — passo 3 é
+"um `allow` que casa, a não ser que o modo seja `readOnly` (nenhuma regra permite ali)". Nenhum
+código novo no domínio; só faltava a prova pela porta do usuário. O `web_fetch` do motor de teste
+(B-33) e seu `'web-fetch-turn'` já serviam — `web.fetch` não está em `READ_ONLY_REFUSED_KINDS`
+(`mode-approval.ts`), que só recusa `file.*`/`shell` antes mesmo da regra ser lida; `startSession`
+(`e2e/fixtures/live-session.ts`) ganhou um `permissionMode` opcional, enviado no próprio
+`session.start`.
+
+**Achado durante a própria tarefa — a lacuna real estava em `/permission-rules/evaluate`, não na
+pasta**: `folder: null` no corpo de uma chamada direta (S-218) é `400 INVALID_INPUT` — o schema só
+aceita `folder` ausente (`z.string().optional()`), nunca `null`; a chamada do teste de comando pela
+tela nunca manda o campo quando não há pasta nenhuma, só a chamada direta do teste precisou do
+ajuste.
+
+**Achado de passagem — duplicação entre as três specs de F4 que já dirigem o assistente pela
+tela**: `rule-authoring.spec.ts` (B-33) e a própria `rule-authoring-security.spec.ts` repetiam a
+mesma sequência de cliques passo a passo — extraído para `e2e/fixtures/wizard.ts`
+(`pickKind`/`typeSubjectPrefix`/`pickAnyUseOf`/`skipSubjectStep`/`pickRadioThenNext`/
+`pickValidityToday`/`confirmRuleCreated`, e um `createRuleThroughWizard` composto para o desenho
+mais comum — kind com assunto, allow, sempre, hoje); `rule-authoring.spec.ts` foi refatorado para
+usar as mesmas funções, sem mudar nada do que afirma. Um `runScriptedTurn` novo em `rules.ts`
+(socket + sessão + turno roteirizado + fechamento, sempre) substitui o mesmo bloco repetido nos
+dois turnos de `rule-authoring.spec.ts` e nos dois de `rule-authoring-security.spec.ts`. `pnpm
+jscpd` (gate 5) não ignora `e2e/` como ignora `**/test/**` — zero clones depois, confirmado em todo
+o repositório.
 
 ### B-36 — Regressões do plano 03, acessibilidade e o deep link 🔲
 

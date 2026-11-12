@@ -1,0 +1,14 @@
+{
+  "id": "15·S-218",
+  "title": "another person sees none of this user's rules in the list, the command test, the simulation or the export",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "stranger": { "username": "approver", "password": "approver" },
+    "kind": "Shell",
+    "command": "echo e2e-isolation-test",
+    "pattern": "shell(echo e2e-isolation-test:*)"
+  }
+}

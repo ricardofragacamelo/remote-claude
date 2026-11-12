@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Envelope } from '@remote-claude/contracts';
 
 import { callApi } from './api';
-import { prompt } from './live-session';
+import { closeSession, connected, prompt, startSession } from './live-session';
 import type { AuthenticatedUser } from './auth';
 import type { E2eSocket } from './ws';
 
@@ -232,6 +232,49 @@ export async function writeTurn(
     completed: ofType('tool.completed'),
     started: ofType('tool.started'),
   };
+}
+
+/** What one scripted turn, run start to finish, leaves the caller to read afterward. */
+export interface ScriptedTurnResult {
+  readonly turn: Turn;
+  readonly sessionId: string;
+}
+
+/**
+ * One scripted turn, start to finish: a fresh socket and session, the named fixture, the session
+ * always closed after — whether the call errors or not (plan 15, B-33…B-35).
+ *
+ * `answer` is who answers the question, if the turn asks one at all — `null` (the default) is
+ * what a turn a rule is meant to settle on its own needs. `permissionMode` opens the session
+ * already in that mode (B-35, S-219 — `readOnly` skips an otherwise-matching `allow`); `engine`
+ * names which one to open on at all (`'test'`, the neutral engine every `[fixture:…]` turn
+ * replays on). `sessionId` comes back too — closed by the time the caller sees it, but still
+ * what the trail (`GET /audit-entries`) reads by.
+ */
+export async function runScriptedTurn(
+  user: AuthenticatedUser,
+  workspace: string,
+  fixture: string,
+  options: {
+    readonly engine?: string;
+    readonly permissionMode?: 'ask' | 'acceptEdits' | 'readOnly' | 'allowAll';
+    readonly answer?: Answer | null;
+  } = {},
+): Promise<ScriptedTurnResult> {
+  const socket = await connected(user);
+  const sessionId = await startSession(
+    socket,
+    workspace,
+    options.engine ?? 'test',
+    options.permissionMode,
+  );
+
+  try {
+    const turn = await writeTurn(socket, sessionId, options.answer ?? null, socket, fixture);
+    return { turn, sessionId };
+  } finally {
+    await closeSession(socket, sessionId);
+  }
 }
 
 /**

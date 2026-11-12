@@ -1,0 +1,12 @@
+{
+  "id": "15·S-217",
+  "title": "a whole-shell allow is blocked in the wizard and refused by a direct POST too; the folder selector offers only the allowlist",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "kind": "Shell",
+    "blockedPattern": "shell"
+  }
+}
