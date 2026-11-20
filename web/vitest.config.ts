@@ -1,3 +1,5 @@
+import os from 'node:os';
+
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -5,6 +7,11 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import { COVERAGE_THRESHOLDS } from '../scripts/lib/coverage.mjs';
 
 import { browserDefine, browserEnvironment } from './env';
+
+// Half the machine's cores — the same headroom the backend's own vitest config gives its worker
+// pool, kept here too so a full `pnpm verify:full` run never has both suites saturating every
+// core at once.
+const MAX_WORKERS = Math.max(2, Math.floor(os.cpus().length / 2));
 
 /**
  * One runner for both suites, with coverage measured over the two together.
@@ -24,6 +31,7 @@ export default defineConfig({
     setupFiles: ['test/support/setup.ts'],
     // Room for the five seconds `waitFor` is given in the setup, and then some.
     testTimeout: 15_000,
+    maxWorkers: MAX_WORKERS,
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'lcov'],

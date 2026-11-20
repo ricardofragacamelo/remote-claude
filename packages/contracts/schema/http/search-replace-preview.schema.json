@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/search-replace-preview.json",
+  "title": "SearchReplacePreviewFrame",
+  "description": "`POST /search/replace/preview`: one line of the NDJSON stream (plan 11, B-11, D-02) — the same search as `search.text.frame`, with the resolved replacement text on every match and the file's own ETag. In the domain this is a discriminated union by `type` (`file` carries `path`/`etag`/`matches`; `end` carries `truncated`/`skipped`; `error` carries `code`/`messageKey`/`params`), which the generator cannot express as a `oneOf`; flattened here, with the pairing documented per field (plan 28, B-48). The stream always ends with exactly one `end` or `error` line.",
+  "x-kind": "http",
+  "x-type": "search.replace.preview.frame",
+  "x-route": [{ "method": "POST", "path": "/search/replace/preview" }],
+  "type": "object",
+  "required": ["type"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["file", "end", "error"]
+    },
+    "path": {
+      "type": "string",
+      "description": "Present exactly when `type` is `file`. Relative to the folder, with /."
+    },
+    "etag": {
+      "type": "string",
+      "description": "Present exactly when `type` is `file`. The sha256 of the content this preview read — the version the apply flow checks against (S-81)."
+    },
+    "matches": {
+      "type": "array",
+      "description": "Present exactly when `type` is `file`.",
+      "maxItems": 20000,
+      "items": {
+        "type": "object",
+        "required": [
+          "line",
+          "column",
+          "endColumn",
+          "preview",
+          "previewMatchStart",
+          "previewMatchEnd",
+          "replacement"
+        ],
+        "properties": {
+          "line": {
+            "type": "integer",
+            "description": "1-based."
+          },
+          "column": {
+            "type": "integer",
+            "description": "1-based, in UTF-16 units (S-65)."
+          },
+          "endColumn": {
+            "type": "integer",
+            "description": "1-based, in UTF-16 units."
+          },
+          "preview": {
+            "type": "string",
+            "description": "A window around the match, cropped to a ceiling (S-66) — the \"before\" of the diff."
+          },
+          "previewMatchStart": {
+            "type": "integer",
+            "description": "Where the match starts inside preview, in UTF-16 units."
+          },
+          "previewMatchEnd": {
+            "type": "integer",
+            "description": "Where the match ends inside preview, in UTF-16 units."
+          },
+          "replacement": {
+            "type": "string",
+            "description": "What this one match's text becomes — group references and \"preserve case\" already resolved (S-82, S-97). The client builds the \"after\" by splicing this in place of preview[previewMatchStart:previewMatchEnd]."
+          }
+        }
+      }
+    },
+    "truncated": {
+      "type": "object",
+      "x-nullable": true,
+      "description": "Present exactly when `type` is `end`.",
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "enum": ["limit", "timeout"]
+        }
+      }
+    },
+    "skipped": {
+      "type": "integer",
+      "description": "Present exactly when `type` is `end`. Files the engine reported as binary, excluded from the results (S-67)."
+    },
+    "code": {
+      "type": "string",
+      "description": "Present exactly when `type` is `error`."
+    },
+    "messageKey": {
+      "type": "string",
+      "description": "Present exactly when `type` is `error`."
+    },
+    "params": {
+      "type": "object",
+      "description": "Present exactly when `type` is `error`. Open: the parameters of the message, by key."
+    }
+  }
+}

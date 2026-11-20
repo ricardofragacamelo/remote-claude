@@ -4,6 +4,9 @@
  */
 export { SettingChoice } from './components/SettingChoice';
 export type { Choice, SettingChoiceProps } from './components/SettingChoice';
+export { SettingRestoreFooter } from './components/SettingRestoreFooter';
+export type { SettingRestoreFooterProps } from './components/SettingRestoreFooter';
+export { onOffChoices } from './lib/on-off-choices';
 export { SettingsScreen } from './components/SettingsScreen';
 export type { SettingsScreenProps } from './components/SettingsScreen';
 export {

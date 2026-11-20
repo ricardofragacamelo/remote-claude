@@ -223,6 +223,23 @@ export const environmentSchema = z.object({
   RC_FILES_HISTORY_MAX_STORE_BYTES: z.coerce.number().int().min(1),
   RC_FILES_HISTORY_RETENTION_DAYS: z.coerce.number().int().min(1).max(36_500),
   RC_FILES_HISTORY_MAX_BATCH_ENTRIES: z.coerce.number().int().min(1),
+  // The search engine (plan 11, D-06): provisional numbers, measured against this repository and
+  // a large public one before the phase that uses them closes. `RC_RIPGREP_PATH` overrides the
+  // pinned `@vscode/ripgrep` binary (D-01) — absent or empty means the pinned one; set, it must
+  // resolve, run and report at least the minimum version, or the boot stops (ADR-016).
+  RC_RIPGREP_PATH: z.string().optional(),
+  RC_SEARCH_MAX_MATCHES: z.coerce.number().int().min(1),
+  RC_SEARCH_LOCATE_MAX_FILES: z.coerce.number().int().min(1),
+  RC_SEARCH_LOCATE_DEFAULT_RESULTS: z.coerce.number().int().min(1),
+  RC_SEARCH_LOCATE_MAX_RESULTS: z.coerce.number().int().min(1),
+  RC_SEARCH_PREVIEW_CONTEXT_CHARS: z.coerce.number().int().min(1),
+  RC_SEARCH_MAX_FILE_BYTES: z.coerce.number().int().min(1),
+  RC_SEARCH_MULTILINE_MAX_FILE_BYTES: z.coerce.number().int().min(1),
+  RC_SEARCH_MAX_CONCURRENT_PER_USER: z.coerce.number().int().min(1),
+  RC_SEARCH_TIMEOUT_MS: z.coerce.number().int().min(1),
+  RC_SEARCH_REPLACE_MAX_FILES: z.coerce.number().int().min(1),
+  RC_SEARCH_PROCESS_MAX_BYTES: z.coerce.number().int().min(1),
+  RC_SEARCH_LOCATE_CACHE_TTL_MS: z.coerce.number().int().min(0),
   // How recently a conversation begun elsewhere has to have been written to read as active there
   // (plan 08, D-06): an estimate, measured against how long one tool leaves the transcript unwritten.
   RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS: z.coerce.number().int().min(1).max(86_400),
@@ -495,6 +512,30 @@ export interface AppConfig {
     readonly history: HistoryLimits & { readonly directory: string };
   };
 
+  /**
+   * The search engine (plan 11): where the pinned ripgrep binary is overridden from, and the
+   * ceilings of D-06, provisional until the phase that uses them measures and closes them.
+   */
+  readonly search: {
+    /** `RC_RIPGREP_PATH`, when it overrides the pinned `@vscode/ripgrep` binary — never `rg` on
+     *  the `PATH` (ADR-016). */
+    readonly ripgrepPathOverride: string | null;
+    readonly maxMatches: number;
+    readonly locate: {
+      readonly maxFiles: number;
+      readonly defaultResults: number;
+      readonly maxResults: number;
+      readonly cacheTtlMs: number;
+    };
+    readonly previewContextChars: number;
+    readonly maxFileBytes: number;
+    readonly multilineMaxFileBytes: number;
+    readonly maxConcurrentPerUser: number;
+    readonly timeoutMs: number;
+    readonly replaceMaxFiles: number;
+    readonly processMaxBytes: number;
+  };
+
   /** What the history says about each conversation beyond what the engine reports (plan 08, B-08). */
   readonly transcript: {
     /**
@@ -535,6 +576,28 @@ export interface AppConfig {
     readonly webClientId: string;
     readonly mobileClientId: string;
     readonly scopes: string;
+  };
+}
+
+/**
+/** The search engine's slice of {@link AppConfig} — its own function so `loadConfig` reads flat. */
+function searchConfigOf(env: z.infer<typeof environmentSchema>): AppConfig['search'] {
+  return {
+    ripgrepPathOverride: env.RC_RIPGREP_PATH?.trim() || null,
+    maxMatches: env.RC_SEARCH_MAX_MATCHES,
+    locate: {
+      maxFiles: env.RC_SEARCH_LOCATE_MAX_FILES,
+      defaultResults: env.RC_SEARCH_LOCATE_DEFAULT_RESULTS,
+      maxResults: env.RC_SEARCH_LOCATE_MAX_RESULTS,
+      cacheTtlMs: env.RC_SEARCH_LOCATE_CACHE_TTL_MS,
+    },
+    previewContextChars: env.RC_SEARCH_PREVIEW_CONTEXT_CHARS,
+    maxFileBytes: env.RC_SEARCH_MAX_FILE_BYTES,
+    multilineMaxFileBytes: env.RC_SEARCH_MULTILINE_MAX_FILE_BYTES,
+    maxConcurrentPerUser: env.RC_SEARCH_MAX_CONCURRENT_PER_USER,
+    timeoutMs: env.RC_SEARCH_TIMEOUT_MS,
+    replaceMaxFiles: env.RC_SEARCH_REPLACE_MAX_FILES,
+    processMaxBytes: env.RC_SEARCH_PROCESS_MAX_BYTES,
   };
 }
 
@@ -669,6 +732,7 @@ export function loadConfig(
         maxBatchEntries: env.RC_FILES_HISTORY_MAX_BATCH_ENTRIES,
       },
     },
+    search: searchConfigOf(env),
     transcript: {
       activeWindowMs: env.RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS * 1_000,
       toolResultMaxBytes: env.RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES,

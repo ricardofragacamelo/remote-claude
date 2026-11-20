@@ -22,7 +22,9 @@ import {
   setPinned,
   tabsToClose,
 } from '@/features/editor/hooks/tabs';
+import { showView } from '@/features/editor/hooks/views';
 import { editorStoreOf } from '@/features/editor/store/editor.store';
+import type { CodeView } from '@/features/editor/types/code-editor';
 import { FOLDER, editorState, openedModel } from '../../../../support/editor';
 import { fakeDisk } from '../../../../support/editor-disk';
 
@@ -47,6 +49,32 @@ describe('the tabs of a folder tab — plan 07, B-32', () => {
     expect(tabIds()).toEqual(['file:b.ts', 'file:c.ts']);
     expect(editorState().recent).toEqual(['c.ts', 'b.ts', 'a.ts']);
     expect(activeFile(FOLDER)).toBe('c.ts');
+  });
+
+  it('opens at a selection — the match of a search result (plan 11, B-15)', () => {
+    fakeDisk(FOLDER, { 'a.ts': 'a' });
+    const range = { startLine: 2, startColumn: 1, endLine: 2, endColumn: 4 };
+
+    openFile(FOLDER, 'a.ts', { selection: range });
+
+    expect(editorState().docs['a.ts']).toMatchObject({
+      cursor: { line: 2, column: 1 },
+      selection: range,
+    });
+  });
+
+  it('sets the selection on the view already on screen too, not only the document', () => {
+    fakeDisk(FOLDER, { 'a.ts': 'a' });
+    const range = { startLine: 2, startColumn: 1, endLine: 2, endColumn: 4 };
+    openFile(FOLDER, 'a.ts');
+    const view = { setPosition: vi.fn(), setSelection: vi.fn() } as unknown as CodeView;
+    const release = showView(FOLDER, group(), view);
+
+    openFile(FOLDER, 'a.ts', { selection: range });
+
+    expect(view.setPosition).toHaveBeenCalledWith({ line: 2, column: 1 });
+    expect(view.setSelection).toHaveBeenCalledWith(range);
+    release();
   });
 
   it('are the folder tab’s own: another folder sees none of them (S-12)', () => {

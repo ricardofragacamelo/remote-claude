@@ -16,10 +16,13 @@ export interface PaletteState {
   readonly mode: string | null;
 
   /**
-   * Opens the palette — on the commands, or on a mode entered by name. Asked again while open, it
-   * does not open a second one, nor drop what was typed (plan 06, S-125).
+   * Opens the palette — on the commands, on a mode entered by name, or, with neither, blank with
+   * `value` already in the field for {@link PaletteState.mode}'s own prefix matching to read as if
+   * it had been typed (plan 11's Quick Open opens this way: blank, so its own empty prefix is what
+   * matches until something else is typed over it). Asked again while open, it does not open a
+   * second one, nor drop what was typed (plan 06, S-125).
    */
-  show(mode?: string): void;
+  show(mode?: string, value?: string): void;
   setValue(value: string): void;
   close(): void;
 }
@@ -30,14 +33,14 @@ export const usePalette = create<PaletteState>((set, get) => ({
   value: '',
   mode: null,
 
-  show: (mode) => {
+  show: (mode, value) => {
     if (get().open) {
       return;
     }
 
     set(
       mode === undefined
-        ? { open: true, mode: null, value: COMMANDS_PREFIX }
+        ? { open: true, mode: null, value: value ?? COMMANDS_PREFIX }
         : { open: true, mode, value: '' },
     );
   },

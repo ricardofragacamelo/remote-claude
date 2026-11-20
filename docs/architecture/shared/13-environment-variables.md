@@ -196,6 +196,26 @@ Before a write of yours loses a version of a file — a save, a delete, a restor
 | `RC_FILES_HISTORY_MAX_STORE_BYTES` | `536870912` | How much the whole store may hold, in bytes of distinct contents, before the oldest go. |
 | `RC_FILES_HISTORY_RETENTION_DAYS` | `30` | How long a version is kept, in days. |
 | `RC_FILES_HISTORY_MAX_BATCH_ENTRIES` | `1000` | The most entries one delete keeps; a folder with more is deleted only with the definitive step. |
+
+## Search (plan 11)
+
+Quick Open, text search and replace-in-files run the ripgrep binary pinned by @vscode/ripgrep (ADR-016, D-01). The numbers below are provisional, measured against this repository and a large public one before the phase that uses them closes (D-06).
+
+| Variable | Default | Description |
+|---|---|---|
+| `RC_RIPGREP_PATH` | *(empty)* | Overrides the pinned ripgrep binary with one already on this machine. Validated at boot — it must exist, run and report at least the minimum version, or the boot stops; empty uses the pinned binary. Never the "rg" of this shell's PATH, which may resolve to something else entirely. |
+| `RC_SEARCH_MAX_MATCHES` | `20000` | The most matches one search returns before it stops and answers truncated. |
+| `RC_SEARCH_LOCATE_MAX_FILES` | `200000` | The most files the locator (Quick Open, and the @ of the Claude panel) lists before it stops and answers truncated. |
+| `RC_SEARCH_LOCATE_DEFAULT_RESULTS` | `50` | How many of the locator's results come back when the caller sets no limit. |
+| `RC_SEARCH_LOCATE_MAX_RESULTS` | `200` | The most results the locator returns, whatever limit the caller asks for. |
+| `RC_SEARCH_LOCATE_CACHE_TTL_MS` | `10000` | How long the locator's path list is cached for one folder, in milliseconds (D-07). |
+| `RC_SEARCH_PREVIEW_CONTEXT_CHARS` | `250` | How many characters of context surround a match in its preview. |
+| `RC_SEARCH_MAX_FILE_BYTES` | `20971520` | Files larger than this are skipped by a search and counted as skipped. |
+| `RC_SEARCH_MULTILINE_MAX_FILE_BYTES` | `5242880` | The smaller ceiling that applies in multiline mode, which reads the whole file to match across lines. |
+| `RC_SEARCH_MAX_CONCURRENT_PER_USER` | `2` | The most searches one user may have running at once; the next one is rate-limited. |
+| `RC_SEARCH_TIMEOUT_MS` | `15000` | How long a search or a locate listing may run before it stops and answers with what it found. |
+| `RC_SEARCH_REPLACE_MAX_FILES` | `1000` | The most files one replace-in-files batch may touch. |
+| `RC_SEARCH_PROCESS_MAX_BYTES` | `104857600` | The most bytes of stdout one ripgrep subprocess may produce before it is killed and the run answers truncated (ADR-016). |
 | `RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS` | `120` | How recently a conversation begun elsewhere — the editor, a terminal — must have been written, in seconds, to be listed as "active elsewhere". An estimate: a long tool leaves the transcript unwritten for as long as it runs (40 s of Bash, 40 s of silence, measured — plan 08, D-06). |
 | `RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES` | `262144` | The history read live (plan 22). The whole output of a tool, opened from its card, in bytes: above it the route serves the first and the last half, and says it cut (D-08). |
 | `RC_TRANSCRIPT_IMAGE_MAX_BYTES` | `10485760` | The largest image of a prompt the history serves when someone opens it, in bytes; above it, 413 (D-10). |

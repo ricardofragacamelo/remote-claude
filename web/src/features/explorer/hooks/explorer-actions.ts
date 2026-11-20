@@ -21,12 +21,15 @@ import {
   Pencil,
   RefreshCw,
   Scissors,
+  Search,
   Trash2,
   Undo2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import type { CommandDeclaration, FileMenuPlacement, Keybinding } from '@/features/commands';
+import { searchInFolder } from '@/features/search';
+import { folderTabStore } from '@/features/workbench';
 import { isOperable } from '../lib/sort';
 import { SORT_ORDERS } from '../types/explorer';
 import type { SortOrder } from '../types/explorer';
@@ -248,6 +251,17 @@ function pointing(explorer: Explorer): ExplorerAction[] {
   const forAgent = explorer.targets.some((row) => isOperable(row.entry));
 
   return [
+    {
+      id: 'explorer.searchInFolder',
+      labelKey: 'explorer.action.searchInFolder',
+      icon: Search,
+      group: 'path',
+      available: () => some,
+      run: () => {
+        searchInFolder(explorer.folder, explorer.targetFolder());
+        folderTabStore(explorer.folder).getState().showView('search');
+      },
+    },
     {
       id: 'explorer.copyPath',
       labelKey: 'explorer.action.copyPath',

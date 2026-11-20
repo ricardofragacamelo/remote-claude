@@ -23,6 +23,8 @@ export interface SaveFileCommand {
   /** The version the person edited — required, and never `*`. */
   readonly ifMatch: string | null;
   readonly confirmSensitive: boolean;
+  /** Who is writing, beyond "the human" the trail already says — `'replace'` for plan 11's B-11. */
+  readonly via?: string;
 }
 
 /** A file as the save left it. */
@@ -117,13 +119,7 @@ export class SaveFileUseCase {
         kind: 'file.written',
         target: file,
         realPath: save.realPath,
-        details: {
-          sizeBytes: bytes.length,
-          hashBefore: current.value,
-          hashAfter: next.value,
-          encoding: save.command.encoding,
-          sensitive: save.sensitive,
-        },
+        details: trailDetailsOf(bytes.length, current.value, next.value, save),
       },
       () => writeOver(this.writing.disk, file, bytes, current),
     );
@@ -151,4 +147,21 @@ export class SaveFileUseCase {
 
     return { version: await this.writing.disk.version(file), size: found.size };
   }
+}
+
+/** The trail's own `details` for one write — open-ended, `via` present only when named. */
+function trailDetailsOf(
+  sizeBytes: number,
+  hashBefore: string,
+  hashAfter: string,
+  save: { readonly sensitive: boolean; readonly command: SaveFileCommand },
+): Record<string, unknown> {
+  return {
+    sizeBytes,
+    hashBefore,
+    hashAfter,
+    encoding: save.command.encoding,
+    sensitive: save.sensitive,
+    ...(save.command.via === undefined ? {} : { via: save.command.via }),
+  };
 }

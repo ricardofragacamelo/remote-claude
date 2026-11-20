@@ -73,9 +73,17 @@ export interface Command {
  * and wins over `global` there; `explorer` only while the focus is in the tree of the Explorer
  * (plan 07, B-26) — `Delete`, `F2` and `Ctrl+C` there act on files, and nowhere else; `pdfPointer`
  * while the pointer is over a PDF reader, and `pdfReader` while the focus is in one (plan 21,
- * D-10) — its `Ctrl+F` finds in the PDF, over the editor's.
+ * D-10) — its `Ctrl+F` finds in the PDF, over the editor's; `searchEditor` while a `.code-search`
+ * tab is open (plan 11, B-17) — its `F12` opens a result, over the editor's "go to line".
  */
-export const KEY_CONTEXTS = ['global', 'workbench', 'explorer', 'pdfPointer', 'pdfReader'] as const;
+export const KEY_CONTEXTS = [
+  'global',
+  'workbench',
+  'explorer',
+  'pdfPointer',
+  'pdfReader',
+  'searchEditor',
+] as const;
 
 export type KeyContext = (typeof KEY_CONTEXTS)[number];
 
@@ -111,6 +119,13 @@ export interface ShortcutLabel {
 export interface PaletteModeProps {
   /** What was typed after the mode's prefix. */
   readonly query: string;
+
+  /**
+   * The value of the item the arrows have on — `cmdk`'s own selection, the field's focus never
+   * leaves the input. Most modes never read it; Quick Open's own keys beyond Enter do (plan 11,
+   * B-14, S-106).
+   */
+  readonly active: string;
 
   /** Closes the palette, gives the focus back, and only then runs `action`. */
   pick(action: () => void): void;

@@ -2239,6 +2239,136 @@ export interface SavedFilePayload {
   readonly history: HistoryOutcome | null;
 }
 
+export interface SearchLocatePayloadEntriesItem {
+  /** Relative to the open folder, with /. */
+  readonly path: string;
+  readonly kind: 'file' | 'dir';
+  /** Ascending indices into path, for the client to highlight. Empty for an unscored prefer entry. */
+  readonly positions: readonly number[];
+}
+
+export interface SearchLocatePayloadTruncated {
+  readonly reason: 'limit' | 'timeout';
+}
+
+/** `GET /search/files`: the locator behind Quick Open and the @ of the composer — paths and directories of an open folder, fuzzy-matched and ranked (plan 11, B-09). */
+export interface SearchLocatePayload {
+  readonly entries: readonly SearchLocatePayloadEntriesItem[];
+  readonly truncated: SearchLocatePayloadTruncated | null;
+  /** Paths ripgrep returned that this backend could not decode as UTF-8 — omitted from entries, never garbled into one (S-63). */
+  readonly skipped: number;
+}
+
+export interface SearchReplaceApplyResultPayloadReportSkippedItem {
+  readonly path: string;
+  readonly reason: 'binary' | 'tooLarge' | 'sensitive';
+}
+
+export interface SearchReplaceApplyResultPayloadReport {
+  /** Relative to the folder, with /. Written, with the trail entry ahead of the disk write (S-83). */
+  readonly applied: readonly string[];
+  /** The disk no longer held the version the preview read — preserved, never overwritten (S-84, S-98). */
+  readonly changed: readonly string[];
+  /** Gone since the preview — never recreated (S-86). */
+  readonly missing: readonly string[];
+  /** Turned binary or grew past the edit ceiling since the preview (S-87), or needs the confirmation a sensitive file needs for any write. */
+  readonly skipped: readonly SearchReplaceApplyResultPayloadReportSkippedItem[];
+}
+
+/** `POST /search/replace`: the report of applying a replace across the files named by the request (plan 11, B-11, D-05) — per file, one of four outcomes. */
+export interface SearchReplaceApplyResultPayload {
+  readonly report: SearchReplaceApplyResultPayloadReport;
+}
+
+export interface SearchReplacePreviewFramePayloadMatchesItem {
+  /** 1-based. */
+  readonly line: number;
+  /** 1-based, in UTF-16 units (S-65). */
+  readonly column: number;
+  /** 1-based, in UTF-16 units. */
+  readonly endColumn: number;
+  /** A window around the match, cropped to a ceiling (S-66) — the "before" of the diff. */
+  readonly preview: string;
+  /** Where the match starts inside preview, in UTF-16 units. */
+  readonly previewMatchStart: number;
+  /** Where the match ends inside preview, in UTF-16 units. */
+  readonly previewMatchEnd: number;
+  /** What this one match's text becomes — group references and "preserve case" already resolved (S-82, S-97). The client builds the "after" by splicing this in place of preview[previewMatchStart:previewMatchEnd]. */
+  readonly replacement: string;
+}
+
+/** Present exactly when `type` is `end`. */
+export interface SearchReplacePreviewFramePayloadTruncated {
+  readonly reason: 'limit' | 'timeout';
+}
+
+/** `POST /search/replace/preview`: one line of the NDJSON stream (plan 11, B-11, D-02) — the same search as `search.text.frame`, with the resolved replacement text on every match and the file's own ETag. In the domain this is a discriminated union by `type` (`file` carries `path`/`etag`/`matches`; `end` carries `truncated`/`skipped`; `error` carries `code`/`messageKey`/`params`), which the generator cannot express as a `oneOf`; flattened here, with the pairing documented per field (plan 28, B-48). The stream always ends with exactly one `end` or `error` line. */
+export interface SearchReplacePreviewFramePayload {
+  readonly type: 'file' | 'end' | 'error';
+  /** Present exactly when `type` is `file`. Relative to the folder, with /. */
+  readonly path?: string;
+  /** Present exactly when `type` is `file`. The sha256 of the content this preview read — the version the apply flow checks against (S-81). */
+  readonly etag?: string;
+  /** Present exactly when `type` is `file`. */
+  readonly matches?: readonly SearchReplacePreviewFramePayloadMatchesItem[];
+  /** Present exactly when `type` is `end`. */
+  readonly truncated?: SearchReplacePreviewFramePayloadTruncated | null;
+  /** Present exactly when `type` is `end`. Files the engine reported as binary, excluded from the results (S-67). */
+  readonly skipped?: number;
+  /** Present exactly when `type` is `error`. */
+  readonly code?: string;
+  /** Present exactly when `type` is `error`. */
+  readonly messageKey?: string;
+  /** Present exactly when `type` is `error`. Open: the parameters of the message, by key. */
+  readonly params?: Readonly<Record<string, unknown>>;
+}
+
+export interface SearchTextFramePayloadMatchesItem {
+  /** 1-based. */
+  readonly line: number;
+  /** 1-based, in UTF-16 units (S-65). */
+  readonly column: number;
+  /** 1-based, in UTF-16 units. */
+  readonly endColumn: number;
+  /** A window around the match, cropped to a ceiling (S-66) — never the whole line. */
+  readonly preview: string;
+  /** Where the match starts inside preview, in UTF-16 units. */
+  readonly previewMatchStart: number;
+  /** Where the match ends inside preview, in UTF-16 units. */
+  readonly previewMatchEnd: number;
+}
+
+export interface SearchTextFramePayloadContextLinesItem {
+  readonly line: number;
+  readonly text: string;
+}
+
+/** Present exactly when `type` is `end`. */
+export interface SearchTextFramePayloadTruncated {
+  readonly reason: 'limit' | 'timeout';
+}
+
+/** `POST /search/text`: one line of the NDJSON stream (plan 11, B-10, D-02). In the domain this is a discriminated union by `type` (`file` carries `path`/`matches`/`contextLines`; `end` carries `truncated`/`skipped`; `error` carries `code`/`messageKey`/`params`), which the generator cannot express as a `oneOf`; flattened here, with the pairing documented per field (plan 28, B-48). The stream always ends with exactly one `end` or `error` line. */
+export interface SearchTextFramePayload {
+  readonly type: 'file' | 'end' | 'error';
+  /** Present exactly when `type` is `file`. Relative to the folder, with /. */
+  readonly path?: string;
+  /** Present exactly when `type` is `file`. */
+  readonly matches?: readonly SearchTextFramePayloadMatchesItem[];
+  /** Present exactly when `type` is `file`. Empty unless the request asked for context lines. */
+  readonly contextLines?: readonly SearchTextFramePayloadContextLinesItem[];
+  /** Present exactly when `type` is `end`. */
+  readonly truncated?: SearchTextFramePayloadTruncated | null;
+  /** Present exactly when `type` is `end`. Files the engine reported as binary, excluded from the results (S-67) — never a count of files the walk itself silently excluded, which carries no per-file signal. */
+  readonly skipped?: number;
+  /** Present exactly when `type` is `error`. The same `code` a `502 SEARCH_ENGINE_FAILED` would carry before the first byte. */
+  readonly code?: string;
+  /** Present exactly when `type` is `error`. */
+  readonly messageKey?: string;
+  /** Present exactly when `type` is `error`. Open: the parameters of the message, by key. */
+  readonly params?: Readonly<Record<string, unknown>>;
+}
+
 /** What `GET /transcripts/:engine/:id/subagents/:toolUseId/messages` answers: a page of what a subagent said, from the tail (plan 28, B-12). */
 export interface SubagentPagePayload {
   /** What the subagent said in this page, oldest first — the same frames as a page of its parent. */
@@ -2864,6 +2994,35 @@ export const PROJECT_MCP_SERVER_LIST_PAYLOAD_LIMITS = {
 /** The bounds the schema gives the fields of {@link RecentFoldersPayload}. */
 export const RECENT_FOLDERS_PAYLOAD_LIMITS = {
   folders: { maxItems: 1000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SearchLocatePayloadEntriesItem}. */
+export const SEARCH_LOCATE_PAYLOAD_ENTRIES_ITEM_LIMITS = {
+  positions: { maxItems: 4096 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SearchLocatePayload}. */
+export const SEARCH_LOCATE_PAYLOAD_LIMITS = {
+  entries: { maxItems: 200 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SearchReplaceApplyResultPayloadReport}. */
+export const SEARCH_REPLACE_APPLY_RESULT_PAYLOAD_REPORT_LIMITS = {
+  applied: { maxItems: 1000 },
+  changed: { maxItems: 1000 },
+  missing: { maxItems: 1000 },
+  skipped: { maxItems: 1000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SearchReplacePreviewFramePayload}. */
+export const SEARCH_REPLACE_PREVIEW_FRAME_PAYLOAD_LIMITS = {
+  matches: { maxItems: 20000 },
+} as const;
+
+/** The bounds the schema gives the fields of {@link SearchTextFramePayload}. */
+export const SEARCH_TEXT_FRAME_PAYLOAD_LIMITS = {
+  matches: { maxItems: 20000 },
+  contextLines: { maxItems: 4096 },
 } as const;
 
 /** The bounds the schema gives the fields of {@link ToolDiffPayloadAfter}. */
@@ -6830,6 +6989,230 @@ export function isSavedFilePayload(value: unknown): value is SavedFilePayload {
     typeof record['etag'] === 'string',
     typeof record['size'] === 'number',
     nullOr(record['history'], isHistoryOutcome(record['history'])),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchLocatePayloadEntriesItem}. Unknown fields are accepted.
+ */
+export function isSearchLocatePayloadEntriesItem(value: unknown): value is SearchLocatePayloadEntriesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['kind'] === 'string',
+    Array.isArray(record['positions']),
+    withinMaxItems(record['positions'], 4096),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchLocatePayloadTruncated}. Unknown fields are accepted.
+ */
+export function isSearchLocatePayloadTruncated(value: unknown): value is SearchLocatePayloadTruncated {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchLocatePayload}. Unknown fields are accepted.
+ */
+export function isSearchLocatePayload(value: unknown): value is SearchLocatePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['entries']),
+    nullOr(record['truncated'], isSearchLocatePayloadTruncated(record['truncated'])),
+    typeof record['skipped'] === 'number',
+    withinMaxItems(record['entries'], 200),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchReplaceApplyResultPayloadReportSkippedItem}. Unknown fields are accepted.
+ */
+export function isSearchReplaceApplyResultPayloadReportSkippedItem(value: unknown): value is SearchReplaceApplyResultPayloadReportSkippedItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['path'] === 'string',
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchReplaceApplyResultPayloadReport}. Unknown fields are accepted.
+ */
+export function isSearchReplaceApplyResultPayloadReport(value: unknown): value is SearchReplaceApplyResultPayloadReport {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    Array.isArray(record['applied']),
+    Array.isArray(record['changed']),
+    Array.isArray(record['missing']),
+    Array.isArray(record['skipped']),
+    withinMaxItems(record['applied'], 1000),
+    withinMaxItems(record['changed'], 1000),
+    withinMaxItems(record['missing'], 1000),
+    withinMaxItems(record['skipped'], 1000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchReplaceApplyResultPayload}. Unknown fields are accepted.
+ */
+export function isSearchReplaceApplyResultPayload(value: unknown): value is SearchReplaceApplyResultPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    isSearchReplaceApplyResultPayloadReport(record['report']),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchReplacePreviewFramePayloadMatchesItem}. Unknown fields are accepted.
+ */
+export function isSearchReplacePreviewFramePayloadMatchesItem(value: unknown): value is SearchReplacePreviewFramePayloadMatchesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['line'] === 'number',
+    typeof record['column'] === 'number',
+    typeof record['endColumn'] === 'number',
+    typeof record['preview'] === 'string',
+    typeof record['previewMatchStart'] === 'number',
+    typeof record['previewMatchEnd'] === 'number',
+    typeof record['replacement'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchReplacePreviewFramePayloadTruncated}. Unknown fields are accepted.
+ */
+export function isSearchReplacePreviewFramePayloadTruncated(value: unknown): value is SearchReplacePreviewFramePayloadTruncated {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchReplacePreviewFramePayload}. Unknown fields are accepted.
+ */
+export function isSearchReplacePreviewFramePayload(value: unknown): value is SearchReplacePreviewFramePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['type'] === 'string',
+    withinMaxItems(record['matches'], 20000),
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchTextFramePayloadMatchesItem}. Unknown fields are accepted.
+ */
+export function isSearchTextFramePayloadMatchesItem(value: unknown): value is SearchTextFramePayloadMatchesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['line'] === 'number',
+    typeof record['column'] === 'number',
+    typeof record['endColumn'] === 'number',
+    typeof record['preview'] === 'string',
+    typeof record['previewMatchStart'] === 'number',
+    typeof record['previewMatchEnd'] === 'number',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchTextFramePayloadContextLinesItem}. Unknown fields are accepted.
+ */
+export function isSearchTextFramePayloadContextLinesItem(value: unknown): value is SearchTextFramePayloadContextLinesItem {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['line'] === 'number',
+    typeof record['text'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchTextFramePayloadTruncated}. Unknown fields are accepted.
+ */
+export function isSearchTextFramePayloadTruncated(value: unknown): value is SearchTextFramePayloadTruncated {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['reason'] === 'string',
+  ].every(Boolean);
+}
+
+/**
+ * Whether `value` carries every required field of {@link SearchTextFramePayload}. Unknown fields are accepted.
+ */
+export function isSearchTextFramePayload(value: unknown): value is SearchTextFramePayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Readonly<Record<string, unknown>>;
+
+  return [
+    typeof record['type'] === 'string',
+    withinMaxItems(record['matches'], 20000),
+    withinMaxItems(record['contextLines'], 4096),
   ].every(Boolean);
 }
 

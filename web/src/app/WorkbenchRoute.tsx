@@ -2,6 +2,8 @@ import { useCallback } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 
 import { EditorLocation } from '@/features/editor';
+import { QuickOpenFolder, SearchLocation } from '@/features/search';
+import type { SearchLocationValue } from '@/features/search';
 import { PanelCommands, useActiveAgentName } from '@/features/session';
 import { FolderShell, Workbench } from '@/features/workbench';
 import { FolderGate } from '@/features/workspace';
@@ -52,6 +54,19 @@ export function WorkbenchRoute(): React.JSX.Element {
     [navigate],
   );
 
+  // The same for the Search view: its query and toggles, never trimmed of what differs from
+  // default — a field at its own default stays out of the address (plan 11, B-15, S-120).
+  const searchShown = useCallback(
+    (folder: string, next: SearchLocationValue) => {
+      void navigate({
+        to: '/workbench',
+        search: (previous) => ({ ...previous, folder, ...next }),
+        replace: true,
+      });
+    },
+    [navigate],
+  );
+
   // The same for the panel of the agent: a session or a conversation, never both (plan 08, D-24).
   const panelShown = useCallback(
     (
@@ -92,7 +107,24 @@ export function WorkbenchRoute(): React.JSX.Element {
                 panelShown(folder.path, panel);
               }}
             />
+            <SearchLocation
+              folder={folder.path}
+              search={{
+                q: search.q,
+                isRegex: search.isRegex,
+                caseSensitive: search.caseSensitive,
+                wholeWord: search.wholeWord,
+                include: search.include,
+                exclude: search.exclude,
+                useIgnoreFiles: search.useIgnoreFiles,
+                onlyOpenEditors: search.onlyOpenEditors,
+              }}
+              onSearch={(next) => {
+                searchShown(folder.path, next);
+              }}
+            />
             <PanelCommands folder={folder.path} />
+            <QuickOpenFolder folder={folder.path} />
             <FolderWorkbenchShell folder={folder.path} />
           </>
         )}
@@ -104,9 +136,18 @@ export function WorkbenchRoute(): React.JSX.Element {
       moved,
       openFolder,
       panelShown,
+      searchShown,
       search.conversation,
       search.file,
       search.session,
+      search.q,
+      search.isRegex,
+      search.caseSensitive,
+      search.wholeWord,
+      search.include,
+      search.exclude,
+      search.useIgnoreFiles,
+      search.onlyOpenEditors,
     ],
   );
 

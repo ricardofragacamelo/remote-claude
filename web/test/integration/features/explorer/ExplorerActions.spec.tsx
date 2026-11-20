@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 
 import { explorerStore } from '@/features/explorer';
 import { FileMenu } from '@/features/commands';
+import { forgetSearchView, searchViewStore } from '@/features/search/store/search-view.store';
+import { folderTabStore } from '@/features/workbench';
 import { agentContextTargets, FILES_DRAG_TYPE } from '@/shared/lib/files-drag';
 import type { FilesDragPayload } from '@/shared/lib/files-drag';
 import { editorFake, resetEditorFake, setActiveFile } from '../../../support/editor-fake';
@@ -20,6 +22,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
   resetEditorFake();
+  forgetSearchView(null);
 });
 
 type User = ReturnType<typeof userEvent.setup>;
@@ -413,6 +416,25 @@ describe('copy, cut, paste and duplicate — S-177, S-182', () => {
 });
 
 describe('paths, reveal, open to the side, compare — S-178, S-179', () => {
+  it('fills "files to include" with the folder, and switches the side bar to Search — S-119', async () => {
+    const user = userEvent.setup();
+    renderExplorer({ 'src/a.ts': 'a' });
+
+    await pick(user, 'src', 'explorer.action.searchInFolder');
+
+    expect(searchViewStore(APP).getState().include).toBe('src/**');
+    expect(folderTabStore(APP).getState().view).toBe('search');
+  });
+
+  it('searches everywhere for a file at the top of the tree, same as no filter', async () => {
+    const user = userEvent.setup();
+    renderExplorer({ 'a.ts': 'a' });
+
+    await pick(user, 'a.ts', 'explorer.action.searchInFolder');
+
+    expect(searchViewStore(APP).getState().include).toBe('');
+  });
+
   it('copies the absolute and the relative path', async () => {
     const user = userEvent.setup();
     renderExplorer({ 'src/a.ts': 'a' });

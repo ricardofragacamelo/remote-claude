@@ -1,7 +1,7 @@
 import { config } from '@/shared/config/env';
 import { newTraceId } from '@/shared/lib/trace';
 import { logger } from '@/shared/logging/logger';
-import { toAppError, toTransportError } from './errors';
+import { AppError, toAppError, toTransportError } from './errors';
 
 /** How long a request may take before it is abandoned. Every external call has a deadline. */
 export const REQUEST_TIMEOUT_MS = 15_000;
@@ -53,6 +53,9 @@ export interface RequestOptions {
 
 /** What a read of bytes may name: the preconditions and the range, the signal, the language. */
 export type BytesOptions = Pick<RequestOptions, 'headers' | 'locale' | 'signal'>;
+
+/** What a streamed `POST` may name — a body, and the signal that cancels a superseded one. */
+export type NdjsonOptions = Pick<RequestOptions, 'locale' | 'signal'>;
 
 /**
  * The bytes of a response — a file as it is on disk, a zip — and the headers that say what they are
@@ -184,6 +187,66 @@ export class ApiClient {
       // The connection dropped in the middle of the body: what arrived is not the file.
       logger.warn({ op: 'http.response', url: path, traceId, err: String(error) }, 'body cut');
       throw toTransportError(traceId);
+    }
+  }
+
+  /**
+   * A `POST` whose body is a stream of NDJSON lines (plan 11, D-02) — yielded one at a time, as
+   * the server flushes each, never buffered whole. A refusal before the first byte throws the
+   * same `AppError` {@link request} does, with nothing yielded. Past the first byte, the status
+   * already left: a connection cut, or a line that is not JSON, ends the iteration by throwing
+   * `NETWORK_UNREACHABLE` — the same failure a dropped connection would be, because from here
+   * that is what it is. Recognising the stream's own `error` line, and a stream that ended with
+   * no final line at all, is the caller's job: this method only ever yields what parsed as JSON,
+   * or throws.
+   */
+  async *ndjson<T>(path: string, body: unknown, options: NdjsonOptions = {}): AsyncIterable<T> {
+    const traceId = newTraceId();
+    const startedAt = Date.now();
+    let lines = 0;
+    const logResponse = (status: number, lines_?: number): void => {
+      logger.debug(
+        {
+          op: 'http.response',
+          method: 'POST',
+          url: path,
+          traceId,
+          httpStatus: status,
+          durationMs: Date.now() - startedAt,
+          ...(lines_ === undefined ? {} : { lines: lines_ }),
+        },
+        'http response',
+      );
+    };
+
+    logger.debug({ op: 'http.request', method: 'POST', url: path, traceId }, 'http request');
+
+    const response = await this.send(
+      path,
+      { ...options, method: 'POST', body, accept: 'application/x-ndjson' },
+      traceId,
+    );
+
+    if (!response.ok) {
+      logResponse(response.status);
+      throw toAppError(await readBody(response), traceId);
+    }
+
+    try {
+      for await (const line of linesOf(response)) {
+        lines += 1;
+        yield parseNdjsonLine<T>(line, traceId);
+      }
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      // The connection dropped, or was aborted, partway through the body — the same failure
+      // `bytes()` reports for the same reason: what arrived cannot be trusted as the whole body.
+      logger.warn({ op: 'http.response', url: path, traceId, err: String(error) }, 'ndjson cut');
+      throw toTransportError(traceId);
+    } finally {
+      logResponse(response.status, lines);
     }
   }
 
@@ -374,6 +437,56 @@ export class ApiClient {
 /** The body, whatever shape it turned out to have. */
 async function readBody(response: Response): Promise<unknown> {
   return parseBody(await response.text());
+}
+
+/**
+ * Every complete `\n`-terminated line of [response]'s body, decoded as UTF-8, as it is flushed —
+ * never the whole body buffered first. A body already consumed, or with none at all, is a
+ * transport failure: there is nothing left for the caller's `for await` to see.
+ */
+async function* linesOf(response: Response): AsyncIterable<string> {
+  if (response.body === null) {
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      let newlineAt = buffer.indexOf('\n');
+      while (newlineAt !== -1) {
+        const line = buffer.slice(0, newlineAt);
+        if (line.length > 0) {
+          yield line;
+        }
+        buffer = buffer.slice(newlineAt + 1);
+        newlineAt = buffer.indexOf('\n');
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (buffer.length > 0) {
+    yield buffer;
+  }
+}
+
+/** One NDJSON line, parsed — never silently dropped the way a one-shot body's parse failure is. */
+function parseNdjsonLine<T>(line: string, traceId: string): T {
+  try {
+    return JSON.parse(line) as T;
+  } catch (error) {
+    logger.warn({ op: 'http.response', traceId, err: String(error) }, 'ndjson line malformed');
+    throw toTransportError(traceId);
+  }
 }
 
 /** A body's text as JSON — or nothing, for an empty one or one that is not JSON. */

@@ -1,9 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { openAndRecentFiles } from '@/features/editor/hooks/tabs';
-import { activeSelections, activeView, focusEditor, showView } from '@/features/editor/hooks/views';
-import { editorStoreOf } from '@/features/editor/store/editor.store';
+import { openAndRecentFiles, openFiles } from '@/features/editor/hooks/tabs';
+import {
+  activeSelections,
+  activeSelectionText,
+  activeView,
+  focusEditor,
+  showView,
+} from '@/features/editor/hooks/views';
+import { aDocument, editorStoreOf } from '@/features/editor/store/editor.store';
 import type { CodeView } from '@/features/editor/types/code-editor';
+import type { TextModel } from '@/features/editor/types/code-editor';
 
 const FOLDER = '/r/app';
 
@@ -61,6 +68,42 @@ describe('what the panel of Claude reads of the editor — plan 08, B-48, B-51',
     expect(activeSelections('/r/sel')).toBeNull();
   });
 
+  function fakeModel(text: string): TextModel {
+    return { getValue: () => text, dispose: () => undefined } as unknown as TextModel;
+  }
+
+  it('answers the text of the first selection, read from the model of its own file', () => {
+    const store = editorStoreOf('/r/text');
+    const group = store.getState().activeGroup;
+    expect(activeSelectionText('/r/text')).toBeNull();
+
+    store.setState({
+      groups: [{ id: group, tabs: [fileTab('a.ts')], active: 't:a.ts' }],
+      docs: { 'a.ts': { ...aDocument('a.ts'), model: fakeModel('one\ntwo\nthree') } },
+    });
+    showView('/r/text', group, {
+      focus: vi.fn(),
+      selections: () => [{ startLine: 2, startColumn: 1, endLine: 2, endColumn: 4 }],
+    } as unknown as CodeView);
+
+    expect(activeSelectionText('/r/text')).toBe('two');
+  });
+
+  it('answers nothing for a file not read yet — no model to read from', () => {
+    const store = editorStoreOf('/r/unread');
+    const group = store.getState().activeGroup;
+    store.setState({
+      groups: [{ id: group, tabs: [fileTab('a.ts')], active: 't:a.ts' }],
+      docs: { 'a.ts': aDocument('a.ts') },
+    });
+    showView('/r/unread', group, {
+      focus: vi.fn(),
+      selections: () => [{ startLine: 1, startColumn: 1, endLine: 1, endColumn: 2 }],
+    } as unknown as CodeView);
+
+    expect(activeSelectionText('/r/unread')).toBeNull();
+  });
+
   it('lists the active file first, then the open ones, then the recent ones, once each', () => {
     const store = editorStoreOf('/r/open');
     const group = store.getState().activeGroup;
@@ -78,5 +121,6 @@ describe('what the panel of Claude reads of the editor — plan 08, B-48, B-51',
     });
 
     expect(openAndRecentFiles('/r/open')).toEqual(['a.ts', 'b.ts', 'c.ts']);
+    expect(openFiles('/r/open')).toEqual(['b.ts', 'a.ts']);
   });
 });

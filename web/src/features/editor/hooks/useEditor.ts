@@ -36,6 +36,14 @@ export function useFileDirty(folder: string, path: string): boolean {
   });
 }
 
+/**
+ * The same, read once instead of subscribed to — for an action that checks before it runs, never
+ * a render (the replace of plan 11, B-16, warning before it overwrites an unsaved buffer).
+ */
+export function fileIsDirty(folder: string, path: string): boolean {
+  return isDirty(editorStoreOf(folder).getState().docs[path]);
+}
+
 /** The open file the active tab of the group with the focus shows, as React state. */
 export function useActiveDocument(folder: string): FileDocument | undefined {
   return useEditorState(folder, (state) => {

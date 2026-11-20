@@ -26,6 +26,7 @@ import process from 'node:process';
 import { auditFindings, judge, loadAccepted, todayOf } from './lib/accepted-advisories.mjs';
 import { inspectAll } from './lib/agent-sdk-rules.mjs';
 import { inspectAll as inspectVendorNames } from './lib/vendor-name-rules.mjs';
+import { inspectAll as inspectProcessRules } from './lib/process-rules.mjs';
 import { filesUnder } from './lib/files.mjs';
 import { commandExists, run, runAttached } from './lib/exec.mjs';
 import { interpretOsv, LOCKFILES, lockfilePath, osvInvocation } from './lib/osv.mjs';
@@ -284,6 +285,22 @@ function checkProductRules() {
   });
 }
 
+/**
+ * The shell-is-forbidden rules of ADR-016 — `shell: true`, `exec(`, `execSync(` and `spawn()`
+ * with a single string command, confined to `backend/src` where the subprocess runs.
+ *
+ * @returns {number}
+ */
+function checkProcessRules() {
+  return runSourceRule({
+    headline: 'process rules — no shell between user input and a subprocess',
+    sources: [{ dir: 'backend/src', extensions: ['.ts'] }],
+    inspect: inspectProcessRules,
+    clean: 'no shell-is-forbidden rule is broken',
+    where: 'docs/architecture/shared/00-decisions.md#adr-016',
+  });
+}
+
 title('security — secrets, dependencies, patterns and the product rules');
 
 /** @type {{ name: string, code: number }[]} */
@@ -294,6 +311,7 @@ for (const [name, check] of /** @type {[string, () => number][]} */ ([
   ['dependencies', checkDependencies],
   ['osv', checkOsv],
   ['product rules', checkProductRules],
+  ['process rules', checkProcessRules],
   ['supplier names', checkVendorNames],
   ['patterns', checkPatterns],
 ])) {

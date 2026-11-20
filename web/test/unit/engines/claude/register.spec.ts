@@ -67,7 +67,10 @@ describe('the Claude engine in the places of the core — plan 28, B-36, B-38', 
       [],
     );
     expect(globalNavigation.entries().map((entry) => entry.id)).not.toContain('claude');
-    expect(commandHosts.entries()).toEqual([]);
+    // Not `toEqual([])`: `commandHosts` is shared by every feature the setup pulls in through
+    // `Workbench` (the search feature's own host among them) — this checks Claude's own entry is
+    // gone, the same way the line above checks `globalNavigation`, never the whole shared registry.
+    expect(commandHosts.entries().map((entry) => entry.id)).not.toContain('claude');
     expect(sensitiveFiles.entries()).toEqual([]);
 
     registerClaudeEngine();

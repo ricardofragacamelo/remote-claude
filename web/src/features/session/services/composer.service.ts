@@ -11,8 +11,9 @@ import { modelOf } from './insight.service';
 
 /**
  * What the composer asks the backend — plan 08, F5: the catalogue of a folder before a session
- * (B-50), an attachment dropped from the desktop (B-45), the entries an `@` completes (B-48) and the
- * facts of a file of the context (B-47). The I/O is logged by `api.ts`, at both edges.
+ * (B-50), an attachment dropped from the desktop (B-45), and the facts of a file of the context
+ * (B-47). The entries an `@` completes with are the locator's own, plan 11's `useFileFinder`
+ * (B-25) — no source of its own here any more. The I/O is logged by `api.ts`, at both edges.
  */
 
 /** What a folder's installation offers before a session exists. */
@@ -138,52 +139,12 @@ export function uploadHeld(
   );
 }
 
-/** One entry an `@` may complete with. */
+/** One entry an `@` may complete with — the locator's own `LocateEntry`, in this feature's words. */
 export interface MentionEntry {
   /** Relative to the folder of the tab, POSIX. */
   readonly path: string;
   readonly name: string;
   readonly kind: 'file' | 'folder';
-}
-
-/** A level of the folder, as an `@` completes from it. */
-export interface MentionLevel {
-  readonly entries: readonly MentionEntry[];
-
-  /** More than the ceiling of a level: what is shown is not all (S-229). */
-  readonly truncated: boolean;
-}
-
-/**
- * The entries of one level of the folder — `GET /files/tree` of plan 07, the provisional source of
- * the `@` until the finder of plan 11 exists (D-12). A link that leads out and a name that is not
- * text are never offered (S-230).
- *
- * @throws {AppError} as the tree answers — `FILE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`, …
- */
-export async function listMentionLevel(folder: string, directory: string): Promise<MentionLevel> {
-  const body = await api.get<unknown>(
-    `/files/tree?${new URLSearchParams({ folder, path: directory }).toString()}`,
-  );
-  const record = isRecord(body) ? body : {};
-  const entries = Array.isArray(record['entries']) ? record['entries'] : [];
-
-  return {
-    entries: entries.filter(isRecord).flatMap((entry): MentionEntry[] => {
-      const path = readText(entry, 'path');
-      const name = readText(entry, 'name');
-      const kind = entry['kind'] === 'directory' ? 'folder' : 'file';
-
-      return path === null ||
-        name === null ||
-        entry['outside'] === true ||
-        entry['unreadableName'] === true ||
-        (entry['kind'] !== 'file' && entry['kind'] !== 'directory')
-        ? []
-        : [{ path, name, kind }];
-    }),
-    truncated: record['truncated'] === true,
-  };
 }
 
 /** The type of the bytes that the agent reads: text, and images. */

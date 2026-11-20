@@ -74,9 +74,6 @@ function served(extra: Record<string, readonly unknown[]> = {}) {
     [`/sessions/${SESSION}/mcp-servers`]: [{ servers: [] }],
     [`/sessions/${SESSION}/commands`]: [aCommandMenu()],
     [`/transcripts/claude/${CONVERSATION}/messages`]: [aHistoryPage([])],
-    [`/files/tree?folder=${encodeURIComponent(A)}&path=`]: [
-      { entries: [{ name: 'src', kind: 'directory' }], truncated: false },
-    ],
     ...extra,
   });
 }

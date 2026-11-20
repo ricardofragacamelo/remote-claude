@@ -229,18 +229,32 @@ Nem toda repetição é duplicação. Estas ficam fora da medição:
 - **Fixtures e builders de teste** — repetição explícita em teste costuma ser mais legível que
   a abstração que a elimina.
 - **Estrutura de wiring** (`*.module.ts`) — é declaração repetitiva por natureza.
+- **A assinatura decorada de duas rotas HTTP que fazem o mesmo tipo de coisa** — nomeado por
+  arquivo, nunca a categoria `*.controller.ts` inteira. `search.controller.ts` (plano 11, B-11)
+  tem duas rotas de fluxo NDJSON (`searchText`, `replacePreview`) cujo `@CurrentUser()`/`@Req()`/
+  `@Res()` e a abertura por `withRequestAbort` são idênticos porque o Nest exige os decorators no
+  próprio método roteado — não há como mover só essa parte para um auxiliar compartilhado sem
+  deixar de ser uma rota. O corpo de cada uma (o que de fato muda por rota) já está extraído em
+  `toSearchQueryFields`/`toOnlyPathsAndContextLines`/`streamed`; só a moldura do decorator repete.
 - **Adapter de saída que só delega a uma função compartilhada**, implementando o mesmo método de
-  dois `port`s de módulos diferentes (`files.FolderResolver` e `permission.RuleFolderResolver`,
-  cada um resolvendo pela própria porta para `workspace`, nunca um pelo outro — são módulos
-  separados de propósito). A regra em si já está extraída (`resolveViaWorkspace`); o que sobra é a
-  sintaxe de implementar a interface, idêntica porque a assinatura é, não porque o módulo é —
-  exclusão nomeada (`workspace-module.folder-resolver.ts`,
-  `workspace-module.rule-folder-resolver.ts`).
+  `port`s de módulos diferentes (`files.FolderResolver`, `permission.RuleFolderResolver` e
+  `search.FolderResolver`, cada um resolvendo pela própria porta para `workspace`, nunca um pelo
+  outro — são módulos separados de propósito). A regra em si já está extraída
+  (`resolveViaWorkspace`); o que sobra é a sintaxe de implementar a interface, idêntica porque a
+  assinatura é, não porque o módulo é — exclusão nomeada: `workspace-module.folder-resolver.ts` de
+  `files` e, com o mesmo nome em sua própria pasta, de `search` (plano 11, B-09); e
+  `workspace-module.rule-folder-resolver.ts` de `permission`.
+- **Um erro de domínio que reproduz, em vez de importar, um erro de `shared/errors/`** — a
+  Dependency Rule nunca deixa `domain/`/`application/` importar `shared/`, então um domínio que
+  recusa pelo mesmo `code` e a mesma `messageKey` de um erro já existente ali (aqui,
+  `RATE_LIMITED`/`common.error.rateLimited`) escreve a própria classe, idêntica porque o contrato
+  HTTP é, não porque o domínio é — exclusão nomeada: `domain/search/errors/search-rate-limited.error.ts`
+  (plano 11, B-10), par de `shared/errors/rate-limited.error.ts`.
 - **Duplicação entre pontas.** Web e mobile implementam a mesma tela em linguagens diferentes;
   isso não é duplicação, é tradução. O que precisa ser único é o **contrato**, e ele já é —
   ver [07-repository-layout.md](07-repository-layout.md).
 - **Alguns poucos schemas de `packages/contracts/schema/`, nomeados no config** — não a
-  categoria inteira, só estes oito arquivos. O gerador resolve `$ref` para uma definição que é um
+  categoria inteira, só estes dez arquivos. O gerador resolve `$ref` para uma definição que é um
   objeto inteiro (nunca um escalar, nunca um `enum` sozinho) e não tem genéricos; um campo nullable
   ao lado de um `$ref` já funciona (plano 28, B-48 — a razão de a maior parte da duplicação de
   schema ter desaparecido nesse mesmo plano), mas a forma repetida aqui não tem outro jeito de virar
@@ -258,7 +272,19 @@ Nem toda repetição é duplicação. Estas ficam fora da medição:
   campo da lista é `invocations` num e `entries` no outro, o que o $ref de um objeto não consegue
   expressar sem forçar os dois nomes a serem o mesmo; o item de cada array **já** é um `$ref`
   compartilhado (`audit-trail-entry.schema.json`, plano 15, B-11) — só o envelope em volta dele
-  coincide).
+  coincide) e `search-replace-preview.schema.json`/`search-replace-apply.schema.json` (o item de
+  `matches[]` da prévia repete os seis campos de `search-text.schema.json` mais um,
+  `replacement` — o `$ref` de um objeto inteiro não expressa "esses campos, mais mais um"; e o
+  envelope `{path, reason}` de `skipped[]` do aplicar coincide, por acaso, com o de
+  `session-rewound.schema.json`, de outro domínio, cujo `reason` é uma regra totalmente diferente).
+- **Um tipo do web que espelha, campo a campo, um tipo do domínio do backend** — a Dependency Rule
+  nunca deixa o web importar nada do backend, então a mesma forma nasce duas vezes, cada lado com
+  o seu próprio motivo para mudar (o backend valida e persiste; o web só lê e mostra). O contrato
+  é o único lugar com uma forma, e ele já é único (`packages/contracts`, fora da medição) — exclusão
+  nomeada: `web/src/features/search/types/search.ts` (plano 11, B-13), que ecoa
+  `SearchQuery` de `backend/src/domain/search/value-objects/search-query.value-object.ts` e
+  `ReplaceApplyReport` de `backend/src/application/search/search-replace-apply.use-case.ts` — o
+  arquivo é só interfaces, sem regra nenhuma para extrair.
 
 Exclusão é declarada no config, com justificativa. Nunca por comentário espalhado no código.
 

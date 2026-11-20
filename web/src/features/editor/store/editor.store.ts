@@ -100,6 +100,7 @@ export function aDocument(path: string): FileDocument {
     recreateAsked: false,
     cursor: { line: 1, column: 1 },
     selectionLength: 0,
+    selection: null,
     scrollTop: 0,
   };
 }

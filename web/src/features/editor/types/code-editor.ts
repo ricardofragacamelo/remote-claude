@@ -99,6 +99,9 @@ export interface CodeView {
   /** The selection, or `null` when it is empty. */
   selection(): TextRange | null;
 
+  /** Selects this range, and scrolls it into view — the match of a search result (plan 11, B-15). */
+  setSelection(range: TextRange): void;
+
   /** Every selection that is not empty, in order — several with more than one cursor (08 · B-51). */
   selections(): readonly TextRange[];
 

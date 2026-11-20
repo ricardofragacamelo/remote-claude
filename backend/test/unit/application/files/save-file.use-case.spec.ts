@@ -94,6 +94,13 @@ describe('SaveFileUseCase', () => {
       sizeBytes: 4,
       sensitive: false,
     });
+    expect(events.appended[0]?.details).not.toHaveProperty('via');
+  });
+
+  it('carries via through to the trail when a caller names one — plan 11, B-11', async () => {
+    await save(diskWith(one)).execute(command({ via: 'replace' }), owner);
+
+    expect(events.appended[0]?.details).toMatchObject({ via: 'replace' });
   });
 
   it.each([[null], ['*']])(

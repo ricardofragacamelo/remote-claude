@@ -18,8 +18,12 @@ import { commandFrame, TestSocket } from '../../../../support/app/ws-client';
 import { waitFor } from '../../../../support/app/wait-for';
 import { RecordingPushSender } from '../../../../support/fakes/recording-push';
 
-/** Short, because one scenario here is about the deadline withdrawing a notification. */
-const TIMEOUT_MS = 1_200;
+/**
+ * Short, because one scenario here is about the deadline withdrawing a notification — but not so
+ * short it races the first retry's own ~800-1200ms jittered delay (`PUSH_RETRY`): S-47/S-50/S-51
+ * need that retry to land well before this deadline fires, with real margin under a loaded suite.
+ */
+const TIMEOUT_MS = 3_000;
 
 /**
  * A question reaching a phone, and being taken back, through the real container.

@@ -23,11 +23,31 @@ export interface WorkbenchSearch {
    */
   readonly session?: string;
   readonly conversation?: string;
+
+  /**
+   * The Search view's own query and its toggles (plan 11, B-15, S-120): pasting the link elsewhere
+   * reproduces the same search. `isRegex`/`caseSensitive`/`wholeWord`/`onlyOpenEditors` default to
+   * `false`, `useIgnoreFiles` to `true` — each is in the address only while it differs from that, so
+   * the common search stays a short link.
+   */
+  readonly q?: string;
+  readonly isRegex?: boolean;
+  readonly caseSensitive?: boolean;
+  readonly wholeWord?: boolean;
+  readonly include?: string;
+  readonly exclude?: string;
+  readonly useIgnoreFiles?: boolean;
+  readonly onlyOpenEditors?: boolean;
 }
 
 /** A search value that names something: text, and not empty — exactly as the link has it. */
 function named(value: unknown): string | undefined {
   return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
+/** A search value that turns a flag on or off — anything else names neither. */
+function flag(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
 }
 
 /**
@@ -46,15 +66,28 @@ export function readWorkbenchSearch(search: Readonly<Record<string, unknown>>): 
     return {};
   }
 
-  const file = named(search['file']);
   const session = named(search['session']);
-  const conversation = session === undefined ? named(search['conversation']) : undefined;
+
+  const rest: readonly (readonly [string, string | boolean | undefined])[] = [
+    ['file', named(search['file'])],
+    ['session', session],
+    ['conversation', session === undefined ? named(search['conversation']) : undefined],
+    ['q', named(search['q'])],
+    ['isRegex', flag(search['isRegex'])],
+    ['caseSensitive', flag(search['caseSensitive'])],
+    ['wholeWord', flag(search['wholeWord'])],
+    ['include', named(search['include'])],
+    ['exclude', named(search['exclude'])],
+    ['useIgnoreFiles', flag(search['useIgnoreFiles'])],
+    ['onlyOpenEditors', flag(search['onlyOpenEditors'])],
+  ];
 
   return {
     folder,
-    ...(file === undefined ? {} : { file }),
-    ...(session === undefined ? {} : { session }),
-    ...(conversation === undefined ? {} : { conversation }),
+    ...(Object.fromEntries(rest.filter(([, value]) => value !== undefined)) as Omit<
+      WorkbenchSearch,
+      'folder'
+    >),
   };
 }
 
@@ -66,10 +99,23 @@ export function workbenchLocation(search: WorkbenchSearch): string {
 
   const query = new URLSearchParams({ folder: search.folder });
 
-  for (const key of ['file', 'session', 'conversation'] as const) {
+  for (const key of ['file', 'session', 'conversation', 'q', 'include', 'exclude'] as const) {
     const value = search[key];
     if (value !== undefined) {
       query.set(key, value);
+    }
+  }
+
+  for (const key of [
+    'isRegex',
+    'caseSensitive',
+    'wholeWord',
+    'useIgnoreFiles',
+    'onlyOpenEditors',
+  ] as const) {
+    const value = search[key];
+    if (value !== undefined) {
+      query.set(key, String(value));
     }
   }
 

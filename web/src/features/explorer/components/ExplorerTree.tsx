@@ -4,13 +4,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useKeyContext } from '@/features/commands';
 import { ContextMenu, ContextMenuTrigger } from '@/shared/components/ui/context-menu';
+import { useRowHeight, useVirtualRows } from '@/shared/hooks/useVirtualRows';
 import type { ExplorerAction } from '../hooks/explorer-actions';
 import type { Explorer } from '../hooks/useExplorer';
 import { useFollowFocus } from '../hooks/useFollowFocus';
 import { useTreeKeyboard } from '../hooks/useTreeKeyboard';
 import { useTreePointer } from '../hooks/useTreePointer';
 import type { TreePointer } from '../hooks/useTreePointer';
-import { useRowHeight, useVirtualRows } from '../hooks/useVirtualRows';
 import { indexOfKey } from '../lib/tree-navigation';
 import { explorerStore } from '../store/explorer.store';
 import type { EntryRow, NoteRow, TreeRow } from '../lib/tree-rows';

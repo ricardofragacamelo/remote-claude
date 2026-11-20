@@ -1,0 +1,11 @@
+{
+  "id": "11·S-155…S-159",
+  "title": "the Search view and Quick Open, through the browser: opening a result, replacing, the results editor, history and the URL, a phone, and axe",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "phone": { "width": 390, "height": 844 }
+  }
+}

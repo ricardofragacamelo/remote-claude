@@ -19,6 +19,12 @@ describe('the palette — plan 06, S-125', () => {
     expect(usePalette.getState()).toMatchObject({ open: true, value: '', mode: 'recent' });
   });
 
+  it('opens blank with no mode entered by name — plan 11’s Quick Open', () => {
+    usePalette.getState().show(undefined, '');
+
+    expect(usePalette.getState()).toMatchObject({ open: true, value: '', mode: null });
+  });
+
   it('asked to open while open, opens nothing more and keeps what was typed', () => {
     usePalette.getState().show();
     usePalette.getState().setValue('> open');

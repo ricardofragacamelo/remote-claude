@@ -21,7 +21,7 @@ detalhe de implementação — e regra que não é verificada por máquina não 
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-01 — ADR-016: o ripgrep por subprocesso, com disciplina fixa 🔲
+### B-01 — ADR-016: o ripgrep por subprocesso, com disciplina fixa ✅
 
 Abre o ADR-016 em [00-decisions](../../architecture/shared/00-decisions.md): a busca executa o
 ripgrep como **subprocesso**, e toda execução segue as mesmas regras, sem exceção por conveniência:
@@ -48,7 +48,7 @@ Registra também o que a D-01 decidir sobre a origem do binário e a entrada del
 `onlyBuiltDependencies`. Não há teste de código nesta task; os cenários que a verificam são os do
 executor (B-06) e das regras estáticas (B-05).
 
-### B-02 — Módulo `search` no catálogo e nas fronteiras 🔲
+### B-02 — Módulo `search` no catálogo e nas fronteiras ✅
 
 Registra o módulo em [backend/03](../../architecture/backend/03-modules.md#criando-um-módulo-novo):
 responsabilidade ("localizar arquivos e texto dentro de uma pasta liberada, e substituir"), o que
@@ -62,7 +62,7 @@ nasce nas quatro camadas ([backend/02](../../architecture/backend/02-folder-stru
 executor de subprocesso em `adapter/outbound/process/` — técnico, sem regra de negócio, pronto para
 ser reusado por outro módulo sem que ninguém reimplemente a disciplina do ADR-016.
 
-### B-03 — Contrato HTTP da busca 🔲
+### B-03 — Contrato HTTP da busca ✅
 
 Documenta em backend/03, com a tabela de status de cada endpoint, no molde do `GET /audit-entries`:
 
@@ -106,7 +106,7 @@ cliente, e com truncamento o conjunto devolvido pode variar. As exclusões padr�
 o `folder` é o da aba, e nada do estado de uma aba vaza para outra. Os limites de taxa por usuário do
 [plano 05](../05-hardening-operations/README.md) se somam ao teto de concorrência deste plano.
 
-### B-04 — Códigos de erro novos e chaves de tradução 🔲
+### B-04 — Códigos de erro novos e chaves de tradução ✅
 
 Entram no [catálogo](../../architecture/shared/04-errors-and-http.md#catálogo-de-erros-de-domínio)
 **antes** de existir no código, e em `error-catalogue.ts`, com `messageKey` em en e pt-BR:
@@ -123,7 +123,7 @@ estourado **não** é erro: é a linha `end` com `truncated.reason: 'timeout'` �
 `SEARCH_ENGINE_FAILED` tem duas formas: `502` quando o `rg` falha antes do primeiro byte, e a linha
 `error` do fluxo quando falha depois (D-02). É o mesmo `code` com a mesma `messageKey`.
 
-### B-05 — Regras estáticas: `child_process` confinado, shell proibido 🔲
+### B-05 — Regras estáticas: `child_process` confinado, shell proibido ✅
 
 Três regras verificadas por máquina ([10](../../architecture/shared/09-code-quality.md#regras-de-arquitetura-como-lint)):
 

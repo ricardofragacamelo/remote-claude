@@ -19,18 +19,27 @@ export {
   openAndRecentFiles,
   openDiff,
   openFile,
+  openFiles,
   openPreview,
 } from './hooks/tabs';
-export { activeSelections } from './hooks/views';
+export { activeSelections, activeSelectionText, activeView, focusEditor } from './hooks/views';
 export { insertBlocker, insertIntoEditor } from './hooks/insert';
 export type { InsertBlocker } from './hooks/insert';
 export { colorizeCode, languageOfFence } from './lib/highlight';
 export type { CodeToken } from './lib/highlight';
 export { useInsertBlocker } from './hooks/useInsertBlocker';
 export { canPreview } from './lib/preview-kinds';
-export { formatBytes } from './lib/text';
-export { useActiveFile, useFileDirty } from './hooks/useEditor';
+export { formatBytes, offsetAt, withEol } from './lib/text';
+export { fileIsDirty, useActiveFile, useFileDirty } from './hooks/useEditor';
 export { diffSources } from './store/diff-sources';
-export type { DiffSide, DiffSource, OpenFileOptions, ProvidedSide } from './types/editor';
-export { createFile } from './services/files.service';
-export type { TextWrite, WrittenFile } from './services/files.service';
+export { fileChrome } from './store/file-chrome';
+export type {
+  DiffSide,
+  DiffSource,
+  FileChrome,
+  FileChromeProps,
+  OpenFileOptions,
+  ProvidedSide,
+} from './types/editor';
+export { createFile, readFile } from './services/files.service';
+export type { ReadResult, TextWrite, WrittenFile } from './services/files.service';

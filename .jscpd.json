@@ -33,7 +33,12 @@
     "packages/contracts/schema/definitions/project-mcp-server.schema.json",
     "packages/contracts/schema/http/engines/claude/project-config-view.schema.json",
     "packages/contracts/schema/http/permission-rule-invocation-page.schema.json",
+    "packages/contracts/schema/http/search-replace-preview.schema.json",
+    "packages/contracts/schema/http/search-replace-apply.schema.json",
     "backend/src/adapter/outbound/files/workspace-module.folder-resolver.ts",
-    "backend/src/adapter/outbound/permission/workspace-module.rule-folder-resolver.ts"
+    "backend/src/adapter/outbound/permission/workspace-module.rule-folder-resolver.ts",
+    "backend/src/domain/search/errors/search-rate-limited.error.ts",
+    "backend/src/adapter/inbound/http/search/search.controller.ts",
+    "web/src/features/search/types/search.ts"
   ]
 }

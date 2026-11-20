@@ -1,5 +1,6 @@
 import type { AppError } from '@/shared/api/errors';
 import type { FolderChange } from '@/shared/api/folder-watches';
+import type { TextRange } from '@/shared/lib/files-drag';
 import type { LineEnding, TextModel, TextPosition } from './code-editor';
 
 /**
@@ -45,6 +46,25 @@ export interface DiffSource {
   read(folder: string, key: string): Promise<string>;
 }
 
+/** What a registered chrome reads, above the editor of a file its own `matches` picked. */
+export interface FileChromeProps {
+  readonly folder: string;
+  readonly group: string;
+  readonly doc: FileDocument;
+}
+
+/**
+ * Extra chrome shown above a file's own editor, by a feature that gives a plain extension a
+ * special screen — the search editor's own header, over `.code-search` (plan 11, B-17) — without
+ * the editor ever learning what one is. The first whose `matches` answers `path` wins.
+ */
+export interface FileChrome {
+  readonly id: string;
+  readonly position: number;
+  matches(path: string): boolean;
+  readonly component: React.ComponentType<FileChromeProps>;
+}
+
 export interface OpenFileOptions {
   /** Opens as the preview tab (italic), replaced by the next preview — a single click in the tree. */
   readonly preview?: boolean;
@@ -54,6 +74,9 @@ export interface OpenFileOptions {
 
   /** Puts the cursor on this line, from 1 — a `path:line` in the agent's answer (plan 08). */
   readonly line?: number;
+
+  /** Puts this selected too — the matched text of a search result (plan 11, B-15); implies `line`. */
+  readonly selection?: TextRange;
 }
 
 /** An editor tab of a file. */
@@ -193,6 +216,9 @@ export interface FileDocument {
   readonly recreateAsked: boolean;
   readonly cursor: TextPosition;
   readonly selectionLength: number;
+
+  /** What a fresh view selects on mount — the match of a search result opening (plan 11, B-15); kept live the same way `cursor` is, so it clears once the person moves on. */
+  readonly selection: TextRange | null;
   readonly scrollTop: number;
 }
 

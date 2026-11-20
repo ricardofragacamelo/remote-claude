@@ -345,3 +345,40 @@ describe('what the panel of Claude shows, in the URL — plan 08, D-24', () => {
     });
   });
 });
+
+describe('the Search view, in the URL — plan 11, B-15, S-120', () => {
+  it('takes the query and every toggle through its own address and back', () => {
+    const address = workbenchLocation({
+      folder: '/srv/app',
+      q: 'TODO',
+      isRegex: true,
+      caseSensitive: true,
+      wholeWord: true,
+      include: '*.ts',
+      exclude: '*.spec.ts',
+      useIgnoreFiles: false,
+      onlyOpenEditors: true,
+    });
+
+    expect(readWorkbenchSearch(defaultParseSearch(address.slice('/workbench'.length)))).toEqual({
+      folder: '/srv/app',
+      q: 'TODO',
+      isRegex: true,
+      caseSensitive: true,
+      wholeWord: true,
+      include: '*.ts',
+      exclude: '*.spec.ts',
+      useIgnoreFiles: false,
+      onlyOpenEditors: true,
+    });
+  });
+
+  it('names no flag that is not a boolean, and no query or filter that is empty or not text', () => {
+    expect(
+      readWorkbenchSearch(
+        defaultParseSearch('?folder=%2Fsrv%2Fapp&q=&include=&isRegex=1&useIgnoreFiles=nope'),
+      ),
+    ).toEqual({ folder: '/srv/app' });
+    expect(readWorkbenchSearch({ q: 'TODO', isRegex: true })).toEqual({});
+  });
+});

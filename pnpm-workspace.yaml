@@ -7,6 +7,11 @@ packages:
   - 'e2e'
 
 # esbuild (a vitest dependency) needs its install script to fetch its native binary.
+# @vscode/ripgrep (plan 11, ADR-016 · D-01), the binary the search feature runs by subprocess, is
+# NOT listed here: version 1.18.0 ships the binary as a platform-specific `optionalDependencies`
+# package (@vscode/ripgrep-<platform>-<arch>) with no install script at all — measured at F0, and
+# the reason D-01 could stay with the lighter of its two options. A version that brought one back
+# would need this list extended, and that extension re-opens the supply-chain question D-01 closed.
 # Every other package stays blocked from running install scripts.
 onlyBuiltDependencies:
   - esbuild

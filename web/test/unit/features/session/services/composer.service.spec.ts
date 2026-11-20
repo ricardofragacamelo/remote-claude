@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_LIMITS,
   fetchCatalog,
-  listMentionLevel,
   probeFile,
   uploadAttachment,
   uploadHeld,
@@ -104,41 +103,6 @@ describe('uploadAttachment — plan 08, B-45', () => {
       mediaType: 'text/plain',
       size: 3,
     });
-  });
-});
-
-describe('listMentionLevel — plan 08, B-48', () => {
-  it('lists a level of the folder, and never offers a link that leads out nor a name that is not text — S-230', async () => {
-    const get = vi.spyOn(api, 'get').mockResolvedValue({
-      path: 'src',
-      truncated: true,
-      entries: [
-        { path: 'src/a.ts', name: 'a.ts', kind: 'file' },
-        { path: 'src/lib', name: 'lib', kind: 'directory' },
-        { path: 'src/out', name: 'out', kind: 'symlink', outside: true },
-        { path: 'src/odd', name: 'odd', kind: 'file', unreadableName: true },
-        { path: 'src/fifo', name: 'fifo', kind: 'other' },
-        { name: 'nameless' },
-        'junk',
-      ],
-    });
-
-    const level = await listMentionLevel(FOLDER, 'src');
-
-    expect(get).toHaveBeenCalledWith('/files/tree?folder=%2Fsrv%2Fprojects%2Fapp&path=src');
-    expect(level).toEqual({
-      truncated: true,
-      entries: [
-        { path: 'src/a.ts', name: 'a.ts', kind: 'file' },
-        { path: 'src/lib', name: 'lib', kind: 'folder' },
-      ],
-    });
-  });
-
-  it('reads a body it cannot read as an empty level', async () => {
-    vi.spyOn(api, 'get').mockResolvedValue(null);
-
-    expect(await listMentionLevel(FOLDER, '')).toEqual({ entries: [], truncated: false });
   });
 });
 

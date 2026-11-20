@@ -345,6 +345,6 @@ const TRANSFER_PROVIDERS = [
         new RestoreHistoryEntryUseCase(writing, store, history),
     },
   ],
-  exports: [SaveFileUseCase, FolderWatches],
+  exports: [SaveFileUseCase, ReadFileUseCase, FolderWatches],
 })
 export class FilesModule {}

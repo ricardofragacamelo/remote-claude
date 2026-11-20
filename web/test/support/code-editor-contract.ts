@@ -121,5 +121,27 @@ export function codeEditorContract(name: string, make: () => CodeEditorEngine): 
       view.dispose();
       host.remove();
     });
+
+    it('selects a range, the match of a search result (plan 11, B-15)', () => {
+      const engine = make();
+      const host = document.createElement('div');
+      document.body.append(host);
+      const view = engine.createView(host, VIEW_OPTIONS);
+      const text = engine.createModel({
+        content: 'one\ntwo\nthree',
+        eol: 'lf',
+        language: 'plaintext',
+      });
+
+      view.setModel(text);
+      view.setSelection({ startLine: 2, startColumn: 1, endLine: 2, endColumn: 4 });
+
+      expect(view.selection()).toEqual({ startLine: 2, startColumn: 1, endLine: 2, endColumn: 4 });
+      expect(view.selectionLength()).toBe(3);
+
+      view.setModel(null);
+      view.dispose();
+      host.remove();
+    });
   });
 }

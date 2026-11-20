@@ -20,6 +20,7 @@ import { NotificationModule } from '@infra/modules/notification.module';
 import { PlatformModule } from '@infra/modules/platform.module';
 import { DiagModule } from '@infra/modules/diag.module';
 import { FilesModule } from '@infra/modules/files.module';
+import { SearchModule } from '@infra/modules/search.module';
 import { PermissionModule } from '@infra/modules/permission.module';
 import { SessionModule } from '@infra/modules/session.module';
 import { TranscriptModule } from '@infra/modules/transcript.module';
@@ -43,6 +44,7 @@ import { WorkspaceModule } from '@infra/modules/workspace.module';
     HealthModule,
     WorkspaceModule,
     FilesModule,
+    SearchModule,
     AuditModule,
     AuditQueryModule,
     DiagModule,

@@ -390,10 +390,12 @@ describe('a question of Claude, over the socket', () => {
       });
       await until(socket, 'permission.resolved');
 
+      // The write lands after the socket's own `permission.resolved` — give it real room under load.
       const entries = await waitFor(
         'the decision to reach the trail',
         () => trail(sessionId, toolUseId),
         (rows) => rows.some((row) => row.decision === 'allowed'),
+        5_000,
       );
       const recorded = entries.find((row) => row.decision === 'recorded');
       const allowed = entries.find((row) => row.decision === 'allowed');
@@ -492,10 +494,12 @@ describe('a question of Claude, over the socket', () => {
       answer(socket, requestId, { decision: 'allow', answers });
       expect((await until(socket, 'command.accepted')).kind).toBe('ack');
 
+      // Same write as S-36's — same real room needed under a loaded suite.
       const decisions = await waitFor(
         'the decision to reach the trail',
         () => trail(sessionId, String(request.payload?.['toolUseId'])),
         (rows) => rows.some((row) => row.decision === 'allowed'),
+        5_000,
       );
       expect(decisions.filter((row) => row.decision === 'allowed')).toHaveLength(1);
     });

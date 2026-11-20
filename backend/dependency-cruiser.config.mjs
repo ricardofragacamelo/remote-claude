@@ -204,6 +204,21 @@ export default {
       to: { path: '^src/application/session/' },
     },
     {
+      name: 'child-process-is-isolated',
+      comment:
+        '`node:child_process` runs a program that is not the Claude Agent SDK, with input the ' +
+        'user typed — pattern, glob, path, replacement text, or a plugin’s own git remote. Two ' +
+        'places own the discipline of ADR-016 (argv as an array, `shell: false`, an absolute or ' +
+        'resolved binary, explicit env, a deadline): `shared/process/` for the short-lived, ' +
+        'read-only CLI call (`execFileText`, plan 13 — an engine’s `--version`, `git`), and ' +
+        '`adapter/outbound/process/` for the long-running, streamed subprocess the search engine ' +
+        'needs (plan 11, SIGTERM then SIGKILL, a byte cap, killed on abort). A second import point ' +
+        'anywhere else is a second place to get either wrong.',
+      severity: 'error',
+      from: { pathNot: '^src/(adapter/outbound/process|shared/process)/' },
+      to: { dependencyTypes: ['core'], path: '^(node:)?child_process$' },
+    },
+    {
       name: 'no-test-in-src',
       comment: 'Tests mirror the source from test/; they never sit beside it.',
       severity: 'error',

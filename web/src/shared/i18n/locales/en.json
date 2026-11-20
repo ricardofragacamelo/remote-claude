@@ -1168,6 +1168,16 @@
       "openFolder": "Open folder…",
       "openRecent": "Open recent"
     },
+    "search": {
+      "quickOpen": "Go to file…",
+      "openSearch": "Find in files",
+      "openResultsEditor": "Open results in editor",
+      "goToResult": "Go to result",
+      "clearHistory": "Clear search history",
+      "openReplace": "Replace in files",
+      "nextResult": "Find next result",
+      "previousResult": "Find previous result"
+    },
     "workbench": {
       "closeFolderTab": "Close folder tab",
       "nextFolderTab": "Next folder tab",
@@ -1354,7 +1364,8 @@
     "section": {
       "appearance": "Appearance",
       "workspaces": "Workspaces",
-      "editor": "Editor"
+      "editor": "Editor",
+      "search": "Search"
     },
     "sections": {
       "label": "Sections"
@@ -1480,6 +1491,7 @@
       "rename": "Rename",
       "delete": "Delete",
       "undo": "Undo the last file operation",
+      "searchInFolder": "Search in folder…",
       "copyPath": "Copy path",
       "copyRelativePath": "Copy relative path",
       "addToContext": "Add to {{agent}}'s context",
@@ -2644,7 +2656,7 @@
       "composerHeading": "The prompt box",
       "composer": "Enter sends and Shift+Enter breaks the line; while an input method is composing a character, Enter does neither. With nothing written and no context, the send button stays off and says why. While {{agent}} works, what you send waits in the queue.",
       "mentionHeading": "@ — files, folders and the selection",
-      "mention": "Type @ to choose a file or a folder of this folder: the open files and the recent ones come first, then what the folder holds, level by level — type a / to go into a folder. @selection adds what is selected in the editor. Use the arrows to move, Enter or Tab to choose, and Esc to close the list without losing what you typed.",
+      "mention": "Type @ to choose a file or a folder of this folder: the open files and the recent ones come first, then any other match of what you typed, anywhere in the folder — by any part of the name, not only the start. @selection adds what is selected in the editor. Use the arrows to move, Enter or Tab to choose, and Esc to close the list without losing what you typed.",
       "commandsHeading": "/ — commands and skills",
       "commands": "Type / at the start of the box for the commands and skills of this installation, even before the session exists. Choosing one writes it with a space after it, and says what it takes. If the list cannot be read, anything you type still goes as the prompt.",
       "dragHeading": "Dragging into the context",
@@ -3338,6 +3350,130 @@
       "stdioAnyFolder": "Runs {{command}} {{args}} on your machine, with your credentials, whenever a session opens, with the variables {{envNames}}.",
       "remoteFolder": "Connects to {{url}} ({{transport}}) whenever a session opens in {{folder}}, with your credentials, with the headers {{headerNames}}.",
       "remoteAnyFolder": "Connects to {{url}} ({{transport}}) whenever a session opens, with your credentials, with the headers {{headerNames}}."
+    }
+  },
+  "search": {
+    "error": {
+      "patternInvalid": "That search pattern cannot be used.",
+      "engineFailed": "The search engine failed or disappeared. Try again.",
+      "globOutsideFolder": "That filter reaches outside the open folder.",
+      "pathOutsideFolder": "That path is outside the open folder.",
+      "queryInvalid": "That search cannot be run as written.",
+      "locateInputInvalid": "That request cannot be used as written.",
+      "replaceApplyFailed": "The replace could not finish writing every file.",
+      "replaceTooManyFiles": "That replace names more files than this edge allows.",
+      "replaceDiffUnavailable": "This preview is no longer available."
+    },
+    "diff": {
+      "after": "After the replace"
+    },
+    "quickOpen": {
+      "placeholder": "Go to a file, or type :line to jump to a line",
+      "empty": "Open a folder to search its files.",
+      "noMatch": "No file matches what you typed.",
+      "loading": "Searching…",
+      "goToLine": "Go to line…",
+      "locateError": "Could not search {{folder}}: {{message}}",
+      "truncatedLimit": "Showing the first matches only — type more to narrow it down.",
+      "truncatedTimeout": "The search took too long — type more to narrow it down.",
+      "screenTitle": "Quick Open",
+      "screenPurpose": "Jumps straight to a file of this folder by typing part of its name.",
+      "helpItem": "Help"
+    },
+    "view": {
+      "queryLabel": "Search",
+      "queryPlaceholder": "Search",
+      "flagCaseSensitive": "Match case",
+      "flagWholeWord": "Match whole word",
+      "flagIsRegex": "Use regular expression",
+      "includeLabel": "Files to include",
+      "includePlaceholder": "e.g. *.ts, src/**/include",
+      "excludeLabel": "Files to exclude",
+      "excludePlaceholder": "e.g. *.spec.ts, node_modules",
+      "flagUseIgnoreFiles": "Use exclude settings and ignore files",
+      "flagOnlyOpenEditors": "Search only in open editors",
+      "toolbarLabel": "Search actions",
+      "resultsCount": "{{files}} files, {{matches}} results",
+      "resultsLabel": "Search results",
+      "resultsMatchLabel": "Line {{line}}",
+      "actionCollapseAll": "Collapse all",
+      "actionExpandAll": "Expand all",
+      "actionCopyAll": "Copy all",
+      "actionOpen": "Open",
+      "actionOpenBeside": "Open to the side",
+      "actionOpenDiff": "Open changes",
+      "actionCopyResult": "Copy match",
+      "actionCopyPath": "Copy path",
+      "actionDismiss": "Dismiss",
+      "menuLabel": "Search result actions",
+      "staleSearchAgain": "Search again",
+      "loading": "Searching…",
+      "empty": "Type to search across the files of this folder — use .* for a regular expression, or narrow it first with a glob like *.ts.",
+      "noMatch": "No results found.",
+      "truncatedLimit": "Showing the first matches only — type more to narrow it down.",
+      "truncatedTimeout": "The search took too long — type more to narrow it down.",
+      "rateLimited": "Another search is already running. Try again in {{seconds}} seconds.",
+      "badgeLabel": "{{count}} search results",
+      "replaceToggle": "Toggle replace",
+      "replaceLabel": "Replace",
+      "replacePlaceholder": "Replace",
+      "flagPreserveCase": "Preserve case",
+      "actionReplaceAll": "Replace all",
+      "actionReplaceFile": "Replace this file",
+      "actionReplaceMatch": "Replace this match",
+      "replaceScopeTitle": "Replace all",
+      "replaceScopeBody": "This makes {{count}} replacements in {{files}} files. This cannot be undone from here — only from this file's local history or your own version control.",
+      "replaceScopeConfirm": "Replace",
+      "replaceScopeCancel": "Cancel",
+      "replaceDirtyTitle": "Unsaved changes",
+      "replaceDirtyBody": "{{count}} of these files have unsaved changes in the editor — the replace overwrites what is on disk, not what is open.",
+      "replaceDirtyConfirm": "Replace anyway",
+      "replaceReportApplied": "{{count}} file(s) replaced.",
+      "replaceReportPreserved": "{{count}} file(s) preserved — they changed since the preview.",
+      "replaceReportAppliedBeforeFailure": "{{count}} file(s) were already written before this failed.",
+      "actionRedoPreview": "Redo preview",
+      "replaceReportDismiss": "Dismiss",
+      "actionOpenInEditor": "Open in editor"
+    },
+    "resultsEditor": {
+      "query": "Query:",
+      "contextLines": "Context lines",
+      "runAgain": "Run again",
+      "running": "Searching…",
+      "readOnlyNotice": "This is a read-only report: typing here never writes to the files it found."
+    },
+    "settings": {
+      "exclude": "Exclude from search",
+      "excludeDescription": "Comma-separated globs left out of every search and Quick Open, on top of what the Explorer already skips.",
+      "excludeDefaultEmpty": "none",
+      "useIgnoreFiles": "Use ignore files by default",
+      "useIgnoreFilesDescription": "A fresh search starts with \".gitignore\"/\".ignore\"/\".rgignore\" respected — turn it off per search in the toolbar.",
+      "smartCase": "Smart case",
+      "smartCaseDescription": "A query with an upper-case letter searches case-sensitively by itself — \"Match case\" always wins when it is on.",
+      "resultsEditorContextLines": "Results editor context lines",
+      "resultsEditorContextLinesDescription": "How many lines of context \"Open in editor\" starts with — the spinner there changes it anytime."
+    },
+    "screen": {
+      "title": "Search",
+      "purpose": "Finds and replaces text across every file of this folder."
+    },
+    "help": {
+      "what": "Search finds a pattern across every file of this folder. Turning on \"Replace\" previews what each match would become before writing anything, never touching a file until \"Replace all\" or \"Replace this file\" is confirmed.",
+      "states": "Empty invites a pattern; loading shows while results come in; a result lists every match, grouped by file; an error names what went wrong and how to retry — the four states every screen here has.",
+      "notRecorded": "Dismissing a result or a file removes it from this list only — the file on disk, and its local history, are both untouched. Nothing searched here reaches the audit log until a replace is actually applied.",
+      "toolbarHeading": "What each button does",
+      "toolbar": "\"Aa\" matches case exactly; \"ab\" matches whole words only; \".*\" reads the pattern as a regular expression — TODO|FIXME finds either word. \"Files to include\"/\"to exclude\" take a comma list of globs, like *.ts or src/**/*.spec.ts. With Replace open, \"Preserve case\" keeps each match’s own casing in the replacement.",
+      "missingHeading": "Why a result might be missing",
+      "missing": "A file is left out when it matches an ignore file or an exclude glob, when it looks binary, when it is past the size this search reads, or when the search stopped early — shown as \"truncated\". Narrowing the pattern or the filters usually finds it.",
+      "replaceHeading": "What \"Replace\" does not do",
+      "replace": "It never writes over an editor tab with unsaved changes without asking first, and it is never undone by the editor’s own Ctrl/Cmd+Z — only this file’s local history or your own version control can take a replace back."
+    },
+    "quickOpenHelp": {
+      "what": "Quick Open finds a file by any part of its name, anywhere in the folder — the letters typed only have to appear in order, not together. Files already open, or opened recently, show first. Typing a file’s name followed by :42 opens it at that line.",
+      "states": "Empty shows the open and recent files first; typing narrows them by fuzzy match, with the matched letters highlighted; no match says so; an error names what went wrong.",
+      "notRecorded": "Nothing chosen here reaches the audit log on its own — opening a file through Quick Open is the same as opening it any other way.",
+      "openSideHeading": "Opening without closing",
+      "openSide": "The right arrow opens the selected file without closing Quick Open, for a quick look at several in a row; Ctrl/Cmd+Enter opens it to the side and closes Quick Open."
     }
   }
 }

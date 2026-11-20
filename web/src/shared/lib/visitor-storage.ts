@@ -75,3 +75,13 @@ export function writeVisitor(
     );
   }
 }
+
+/**
+ * One field of a group of preferences, changed and kept for this browser in the same call — what
+ * every `set(key, value)` of a `*.preferences.store.ts` does (the editor's, the search's).
+ */
+export function withVisitorChange<T extends object>(key: string, current: T, patch: Partial<T>): T {
+  const next = { ...current, ...patch };
+  writeVisitor(key, next);
+  return next;
+}

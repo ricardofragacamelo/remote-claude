@@ -28,6 +28,7 @@ function keepPlace(folder: string, path: string, view: CodeView): void {
   updateDoc(editorStoreOf(folder), path, () => ({
     cursor: view.position(),
     selectionLength: view.selectionLength(),
+    selection: view.selection(),
     scrollTop: view.scrollTop(),
   }));
 }
@@ -79,9 +80,12 @@ export function useCodeView({
     }
 
     const model = attachModel(folder, path, engine);
-    const { cursor, scrollTop } = documentOf(folder, path);
+    const { cursor, selection, scrollTop } = documentOf(folder, path);
     view.setModel(model);
     view.setPosition(cursor);
+    if (selection !== null) {
+      view.setSelection(selection);
+    }
     view.setScrollTop(scrollTop);
 
     const stops = [

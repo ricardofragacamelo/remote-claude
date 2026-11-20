@@ -1,3 +1,4 @@
+import type { TextRange } from '@/shared/lib/files-drag';
 import { logger } from '@/shared/logging/logger';
 import {
   aDiffTab,
@@ -80,7 +81,9 @@ function openEditorOf(folder: string, path: string, options: OpenFileOptions = {
     'file opened in the editor',
   );
 
-  if (options.line !== undefined) {
+  if (options.selection !== undefined) {
+    atSelection(folder, path, options.selection);
+  } else if (options.line !== undefined) {
     atLine(folder, path, options.line);
   }
 
@@ -94,9 +97,25 @@ function openEditorOf(folder: string, path: string, options: OpenFileOptions = {
 function atLine(folder: string, path: string, line: number): void {
   const position = { line: Math.max(1, Math.floor(line)), column: 1 };
 
-  updateDoc(editorStoreOf(folder), path, () => ({ cursor: position }));
+  updateDoc(editorStoreOf(folder), path, () => ({ cursor: position, selection: null }));
   if (activeFile(folder) === path) {
     activeView(folder)?.setPosition(position);
+  }
+}
+
+/**
+ * Puts a file's selection on a range — the matched text of a search result (plan 11, B-15), the
+ * same two places `atLine` reaches: the document a fresh view reads from, and the view already on
+ * screen.
+ */
+function atSelection(folder: string, path: string, range: TextRange): void {
+  const position = { line: range.startLine, column: range.startColumn };
+
+  updateDoc(editorStoreOf(folder), path, () => ({ cursor: position, selection: range }));
+  if (activeFile(folder) === path) {
+    const view = activeView(folder);
+    view?.setPosition(position);
+    view?.setSelection(range);
   }
 }
 
@@ -182,11 +201,18 @@ export function activeFile(folder: string): string | null {
 export function openAndRecentFiles(folder: string): readonly string[] {
   const state = editorStoreOf(folder).getState();
   const active = activeFileOf(state);
-  const open = state.groups.flatMap((group) =>
-    group.tabs.flatMap((tab) => (tab.kind === 'file' ? [tab.path] : [])),
-  );
+  const open = openFiles(folder);
 
   return [...new Set([...(active === null ? [] : [active]), ...open, ...state.recent])];
+}
+
+/** The files open in an editor tab right now, once each — "only in the open editors" (plan 11, B-15). */
+export function openFiles(folder: string): readonly string[] {
+  return editorStoreOf(folder)
+    .getState()
+    .groups.flatMap((group) =>
+      group.tabs.flatMap((tab) => (tab.kind === 'file' ? [tab.path] : [])),
+    );
 }
 
 /** Puts a tab of a group on screen, and the focus in that group. */

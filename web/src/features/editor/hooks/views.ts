@@ -1,5 +1,6 @@
 import type { TextRange } from '@/shared/lib/files-drag';
 import { activeGroupOf, activeTabOf } from '../lib/layout';
+import { offsetAt, withEol } from '../lib/text';
 import { editorStoreOf } from '../store/editor.store';
 import type { CodeView } from '../types/code-editor';
 
@@ -44,4 +45,31 @@ export function activeSelections(
   const ranges = activeView(folder)?.selections() ?? [];
 
   return tab?.kind !== 'file' || ranges.length === 0 ? null : { path: tab.path, ranges };
+}
+
+/**
+ * The text of the active editor's first selection — `Ctrl/Cmd+Shift+F` fills the Search view's
+ * query with it (plan 11, B-15, S-119). `null` with no editor, nothing selected, or the file not
+ * yet read.
+ */
+export function activeSelectionText(folder: string): string | null {
+  const selected = activeSelections(folder);
+  const [range] = selected?.ranges ?? [];
+
+  if (selected === null || range === undefined) {
+    return null;
+  }
+
+  const model = editorStoreOf(folder).getState().docs[selected.path]?.model;
+
+  if (model === null || model === undefined) {
+    return null;
+  }
+
+  const text = withEol(model.getValue(), 'lf');
+
+  return text.slice(
+    offsetAt(text, { line: range.startLine, column: range.startColumn }),
+    offsetAt(text, { line: range.endLine, column: range.endColumn }),
+  );
 }

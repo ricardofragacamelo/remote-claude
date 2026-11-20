@@ -21,6 +21,7 @@ import { useCodeView } from '../hooks/useCodeView';
 import { useDocument, usePreferences } from '../hooks/useEditor';
 import { baseName } from '../lib/paths';
 import { viewOptionsOf } from '../lib/view-options';
+import { fileChromeFor } from '../store/file-chrome';
 import type { CodeEditorEngine } from '../types/code-editor';
 import type { FileDocument } from '../types/editor';
 import { pagedModeOf } from '../lib/paged';
@@ -61,8 +62,12 @@ export function FilePane({ folder, group, path }: FilePaneProps): React.JSX.Elem
     return <PaneLoading />;
   }
 
+  const chrome = fileChromeFor(doc.path);
+  const Chrome = chrome?.component;
+
   return (
     <div className="flex size-full min-h-0 min-w-0 flex-col">
+      {Chrome !== undefined && <Chrome folder={folder} group={group} doc={doc} />}
       <FileNotices folder={folder} doc={doc} />
       <CodeEditorHost folder={folder} group={group} doc={doc} engine={engine} />
     </div>

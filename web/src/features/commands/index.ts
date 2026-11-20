@@ -9,6 +9,8 @@ export { matchesSearch } from './hooks/palette-filter';
 export { useCommands } from './hooks/useCommands';
 export type { CommandDeclaration } from './hooks/useCommands';
 export { useKeyContext } from './hooks/useKeyContext';
+export { useScreenHelpBasics } from './hooks/useScreenHelp';
+export type { ScreenHelpBasics } from './hooks/useScreenHelp';
 export { useScreenShortcuts, useShortcut } from './hooks/useShortcut';
 export { goCommandOf } from './lib/go-command';
 export type { GoActionLike } from './lib/go-command';

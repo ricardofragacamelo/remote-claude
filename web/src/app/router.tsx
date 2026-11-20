@@ -82,9 +82,43 @@ const workbenchRoute = createRoute({
     file?: string | undefined;
     session?: string | undefined;
     conversation?: string | undefined;
+    q?: string | undefined;
+    isRegex?: boolean | undefined;
+    caseSensitive?: boolean | undefined;
+    wholeWord?: boolean | undefined;
+    include?: string | undefined;
+    exclude?: string | undefined;
+    useIgnoreFiles?: boolean | undefined;
+    onlyOpenEditors?: boolean | undefined;
   } => {
-    const { folder = '', file, session, conversation } = readWorkbenchSearch(search);
-    return { folder, file, session, conversation };
+    const {
+      folder = '',
+      file,
+      session,
+      conversation,
+      q,
+      isRegex,
+      caseSensitive,
+      wholeWord,
+      include,
+      exclude,
+      useIgnoreFiles,
+      onlyOpenEditors,
+    } = readWorkbenchSearch(search);
+    return {
+      folder,
+      file,
+      session,
+      conversation,
+      q,
+      isRegex,
+      caseSensitive,
+      wholeWord,
+      include,
+      exclude,
+      useIgnoreFiles,
+      onlyOpenEditors,
+    };
   },
   beforeLoad: ({ search }) => {
     if (search.folder === '') {

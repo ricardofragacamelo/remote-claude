@@ -242,7 +242,7 @@ describe('the menus of files opened last, with no editor on screen', () => {
         </Menubar>
         <Command>
           <CommandList>
-            <RecentFilesMode query="" pick={vi.fn()} />
+            <RecentFilesMode query="" active="" pick={vi.fn()} />
           </CommandList>
         </Command>
       </>,

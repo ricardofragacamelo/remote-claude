@@ -570,6 +570,82 @@ com a mesma disciplina do store de snapshots do desfazer
 Restaurar é escrita comum: `If-Match` do atual, o atual guardado antes, `file.restored` na trilha
 antes do disco.
 
+---
+
+## ADR-016 — O ripgrep roda por subprocesso, com disciplina fixa e um único adapter
+
+**Status:** aceita · 2026-09-28 · aberta pelo [plano 11 · B-01](../../plans/11-search/F0-contract.md#b-01--adr-016-o-ripgrep-por-subprocesso-com-disciplina-fixa-),
+sobre a [D-01](../../plans/11-search/decisions.md#d-01--de-onde-vem-o-ripgrep) e a
+[D-02](../../plans/11-search/decisions.md#d-02--como-o-resultado-chega)
+
+Até o plano 11, o único programa que o backend executa na máquina do usuário é o próprio Claude,
+sob o `canUseTool`. O Quick Open e a busca em texto precisam de um motor de regex linear, que
+respeite `.gitignore` e seja rápido em pasta grande — o que o VS Code resolve com o `ripgrep`. É a
+**primeira vez que o backend executa um programa que não é o Claude**, com entrada vinda do
+usuário (padrão, globs, caminhos, texto de substituição), e a disciplina de execução precisa ser
+arquitetura, não detalhe de implementação.
+
+**A decisão:**
+
+- **origem do binário ([D-01](../../plans/11-search/decisions.md#d-01--de-onde-vem-o-ripgrep)):**
+  `@vscode/ripgrep`, versão fixada (`1.18.0`, sem `^`), o mesmo pacote e o mesmo binário que o VS
+  Code usa. **Medido na F0:** esta versão **não** baixa nada por *postinstall* — o binário chega
+  como um pacote `optionalDependencies` por plataforma (`@vscode/ripgrep-<plataforma>-<arquitetura>`,
+  sem `scripts` nenhum), então o `onlyBuiltDependencies` do pnpm **não precisa ser aberto** para
+  ela: a preocupação do R-05 com a cadeia de suprimentos fica menor do que a decisão original
+  previu. `RC_RIPGREP_PATH` é a sobreposição explícita para quem prefere o do sistema, validada
+  **no boot** (existe, executa, versão mínima): caminho inválido **derruba o boot**, como a
+  allowlist. Nunca o `rg` do `PATH` desta máquina (medido: resolve para uma função de shell que
+  executa o `claude` com outro `argv0`) e nunca o que o SDK do Claude carrega (medido: não existe
+  como arquivo);
+- **argv em array, `shell: false`, sempre** — nenhum texto do usuário é interpretado por shell. O
+  padrão entra como `--regexp=<padrão>`, os globs como `--glob=<glob>`, e `--` antes de todo
+  caminho: padrão, glob ou nome de arquivo que começa com `-` é **dado**, nunca opção;
+- **binário por caminho absoluto**, resolvido **uma vez no boot**, nunca procurado no `PATH` a cada
+  chamada;
+- **flags sempre presentes:** `--no-config` (ignora `RIPGREP_CONFIG_PATH` do ambiente de quem
+  roda), `--json`, nunca `-L` (não segue symlink), teto de tamanho de arquivo, `--max-columns` com
+  a prévia, `--regex-size-limit` e `--dfa-size-limit` (regex compilada tem teto, nunca cresce sem
+  limite). **Flags nunca usadas:** `--pre`/`--pre-glob` (executam programa por arquivo — um segundo
+  subprocesso que este ADR não governa), `-z`/`--search-zip` (executa descompressor), `-P`/`--pcre2`
+  (motor com *backtracking*, reabre o ReDoS que o motor do Rust fecha);
+- **env mínimo, por lista de permissão** (`PATH`, `HOME`, `LANG`, `LC_ALL`, `TMPDIR`) — nenhuma
+  variável `RC_*`, nenhuma credencial de banco, OIDC ou push chega ao filho;
+- **prazo em toda execução**, `SIGTERM` e depois `SIGKILL` se não sair; teto de bytes lidos; o
+  filho morre quando a requisição que o pediu é abortada;
+- **dois lugares, e só dois, importam `node:child_process`** — `adapter/outbound/process/`, novo
+  neste plano, para o subprocesso de vida longa e em fluxo que a busca precisa (`SIGTERM` e depois
+  `SIGKILL`, teto de bytes, morto no abort); e `shared/process/` (`execFileText`, já existente desde
+  o [plano 13](../../plans/13-claude-settings/README.md)), para a chamada curta e só-leitura de um
+  CLI (a versão de um motor, `git`) — a mesma disciplina, para um processo que só devolve texto e
+  termina sozinho. Nenhum terceiro lugar: verificado por `dependency-cruiser`
+  (`child-process-is-isolated`) e pela regra própria do `scan:security` que reprova `shell: true`,
+  `exec(`, `execSync(` e `spawn` com uma string única de comando em `backend/src` — ambas com um
+  arquivo-probe que viola a regra e é reprovado (B-05);
+- **o substituir usa o mesmo motor da prévia** ([D-04](../../plans/11-search/decisions.md#d-04--um-motor-só-para-prévia-e-aplicação)):
+  `--replace` e `--json`, nunca `RegExp` do JavaScript nem um segundo motor — o Node só costura os
+  bytes nos offsets que o ripgrep devolve;
+- **o resultado chega em fluxo** ([D-02](../../plans/11-search/decisions.md#d-02--como-o-resultado-chega)):
+  `POST /search/text` e `POST /search/replace/preview` respondem em HTTP de fluxo (NDJSON), uma
+  linha por arquivo, porque o `rg` roda em paralelo e os casamentos de uma pasta grande demoram
+  para fechar; o fluxo sempre fecha com uma linha final (`end` ou `error`), que é a exceção
+  registrada à regra "nunca `200` com erro no corpo" ([04-errors-and-http](04-errors-and-http.md#catálogo-de-erros-de-domínio)).
+
+**O que esta decisão não é:** um segundo caminho até um motor de regex. A prévia e a aplicação do
+substituir nunca divergem, porque são o mesmo processo e a mesma sintaxe (a do Rust, sem
+*backtracking*) — a diferença entre "ver" e "aplicar" é só se o ripgrep recebe `--replace`.
+
+**Consequências:** módulo `search` no catálogo, com `search → workspace` (resolver a pasta) e
+`search → files` (ler com ETag e escrever o resultado do substituir), sem ciclo
+([backend/03 · search](../backend/03-modules.md#search)); os códigos `SEARCH_PATTERN_INVALID` e
+`SEARCH_ENGINE_FAILED` no [catálogo](04-errors-and-http.md#catálogo-de-erros-de-domínio); a entrada
+do `@vscode/ripgrep` no `onlyBuiltDependencies`, com a justificativa aqui citada em qualquer
+supressão de `semgrep` sobre o `execFile` do adapter (R-05, R-07 do [plano 11](../../plans/11-search/README.md#riscos-e-decisões-em-aberto)).
+Se o binário é baixado na instalação ou empacotado no artefato final é pergunta do
+[plano 19](../../plans/19-distribution/README.md), avisado por nota, não decidido aqui.
+
+---
+
 ## ADR-017 — Existe um terminal, fora do modelo de permissão, com travas
 
 **Status:** aceita · 2026-09-26 · decisão do usuário ([12 · D-01](../../plans/12-integrated-terminal/decisions.md)),

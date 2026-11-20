@@ -47,6 +47,14 @@ justificativa no ADR-016** (aberto em B-01) e verificação de integridade do bi
 Nunca (c). Se o binário é baixado na instalação ou empacotado no artefato é pergunta do
 [plano 19](../19-distribution/README.md), que é avisado por nota, não editado agora.
 
+**Medido na execução da F0 (2026-11-17):** a versão fixada (`1.18.0`) **não tem *postinstall*** —
+o binário chega como pacote `optionalDependencies` por plataforma
+(`@vscode/ripgrep-<plataforma>-<arquitetura>`, sem `scripts`), resolvido por
+`require.resolve()` dentro do próprio `@vscode/ripgrep`. O `onlyBuiltDependencies` do pnpm
+**não precisa ser aberto** para ela — o risco do R-05 que a decisão original previu (abrir a porta
+de script de instalação) não se aplica a esta versão; se uma versão futura voltar a usar
+*postinstall*, a pergunta reabre. A decisão em si (a, fixada) não muda.
+
 ### D-02 — como o resultado chega
 
 | Opção | A favor | Contra |

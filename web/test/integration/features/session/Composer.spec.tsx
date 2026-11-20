@@ -37,26 +37,67 @@ let live: LiveSocket;
 let seq = 1;
 let unregister: () => void;
 
-/** The tree of the folder, by level, as `GET /files/tree` answers. */
-const TREE: Record<string, unknown> = {
-  '': {
-    path: '',
-    truncated: false,
-    entries: [
-      { path: 'README.md', name: 'README.md', kind: 'file' },
-      { path: 'src', name: 'src', kind: 'directory' },
-      { path: 'link', name: 'link', kind: 'symlink', outside: true },
+/** One entry of the folder, as the locator of plan 11 answers it (`LocateEntry`). */
+function anEntry(path: string, kind: 'file' | 'dir' = 'file') {
+  return { path, kind, positions: [] };
+}
+
+/** Every file and folder of `A`, for the `@` tests to pick a scope of from. */
+const ALL_ENTRIES = [
+  anEntry('src/composer.ts'),
+  anEntry('README.md'),
+  anEntry('src', 'dir'),
+  anEntry('src/app.ts'),
+];
+
+/** `GET /search/files` answered from {@link ALL_ENTRIES}, filtered by its own `query`. */
+function locateAnswer(params: URLSearchParams, overrides: Record<string, unknown> = {}) {
+  const query = (params.get('query') ?? '').toLowerCase();
+  const entries = ALL_ENTRIES.filter(
+    (entry) => query === '' || entry.path.toLowerCase().includes(query),
+  );
+
+  return { entries, truncated: null, ...overrides };
+}
+
+function isWireErrorLike(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && 'code' in value && 'messageKey' in value;
+}
+
+/** `served()`'s own routes, with `GET /search/files` answered by `locate` instead of a fixed map. */
+function servedWithLocator(
+  locate: (params: URLSearchParams) => unknown,
+  extra: Record<string, readonly unknown[]> = {},
+) {
+  const routes: Record<string, readonly unknown[]> = {
+    [`/sessions/${SESSION}/models`]: [{ current: 'opus', models: [] }],
+    [`/sessions/${SESSION}/context`]: [
+      { model: 'opus', totalTokens: 1_000, maxTokens: 201_000, percentage: 1, categories: [] },
     ],
-  },
-  src: {
-    path: 'src',
-    truncated: true,
-    entries: [
-      { path: 'src/app.ts', name: 'app.ts', kind: 'file' },
-      { path: 'src/composer.ts', name: 'composer.ts', kind: 'file' },
-    ],
-  },
-};
+    [`/sessions/${SESSION}/mcp-servers`]: [{ servers: [] }],
+    [`/sessions/${SESSION}/checkpoints`]: [{ checkpoints: [] }],
+    [`/sessions/${SESSION}/commands`]: [COMMANDS],
+    [`/transcripts/claude/${CONVERSATION}/messages`]: [aHistoryPage([])],
+    ...extra,
+  };
+  const served = new Map<string, number>();
+
+  return vi.spyOn(api, 'get').mockImplementation((path: string) => {
+    if (path.startsWith('/search/files?')) {
+      const answer = locate(new URLSearchParams(path.slice(path.indexOf('?') + 1)));
+      return isWireErrorLike(answer) ? Promise.reject(answer) : Promise.resolve(answer);
+    }
+
+    const answers = routes[path];
+    if (answers === undefined || answers.length === 0) {
+      return Promise.reject(new Error(`unexpected GET ${path}`));
+    }
+    const index = Math.min(served.get(path) ?? 0, answers.length - 1);
+    served.set(path, index + 1);
+    const answer = answers[index];
+    return isWireErrorLike(answer) ? Promise.reject(answer) : Promise.resolve(answer);
+  });
+}
 
 const COMMANDS = {
   cliVersion: '2.1.277',
@@ -92,8 +133,6 @@ function served(extra: Record<string, readonly unknown[]> = {}) {
     [`/sessions/${SESSION}/checkpoints`]: [{ checkpoints: [] }],
     [`/sessions/${SESSION}/commands`]: [COMMANDS],
     [`/transcripts/claude/${CONVERSATION}/messages`]: [aHistoryPage([])],
-    [`/files/tree?folder=${encodeURIComponent(A)}&path=`]: [TREE['']],
-    [`/files/tree?folder=${encodeURIComponent(A)}&path=src`]: [TREE['src']],
     ...extra,
   });
 }
@@ -489,9 +528,19 @@ describe('the set of context — plan 08, B-47', () => {
   });
 });
 
-describe('`@` — plan 08, B-48', () => {
-  it('lists the folder by level, the open and recent files first, and `@selection` — S-226', async () => {
-    served();
+describe('`@` — plan 08, B-48; plan 11, B-25', () => {
+  it('lists matches of the folder by the locator, the open and recent files first, and `@selection` — S-226, S-172', async () => {
+    const seen: URLSearchParams[] = [];
+    servedWithLocator((params) => {
+      seen.push(params);
+      const query = params.get('query') ?? '';
+      return query === ''
+        ? {
+            entries: [anEntry('src/composer.ts'), anEntry('README.md'), anEntry('src', 'dir')],
+            truncated: null,
+          }
+        : { entries: [anEntry('src/composer.ts')], truncated: { reason: 'limit' } };
+    });
     files();
     const user = userEvent.setup();
     editorStoreOf(A).setState({ recent: ['src/composer.ts'] });
@@ -531,7 +580,8 @@ describe('`@` — plan 08, B-48', () => {
         expect.stringContaining('src'),
       ]);
     });
-    expect(within(menu).queryByText('link')).not.toBeInTheDocument();
+    expect(seen.at(-1)?.get('kinds')).toBe('file,dir');
+    expect(seen.at(-1)?.getAll('prefer')).toEqual(['src/composer.ts']);
 
     await typeIn(user, box(), 'src/co');
     await waitFor(() => {
@@ -544,7 +594,12 @@ describe('`@` — plan 08, B-48', () => {
   });
 
   it('moves with the arrows, chooses with Enter and Tab, and closes with Esc keeping the text — S-227', async () => {
-    served();
+    servedWithLocator((params) => {
+      const query = params.get('query') ?? '';
+      return query === ''
+        ? { entries: [anEntry('README.md'), anEntry('src', 'dir')], truncated: null }
+        : { entries: [anEntry('README.md')], truncated: null };
+    });
     files();
     const user = userEvent.setup();
     opened();
@@ -578,49 +633,40 @@ describe('`@` — plan 08, B-48', () => {
     expect(live.lastSent('session.prompt')).toBeUndefined();
   });
 
-  it('shows the answer of the level asked now, never a late one of an older level — S-228', async () => {
-    let release: (value: unknown) => void = () => undefined;
+  it('cancels a mention query superseded by another, and never shows its late answer — plan 11, B-25, S-173', async () => {
+    let releaseSrc: (value: unknown) => void = () => undefined;
     const late = new Promise((resolve) => {
-      release = resolve;
+      releaseSrc = resolve;
     });
-    vi.spyOn(api, 'get').mockImplementation((path: string) => {
-      if (path.endsWith('path=')) return late;
-      if (path.endsWith('path=src')) return Promise.resolve(TREE['src']);
-      return Promise.reject(new Error(`unexpected GET ${path}`));
+    servedWithLocator((params) => {
+      const query = params.get('query') ?? '';
+      if (query === 'src') return late;
+      if (query === 'readme') return { entries: [anEntry('README.md')], truncated: null };
+      return Promise.reject(new Error(`unexpected query ${query}`));
     });
-    files();
-    const user = userEvent.setup();
-    render(<SessionScreen sessionId={SESSION} folder={A} />);
-
-    await typeIn(user, box(), '@src/');
-    await waitFor(() => {
-      expect(screen.getAllByRole('option')[0]).toHaveTextContent('src/app.ts');
-    });
-    await act(async () => {
-      release(TREE['']);
-      await late;
-    });
-
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).not.toContainEqual(
-      expect.stringContaining('README.md'),
-    );
-  });
-
-  it('finds a name by its letters in order, after the ones that start or hold what was typed', async () => {
-    served();
     files();
     const user = userEvent.setup();
     opened();
 
-    await typeIn(user, box(), '@src/cs');
-
+    await typeIn(user, box(), '@src');
+    await user.clear(box());
+    await typeIn(user, box(), '@readme');
     await waitFor(() => {
-      expect(screen.getAllByRole('option')[0]).toHaveTextContent('src/composer.ts');
+      expect(screen.getAllByRole('option')[0]).toHaveTextContent('README.md');
     });
+
+    await act(async () => {
+      releaseSrc({ entries: [anEntry('src/app.ts')], truncated: null });
+      await late;
+    });
+
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).not.toContainEqual(
+      expect.stringContaining('src/app.ts'),
+    );
   });
 
   it('says when nothing matches — S-229', async () => {
-    served();
+    servedWithLocator((params) => locateAnswer(params));
     files();
     const user = userEvent.setup();
     opened();
@@ -631,11 +677,7 @@ describe('`@` — plan 08, B-48', () => {
   });
 
   it('says when the folder is empty — S-229', async () => {
-    served({
-      [`/files/tree?folder=${encodeURIComponent(A)}&path=`]: [
-        { path: '', truncated: false, entries: [] },
-      ],
-    });
+    servedWithLocator(() => ({ entries: [], truncated: null }));
     files();
     const user = userEvent.setup();
     opened();
@@ -645,8 +687,10 @@ describe('`@` — plan 08, B-48', () => {
     expect(await screen.findByText(t('composer.mention.emptyFolder'))).toBeInTheDocument();
   });
 
-  it('never offers a path out of the folder; typed and chosen, the send is refused — S-230', async () => {
-    served();
+  it('never offers a path out of the folder; typed and chosen, the send is refused — S-230, S-174', async () => {
+    servedWithLocator(() => {
+      throw new Error('a path outside the folder never reaches the locator');
+    });
     files({ '../secret': 100 });
     const user = userEvent.setup();
     opened();
@@ -678,17 +722,13 @@ describe('`@` — plan 08, B-48', () => {
     ).toBeInTheDocument();
   });
 
-  it('says the search failed, and still lets the typed path be chosen — S-232', async () => {
-    served({
-      [`/files/tree?folder=${encodeURIComponent(A)}&path=`]: [
-        {
-          code: 'NETWORK_UNREACHABLE',
-          messageKey: 'common.error.offline',
-          params: {},
-          traceId: 't',
-        },
-      ],
-    });
+  it('says the search failed, and still lets the typed path be chosen — S-232, S-174', async () => {
+    servedWithLocator(() => ({
+      code: 'NETWORK_UNREACHABLE',
+      messageKey: 'common.error.offline',
+      params: {},
+      traceId: 't',
+    }));
     files();
     const user = userEvent.setup();
     opened();
@@ -1266,7 +1306,7 @@ describe('help and keyboard — plan 08, B-52', () => {
   );
 
   it('works by keyboard alone — open @ and /, choose, remove a chip, send — with no axe violation — S-253', async () => {
-    served();
+    servedWithLocator((params) => locateAnswer(params));
     files();
     const user = userEvent.setup();
     const { container } = opened();

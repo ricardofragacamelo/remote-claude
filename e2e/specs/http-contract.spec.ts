@@ -76,6 +76,31 @@ const REFUSALS = [
     code: 'NOT_FOUND',
     call: (api: APIRequestContext) => api.get(`${environment.backendUrl}/nothing-here`),
   },
+  {
+    what: 'the locator with no credential (plan 11, S-152)',
+    status: 401,
+    code: 'UNAUTHENTICATED',
+    call: (api: APIRequestContext) =>
+      api.get(`${environment.backendUrl}/search/files?folder=/srv&query=x`),
+  },
+  {
+    what: 'a text search with no credential (plan 11, S-152)',
+    status: 401,
+    code: 'UNAUTHENTICATED',
+    call: (api: APIRequestContext) => api.post(`${environment.backendUrl}/search/text`),
+  },
+  {
+    what: 'a replace preview with no credential (plan 11, S-152)',
+    status: 401,
+    code: 'UNAUTHENTICATED',
+    call: (api: APIRequestContext) => api.post(`${environment.backendUrl}/search/replace/preview`),
+  },
+  {
+    what: 'a replace apply with no credential (plan 11, S-152)',
+    status: 401,
+    code: 'UNAUTHENTICATED',
+    call: (api: APIRequestContext) => api.post(`${environment.backendUrl}/search/replace`),
+  },
 ] as const;
 
 test.describe('S-19 — the status line carries the outcome, never the body alone', () => {

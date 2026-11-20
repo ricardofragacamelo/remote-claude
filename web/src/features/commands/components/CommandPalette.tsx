@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Command, CommandEmpty, CommandInput, CommandList } from '@/shared/components/ui/command';
@@ -33,6 +33,7 @@ export function CommandPalette(): React.JSX.Element {
   const close = usePalette((state) => state.close);
   const modes = useRegistry(paletteModes);
   const match = modeFor(modes, value, entered);
+  const [active, setActive] = useState('');
 
   const pick = useCallback(
     (action: () => void) => {
@@ -59,7 +60,13 @@ export function CommandPalette(): React.JSX.Element {
         <DialogTitle className="sr-only">{t('palette.dialog.title')}</DialogTitle>
         <DialogDescription className="sr-only">{t('palette.dialog.description')}</DialogDescription>
         {/* `label` names the field: cmdk points the input's `aria-labelledby` at it. */}
-        <Command shouldFilter={false} loop label={t('palette.dialog.input')}>
+        <Command
+          shouldFilter={false}
+          loop
+          label={t('palette.dialog.input')}
+          value={active}
+          onValueChange={setActive}
+        >
           <CommandInput
             value={value}
             onValueChange={setValue}
@@ -69,7 +76,7 @@ export function CommandPalette(): React.JSX.Element {
             {match === null ? (
               <CommandEmpty>{t('palette.dialog.noMode', { prefixes })}</CommandEmpty>
             ) : (
-              <match.mode.component query={match.query} pick={pick} />
+              <match.mode.component query={match.query} active={active} pick={pick} />
             )}
           </CommandList>
         </Command>

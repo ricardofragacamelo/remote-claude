@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 
-/** The parts of the editor's interface that are the page's, not a folder tab's. */
-export interface EditorUiState {
-  /** The folders whose editor is on screen, the latest last — the File menu acts on it. */
-  readonly mounted: readonly string[];
+import { mountedStackAction } from '@/shared/lib/mounted-stack';
+import type { MountedStackSlice } from '@/shared/lib/mounted-stack';
 
+/** The parts of the editor's interface that are the page's, not a folder tab's. */
+export interface EditorUiState extends MountedStackSlice {
   /** Whether the help of the editor is open (B-41). */
   readonly helpOpen: boolean;
   setHelpOpen(open: boolean): void;
@@ -20,20 +20,7 @@ export const useEditorUi = create<EditorUiState>((set) => ({
   setHelpOpen: (helpOpen) => {
     set({ helpOpen });
   },
-  mount: (folder) => {
-    set((state) => ({ mounted: [...state.mounted, folder] }));
-    let mounted = true;
-
-    return () => {
-      if (mounted) {
-        mounted = false;
-        set((state) => {
-          const at = state.mounted.lastIndexOf(folder);
-          return { mounted: state.mounted.filter((_, index) => index !== at) };
-        });
-      }
-    };
-  },
+  mount: mountedStackAction(set),
 }));
 
 /** The folder whose editor is on screen — `null` while none is. */

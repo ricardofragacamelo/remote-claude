@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/search-text.json",
+  "title": "SearchTextFrame",
+  "description": "`POST /search/text`: one line of the NDJSON stream (plan 11, B-10, D-02). In the domain this is a discriminated union by `type` (`file` carries `path`/`matches`/`contextLines`; `end` carries `truncated`/`skipped`; `error` carries `code`/`messageKey`/`params`), which the generator cannot express as a `oneOf`; flattened here, with the pairing documented per field (plan 28, B-48). The stream always ends with exactly one `end` or `error` line.",
+  "x-kind": "http",
+  "x-type": "search.text.frame",
+  "x-route": [{ "method": "POST", "path": "/search/text" }],
+  "type": "object",
+  "required": ["type"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["file", "end", "error"]
+    },
+    "path": {
+      "type": "string",
+      "description": "Present exactly when `type` is `file`. Relative to the folder, with /."
+    },
+    "matches": {
+      "type": "array",
+      "description": "Present exactly when `type` is `file`.",
+      "maxItems": 20000,
+      "items": {
+        "type": "object",
+        "required": [
+          "line",
+          "column",
+          "endColumn",
+          "preview",
+          "previewMatchStart",
+          "previewMatchEnd"
+        ],
+        "properties": {
+          "line": {
+            "type": "integer",
+            "description": "1-based."
+          },
+          "column": {
+            "type": "integer",
+            "description": "1-based, in UTF-16 units (S-65)."
+          },
+          "endColumn": {
+            "type": "integer",
+            "description": "1-based, in UTF-16 units."
+          },
+          "preview": {
+            "type": "string",
+            "description": "A window around the match, cropped to a ceiling (S-66) — never the whole line."
+          },
+          "previewMatchStart": {
+            "type": "integer",
+            "description": "Where the match starts inside preview, in UTF-16 units."
+          },
+          "previewMatchEnd": {
+            "type": "integer",
+            "description": "Where the match ends inside preview, in UTF-16 units."
+          }
+        }
+      }
+    },
+    "contextLines": {
+      "type": "array",
+      "description": "Present exactly when `type` is `file`. Empty unless the request asked for context lines.",
+      "maxItems": 4096,
+      "items": {
+        "type": "object",
+        "required": ["line", "text"],
+        "properties": {
+          "line": { "type": "integer" },
+          "text": { "type": "string" }
+        }
+      }
+    },
+    "truncated": {
+      "type": "object",
+      "x-nullable": true,
+      "description": "Present exactly when `type` is `end`.",
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "enum": ["limit", "timeout"]
+        }
+      }
+    },
+    "skipped": {
+      "type": "integer",
+      "description": "Present exactly when `type` is `end`. Files the engine reported as binary, excluded from the results (S-67) — never a count of files the walk itself silently excluded, which carries no per-file signal."
+    },
+    "code": {
+      "type": "string",
+      "description": "Present exactly when `type` is `error`. The same `code` a `502 SEARCH_ENGINE_FAILED` would carry before the first byte."
+    },
+    "messageKey": {
+      "type": "string",
+      "description": "Present exactly when `type` is `error`."
+    },
+    "params": {
+      "type": "object",
+      "description": "Present exactly when `type` is `error`. Open: the parameters of the message, by key."
+    }
+  }
+}

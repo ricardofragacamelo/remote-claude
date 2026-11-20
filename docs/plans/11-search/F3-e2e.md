@@ -18,7 +18,7 @@ integração isolado prova isso ([e2e](../../architecture/shared/06-testing-stra
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-21 — A fixture: pasta gerada por execução, com nomes hostis 🔲
+### B-21 — A fixture: pasta gerada por execução, com nomes hostis ✅
 
 Como a [D-07 do plano 04](../04-transcript-and-resume/decisions.md#d-07--onde-o-init-pode-escrever):
 gerada num diretório temporário **dentro da raiz de e2e da allowlist**, apagada no teardown, nunca um
@@ -29,7 +29,7 @@ symlink para fora da raiz; um binário; um arquivo acima do teto; uma linha mini
 BOM; e um arquivo-sentinela que só existe se algo executar comando. Um gerador separado produz a pasta
 grande (50 mil arquivos) para os cenários de teto e latência, fora do caminho rápido.
 
-### B-22 — E2E da API 🔲
+### B-22 — E2E da API ✅
 
 Playwright em modo API contra o backend real ([06-testing-strategy](../../architecture/shared/06-testing-strategy.md#e2e--o-sistema-inteiro-pela-porta-do-usuário)):
 localizador (arquivos, pastas, `prefer`, ignorados, teto), busca (regex, caixa, palavra, multilinha,
@@ -39,7 +39,7 @@ de substituição, glob com `..` — com o sentinela **ausente** no fim. Prazo e
 abort da requisição deixa zero processos `rg` órfãos; a terceira busca simultânea recebe `429`. Os
 status de cada endpoint conferidos contra a tabela do contrato no `http-contract.spec.ts`.
 
-### B-23 — E2E da web 🔲
+### B-23 — E2E da web ✅
 
 Pela porta do usuário, no Playwright com o web buildado: Ctrl/Cmd+P → consulta → Enter abre o arquivo
 no editor; `arquivo:42` abre na linha; view Busca com regex → clique abre na linha; "substituir tudo"
@@ -48,7 +48,7 @@ reexecuta e salva `.code-search`; histórico pelas setas; a busca na URL sobrevi
 de celular sem scroll horizontal; axe nas duas views e no Quick Open; ajuda aberta e traduzida nos
 dois idiomas.
 
-### B-24 — O Claude roteirizado e as abas de pasta 🔲
+### B-24 — O Claude roteirizado e as abas de pasta ✅
 
 Com o backend roteirizado do [plano 04](../04-transcript-and-resume/README.md) — o fake que escreve
 os arquivos que a gravação escreveu, no diretório da sessão —: o Claude escreve num arquivo **entre**

@@ -1,8 +1,5 @@
-import { RotateCcw } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-
-import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
+import { SettingRestoreFooter } from './SettingRestoreFooter';
 
 /** One of the values an option can take, with what it is called on screen. */
 export interface Choice<T extends string> {
@@ -47,7 +44,6 @@ export function SettingChoice<T extends string>({
   onChange,
   onRestore,
 }: SettingChoiceProps<T>): React.JSX.Element {
-  const { t } = useTranslation();
   const descriptionId = `setting-${id}-description`;
 
   return (
@@ -85,22 +81,12 @@ export function SettingChoice<T extends string>({
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-ui-sm text-muted-foreground">
-          {t('settings.option.default', { value: defaultLabel })}
-        </span>
-        {!isDefault && (
-          <Button
-            variant="outline"
-            className="h-8 px-3"
-            aria-label={t('settings.option.restoreLabel', { option: legend })}
-            onClick={onRestore}
-          >
-            <RotateCcw className="size-4" aria-hidden />
-            {t('settings.option.restore')}
-          </Button>
-        )}
-      </div>
+      <SettingRestoreFooter
+        legend={legend}
+        defaultLabel={defaultLabel}
+        isDefault={isDefault}
+        onRestore={onRestore}
+      />
     </fieldset>
   );
 }

@@ -212,6 +212,20 @@ export function testEnvironment(
   process.env['RC_FILES_HISTORY_MAX_STORE_BYTES'] = '536870912';
   process.env['RC_FILES_HISTORY_RETENTION_DAYS'] = '30';
   process.env['RC_FILES_HISTORY_MAX_BATCH_ENTRIES'] = '1000';
+  // The search engine (plan 11, D-06): the product's own numbers — no suite needs them smaller.
+  process.env['RC_RIPGREP_PATH'] = '';
+  process.env['RC_SEARCH_MAX_MATCHES'] = '20000';
+  process.env['RC_SEARCH_LOCATE_MAX_FILES'] = '200000';
+  process.env['RC_SEARCH_LOCATE_DEFAULT_RESULTS'] = '50';
+  process.env['RC_SEARCH_LOCATE_MAX_RESULTS'] = '200';
+  process.env['RC_SEARCH_LOCATE_CACHE_TTL_MS'] = '10000';
+  process.env['RC_SEARCH_PREVIEW_CONTEXT_CHARS'] = '250';
+  process.env['RC_SEARCH_MAX_FILE_BYTES'] = '20971520';
+  process.env['RC_SEARCH_MULTILINE_MAX_FILE_BYTES'] = '5242880';
+  process.env['RC_SEARCH_MAX_CONCURRENT_PER_USER'] = '2';
+  process.env['RC_SEARCH_TIMEOUT_MS'] = '15000';
+  process.env['RC_SEARCH_REPLACE_MAX_FILES'] = '1000';
+  process.env['RC_SEARCH_PROCESS_MAX_BYTES'] = '104857600';
   process.env['RC_TRANSCRIPT_ACTIVE_WINDOW_SECONDS'] = '120';
   process.env['RC_TRANSCRIPT_TOOL_RESULT_MAX_BYTES'] = '262144';
   process.env['RC_TRANSCRIPT_IMAGE_MAX_BYTES'] = '10485760';

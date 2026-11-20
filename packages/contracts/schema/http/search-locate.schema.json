@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/search-locate.json",
+  "title": "SearchLocate",
+  "description": "`GET /search/files`: the locator behind Quick Open and the @ of the composer — paths and directories of an open folder, fuzzy-matched and ranked (plan 11, B-09).",
+  "x-kind": "http",
+  "x-type": "search.locate",
+  "x-route": [{ "method": "GET", "path": "/search/files" }],
+  "type": "object",
+  "required": ["entries", "truncated", "skipped"],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "required": ["path", "kind", "positions"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative to the open folder, with /."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["file", "dir"]
+          },
+          "positions": {
+            "type": "array",
+            "maxItems": 4096,
+            "items": { "type": "integer" },
+            "description": "Ascending indices into path, for the client to highlight. Empty for an unscored prefer entry."
+          }
+        }
+      }
+    },
+    "truncated": {
+      "type": "object",
+      "x-nullable": true,
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "enum": ["limit", "timeout"]
+        }
+      }
+    },
+    "skipped": {
+      "type": "integer",
+      "description": "Paths ripgrep returned that this backend could not decode as UTF-8 — omitted from entries, never garbled into one (S-63)."
+    }
+  }
+}

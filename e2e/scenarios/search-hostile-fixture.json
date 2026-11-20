@@ -1,0 +1,11 @@
+{
+  "id": "11·S-148/S-149",
+  "title": "the hostile fixture lives only in the e2e root, and every hostile name it carries survives the whole stack intact",
+  "user": {
+    "username": "dev",
+    "password": "dev"
+  },
+  "expect": {
+    "needle": "hostile-needle-e2e"
+  }
+}

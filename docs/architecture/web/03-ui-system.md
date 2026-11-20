@@ -789,6 +789,29 @@ o 13 os reusem em vez de reinventar ([07 · B-06](../../plans/07-explorer-and-ed
   "isto muda o que o Claude pode fazer sem perguntar" — e a resposta vai como `confirmSensitive`
   ([07 · D-15](../../plans/07-explorer-and-editor/decisions.md#d-15--arquivos-que-mudam-a-permissão)).
 
+### Busca
+
+A view Busca do [plano 11](../../plans/11-search/README.md) (B-15), na activity bar, por aba de
+pasta como o Explorer é ([07 · B-06](../../plans/07-explorer-and-editor/F0-contract.md#b-06--o-estado-do-explorer-e-do-editor-por-aba-de-pasta-)):
+
+- **A árvore de resultados reusa o padrão ARIA tree** do Explorer acima — virtualizada, um
+  `treeitem` por arquivo (recolhe/expande os seus casamentos) e por casamento, roving tabindex,
+  o teclado do container (não da linha). Clique num casamento abre o editor na linha e coluna, com
+  o trecho selecionado; o menu de contexto repete as mesmas ações do botão (dispensar, copiar,
+  recolher/expandir, abrir, abrir ao lado) — nunca uma ação só num dos dois.
+- **A barra de busca** tem os três botões do VS Code (`Aa` caixa, `ab` palavra inteira, `.*`
+  regex), "arquivos a incluir"/"a excluir" e os dois interruptores ("usar exclusões e arquivos de
+  ignore", "só nos editores abertos"). Regex inválida mostra o erro traduzido **junto ao campo**,
+  nunca no lugar da árvore — os resultados anteriores ficam, só o novo pedido falha.
+  Arquivo alterado depois da busca (`workspace.filesChanged` do 07) marca o resultado como
+  desatualizado, com "buscar de novo" em vez de reconsultar sozinho.
+- **Duas entradas, como o VS Code**: "Buscar na pasta…" no menu de contexto do Explorer (S-119)
+  preenche "a incluir" com a pasta (`pasta/**`); `Ctrl/Cmd+Shift+F` com uma seleção no editor
+  preenche o campo com o texto selecionado — ambos trocam a view ativa da side bar para Busca.
+- **A consulta e os botões são a search da URL** ([a URL é estado](04-state-and-data.md#a-url-é-estado)):
+  cada campo deixa a address bar só enquanto difere do seu próprio padrão, para o link comum ficar
+  curto; recarregar — ou colar o link noutro lugar — reproduz a mesma busca.
+
 ### Prévias
 
 O que o [plano 21](../../plans/21-rich-previews/README.md) acrescenta à prévia do 07 (B-50) e ao

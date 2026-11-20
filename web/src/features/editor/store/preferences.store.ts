@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import { isRecord } from '@/shared/lib/json';
-import { readVisitor, writeVisitor } from '@/shared/lib/visitor-storage';
+import { readVisitor, withVisitorChange } from '@/shared/lib/visitor-storage';
 import type { StorageSource } from '@/shared/lib/visitor-storage';
 import { AUTO_SAVE_MODES, EDITOR_FONTS } from '../types/editor';
 import type { EditorPreferences } from '../types/editor';
@@ -80,8 +80,6 @@ export interface PreferencesState {
 export const useEditorPreferences = create<PreferencesState>((set, get) => ({
   preferences: initialPreferences(),
   set: (key, value) => {
-    const preferences = { ...get().preferences, [key]: value };
-    writeVisitor(PREFERENCES_KEY, preferences);
-    set({ preferences });
+    set({ preferences: withVisitorChange(PREFERENCES_KEY, get().preferences, { [key]: value }) });
   },
 }));

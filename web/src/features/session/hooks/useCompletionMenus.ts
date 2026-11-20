@@ -2,14 +2,15 @@ import { useMemo } from 'react';
 import { skipToken, useQuery } from '@tanstack/react-query';
 
 import { openAndRecentFiles } from '@/features/editor';
+import { useFileFinder } from '@/features/search';
+import type { FileFinder, LocateEntry } from '@/features/search';
 import type { AppError } from '@/shared/api/errors';
 import { useRegistry } from '@/shared/hooks/useRegistry';
 import { mentionTarget } from '../lib/composer-tokens';
 import { mentionProviders, offeredProviders } from '../lib/mention-providers';
 import type { MentionProvider } from '../lib/mention-providers';
 import { fetchCommands, searchCommands } from '../services/command.service';
-import { listMentionLevel } from '../services/composer.service';
-import type { MentionEntry, MentionLevel } from '../services/composer.service';
+import type { MentionEntry } from '../services/composer.service';
 import type { ContextItem } from '../types/context';
 import type { CommandMenu, SlashCommand } from '../types/command';
 import { useCatalog } from './useCatalog';
@@ -57,136 +58,69 @@ export interface MentionMenu {
   readonly outside: boolean;
 }
 
-/** Whether `wanted` can be read in `name`, its letters in order — the loose match of a menu. */
-function matches(name: string, wanted: string): boolean {
-  let at = 0;
-  const lower = name.toLowerCase();
-
-  for (const letter of wanted.toLowerCase()) {
-    at = lower.indexOf(letter, at);
-    if (at === -1) {
-      return false;
-    }
-    at += 1;
-  }
-
-  return true;
-}
-
-/** Smaller first: a name that starts with what was typed, then one that contains it, then the rest. */
-function rank(name: string, wanted: string): number {
-  const lower = name.toLowerCase();
-  const typed = wanted.toLowerCase();
-
-  if (lower.startsWith(typed)) {
-    return 0;
-  }
-
-  return lower.includes(typed) ? 1 : 2;
-}
-
-/** The options of a level of the folder, the open and recent files first (D-12, provisional). */
-function mentionOptions(
-  level: MentionLevel | undefined,
-  directory: string,
-  partial: string,
+/** `entries`, in this feature's own words — the open ones marked, for the badge of each row. */
+function mentionOptionsOf(
+  entries: readonly LocateEntry[],
   open: readonly string[],
 ): MentionOption[] {
-  const inDirectory = (path: string) =>
-    directory === '' ? !path.includes('/') : path.startsWith(`${directory}/`);
-  const prefix = directory === '' ? '' : `${directory}/`;
-  const openHere = open
-    .filter((path) => matches(path, `${prefix}${partial}`))
-    .slice(0, MAX_MENTIONS);
-  const opened = openHere.map((path): MentionOption => ({
-    kind: 'entry',
-    id: `open:${path}`,
-    entry: { path, name: path.slice(path.lastIndexOf('/') + 1), kind: 'file' },
-    open: true,
-  }));
-  const shown = new Set(openHere);
-  const listed = (level?.entries ?? [])
-    .filter((entry) => inDirectory(entry.path) && !shown.has(entry.path))
-    .filter((entry) => matches(entry.name, partial))
-    .sort((left, right) => rank(left.name, partial) - rank(right.name, partial))
-    .map((entry): MentionOption => ({
+  const isOpen = new Set(open);
+
+  return entries.map((entry): MentionOption => {
+    const name = entry.path.slice(entry.path.lastIndexOf('/') + 1);
+    const mentionEntry: MentionEntry = {
+      path: entry.path,
+      name,
+      kind: entry.kind === 'dir' ? 'folder' : 'file',
+    };
+
+    return {
       kind: 'entry',
       id: `entry:${entry.path}`,
-      entry,
-      open: false,
-    }));
-
-  return [...opened, ...listed].slice(0, MAX_MENTIONS);
+      entry: mentionEntry,
+      open: isOpen.has(entry.path),
+    };
+  });
 }
 
 /**
- * The `@` menu of the composer (plan 08, B-48): the entries of the folder by the level the query is
- * in — `@src/co` lists `src` and finds `co` there —, the files open in the editor and the recent ones
- * first, and the providers (`@selection`, and whatever another plan registers).
- *
- * The source is the tree of plan 07 (`GET /files/tree`), the provisional step D-12 allows until the
- * finder of plan 11 exists — registered in the progress of the plan; the swap is B-25 of plan 11. An
- * answer for a level that is no longer the one asked is never shown: each level is its own query,
- * and the menu reads the one the query names now (S-228).
+ * The `@` menu of the composer (plan 08, B-48; plan 11, B-25): any file or folder of the folder by
+ * fuzzy match, anywhere in it — the files open in the editor and the recent ones first, and the
+ * providers (`@selection`, and whatever another plan registers). The source is the locator of plan
+ * 11 (`useFileFinder`, B-13), which cancels a query superseded by the next keystroke through its
+ * own `AbortSignal` — an answer for a query no longer asked is never shown (S-173, the same promise
+ * S-228 of plan 08 made over the tree's own levels, now kept by the finder instead).
  *
  * @param query what follows the `@`, or `null` when no `@` is being completed
  */
 export function useMentionMenu(folder: string, query: string | null): MentionMenu {
   const target = mentionTarget(query ?? '');
   const providers = useRegistry(mentionProviders);
-  const listing = useQuery<MentionLevel, AppError>({
-    queryKey: ['sessions', 'mention', folder, target.directory],
-    queryFn: () => listMentionLevel(folder, target.directory),
-    enabled: query !== null && !target.outside,
-    staleTime: 10_000,
-    retry: false,
-  });
-
-  const { directory, partial, outside } = target;
+  const prefer = useMemo(() => openAndRecentFiles(folder), [folder]);
+  const asked = query !== null && !target.outside;
+  const finder = useFileFinder(
+    asked ? folder : null,
+    asked ? { query, kinds: ['file', 'dir'], prefer, limit: MAX_MENTIONS } : null,
+  );
 
   return useMemo(
-    () =>
-      mentionMenuOf({
-        query,
-        directory,
-        partial,
-        outside,
-        folder,
-        providers,
-        listing: listing.data,
-        isLoading: listing.isLoading,
-        error: listing.error,
-      }),
-    [
-      directory,
-      folder,
-      listing.data,
-      listing.error,
-      listing.isLoading,
-      outside,
-      partial,
-      providers,
-      query,
-    ],
+    () => mentionMenuOf({ query, outside: target.outside, folder, providers, finder, prefer }),
+    [finder, folder, prefer, providers, query, target.outside],
   );
 }
 
 /** What the `@` menu is made of. */
 interface MentionInputs {
   readonly query: string | null;
-  readonly directory: string;
-  readonly partial: string;
   readonly outside: boolean;
   readonly folder: string;
   readonly providers: readonly MentionProvider[];
-  readonly listing: MentionLevel | undefined;
-  readonly isLoading: boolean;
-  readonly error: AppError | null;
+  readonly finder: FileFinder;
+  readonly prefer: readonly string[];
 }
 
-/** The `@` menu, from the level listed, the providers and what was typed. */
+/** The `@` menu, from the locator's own entries, the providers and what was typed. */
 function mentionMenuOf(inputs: MentionInputs): MentionMenu {
-  const { query, listing } = inputs;
+  const { query } = inputs;
   const closed = { isLoading: false, error: null, truncated: false, empty: null };
 
   if (query === null) {
@@ -199,12 +133,7 @@ function mentionMenuOf(inputs: MentionInputs): MentionMenu {
     return { ...closed, options: [typedOption(query)], outside: true };
   }
 
-  const entries = mentionOptions(
-    listing,
-    inputs.directory,
-    inputs.partial,
-    openAndRecentFiles(inputs.folder),
-  );
+  const entries = mentionOptionsOf(inputs.finder.entries, inputs.prefer);
   const exact = entries.some((option) => option.kind === 'entry' && option.entry.path === query);
 
   return {
@@ -213,10 +142,10 @@ function mentionMenuOf(inputs: MentionInputs): MentionMenu {
       ...entries,
       ...(query === '' || exact ? [] : [typedOption(query)]),
     ],
-    isLoading: inputs.isLoading,
-    error: inputs.error,
-    truncated: listing?.truncated === true,
-    empty: emptinessOf(entries.length, listing, inputs.directory),
+    isLoading: inputs.finder.isLoading,
+    error: inputs.finder.error,
+    truncated: inputs.finder.truncated !== null,
+    empty: entries.length === 0 ? (query === '' ? 'emptyFolder' : 'noMatch') : null,
     outside: false,
   };
 }
@@ -239,20 +168,6 @@ function providerOptions(
         provider: each.provider,
         items: each.items,
       }));
-}
-
-function emptinessOf(
-  found: number,
-  listing: MentionLevel | undefined,
-  directory: string,
-): MentionMenu['empty'] {
-  if (found > 0) {
-    return null;
-  }
-
-  return listing !== undefined && listing.entries.length === 0 && directory === ''
-    ? 'emptyFolder'
-    : 'noMatch';
 }
 
 /** The `/` menu as it stands. */

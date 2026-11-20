@@ -268,6 +268,18 @@ class MonacoView implements port.CodeView {
     };
   }
 
+  setSelection(range: TextRange): void {
+    const selection = {
+      startLineNumber: range.startLine,
+      startColumn: range.startColumn,
+      endLineNumber: range.endLine,
+      endColumn: range.endColumn,
+    };
+
+    this.editor.setSelection(selection);
+    this.editor.revealRangeInCenterIfOutsideViewport(selection);
+  }
+
   selections(): readonly TextRange[] {
     return (this.editor.getSelections() ?? [])
       .filter((selection) => !selection.isEmpty())

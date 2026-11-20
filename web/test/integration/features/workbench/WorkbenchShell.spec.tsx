@@ -71,7 +71,8 @@ describe('the activity bar — plan 06, S-111, S-112', () => {
     expect(view('workbench.explorer.label')).toHaveAttribute('aria-pressed', 'true');
     await user.click(view('workbench.search.label'));
     expect(sideBar('workbench.search.label')).toBeVisible();
-    expect(screen.getByText(t('workbench.search.placeholder'))).toBeVisible();
+    // Search is filled in (plan 11, B-15): its own empty state shows, not the held placeholder.
+    expect(screen.getByText(t('search.view.empty'))).toBeVisible();
     expect(view('workbench.search.label')).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(view('workbench.search.label'));
@@ -148,11 +149,11 @@ describe('a tab left and come back to — plan 06, S-99, S-100, S-108', () => {
     });
     // B is a tab of its own: the view of A did not leak into it, and A's tree is gone.
     expect(await screen.findByText(t('workbench.explorer.placeholder'))).toBeVisible();
-    expect(screen.queryByText(t('workbench.search.placeholder'))).toBeNull();
+    expect(screen.queryByText(t('search.view.empty'))).toBeNull();
     expect(screen.queryByRole('region', { name: t('workbench.panel.label') })).toBeNull();
 
     await user.click(await tabNamed('a'));
-    expect(await screen.findByText(t('workbench.search.placeholder'))).toBeVisible();
+    expect(await screen.findByText(t('search.view.empty'))).toBeVisible();
     expect(screen.getByRole('region', { name: t('workbench.panel.label') })).toBeVisible();
   });
 });

@@ -50,6 +50,9 @@ describe('the permission HTTP surface', () => {
     identity = await startIdentityServer();
     harness = await startTestApp(database.url, identity, (builder) => builder, undefined, {
       RC_PERMISSION_TIMEOUT_MS: '60000',
+      // A question's own deadline — the harness default (400ms) is far too tight for S-53's
+      // pending/answered questions to survive a loaded suite; match the tool deadline above.
+      RC_QUESTION_TIMEOUT_MS: '60000',
       // Longer than the deadline, or extending would reach no further and spend nothing.
       RC_PERMISSION_EXTENSION_MS: '120000',
     });

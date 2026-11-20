@@ -1168,6 +1168,16 @@
       "openFolder": "Abrir pasta…",
       "openRecent": "Abrir recente"
     },
+    "search": {
+      "quickOpen": "Ir para arquivo…",
+      "openSearch": "Buscar nos arquivos",
+      "openResultsEditor": "Abrir resultados em editor",
+      "goToResult": "Ir para o resultado",
+      "clearHistory": "Limpar histórico de buscas",
+      "openReplace": "Substituir nos arquivos",
+      "nextResult": "Ir para o próximo resultado",
+      "previousResult": "Ir para o resultado anterior"
+    },
     "workbench": {
       "closeFolderTab": "Fechar aba de pasta",
       "nextFolderTab": "Próxima aba de pasta",
@@ -1354,7 +1364,8 @@
     "section": {
       "appearance": "Aparência",
       "workspaces": "Workspaces",
-      "editor": "Editor"
+      "editor": "Editor",
+      "search": "Busca"
     },
     "sections": {
       "label": "Seções"
@@ -1480,6 +1491,7 @@
       "rename": "Renomear",
       "delete": "Apagar",
       "undo": "Desfazer a última operação de arquivo",
+      "searchInFolder": "Buscar na pasta…",
       "copyPath": "Copiar caminho",
       "copyRelativePath": "Copiar caminho relativo",
       "addToContext": "Adicionar ao contexto do {{agent}}",
@@ -2644,7 +2656,7 @@
       "composerHeading": "A caixa de prompt",
       "composer": "Enter envia e Shift+Enter quebra a linha; enquanto um método de entrada compõe um caractere, Enter não faz nenhum dos dois. Sem nada escrito e sem contexto, o botão de enviar fica desligado e diz por quê. Enquanto o {{agent}} trabalha, o que você enviar espera na fila.",
       "mentionHeading": "@ — arquivos, pastas e a seleção",
-      "mention": "Digite @ para escolher um arquivo ou uma pasta desta pasta: os arquivos abertos e os recentes vêm primeiro, depois o que a pasta tem, nível a nível — digite / para entrar numa pasta. @selection acrescenta o que está selecionado no editor. Use as setas para andar, Enter ou Tab para escolher, e Esc para fechar a lista sem perder o que digitou.",
+      "mention": "Digite @ para escolher um arquivo ou uma pasta desta pasta: os arquivos abertos e os recentes vêm primeiro, depois qualquer outro que bate com o que foi digitado, em qualquer lugar da pasta — por qualquer parte do nome, não só o começo. @selection acrescenta o que está selecionado no editor. Use as setas para andar, Enter ou Tab para escolher, e Esc para fechar a lista sem perder o que digitou.",
       "commandsHeading": "/ — comandos e skills",
       "commands": "Digite / no começo da caixa para os comandos e skills desta instalação, mesmo antes de a sessão existir. Escolher um o escreve com um espaço depois, e diz o que ele recebe. Se a lista não puder ser lida, o que você digitar continua indo como prompt.",
       "dragHeading": "Arrastar para o contexto",
@@ -3338,6 +3350,130 @@
       "stdioAnyFolder": "Roda {{command}} {{args}} na sua máquina, com as suas credenciais, sempre que uma sessão abrir, com as variáveis {{envNames}}.",
       "remoteFolder": "Conecta a {{url}} ({{transport}}) sempre que uma sessão abrir em {{folder}}, com as suas credenciais, com os cabeçalhos {{headerNames}}.",
       "remoteAnyFolder": "Conecta a {{url}} ({{transport}}) sempre que uma sessão abrir, com as suas credenciais, com os cabeçalhos {{headerNames}}."
+    }
+  },
+  "search": {
+    "error": {
+      "patternInvalid": "Esse padrão de busca não pode ser usado.",
+      "engineFailed": "O motor de busca falhou ou sumiu. Tente de novo.",
+      "globOutsideFolder": "Esse filtro alcança fora da pasta aberta.",
+      "pathOutsideFolder": "Esse caminho está fora da pasta aberta.",
+      "queryInvalid": "Essa busca não pode ser feita como está.",
+      "locateInputInvalid": "Esse pedido não pode ser usado como está.",
+      "replaceApplyFailed": "O substituir não conseguiu escrever todos os arquivos.",
+      "replaceTooManyFiles": "Esse substituir tem mais arquivos do que este limite permite.",
+      "replaceDiffUnavailable": "Esta prévia não está mais disponível."
+    },
+    "diff": {
+      "after": "Depois do substituir"
+    },
+    "quickOpen": {
+      "placeholder": "Vá para um arquivo, ou digite :linha para pular para uma linha",
+      "empty": "Abra uma pasta para buscar os arquivos dela.",
+      "noMatch": "Nenhum arquivo corresponde ao que você digitou.",
+      "loading": "Buscando…",
+      "goToLine": "Ir para a linha…",
+      "locateError": "Não foi possível buscar em {{folder}}: {{message}}",
+      "truncatedLimit": "Mostrando só os primeiros casamentos — digite mais para refinar.",
+      "truncatedTimeout": "A busca demorou demais — digite mais para refinar.",
+      "screenTitle": "Quick Open",
+      "screenPurpose": "Vai direto a um arquivo desta pasta digitando parte do nome.",
+      "helpItem": "Ajuda"
+    },
+    "view": {
+      "queryLabel": "Buscar",
+      "queryPlaceholder": "Buscar",
+      "flagCaseSensitive": "Diferenciar maiúsculas de minúsculas",
+      "flagWholeWord": "Casar a palavra inteira",
+      "flagIsRegex": "Usar expressão regular",
+      "includeLabel": "Arquivos a incluir",
+      "includePlaceholder": "ex.: *.ts, src/**/incluir",
+      "excludeLabel": "Arquivos a excluir",
+      "excludePlaceholder": "ex.: *.spec.ts, node_modules",
+      "flagUseIgnoreFiles": "Usar exclusões e arquivos de ignore",
+      "flagOnlyOpenEditors": "Buscar só nos editores abertos",
+      "toolbarLabel": "Ações da busca",
+      "resultsCount": "{{files}} arquivos, {{matches}} resultados",
+      "resultsLabel": "Resultados da busca",
+      "resultsMatchLabel": "Linha {{line}}",
+      "actionCollapseAll": "Recolher tudo",
+      "actionExpandAll": "Expandir tudo",
+      "actionCopyAll": "Copiar tudo",
+      "actionOpen": "Abrir",
+      "actionOpenBeside": "Abrir ao lado",
+      "actionOpenDiff": "Abrir as mudanças",
+      "actionCopyResult": "Copiar o casamento",
+      "actionCopyPath": "Copiar o caminho",
+      "actionDismiss": "Dispensar",
+      "menuLabel": "Ações do resultado da busca",
+      "staleSearchAgain": "Buscar de novo",
+      "loading": "Buscando…",
+      "empty": "Digite para buscar nos arquivos desta pasta — use .* para expressão regular, ou restrinja antes com um glob como *.ts.",
+      "noMatch": "Nenhum resultado encontrado.",
+      "truncatedLimit": "Mostrando só os primeiros casamentos — digite mais para refinar.",
+      "truncatedTimeout": "A busca demorou demais — digite mais para refinar.",
+      "rateLimited": "Já tem outra busca em andamento. Tente de novo em {{seconds}} segundos.",
+      "badgeLabel": "{{count}} resultados da busca",
+      "replaceToggle": "Mostrar/esconder o substituir",
+      "replaceLabel": "Substituir",
+      "replacePlaceholder": "Substituir",
+      "flagPreserveCase": "Preservar maiúsculas/minúsculas",
+      "actionReplaceAll": "Substituir tudo",
+      "actionReplaceFile": "Substituir este arquivo",
+      "actionReplaceMatch": "Substituir este casamento",
+      "replaceScopeTitle": "Substituir tudo",
+      "replaceScopeBody": "Isto faz {{count}} substituições em {{files}} arquivos. Não há como desfazer por aqui — só pelo histórico local deste arquivo ou pelo seu próprio controle de versão.",
+      "replaceScopeConfirm": "Substituir",
+      "replaceScopeCancel": "Cancelar",
+      "replaceDirtyTitle": "Mudanças não salvas",
+      "replaceDirtyBody": "{{count}} destes arquivos têm mudanças não salvas no editor — o substituir sobrescreve o que está no disco, não o que está aberto.",
+      "replaceDirtyConfirm": "Substituir assim mesmo",
+      "replaceReportApplied": "{{count}} arquivo(s) substituído(s).",
+      "replaceReportPreserved": "{{count}} arquivo(s) preservado(s) — mudaram desde a prévia.",
+      "replaceReportAppliedBeforeFailure": "{{count}} arquivo(s) já tinham sido escritos antes disto falhar.",
+      "actionRedoPreview": "Refazer a prévia",
+      "replaceReportDismiss": "Dispensar",
+      "actionOpenInEditor": "Abrir em editor"
+    },
+    "resultsEditor": {
+      "query": "Consulta:",
+      "contextLines": "Linhas de contexto",
+      "runAgain": "Executar de novo",
+      "running": "Buscando…",
+      "readOnlyNotice": "Isto é um relatório só de leitura: digitar aqui nunca escreve nos arquivos que ele encontrou."
+    },
+    "settings": {
+      "exclude": "Excluir da busca",
+      "excludeDescription": "Globs separados por vírgula deixados de fora de toda busca e do Quick Open, além do que o Explorer já pula.",
+      "excludeDefaultEmpty": "nenhum",
+      "useIgnoreFiles": "Usar arquivos de ignore por padrão",
+      "useIgnoreFilesDescription": "Uma busca nova começa respeitando \".gitignore\"/\".ignore\"/\".rgignore\" — desligue por busca na barra de ferramentas.",
+      "smartCase": "Caixa inteligente",
+      "smartCaseDescription": "Uma consulta com letra maiúscula busca com diferenciação de caixa sozinha — \"Diferenciar maiúsculas\" sempre vence quando ligado.",
+      "resultsEditorContextLines": "Linhas de contexto do editor de resultados",
+      "resultsEditorContextLinesDescription": "Quantas linhas de contexto \"Abrir em editor\" começa com — o seletor lá muda a qualquer momento."
+    },
+    "screen": {
+      "title": "Busca",
+      "purpose": "Busca e substitui texto em todos os arquivos desta pasta."
+    },
+    "help": {
+      "what": "A busca encontra um padrão em todos os arquivos desta pasta. Ligar \"Substituir\" mostra uma prévia do que cada casamento viraria antes de escrever qualquer coisa, sem tocar em nenhum arquivo até \"Substituir tudo\" ou \"Substituir este arquivo\" ser confirmado.",
+      "states": "Vazio convida a digitar um padrão; carregando mostra enquanto os resultados chegam; um resultado lista cada casamento, agrupado por arquivo; um erro diz o que deu errado e como tentar de novo — os quatro estados que toda tela daqui tem.",
+      "notRecorded": "Descartar um resultado ou um arquivo some só desta lista — o arquivo no disco, e o histórico local dele, continuam intactos. Nada buscado aqui chega à auditoria até um substituir ser de fato aplicado.",
+      "toolbarHeading": "O que cada botão faz",
+      "toolbar": "\"Aa\" diferencia maiúsculas exatamente; \"ab\" casa só a palavra inteira; \".*\" lê o padrão como expressão regular — TODO|FIXME encontra qualquer uma das duas palavras. \"Arquivos a incluir\"/\"a excluir\" recebem uma lista separada por vírgula de globs, como *.ts ou src/**/*.spec.ts. Com o substituir aberto, \"Preservar caixa\" mantém a caixa própria de cada casamento na substituição.",
+      "missingHeading": "Por que um resultado pode faltar",
+      "missing": "Um arquivo fica de fora quando casa com um arquivo de ignore ou um glob de exclusão, quando parece binário, quando passa do tamanho que esta busca lê, ou quando a busca parou antes do fim — mostrado como \"truncado\". Afinar o padrão ou os filtros costuma encontrá-lo.",
+      "replaceHeading": "O que \"Substituir\" não faz",
+      "replace": "Ele nunca escreve por cima de uma aba do editor com alterações não salvas sem avisar antes, e nunca é desfeito pelo Ctrl/Cmd+Z do próprio editor — só o histórico local deste arquivo ou o controle de versão fora do produto desfazem um substituir."
+    },
+    "quickOpenHelp": {
+      "what": "O Quick Open encontra um arquivo por qualquer parte do nome, em qualquer lugar da pasta — as letras digitadas só precisam aparecer na ordem, não juntas. Os arquivos já abertos, ou abertos recentemente, aparecem primeiro. Digitar o nome de um arquivo seguido de :42 abre na linha 42.",
+      "states": "Vazio mostra primeiro os arquivos abertos e recentes; digitar afina por casamento aproximado, com as letras casadas destacadas; nenhum casamento avisa; um erro diz o que deu errado.",
+      "notRecorded": "Nada escolhido aqui chega sozinho à auditoria — abrir um arquivo pelo Quick Open é o mesmo que abri-lo de qualquer outro jeito.",
+      "openSideHeading": "Abrir sem fechar",
+      "openSide": "A seta para a direita abre o arquivo selecionado sem fechar o Quick Open, para uma espiada rápida em vários seguidos; Ctrl/Cmd+Enter abre ao lado e fecha o Quick Open."
     }
   }
 }

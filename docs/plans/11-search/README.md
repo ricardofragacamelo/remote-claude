@@ -84,10 +84,10 @@ verde.
 
 | Fase | Arquivo | Entrega | Tarefas | Estado |
 |---|---|---|---|---|
-| F0 | [Contrato](F0-contract.md) | ADR-016, módulo `search`, contrato HTTP, códigos e regras estáticas | B-01…B-05 | 🔲 |
-| F1 | [Busca no backend](F1-search.md) | executor, ripgrep, localizador, busca em texto e substituir | B-06…B-12 | 🔲 |
-| F2 | [Busca na web](F2-search-ui.md) | Quick Open, view Busca, substituir com prévia, editor de resultados, histórico, ajuda, e o `@` do composer do 08 sobre o localizador | B-13…B-20, B-25 | 🔲 |
-| F3 | [E2E](F3-e2e.md) | a busca pela porta do usuário, com entrada hostil e o Claude roteirizado | B-21…B-24 | 🔲 |
+| F0 | [Contrato](F0-contract.md) | ADR-016, módulo `search`, contrato HTTP, códigos e regras estáticas | B-01…B-05 | ✅ |
+| F1 | [Busca no backend](F1-search.md) | executor, ripgrep, localizador, busca em texto e substituir | B-06…B-12 | ✅ |
+| F2 | [Busca na web](F2-search-ui.md) | Quick Open, view Busca, substituir com prévia, editor de resultados, histórico, ajuda, e o `@` do composer do 08 sobre o localizador | B-13…B-20, B-25 | ✅ |
+| F3 | [E2E](F3-e2e.md) | a busca pela porta do usuário, com entrada hostil e o Claude roteirizado | B-21…B-24 | ✅ |
 
 Legenda: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada
 
@@ -156,7 +156,7 @@ e2e/{fixtures,scenarios,specs}/        search-*
 | R-06 | A busca enxergar fora da fronteira: symlink, glob com `..`, pasta que saiu da allowlist mas ficou no cache | **aberto** — realpath antes de tudo, sem seguir symlink, contenção de cada resultado, cache consultado depois da validação ([D-07](decisions.md#d-07--a-lista-de-caminhos-do-localizador)) |
 | R-07 | O semgrep acusar o `execFile` com argumento variável, e a supressão virar hábito | **aberto** — um adapter só, supressão na linha com o id da regra e o ADR citado (B-05); supressão recusada em review vira ADR, como manda o [10](../../architecture/shared/09-code-quality.md#suprimir-uma-regra) |
 | R-08 | O log vazar o que o usuário procurou — muitas vezes, justamente um segredo | **aberto** — log de I/O com binário, duração e contagens, nunca padrão, substituição ou conteúdo (S-12, S-104) |
-| R-09 | O `@` do composer do 08 ficar lento numa pasta grande | **aberto** — lista em cache ([D-07](decisions.md#d-07--a-lista-de-caminhos-do-localizador)) e orçamento de p95 < 150 ms medido, não suposto (S-61) |
+| R-09 | O `@` do composer do 08 ficar lento numa pasta grande | **resolvido** — lista em cache ([D-07](decisions.md#d-07--a-lista-de-caminhos-do-localizador)) e orçamento de p95 < 150 ms medido, não suposto (S-61) |
 
 ---
 

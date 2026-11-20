@@ -10685,6 +10685,623 @@ class SavedFilePayload {
   }
 }
 
+class SearchLocatePayloadEntriesItem {
+  const SearchLocatePayloadEntriesItem({
+    required this.path,
+    required this.kind,
+    required this.positions,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchLocatePayloadEntriesItem.fromJson(Map<String, Object?> json) => SearchLocatePayloadEntriesItem(
+        path: json['path']! as String,
+        kind: json['kind']! as String,
+        positions: (json['positions']! as List<Object?>).map((item) => item! as int).toList(growable: false),
+      );
+
+  /// Relative to the open folder, with /.
+  final String path;
+
+  final String kind;
+
+  /// Ascending indices into path, for the client to highlight. Empty for an unscored prefer entry.
+  final List<int> positions;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'kind': kind,
+      'positions': positions,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SearchLocatePayloadEntriesItem].
+bool searchLocatePayloadEntriesItemLimitsHold(Map<String, Object?> json) {
+  if (json['positions'] is List<Object?> && (json['positions']! as List<Object?>).length > 4096) {
+    return false;
+  }
+
+  return true;
+}
+
+class SearchLocatePayloadTruncated {
+  const SearchLocatePayloadTruncated({
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchLocatePayloadTruncated.fromJson(Map<String, Object?> json) => SearchLocatePayloadTruncated(
+        reason: json['reason']! as String,
+      );
+
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
+/// `GET /search/files`: the locator behind Quick Open and the @ of the composer — paths and directories of an open folder, fuzzy-matched and ranked (plan 11, B-09).
+class SearchLocatePayload {
+  const SearchLocatePayload({
+    required this.entries,
+    required this.truncated,
+    required this.skipped,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchLocatePayload.fromJson(Map<String, Object?> json) => SearchLocatePayload(
+        entries: (json['entries']! as List<Object?>).map((item) => SearchLocatePayloadEntriesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        truncated: json['truncated'] == null ? null : SearchLocatePayloadTruncated.fromJson(json['truncated']! as Map<String, Object?>),
+        skipped: json['skipped']! as int,
+      );
+
+  final List<SearchLocatePayloadEntriesItem> entries;
+
+  final SearchLocatePayloadTruncated? truncated;
+
+  /// Paths ripgrep returned that this backend could not decode as UTF-8 — omitted from entries, never garbled into one (S-63).
+  final int skipped;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'entries': entries.map((item) => item.toJson()).toList(growable: false),
+      'truncated': truncated?.toJson(),
+      'skipped': skipped,
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SearchLocatePayload].
+bool searchLocatePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['entries'] is List<Object?> && (json['entries']! as List<Object?>).length > 200) {
+    return false;
+  }
+
+  return true;
+}
+
+class SearchReplaceApplyResultPayloadReportSkippedItem {
+  const SearchReplaceApplyResultPayloadReportSkippedItem({
+    required this.path,
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchReplaceApplyResultPayloadReportSkippedItem.fromJson(Map<String, Object?> json) => SearchReplaceApplyResultPayloadReportSkippedItem(
+        path: json['path']! as String,
+        reason: json['reason']! as String,
+      );
+
+  final String path;
+
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'path': path,
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
+class SearchReplaceApplyResultPayloadReport {
+  const SearchReplaceApplyResultPayloadReport({
+    required this.applied,
+    required this.changed,
+    required this.missing,
+    required this.skipped,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchReplaceApplyResultPayloadReport.fromJson(Map<String, Object?> json) => SearchReplaceApplyResultPayloadReport(
+        applied: (json['applied']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        changed: (json['changed']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        missing: (json['missing']! as List<Object?>).map((item) => item! as String).toList(growable: false),
+        skipped: (json['skipped']! as List<Object?>).map((item) => SearchReplaceApplyResultPayloadReportSkippedItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+      );
+
+  /// Relative to the folder, with /. Written, with the trail entry ahead of the disk write (S-83).
+  final List<String> applied;
+
+  /// The disk no longer held the version the preview read — preserved, never overwritten (S-84, S-98).
+  final List<String> changed;
+
+  /// Gone since the preview — never recreated (S-86).
+  final List<String> missing;
+
+  /// Turned binary or grew past the edit ceiling since the preview (S-87), or needs the confirmation a sensitive file needs for any write.
+  final List<SearchReplaceApplyResultPayloadReportSkippedItem> skipped;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'applied': applied,
+      'changed': changed,
+      'missing': missing,
+      'skipped': skipped.map((item) => item.toJson()).toList(growable: false),
+    };
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SearchReplaceApplyResultPayloadReport].
+bool searchReplaceApplyResultPayloadReportLimitsHold(Map<String, Object?> json) {
+  if (json['applied'] is List<Object?> && (json['applied']! as List<Object?>).length > 1000) {
+    return false;
+  }
+
+  if (json['changed'] is List<Object?> && (json['changed']! as List<Object?>).length > 1000) {
+    return false;
+  }
+
+  if (json['missing'] is List<Object?> && (json['missing']! as List<Object?>).length > 1000) {
+    return false;
+  }
+
+  if (json['skipped'] is List<Object?> && (json['skipped']! as List<Object?>).length > 1000) {
+    return false;
+  }
+
+  return true;
+}
+
+/// `POST /search/replace`: the report of applying a replace across the files named by the request (plan 11, B-11, D-05) — per file, one of four outcomes.
+class SearchReplaceApplyResultPayload {
+  const SearchReplaceApplyResultPayload({
+    required this.report,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchReplaceApplyResultPayload.fromJson(Map<String, Object?> json) => SearchReplaceApplyResultPayload(
+        report: SearchReplaceApplyResultPayloadReport.fromJson(json['report']! as Map<String, Object?>),
+      );
+
+  final SearchReplaceApplyResultPayloadReport report;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'report': report.toJson(),
+    };
+
+    return json;
+  }
+}
+
+class SearchReplacePreviewFramePayloadMatchesItem {
+  const SearchReplacePreviewFramePayloadMatchesItem({
+    required this.line,
+    required this.column,
+    required this.endColumn,
+    required this.preview,
+    required this.previewMatchStart,
+    required this.previewMatchEnd,
+    required this.replacement,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchReplacePreviewFramePayloadMatchesItem.fromJson(Map<String, Object?> json) => SearchReplacePreviewFramePayloadMatchesItem(
+        line: json['line']! as int,
+        column: json['column']! as int,
+        endColumn: json['endColumn']! as int,
+        preview: json['preview']! as String,
+        previewMatchStart: json['previewMatchStart']! as int,
+        previewMatchEnd: json['previewMatchEnd']! as int,
+        replacement: json['replacement']! as String,
+      );
+
+  /// 1-based.
+  final int line;
+
+  /// 1-based, in UTF-16 units (S-65).
+  final int column;
+
+  /// 1-based, in UTF-16 units.
+  final int endColumn;
+
+  /// A window around the match, cropped to a ceiling (S-66) — the "before" of the diff.
+  final String preview;
+
+  /// Where the match starts inside preview, in UTF-16 units.
+  final int previewMatchStart;
+
+  /// Where the match ends inside preview, in UTF-16 units.
+  final int previewMatchEnd;
+
+  /// What this one match's text becomes — group references and "preserve case" already resolved (S-82, S-97). The client builds the "after" by splicing this in place of preview[previewMatchStart:previewMatchEnd].
+  final String replacement;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'line': line,
+      'column': column,
+      'endColumn': endColumn,
+      'preview': preview,
+      'previewMatchStart': previewMatchStart,
+      'previewMatchEnd': previewMatchEnd,
+      'replacement': replacement,
+    };
+
+    return json;
+  }
+}
+
+/// Present exactly when `type` is `end`.
+class SearchReplacePreviewFramePayloadTruncated {
+  const SearchReplacePreviewFramePayloadTruncated({
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchReplacePreviewFramePayloadTruncated.fromJson(Map<String, Object?> json) => SearchReplacePreviewFramePayloadTruncated(
+        reason: json['reason']! as String,
+      );
+
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
+/// `POST /search/replace/preview`: one line of the NDJSON stream (plan 11, B-11, D-02) — the same search as `search.text.frame`, with the resolved replacement text on every match and the file's own ETag. In the domain this is a discriminated union by `type` (`file` carries `path`/`etag`/`matches`; `end` carries `truncated`/`skipped`; `error` carries `code`/`messageKey`/`params`), which the generator cannot express as a `oneOf`; flattened here, with the pairing documented per field (plan 28, B-48). The stream always ends with exactly one `end` or `error` line.
+class SearchReplacePreviewFramePayload {
+  const SearchReplacePreviewFramePayload({
+    required this.type,
+    this.path,
+    this.etag,
+    this.matches,
+    this.truncated,
+    this.skipped,
+    this.code,
+    this.messageKey,
+    this.params,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchReplacePreviewFramePayload.fromJson(Map<String, Object?> json) => SearchReplacePreviewFramePayload(
+        type: json['type']! as String,
+        path: json['path'] as String?,
+        etag: json['etag'] as String?,
+        matches: json['matches'] == null ? null : (json['matches']! as List<Object?>).map((item) => SearchReplacePreviewFramePayloadMatchesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        truncated: json['truncated'] == null ? null : SearchReplacePreviewFramePayloadTruncated.fromJson(json['truncated']! as Map<String, Object?>),
+        skipped: json['skipped'] as int?,
+        code: json['code'] as String?,
+        messageKey: json['messageKey'] as String?,
+        params: json['params'] as Map<String, Object?>?,
+      );
+
+  final String type;
+
+  /// Present exactly when `type` is `file`. Relative to the folder, with /.
+  final String? path;
+
+  /// Present exactly when `type` is `file`. The sha256 of the content this preview read — the version the apply flow checks against (S-81).
+  final String? etag;
+
+  /// Present exactly when `type` is `file`.
+  final List<SearchReplacePreviewFramePayloadMatchesItem>? matches;
+
+  /// Present exactly when `type` is `end`.
+  final SearchReplacePreviewFramePayloadTruncated? truncated;
+
+  /// Present exactly when `type` is `end`. Files the engine reported as binary, excluded from the results (S-67).
+  final int? skipped;
+
+  /// Present exactly when `type` is `error`.
+  final String? code;
+
+  /// Present exactly when `type` is `error`.
+  final String? messageKey;
+
+  /// Present exactly when `type` is `error`. Open: the parameters of the message, by key.
+  final Map<String, Object?>? params;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'type': type,
+    };
+
+    if (path != null) {
+      json['path'] = path;
+    }
+
+    if (etag != null) {
+      json['etag'] = etag;
+    }
+
+    if (matches != null) {
+      json['matches'] = matches?.map((item) => item.toJson()).toList(growable: false);
+    }
+
+    if (truncated != null) {
+      json['truncated'] = truncated?.toJson();
+    }
+
+    if (skipped != null) {
+      json['skipped'] = skipped;
+    }
+
+    if (code != null) {
+      json['code'] = code;
+    }
+
+    if (messageKey != null) {
+      json['messageKey'] = messageKey;
+    }
+
+    if (params != null) {
+      json['params'] = params;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SearchReplacePreviewFramePayload].
+bool searchReplacePreviewFramePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['matches'] is List<Object?> && (json['matches']! as List<Object?>).length > 20000) {
+    return false;
+  }
+
+  return true;
+}
+
+class SearchTextFramePayloadMatchesItem {
+  const SearchTextFramePayloadMatchesItem({
+    required this.line,
+    required this.column,
+    required this.endColumn,
+    required this.preview,
+    required this.previewMatchStart,
+    required this.previewMatchEnd,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchTextFramePayloadMatchesItem.fromJson(Map<String, Object?> json) => SearchTextFramePayloadMatchesItem(
+        line: json['line']! as int,
+        column: json['column']! as int,
+        endColumn: json['endColumn']! as int,
+        preview: json['preview']! as String,
+        previewMatchStart: json['previewMatchStart']! as int,
+        previewMatchEnd: json['previewMatchEnd']! as int,
+      );
+
+  /// 1-based.
+  final int line;
+
+  /// 1-based, in UTF-16 units (S-65).
+  final int column;
+
+  /// 1-based, in UTF-16 units.
+  final int endColumn;
+
+  /// A window around the match, cropped to a ceiling (S-66) — never the whole line.
+  final String preview;
+
+  /// Where the match starts inside preview, in UTF-16 units.
+  final int previewMatchStart;
+
+  /// Where the match ends inside preview, in UTF-16 units.
+  final int previewMatchEnd;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'line': line,
+      'column': column,
+      'endColumn': endColumn,
+      'preview': preview,
+      'previewMatchStart': previewMatchStart,
+      'previewMatchEnd': previewMatchEnd,
+    };
+
+    return json;
+  }
+}
+
+class SearchTextFramePayloadContextLinesItem {
+  const SearchTextFramePayloadContextLinesItem({
+    required this.line,
+    required this.text,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchTextFramePayloadContextLinesItem.fromJson(Map<String, Object?> json) => SearchTextFramePayloadContextLinesItem(
+        line: json['line']! as int,
+        text: json['text']! as String,
+      );
+
+  final int line;
+
+  final String text;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'line': line,
+      'text': text,
+    };
+
+    return json;
+  }
+}
+
+/// Present exactly when `type` is `end`.
+class SearchTextFramePayloadTruncated {
+  const SearchTextFramePayloadTruncated({
+    required this.reason,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchTextFramePayloadTruncated.fromJson(Map<String, Object?> json) => SearchTextFramePayloadTruncated(
+        reason: json['reason']! as String,
+      );
+
+  final String reason;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'reason': reason,
+    };
+
+    return json;
+  }
+}
+
+/// `POST /search/text`: one line of the NDJSON stream (plan 11, B-10, D-02). In the domain this is a discriminated union by `type` (`file` carries `path`/`matches`/`contextLines`; `end` carries `truncated`/`skipped`; `error` carries `code`/`messageKey`/`params`), which the generator cannot express as a `oneOf`; flattened here, with the pairing documented per field (plan 28, B-48). The stream always ends with exactly one `end` or `error` line.
+class SearchTextFramePayload {
+  const SearchTextFramePayload({
+    required this.type,
+    this.path,
+    this.matches,
+    this.contextLines,
+    this.truncated,
+    this.skipped,
+    this.code,
+    this.messageKey,
+    this.params,
+  });
+
+  /// Reads a decoded JSON map. Unknown keys are ignored, never rejected.
+  factory SearchTextFramePayload.fromJson(Map<String, Object?> json) => SearchTextFramePayload(
+        type: json['type']! as String,
+        path: json['path'] as String?,
+        matches: json['matches'] == null ? null : (json['matches']! as List<Object?>).map((item) => SearchTextFramePayloadMatchesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        contextLines: json['contextLines'] == null ? null : (json['contextLines']! as List<Object?>).map((item) => SearchTextFramePayloadContextLinesItem.fromJson(item! as Map<String, Object?>)).toList(growable: false),
+        truncated: json['truncated'] == null ? null : SearchTextFramePayloadTruncated.fromJson(json['truncated']! as Map<String, Object?>),
+        skipped: json['skipped'] as int?,
+        code: json['code'] as String?,
+        messageKey: json['messageKey'] as String?,
+        params: json['params'] as Map<String, Object?>?,
+      );
+
+  final String type;
+
+  /// Present exactly when `type` is `file`. Relative to the folder, with /.
+  final String? path;
+
+  /// Present exactly when `type` is `file`.
+  final List<SearchTextFramePayloadMatchesItem>? matches;
+
+  /// Present exactly when `type` is `file`. Empty unless the request asked for context lines.
+  final List<SearchTextFramePayloadContextLinesItem>? contextLines;
+
+  /// Present exactly when `type` is `end`.
+  final SearchTextFramePayloadTruncated? truncated;
+
+  /// Present exactly when `type` is `end`. Files the engine reported as binary, excluded from the results (S-67) — never a count of files the walk itself silently excluded, which carries no per-file signal.
+  final int? skipped;
+
+  /// Present exactly when `type` is `error`. The same `code` a `502 SEARCH_ENGINE_FAILED` would carry before the first byte.
+  final String? code;
+
+  /// Present exactly when `type` is `error`.
+  final String? messageKey;
+
+  /// Present exactly when `type` is `error`. Open: the parameters of the message, by key.
+  final Map<String, Object?>? params;
+
+  /// A JSON map with the absent optional fields left out.
+  Map<String, Object?> toJson() {
+    final Map<String, Object?> json = <String, Object?>{
+      'type': type,
+    };
+
+    if (path != null) {
+      json['path'] = path;
+    }
+
+    if (matches != null) {
+      json['matches'] = matches?.map((item) => item.toJson()).toList(growable: false);
+    }
+
+    if (contextLines != null) {
+      json['contextLines'] = contextLines?.map((item) => item.toJson()).toList(growable: false);
+    }
+
+    if (truncated != null) {
+      json['truncated'] = truncated?.toJson();
+    }
+
+    if (skipped != null) {
+      json['skipped'] = skipped;
+    }
+
+    if (code != null) {
+      json['code'] = code;
+    }
+
+    if (messageKey != null) {
+      json['messageKey'] = messageKey;
+    }
+
+    if (params != null) {
+      json['params'] = params;
+    }
+
+    return json;
+  }
+}
+
+/// Whether [json] keeps within the bounds the schema gives [SearchTextFramePayload].
+bool searchTextFramePayloadLimitsHold(Map<String, Object?> json) {
+  if (json['matches'] is List<Object?> && (json['matches']! as List<Object?>).length > 20000) {
+    return false;
+  }
+
+  if (json['contextLines'] is List<Object?> && (json['contextLines']! as List<Object?>).length > 4096) {
+    return false;
+  }
+
+  return true;
+}
+
 /// What `GET /transcripts/:engine/:id/subagents/:toolUseId/messages` answers: a page of what a subagent said, from the tail (plan 28, B-12).
 class SubagentPagePayload {
   const SubagentPagePayload({

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { SettingChoice } from '@/features/settings';
+import { onOffChoices, SettingChoice } from '@/features/settings';
 import type { Choice } from '@/features/settings';
 import { usePreferences } from '../hooks/useEditor';
 import { DEFAULT_PREFERENCES, FONT_SIZES, TAB_SIZES, ZOOMS } from '../store/preferences.store';
@@ -83,10 +83,7 @@ export function EditorSettings(): React.JSX.Element {
   const { t } = useTranslation();
   const { preferences, set } = usePreferences();
   const d = DEFAULT_PREFERENCES;
-  const onOff: readonly Choice<'on' | 'off'>[] = [
-    { value: 'on', label: t('editor.settings.on') },
-    { value: 'off', label: t('editor.settings.off') },
-  ];
+  const onOff = onOffChoices(t);
   const fonts: Readonly<Record<EditorPreferences['font'], string>> = {
     code: t('editor.settings.fontCode'),
     browser: t('editor.settings.fontBrowser'),

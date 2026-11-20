@@ -16,6 +16,7 @@ Voltar para o [índice do backend](README.md).
 | `auth` | Identidade: validação de token OIDC, usuário local, device | Emitir credencial (quem emite é o provedor) · autorizar tool (é `permission`) |
 | `workspace` | Diretórios: allowlist, validação, listagem, metadados de git | Rodar nada dentro deles · ler ou escrever arquivo (é `files`) |
 | `files` | Os arquivos da pasta aberta: árvore, conteúdo com `ETag`, e a escrita da pessoa — salvar, criar, mover, copiar, apagar —, na trilha antes do disco | Decidir a fronteira (pergunta ao `workspace`) · a escrita do Claude (é `session`, sob `canUseTool`) |
+| `search` | Localizar arquivos e texto dentro de uma pasta liberada, e substituir em lote com prévia — pelo `ripgrep`, por subprocesso ([ADR-016](../shared/00-decisions.md#adr-016--o-ripgrep-roda-por-subprocesso-com-disciplina-fixa-e-um-único-adapter)) | Escrever arquivo (é `files`, que o substituir usa) · decidir se a pasta pode ser aberta (é `workspace`) |
 | `session` | Ciclo de vida da sessão do Claude: start, prompt, interrupt, close, streaming | Persistir transcript histórico |
 | `permission` | Requests de permissão, regras persistidas, resolução, timeout | Executar a tool · registrar a trilha (é `audit`) |
 | `transcript` | Histórico: listar sessões, carregar mensagens, retomar | Sessão viva |
@@ -49,11 +50,14 @@ comando arbitrário na máquina do usuário, a trilha precisa sobreviver à falh
      │
      ▼
  workspace ◄──── session ────► permission ────► notification
-     ▲              │              │
-     │              ▼              ▼
-   files        transcript       audit ◄──── (todos escrevem)
-     ▲                                ▲
-     └─ session.fileStateRecorded     └──── files escreve
+     ▲ ▲            │              │
+     │ │            ▼              ▼
+   files│       transcript       audit ◄──── (todos escrevem)
+     ▲  │                             ▲
+     │  └── search ──────────────────-┘
+     │      (search → workspace, search → files)
+     │
+     └─ session.fileStateRecorded     └──── files e search escrevem
         workspace.allowlistReloaded
         (barramento, sem import)
 ```
@@ -465,6 +469,63 @@ estender ao HTTP.
   `WATCH_LIMIT_REACHED`, `WATCH_UNAVAILABLE`, `RANGE_NOT_SATISFIABLE`, `HISTORY_ENTRY_NOT_FOUND`, e os reusados `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`,
   `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`, `WORKSPACE_DIRECTORY_UNREADABLE`,
   `INVALID_INPUT`, `SERVICE_UNAVAILABLE` — ver o [catálogo](../shared/04-errors-and-http.md#catálogo-de-erros-de-domínio).
+
+### `search`
+
+O [plano 11](../../plans/11-search/README.md): achar qualquer coisa na pasta aberta — Quick Open,
+busca em texto com regex e filtros — e substituir em lote com prévia. O motor é o `ripgrep`, por
+subprocesso, com a disciplina fixa do [ADR-016](../shared/00-decisions.md#adr-016--o-ripgrep-roda-por-subprocesso-com-disciplina-fixa-e-um-único-adapter).
+Módulo próprio, não extensão de `files` nem de `workspace`: a linguagem (consulta, casamento,
+prévia, truncamento, lote) e o risco (primeiro programa, além do Claude, executado com entrada do
+usuário) são próprios.
+
+- **`search → workspace`**, por porta (`FolderResolver`, a mesma implementação do `files`): resolve
+  e contém a pasta da aba **antes** de qualquer processo.
+- **`search → files`**, por porta: o substituir em lote escreve pelo `SaveFileUseCase` do `files` —
+  herda `ETag`, trilha antes do disco e atomicidade; este módulo não cria um segundo jeito de
+  escrever arquivo. Sem ciclo: `files` não conhece `search`.
+- **Executor de subprocesso** em `adapter/outbound/process/` — técnico, sem regra de negócio do
+  domínio `search`. É um dos dois únicos lugares do backend que importam `node:child_process`
+  (`dependency-cruiser`, regra `child-process-is-isolated`); o outro é `shared/process/`
+  (`execFileText`, já existente desde o [plano 13](../../plans/13-claude-settings/README.md)), para
+  a chamada curta e só-leitura de um CLI — a versão de um motor, `git`. O da busca é de vida longa
+  e em fluxo, com a disciplina própria do [ADR-016](../shared/00-decisions.md#adr-016--o-ripgrep-roda-por-subprocesso-com-disciplina-fixa-e-um-único-adapter).
+- **O localizador tem dois consumidores:** o Quick Open deste plano e o `@` do composer do
+  [plano 08](../../plans/08-claude-panel/README.md), que autocompleta arquivos e pastas da pasta
+  aberta para o contexto do prompt. Mesma rota, mesmo orçamento de latência (p95 < 150 ms com a
+  lista em cache).
+- **Entrada hostil é dado, nunca opção:** padrão, glob, caminho e texto de substituição que começam
+  com `-` ou carregam `$(…)` viajam como elemento próprio do argv, nunca concatenados; ver ADR-016.
+- **Erros:** `SEARCH_PATTERN_INVALID`, `SEARCH_ENGINE_FAILED`, e os reusados
+  `WORKSPACE_NOT_ALLOWED`, `FORBIDDEN`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_NOT_A_DIRECTORY`,
+  `INVALID_INPUT`, `RATE_LIMITED`, `PAYLOAD_TOO_LARGE`, `PRECONDITION_REQUIRED` — ver o
+  [catálogo](../shared/04-errors-and-http.md#catálogo-de-erros-de-domínio).
+
+#### As rotas HTTP do `search`
+
+Toda rota nomeia a pasta da **aba** (`folder`, absoluta, mesma regra das rotas do `workspace`), e é
+resolvida pelo `workspace` antes de qualquer processo. Caminhos de resultado são relativos à pasta,
+com `/`; colunas em unidades UTF-16 — o que o editor do [07](../../plans/07-explorer-and-editor/README.md)
+conta. `POST` para leitura porque a consulta tem corpo estruturado; é seguro e sem efeito colateral
+(os dois primeiros `POST` não escrevem nada).
+
+| Rota | Resposta | Recusas |
+|---|---|---|
+| `GET /search/files?folder=&query=&kinds=&prefer=&limit=&includeIgnored=` | `{ entries[{ path, kind, positions[] }], truncated: null \| { reason: 'limit'\|'timeout' } }` — localizador de caminhos: arquivos e/ou pastas (`kinds=file,dir`) pontuados pela consulta, com as posições casadas para destaque; `prefer` (repetível ou separado por vírgula, teto de 50) sobe caminhos recentes e abertos da aba na ordem; corpo único JSON, orçamento p95 < 150 ms com a lista em cache (D-07) | `400`, `401`, `403` `WORKSPACE_NOT_ALLOWED`/`FORBIDDEN`, `404` `WORKSPACE_NOT_FOUND`, `422` `WORKSPACE_NOT_A_DIRECTORY`, `429` `RATE_LIMITED` |
+| `POST /search/text` `{ folder, pattern, isRegex, caseSensitive, wholeWord, include[], exclude[], useIgnoreFiles, onlyPaths[], contextLines }` (`multiline` nunca é um campo do pedido — liga sozinho quando `pattern` tem `\n`, como no VS Code) | fluxo NDJSON (`Content-Type: application/x-ndjson`, `Cache-Control: no-transform`, `X-Accel-Buffering: no`): uma linha `{type:'file', path, matches[]}` por arquivo, fechado por `{type:'end', truncated, skipped}` ou `{type:'error', code, messageKey, params}` | antes do primeiro byte: `400` `SEARCH_PATTERN_INVALID`/`INVALID_INPUT`, `401`, `403`, `404`, `422`, `429` `RATE_LIMITED`, `413` `PAYLOAD_TOO_LARGE`; depois do primeiro byte: a linha `error` com `SEARCH_ENGINE_FAILED` |
+| `POST /search/replace/preview` a mesma consulta + `replacement`, `preserveCase` | o mesmo fluxo NDJSON, cada casamento com antes/depois e o `ETag` do conteúdo lido por arquivo | as mesmas de `/search/text` |
+| `POST /search/replace` a mesma consulta + `replacement` + `files[{path, etag}]` | `200` `{ report: { applied[], changed[], missing[], skipped[] } }` — corpo único, por arquivo, conforme [D-05](../../plans/11-search/decisions.md#d-05--o-aplicar-em-lote) | `400`, `401`, `403`, `404`, `413` `PAYLOAD_TOO_LARGE` (`params.measure: 'files'`), `428` `PRECONDITION_REQUIRED` (algum arquivo sem `ETag` — nada é escrito), `500` `INTERNAL_ERROR` (falha de escrita no meio, com `params.applied`) |
+
+Fluxo sem linha final (conexão caída) ou com linha malformada é `SEARCH_ENGINE_FAILED`, tratado pelo
+cliente — exceção explícita à regra "nunca `200` com erro no corpo"
+([04-errors-and-http](../shared/04-errors-and-http.md#catálogo-de-erros-de-domínio)), porque o
+status HTTP (`200`) já saiu antes do motor falhar. A ordem das linhas não é garantida — o `rg` roda
+em paralelo —, e quem ordena é o cliente; com truncamento, o conjunto devolvido pode variar. As
+exclusões padrão seguem a [D-03](../../plans/11-search/decisions.md#d-03--o-que-se-pula-sem-pedir).
+O cliente cancela a consulta anterior a cada tecla e descarta resposta velha; o servidor mata o que
+ainda estiver rodando para a consulta abortada. Os limites de taxa por usuário do
+[plano 05](../../plans/05-hardening-operations/README.md) se somam ao teto de concorrência deste
+módulo (duas buscas simultâneas por usuário).
 
 ### `session`
 

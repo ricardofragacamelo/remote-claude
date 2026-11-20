@@ -4,6 +4,7 @@ import {
   forgetVisitor,
   readVisitor,
   VISITOR_PREFIX,
+  withVisitorChange,
   writeVisitor,
 } from '@/shared/lib/visitor-storage';
 import type { VisitorStorage } from '@/shared/lib/visitor-storage';
@@ -97,5 +98,14 @@ describe('forgetting a convenience — plan 06, S-201', () => {
     forgetVisitor('density');
 
     expect(localStorage.getItem(`${VISITOR_PREFIX}density`)).toBeNull();
+  });
+});
+
+describe('withVisitorChange — every *.preferences.store.ts’s own `set`', () => {
+  it('merges the patch over what is kept, and writes the result back', () => {
+    const next = withVisitorChange('widget', { a: 1, b: 2 }, { b: 3 });
+
+    expect(next).toEqual({ a: 1, b: 3 });
+    expect(JSON.parse(localStorage.getItem(`${VISITOR_PREFIX}widget`) ?? '{}')).toEqual(next);
   });
 });

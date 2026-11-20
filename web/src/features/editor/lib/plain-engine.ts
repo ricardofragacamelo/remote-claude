@@ -239,6 +239,13 @@ class PlainView implements CodeView {
     };
   }
 
+  setSelection(range: TextRange): void {
+    const start = offsetAt(this.area.value, { line: range.startLine, column: range.startColumn });
+    const end = offsetAt(this.area.value, { line: range.endLine, column: range.endColumn });
+
+    this.area.setSelectionRange(start, end);
+  }
+
   selections(): readonly TextRange[] {
     // A text area has one selection: there is no second cursor to have another.
     const only = this.selection();

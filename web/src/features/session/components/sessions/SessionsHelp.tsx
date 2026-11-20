@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { useScreenShortcuts } from '@/features/commands';
+import { useScreenHelpBasics } from '@/features/commands';
 import { HelpSheet } from '@/shared/components/HelpSheet';
 import type { SessionsView } from '../../hooks/useSessionsView';
 
@@ -22,12 +22,16 @@ const HELP_SHORTCUTS = [
  */
 export function SessionsHelp({ view }: { readonly view: SessionsView }): React.JSX.Element {
   const { t } = useTranslation();
-  const shortcuts = useScreenShortcuts(HELP_SHORTCUTS);
+  const { title, purpose, shortcuts } = useScreenHelpBasics(
+    'sessions.screen.title',
+    'sessions.screen.purpose',
+    HELP_SHORTCUTS,
+  );
 
   return (
     <HelpSheet
-      title={t('sessions.screen.title')}
-      purpose={t('sessions.screen.purpose')}
+      title={title}
+      purpose={purpose}
       help="sessions.help"
       shortcuts={shortcuts}
       own={{ open: view.state.helpOpen, onOpenChange: view.state.setHelpOpen }}

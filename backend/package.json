@@ -11,8 +11,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint:arch": "depcruise src --config dependency-cruiser.config.mjs",
     "test:unit": "vitest run test/unit",
-    "test:integration": "vitest run test/integration",
-    "test:coverage": "vitest run --coverage",
+    "test:performance": "vitest run test/integration/application/search/find-paths.performance.spec.ts",
+    "test:integration": "vitest run test/integration --exclude \"**/find-paths.performance.spec.ts\" && pnpm run test:performance",
+    "test:coverage": "vitest run --coverage --exclude \"**/find-paths.performance.spec.ts\" && pnpm run test:performance",
     "verify": "node ../scripts/verify-workspace.mjs backend",
     "fixtures:conversation-parity": "tsx scripts/record-conversation-parity-fixtures.ts",
     "db": "tsx src/infrastructure/database/cli.ts"
@@ -20,6 +21,7 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.277",
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "@vscode/ripgrep": "1.18.0",
     "@nestjs/common": "^12.0.1",
     "@nestjs/core": "^12.0.1",
     "@nestjs/event-emitter": "^12.0.1",

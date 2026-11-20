@@ -1,7 +1,15 @@
+import os from 'node:os';
+
 import { defineConfig } from 'vitest/config';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 import { COVERAGE_THRESHOLDS } from '../scripts/lib/coverage.mjs';
+
+// Half the machine's cores, so every worker's own child process (a real `rg`, a Docker CLI call,
+// a Postgres connection) has room to run without the worker pool alone already saturating every
+// core — the actual cause behind this suite's own documented load-flakes (timing asserts starved,
+// a statement_timeout hit, a container teardown race), not external contention.
+const MAX_WORKERS = Math.max(2, Math.floor(os.cpus().length / 2));
 
 /**
  * One runner for both suites.
@@ -25,6 +33,7 @@ export default defineConfig({
     testTimeout: 20_000,
     // A container takes seconds to start, and it starts once per suite, in a hook.
     hookTimeout: 180_000,
+    maxWorkers: MAX_WORKERS,
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'lcov'],

@@ -21,7 +21,7 @@ estado da aba; trocar de aba e voltar não perde nada, e nada de uma aba aparece
 Estado da task no fim do título: 🔲 não iniciada · 🔄 em andamento · ✅ concluída · ⛔ bloqueada.
 Sem marca, a task conta como 🔲. É daqui que `pnpm plan progress` tira os contadores.
 
-### B-13 — Service e hooks da busca 🔲
+### B-13 — Service e hooks da busca ✅
 
 `web/src/features/search/`, na cadeia `Component → Hook → Service → api.ts`
 ([web/01](../../architecture/web/01-architecture.md)): `search.service.ts` com as quatro chamadas;
@@ -37,7 +37,7 @@ com o que já chegou mantido e marcado como parcial. O
 [plano 08](../08-claude-panel/README.md) — um hook, dois consumidores. Log de I/O em `debug` pelo
 `pino` do web, sem o padrão.
 
-### B-14 — Quick Open (Ctrl/Cmd+P) 🔲
+### B-14 — Quick Open (Ctrl/Cmd+P) ✅
 
 Sobre o componente de palette do 06 (shadcn `command`), padrão ARIA *combobox*: consulta vazia
 mostra recentes e abertos da aba; digitando, os mesmos sobem pelo `prefer` e o resto vem pontuado,
@@ -46,7 +46,7 @@ abre ao lado, seta direita mantém a palette aberta. `arquivo.ts:42` abre na lin
 é encaminhado ao "ir para linha" **do 07** — o Quick Open não reimplementa. `>` troca para os
 comandos da palette do 07. Resultado truncado diz isso. Em tela pequena, ocupa a tela.
 
-### B-15 — A view Busca 🔲
+### B-15 — A view Busca ✅
 
 Na activity bar do 06, com contagem de resultados no ícone. Campo de busca com os três botões do VS
 Code — `Aa` caixa, `ab` palavra inteira, `.*` regex —, "arquivos a incluir" e "a excluir" (com o
@@ -63,7 +63,7 @@ vão para a search da URL — o link reproduz a busca ([a URL é estado](../../a
 Atualiza [web/03](../../architecture/web/03-ui-system.md#padrões-de-ui-deste-produto) com o padrão
 da view.
 
-### B-16 — Substituir, com prévia em diff 🔲
+### B-16 — Substituir, com prévia em diff ✅
 
 Campo "substituir" (seta que abre, como no VS Code) com o botão "preservar caixa". Cada casamento
 mostra o antes riscado e o depois; clicar num arquivo abre a prévia no **diff editor do 07**
@@ -75,31 +75,32 @@ foram preservados** porque mudaram desde a prévia, com ação de refazer a pré
 Arquivo com edição suja numa aba de editor: o substituir avisa antes, e depois o editor mostra o
 aviso de mudança externa do 07 — nunca sobrescreve a aba em silêncio. Clique duplo aplica uma vez. Alcance acima do teto de arquivos de um aplicar (D-06) é dito na prévia, que pede para refinar; `500` com `params.applied` mostra o que foi aplicado **e** o erro, sem esconder nenhum dos dois.
 
-### B-17 — O editor de resultados de busca 🔲
+### B-17 — O editor de resultados de busca ✅
 
 "Abrir em editor" leva os resultados para uma aba do editor do 07, como o *Search Editor* do VS
 Code: cabeçalho com a consulta e os botões, linhas de contexto ajustáveis (1–9), casamentos
 destacados, "executar de novo", e clique/F12 num resultado abre o arquivo na linha. Salvável como
-`.code-search` conforme a D-08, pela escrita do 08. É só leitura quanto ao conteúdo dos arquivos: nada
+`.code-search` conforme a D-08, pela escrita do 07. É só leitura quanto ao conteúdo dos arquivos: nada
 que se digita nele escreve nos arquivos encontrados.
 
-### B-18 — Histórico de buscas 🔲
+### B-18 — Histórico de buscas ✅
 
 Setas para cima/baixo no campo percorrem as consultas anteriores **da pasta**, como no VS Code;
 "limpar histórico" na palette e na ajuda. Guardado por visitante (D-08 → D-13 do 06), com `try/catch`
 em toda leitura e escrita: armazenamento indisponível (janela privada) degrada para "sem histórico",
 nunca quebra a view. Teto de 50 entradas, sem duplicata consecutiva.
 
-### B-19 — Atalhos, palette e configurações 🔲
+### B-19 — Atalhos, palette e configurações ✅
 
 Comandos no registro do 06, com título traduzido e atalho: Quick Open (Ctrl/Cmd+P), Buscar em
 arquivos (Ctrl/Cmd+Shift+F), Substituir em arquivos (Ctrl/Cmd+Shift+H), próximo/anterior resultado
 (F4/Shift+F4), abrir editor de resultados, limpar histórico. Atalho não dispara quando o foco está
 num campo que o consome (o terminal do [12](../12-integrated-terminal/README.md), um campo de texto
-do próprio atalho). Seção **"Busca"** nas configurações do 07: exclusões (D-03), usar arquivos de
-ignore, caixa inteligente, linhas de contexto padrão do editor de resultados.
+do próprio atalho). Seção **"Busca"** nas configurações do [06](../06-workbench/README.md):
+exclusões (D-03), usar arquivos de ignore, caixa inteligente, linhas de contexto padrão do editor de
+resultados.
 
-### B-20 — Usabilidade e ajuda da busca 🔲
+### B-20 — Usabilidade e ajuda da busca ✅
 
 No screen frame do 06, cada tela entregue aqui tem **propósito e ajuda**: o que é o Quick Open e a
 Busca, o que cada botão faz (com exemplo de regex, de glob e de "preservar caixa"), por que um
@@ -111,7 +112,7 @@ que fazer; "saiba mais" que abre a seção certa da ajuda. Os quatro estados de 
 ([web/03](../../architecture/web/03-ui-system.md#estados-de-tela--os-quatro-sempre)), teclado e foco
 completos, axe sem violação, e nenhum literal apresentável fora do i18n.
 
-### B-25 — O `@` do composer do 08 passa ao localizador 🔲
+### B-25 — O `@` do composer do 08 passa ao localizador ✅
 
 A troca que a [D-12 do plano 08](../08-claude-panel/decisions.md#f5--composer-e-contexto) previu: o
 `@` do composer foi entregue (08 · F5) sobre o passo provisório — completação **por nível** sobre

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://remote-claude.local/schema/http/search-replace-apply.json",
+  "title": "SearchReplaceApplyResult",
+  "description": "`POST /search/replace`: the report of applying a replace across the files named by the request (plan 11, B-11, D-05) — per file, one of four outcomes.",
+  "x-kind": "http",
+  "x-type": "search.replace.apply.result",
+  "x-route": [{ "method": "POST", "path": "/search/replace" }],
+  "type": "object",
+  "required": ["report"],
+  "properties": {
+    "report": {
+      "type": "object",
+      "required": ["applied", "changed", "missing", "skipped"],
+      "properties": {
+        "applied": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": { "type": "string" },
+          "description": "Relative to the folder, with /. Written, with the trail entry ahead of the disk write (S-83)."
+        },
+        "changed": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": { "type": "string" },
+          "description": "The disk no longer held the version the preview read — preserved, never overwritten (S-84, S-98)."
+        },
+        "missing": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": { "type": "string" },
+          "description": "Gone since the preview — never recreated (S-86)."
+        },
+        "skipped": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "required": ["path", "reason"],
+            "properties": {
+              "path": { "type": "string" },
+              "reason": {
+                "type": "string",
+                "enum": ["binary", "tooLarge", "sensitive"]
+              }
+            }
+          },
+          "description": "Turned binary or grew past the edit ceiling since the preview (S-87), or needs the confirmation a sensitive file needs for any write."
+        }
+      }
+    }
+  }
+}

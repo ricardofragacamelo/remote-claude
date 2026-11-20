@@ -298,6 +298,22 @@ describe('the Dependency Rule, as the build enforces it', () => {
     ).toBe(false);
   });
 
+  it('refuses `child_process` outside its adapter — plan 11, B-05', async () => {
+    expect(
+      broke(
+        await violations(),
+        'child-process-is-isolated',
+        'application/search/runs-a-process.ts',
+      ),
+    ).toBe(true);
+  });
+
+  it('allows `child_process` inside its one adapter — plan 11, B-05', async () => {
+    expect(
+      broke(await violations(), 'child-process-is-isolated', 'adapter/outbound/process/allowed.ts'),
+    ).toBe(false);
+  });
+
   it('carries a comment on every rule, so a failure says why the rule exists', () => {
     for (const rule of configuration.forbidden ?? []) {
       expect(rule.comment, rule.name).toBeTruthy();
